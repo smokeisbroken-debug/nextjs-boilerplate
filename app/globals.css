@@ -1215,3 +1215,131 @@ body {
     right: -5px !important;
   }
 }
+/* ===== VISUAL FIX V3 ===== */
+
+/* More compact page spacing */
+.screen {
+  padding-top: 16px !important;
+  padding-bottom: 150px !important;
+}
+
+/* Header polish */
+.screen-header {
+  height: 42px !important;
+  margin-bottom: 4px !important;
+}
+
+.header-title {
+  font-size: 16px !important;
+}
+
+.app-icon,
+.header-icon {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 10px !important;
+  opacity: 0.95;
+}
+
+/* Hero closer to reference */
+.hero {
+  min-height: 155px !important;
+  margin-top: 8px !important;
+  margin-bottom: 14px !important;
+}
+
+.hero h1 {
+  font-size: 30px !important;
+  line-height: 0.96 !important;
+}
+
+.home-mascot {
+  width: 150px !important;
+  right: -2px !important;
+  top: 10px !important;
+  border-radius: 26px !important;
+  opacity: 0.96;
+}
+
+/* Smaller and tighter dashboard cards */
+.stats-grid {
+  gap: 10px !important;
+}
+
+.stat-card {
+  min-height: 95px !important;
+  padding: 11px 13px !important;
+  border-radius: 17px !important;
+}
+
+.stat-top {
+  font-size: 12px !important;
+}
+
+.stat-top img {
+  width: 26px !important;
+  height: 26px !important;
+}
+
+.stat-card strong {
+  margin-top: 7px !important;
+  font-size: 24px !important;
+}
+
+.stat-card small {
+  font-size: 11px !important;
+}
+
+/* Wallet HP block */
+.hp-card {
+  margin-top: 14px !important;
+  padding: 12px 13px !important;
+  border-radius: 18px !important;
+}
+
+.hp-row {
+  grid-template-columns: 32px 1fr auto !important;
+}
+
+.hp-row img {
+  width: 31px !important;
+  height: 31px !important;
+}
+
+.hp-card p {
+  font-size: 12px !important;
+}
+
+/* Chart card should not be hidden by nav */
+.chart-preview {
+  min-height: 260px !important;
+  margin-bottom: 40px !important;
+}
+
+/* Bottom nav lower and cleaner */
+.bottom-nav {
+  bottom: 10px !important;
+  left: 20px !important;
+  right: 20px !important;
+  height: 64px !important;
+  border-radius: 24px !important;
+  background:
+    linear-gradient(180deg, rgba(6, 10, 9, 0.97), rgba(2, 4, 4, 0.98)) !important;
+}
+
+.bottom-nav button img {
+  width: 23px !important;
+  height: 23px !important;
+}
+
+.bottom-nav button span {
+  font-size: 10px !important;
+}
+
+/* Reduce green fog in background even more */
+.phone {
+  background:
+    radial-gradient(circle at top right, rgba(183, 255, 25, 0.035), transparent 36%),
+    radial-gradient(circle at bottom left, rgba(183, 255, 25, 0.025), transparent 34%),
+    linear-gradient(180deg, #040605 0%, #020302 100%) !important;
+}
