@@ -943,3 +943,275 @@ button {
     width: 155px;
   }
   }
+/* ===== VISUAL FIX V2 ===== */
+
+html,
+body {
+  background: #030504 !important;
+}
+
+.app-shell {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(183, 255, 25, 0.08), transparent 34%),
+    linear-gradient(180deg, #030504 0%, #050706 100%) !important;
+}
+
+.phone {
+  background:
+    radial-gradient(circle at top right, rgba(183, 255, 25, 0.055), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(183, 255, 25, 0.035), transparent 32%),
+    linear-gradient(180deg, #050807 0%, #030504 100%) !important;
+}
+
+.screen {
+  padding: 18px 14px 126px !important;
+  background: transparent !important;
+}
+
+/* Header */
+
+.screen-header {
+  margin-bottom: 10px !important;
+}
+
+.header-title {
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.3px;
+}
+
+.app-icon,
+.header-icon {
+  mix-blend-mode: screen;
+  background: transparent !important;
+}
+
+.app-icon {
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.header-icon {
+  width: 27px !important;
+  height: 27px !important;
+}
+
+/* Hero */
+
+.hero {
+  min-height: 145px !important;
+  margin-top: 4px !important;
+  margin-bottom: 18px !important;
+}
+
+.hero h1 {
+  font-size: 31px !important;
+  line-height: 0.97 !important;
+  letter-spacing: -1.3px !important;
+}
+
+.hero h1 span {
+  color: var(--green) !important;
+  text-shadow: 0 0 16px rgba(183, 255, 25, 0.35) !important;
+}
+
+.home-mascot {
+  width: 152px !important;
+  right: -4px !important;
+  top: 8px !important;
+  border-radius: 22px !important;
+  mix-blend-mode: screen;
+  filter:
+    drop-shadow(0 0 16px rgba(183, 255, 25, 0.18))
+    contrast(1.04)
+    saturate(1.05) !important;
+}
+
+/* Dashboard cards */
+
+.stats-grid {
+  gap: 11px !important;
+}
+
+.stat-card {
+  min-height: 102px !important;
+  padding: 13px !important;
+  border-radius: 18px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.015)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.075) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 255, 25, 0.025),
+    0 8px 22px rgba(0, 0, 0, 0.24) !important;
+}
+
+.stat-card.green {
+  border-color: rgba(112, 255, 68, 0.14) !important;
+}
+
+.stat-card.red {
+  border-color: rgba(255, 76, 76, 0.12) !important;
+}
+
+.stat-card.orange {
+  border-color: rgba(255, 159, 26, 0.12) !important;
+}
+
+.stat-top {
+  gap: 8px !important;
+  font-size: 13px !important;
+}
+
+.stat-top img {
+  width: 28px !important;
+  height: 28px !important;
+  mix-blend-mode: screen;
+}
+
+.stat-card strong {
+  font-size: 25px !important;
+}
+
+/* Main panels */
+
+.hp-card,
+.chart-preview,
+.chart-banner,
+.big-chart,
+.volume,
+.day-card,
+.whatif-hero,
+.savings-card,
+.settings-group,
+.settings-menu {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.042), rgba(255, 255, 255, 0.012)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.075) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 255, 25, 0.025),
+    0 10px 28px rgba(0, 0, 0, 0.24) !important;
+}
+
+.hp-card {
+  margin-top: 16px !important;
+}
+
+.hp-row img,
+.damage-card img,
+.whatif-card img,
+.savings-card img,
+.menu-line img,
+.cat img,
+.note-box img,
+.tiny-note img {
+  mix-blend-mode: screen;
+}
+
+/* Wallet HP */
+
+.hp-bar {
+  height: 15px !important;
+  background: rgba(183, 255, 25, 0.095) !important;
+  border: 1px solid rgba(183, 255, 25, 0.18) !important;
+}
+
+.hp-bar div {
+  background: linear-gradient(90deg, #67ff26, #d7ff21) !important;
+  box-shadow: 0 0 14px rgba(183, 255, 25, 0.42) !important;
+}
+
+/* Chart preview */
+
+.chart-preview {
+  min-height: 230px !important;
+  overflow: hidden !important;
+}
+
+.mini-chart {
+  height: 92px !important;
+}
+
+/* Bottom navigation */
+
+.bottom-nav {
+  left: 18px !important;
+  right: 18px !important;
+  bottom: 20px !important;
+  height: 66px !important;
+  padding: 7px 6px !important;
+  border-radius: 26px !important;
+  background:
+    linear-gradient(180deg, rgba(8, 13, 12, 0.96), rgba(4, 7, 6, 0.96)) !important;
+  border: 1px solid rgba(183, 255, 25, 0.12) !important;
+  box-shadow:
+    0 -8px 30px rgba(0, 0, 0, 0.55),
+    0 0 26px rgba(183, 255, 25, 0.05) !important;
+}
+
+.bottom-nav button {
+  gap: 2px !important;
+  font-size: 10px !important;
+  color: #8c9488 !important;
+}
+
+.bottom-nav button img {
+  width: 24px !important;
+  height: 24px !important;
+  opacity: 0.7 !important;
+  mix-blend-mode: screen;
+  filter: none !important;
+}
+
+.bottom-nav button.active {
+  color: var(--green) !important;
+}
+
+.bottom-nav button.active img {
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 10px rgba(183, 255, 25, 0.55)) !important;
+}
+
+/* Buttons */
+
+.primary-btn {
+  height: 54px !important;
+  border-radius: 16px !important;
+  background: linear-gradient(90deg, #aaff18, #d7ff27) !important;
+  box-shadow: 0 0 22px rgba(183, 255, 25, 0.28) !important;
+}
+
+.choice,
+.cat {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(255, 255, 255, 0.075) !important;
+}
+
+.choice.active,
+.cat.active {
+  border-color: rgba(183, 255, 25, 0.7) !important;
+  box-shadow: 0 0 16px rgba(183, 255, 25, 0.12) !important;
+}
+
+/* Mobile full screen */
+
+@media (max-width: 420px) {
+  .phone {
+    border-radius: 0 !important;
+  }
+
+  .screen {
+    padding-top: 18px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    padding-bottom: 128px !important;
+  }
+
+  .hero h1 {
+    font-size: 30px !important;
+  }
+
+  .home-mascot {
+    width: 148px !important;
+    right: -5px !important;
+  }
+}
