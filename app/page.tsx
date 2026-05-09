@@ -29,12 +29,664 @@ type AppData = {
   expenses: Expense[];
 };
 
-const STORAGE_KEY = "broke-life-tracker-v1";
+const STORAGE_KEY = "broke-life-tracker-ui-v2";
+
+const categories = [
+  { name: "Coffee", icon: "☕", label: "Coffee" },
+  { name: "Smoking", icon: "🚬", label: "Smoking" },
+  { name: "Takeouts", icon: "🍔", label: "Takeouts" },
+  { name: "Shopping", icon: "🛍", label: "Shopping" },
+  { name: "Subscriptions", icon: "💳", label: "Subs" },
+  { name: "Taxi", icon: "🚕", label: "Taxi" },
+  { name: "Custom", icon: "•••", label: "Custom" },
+];
 
 const defaultData: AppData = {
   salary: 2800,
   sideIncome: 600,
   otherIncome: 450,
+  currency: "USD",
+  fixedCosts: {
+    rent: 1200,
+    utilities: 200,
+    foodBasics: 350,
+    transport: 150,
+    phoneInternet: 80,
+  },
+  expenses: [
+    {
+      id: "1",
+      amount: 84,
+      category: "Coffee",
+      needed: "not_needed",
+      note: "Daily coffee",
+      date: new Date().toISOString(),
+    },
+    {
+      id: "2",
+      amount: 120,
+      category: "Takeouts",
+      needed: "not_needed",
+      note: "Food delivery",
+      date: new Date().toISOString(),
+    },
+    {
+      id: "3",
+      amount: 98,
+      category: "Shopping",
+      needed: "maybe",
+      note: "Random order",
+      date: new Date().toISOString(),
+    },
+  ],
+};
+
+function money(value: number, currency = "USD") {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value || 0);
+}
+
+function sameMonth(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+
+  return (
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+  );
+}
+
+function sameDay(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+
+  return (
+    date.getDate() === now.getDate() &&
+    date.getMonth() === now.getMonth() &&
+    date.getFullYear() === now.getFullYear()
+  );
+}
+
+export default function Home() {
+  const [activeTab, setActiveTab] = useState<Tab>("home");
+  const [data, setData] = useState<AppData>(defaultData);
+
+  const [amount, setAmount] = useState("25");
+  const [selectedCategory, setSelectedCategory] = useState("Coffee");
+  const [needed, setNeeded] = useState<NeededStatus>("needed");
+  const [note, setNote] = useState("");
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+
+    if (saved) {
+      try {
+        setData(JSON.parse(saved));
+      } catch {
+        setData(defaultData);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [data]);
+
+  const stats = useMemo(() => {
+    const totalIncome = data.salary + data.sideIncome + data.otherIncome;
+
+    const fixedLifeCost =
+      data.fixedCosts.rent +
+      data.fixedCosts.utilities +
+      data.fixedCosts.foodBasics +
+      data.fixedCosts.transport +
+      data.fixedCosts.phoneInternet;
+
+    const monthExpenses = data.expenses.filter((expense) =>
+      sameMonth(expense.date)
+    );
+
+    const todayExpenses = data.expenses.filter((expense) =>
+      sameDay(expense.date)
+    );
+
+    const moneyLeaks = monthExpenses
+      .filter((expense) => expense.needed === "not_needed")
+      .reduce((sum, expense) => sum + expense.amount, 0);
+
+    const maybeSpending = monthExpenses
+      .filter((expense) => expense.needed === "maybe")
+      .reduce((sum, expense) => sum + expense.amount, 0);
+
+    const neededSpending = monthExpenses
+      .filter((expense) => expense.needed === "needed")
+      .reduce((sum, expense) => sum + expense.amount, 0);
+
+    const realBalance =
+      totalIncome - fixedLifeCost - moneyLeaks - maybeSpending - neededSpending;
+
+    const leakDamage = totalIncome > 0 ? (moneyLeaks / totalIncome) * 100 : 0;
+    const walletHp = Math.max(0, Math.min(100, Math.round(100 - leakDamage)));
+
+    let status = "Stable Wallet";
+
+    if (walletHp < 20) status = "Full $BROKE Mode";
+    else if (walletHp < 40) status = "Heavy Leak";
+    else if (walletHp < 60) status = "Pressure Mode";
+    else if (walletHp < 80) status = "Small Leak";
+
+    const todayDamage = todayExpenses.reduce(
+      (sum, expense) => sum + expense.amount,
+      0
+    );
+
+    const categoryTotals = monthExpenses.reduce<Record<string, number>>(
+      (acc, expense) => {
+        acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
+        return acc;
+      },
+      {}
+    );
+
+    const biggestLeak =
+      Object.entries(categoryTotals).sort((a, b) => b[1] - a[1])[0]?.[0] ||
+      "None";
+
+    const potentialYearlySavings = moneyLeaks * 12;
+
+    return {
+      totalIncome,
+      fixedLifeCost,
+      moneyLeaks,
+      maybeSpending,
+      neededSpending,
+      realBalance,
+      walletHp,
+      status,
+      todayDamage,
+      categoryTotals,
+      biggestLeak,
+      potentialYearlySavings,
+    };
+  }, [data]);
+
+  function addExpense() {
+    const numericAmount = Number(amount);
+
+    if (!numericAmount || numericAmount <= 0) return;
+
+    const newExpense: Expense = {
+      id: crypto.randomUUID(),
+      amount: numericAmount,
+      category: selectedCategory,
+      needed,
+      note,
+      date: new Date().toISOString(),
+    };
+
+    setData((current) => ({
+      ...current,
+      expenses: [newExpense, ...current.expenses],
+    }));
+
+    setAmount("");
+    setNote("");
+    setActiveTab("home");
+  }
+
+  return (
+    <main className="app-shell">
+      <div className="noise" />
+      <div className="phone">
+        <div className="phone-glow" />
+
+        {activeTab === "home" && (
+          <section className="screen">
+            <TopBar title="$BROKE Life Tracker" />
+
+            <section className="hero">
+              <div className="hero-copy">
+                <p className="kicker">Life dashboard</p>
+                <h1>
+                  Your wallet is not broken.
+                  <span> It is leaking.</span>
+                </h1>
+                <p className="hero-sub">Track your leaks. Fix your life.</p>
+              </div>
+
+              <Mascot />
+            </section>
+
+            <section className="metric-grid">
+              <Metric
+                title="Income"
+                value={money(stats.totalIncome, data.currency)}
+                subtitle="This month"
+                tone="green"
+              />
+              <Metric
+                title="Life Cost"
+                value={money(stats.fixedLifeCost, data.currency)}
+                subtitle="This month"
+                tone="red"
+              />
+              <Metric
+                title="Money Leaks"
+                value={money(stats.moneyLeaks, data.currency)}
+                subtitle="This month"
+                tone="orange"
+              />
+              <Metric
+                title="Real Balance"
+                value={money(stats.realBalance, data.currency)}
+                subtitle="Left to stack"
+                tone="green"
+              />
+            </section>
+
+            <section className="panel wallet-panel">
+              <div className="panel-head">
+                <div>
+                  <h2>Wallet HP</h2>
+                  <p>Hold the line, fix the leaks.</p>
+                </div>
+                <span className="status-badge">{stats.status}</span>
+              </div>
+
+              <div className="hp-track">
+                <div style={{ width: `${stats.walletHp}%` }} />
+              </div>
+
+              <div className="panel-foot">
+                <span>Wallet condition</span>
+                <strong>{stats.walletHp}/100</strong>
+              </div>
+            </section>
+
+            <button className="chart-preview" onClick={() => setActiveTab("chart")}>
+              <div className="panel-head">
+                <div>
+                  <h2>$BROKE Chart</h2>
+                  <p>7D preview</p>
+                </div>
+                <span className="open-link">Open</span>
+              </div>
+
+              <MiniChart />
+
+              <div className="panel-foot">
+                <span>Today’s Damage</span>
+                <strong className="negative">
+                  -{money(stats.todayDamage, data.currency)}
+                </strong>
+              </div>
+            </button>
+          </section>
+        )}
+
+        {activeTab === "add" && (
+          <section className="screen">
+            <TopBar title="Add Expense" />
+
+            <section className="amount-panel">
+              <p className="field-label">Amount</p>
+              <div className="money-input">
+                <span>$</span>
+                <input
+                  value={amount}
+                  onChange={(event) => setAmount(event.target.value)}
+                  inputMode="decimal"
+                  placeholder="0.00"
+                />
+                <small>{data.currency}</small>
+              </div>
+            </section>
+
+            <section className="block">
+              <p className="field-label">Category</p>
+
+              <div className="category-grid">
+                {categories.map((category) => (
+                  <button
+                    key={category.name}
+                    className={
+                      selectedCategory === category.name
+                        ? "category active"
+                        : "category"
+                    }
+                    onClick={() => setSelectedCategory(category.name)}
+                  >
+                    <span>{category.icon}</span>
+                    <small>{category.label}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="block">
+              <p className="field-label">Was it needed?</p>
+
+              <div className="choice-row">
+                <button
+                  className={needed === "needed" ? "choice good active" : "choice good"}
+                  onClick={() => setNeeded("needed")}
+                >
+                  Needed
+                </button>
+                <button
+                  className={
+                    needed === "not_needed" ? "choice bad active" : "choice bad"
+                  }
+                  onClick={() => setNeeded("not_needed")}
+                >
+                  Not needed
+                </button>
+                <button
+                  className={
+                    needed === "maybe" ? "choice maybe active" : "choice maybe"
+                  }
+                  onClick={() => setNeeded("maybe")}
+                >
+                  Maybe
+                </button>
+              </div>
+            </section>
+
+            <section className="block">
+              <p className="field-label">Note optional</p>
+              <input
+                className="note-input"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="Add a quick note..."
+              />
+            </section>
+
+            <button className="add-button" onClick={addExpense}>
+              + Add Expense
+            </button>
+
+            <p className="tiny-note">
+              Track daily leaks. Small leaks sink big wallets.
+            </p>
+          </section>
+        )}
+
+        {activeTab === "chart" && (
+          <section className="screen">
+            <TopBar title="$BROKE Chart" />
+
+            <section className="quote-panel">
+              <p>You watch crypto charts every day.</p>
+              <strong>But do you watch your own $BROKE Chart?</strong>
+            </section>
+
+            <div className="range-tabs">
+              <button>Day</button>
+              <button className="active">Week</button>
+              <button>Month</button>
+            </div>
+
+            <section className="chart-panel">
+              <TradingChart />
+              <div className="volume-title">Spending Volume</div>
+              <Volume />
+
+              <div className="day-card">
+                <div className="panel-head">
+                  <div>
+                    <h2>Friday, May 9</h2>
+                    <p>Selected candle details</p>
+                  </div>
+                  <span className="status-badge danger">Leak Day</span>
+                </div>
+
+                <div className="day-grid">
+                  <Info title="Open" value={money(stats.realBalance + 132)} />
+                  <Info title="Close" value={money(stats.realBalance)} />
+                  <Info title="Daily Damage" value={`-${money(132)}`} bad />
+                  <Info title="Top Leak" value={stats.biggestLeak} />
+                </div>
+              </div>
+            </section>
+          </section>
+        )}
+
+        {activeTab === "whatif" && (
+          <section className="screen">
+            <TopBar title="What If?" />
+
+            <section className="what-hero">
+              <Mascot small />
+              <div>
+                <h2>Small changes.</h2>
+                <p>Big wins.</p>
+              </div>
+            </section>
+
+            <div className="what-list">
+              {Object.entries(stats.categoryTotals).map(([category, total]) => (
+                <WhatIfCard
+                  key={category}
+                  category={category}
+                  total={total}
+                  currency={data.currency}
+                />
+              ))}
+            </div>
+
+            <section className="savings-panel">
+              <div>
+                <span>Total Potential Savings</span>
+                <strong>{money(stats.potentialYearlySavings, data.currency)}</strong>
+                <p>per year if leaks are reduced</p>
+              </div>
+              <div className="hp-plus">+18</div>
+            </section>
+          </section>
+        )}
+
+        {activeTab === "settings" && (
+          <section className="screen">
+            <TopBar title="Settings" />
+
+            <section className="settings-panel">
+              <h2>Income Monthly</h2>
+
+              <NumberRow
+                label="Salary"
+                value={data.salary}
+                onChange={(value) =>
+                  setData((current) => ({ ...current, salary: value }))
+                }
+              />
+              <NumberRow
+                label="Side income"
+                value={data.sideIncome}
+                onChange={(value) =>
+                  setData((current) => ({ ...current, sideIncome: value }))
+                }
+              />
+              <NumberRow
+                label="Other income"
+                value={data.otherIncome}
+                onChange={(value) =>
+                  setData((current) => ({ ...current, otherIncome: value }))
+                }
+              />
+
+              <div className="total-row good">
+                <span>Total Income</span>
+                <strong>{money(stats.totalIncome, data.currency)}</strong>
+              </div>
+            </section>
+
+            <section className="settings-panel">
+              <h2>Fixed Life Costs Monthly</h2>
+
+              <NumberRow
+                label="Rent"
+                value={data.fixedCosts.rent}
+                onChange={(value) =>
+                  setData((current) => ({
+                    ...current,
+                    fixedCosts: { ...current.fixedCosts, rent: value },
+                  }))
+                }
+              />
+              <NumberRow
+                label="Utilities"
+                value={data.fixedCosts.utilities}
+                onChange={(value) =>
+                  setData((current) => ({
+                    ...current,
+                    fixedCosts: { ...current.fixedCosts, utilities: value },
+                  }))
+                }
+              />
+              <NumberRow
+                label="Food basics"
+                value={data.fixedCosts.foodBasics}
+                onChange={(value) =>
+                  setData((current) => ({
+                    ...current,
+                    fixedCosts: { ...current.fixedCosts, foodBasics: value },
+                  }))
+                }
+              />
+              <NumberRow
+                label="Transport"
+                value={data.fixedCosts.transport}
+                onChange={(value) =>
+                  setData((current) => ({
+                    ...current,
+                    fixedCosts: { ...current.fixedCosts, transport: value },
+                  }))
+                }
+              />
+              <NumberRow
+                label="Phone / Internet"
+                value={data.fixedCosts.phoneInternet}
+                onChange={(value) =>
+                  setData((current) => ({
+                    ...current,
+                    fixedCosts: {
+                      ...current.fixedCosts,
+                      phoneInternet: value,
+                    },
+                  }))
+                }
+              />
+
+              <div className="total-row bad">
+                <span>Total Fixed Costs</span>
+                <strong>{money(stats.fixedLifeCost, data.currency)}</strong>
+              </div>
+            </section>
+
+            <section className="settings-panel compact">
+              <SettingsLine title="Currency" value="USD ($)" />
+              <SettingsLine title="Daily Reminder" value="On" />
+              <SettingsLine title="Custom Categories" value="Manage" />
+              <button
+                className="delete-button"
+                onClick={() => {
+                  window.localStorage.removeItem(STORAGE_KEY);
+                  setData(defaultData);
+                }}
+              >
+                Delete My Data
+              </button>
+            </section>
+          </section>
+        )}
+
+        <BottomNav active={activeTab} setActive={setActiveTab} />
+      </div>
+    </main>
+  );
+}
+
+function TopBar({ title }: { title: string }) {
+  return (
+    <header className="topbar">
+      <div className="brand-dot">
+        <span />
+      </div>
+      <strong>{title}</strong>
+      <button className="icon-button">⌁</button>
+    </header>
+  );
+}
+
+function Mascot({ small = false }: { small?: boolean }) {
+  return (
+    <div className={small ? "mascot-box small" : "mascot-box"}>
+      <div className="frog-head">
+        <span className="eye left" />
+        <span className="eye right" />
+        <span className="mouth" />
+        <span className="cap" />
+      </div>
+    </div>
+  );
+}
+
+function Metric({
+  title,
+  value,
+  subtitle,
+  tone,
+}: {
+  title: string;
+  value: string;
+  subtitle: string;
+  tone: "green" | "red" | "orange";
+}) {
+  return (
+    <div className={`metric ${tone}`}>
+      <span>{title}</span>
+      <strong>{value}</strong>
+      <small>{subtitle}</small>
+    </div>
+  );
+}
+
+function MiniChart() {
+  const bars = [34, 56, 42, 28, 66, 72, 48, 86, 70, 94, 110, 124];
+
+  return (
+    <div className="mini-chart">
+      {bars.map((height, index) => (
+        <span
+          key={index}
+          className={index % 4 === 0 ? "down" : "up"}
+          style={{ height }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function TradingChart() {
+  const candles = [
+    { top: 20, wick: 128, body: 48, red: true },
+    { top: 46, wick: 118, body: 42, red: true },
+    { top: 72, wick: 106, body: 32, red: false },
+    { top: 62, wick: 136, body: 44, red: false },
+    { top: 90, wick: 92, body: 30, red: true },
+    { top: 110, wick: 100, body: 36, red: false },
+    { top: 100, wick: 128, body: 42, red: true },
+    { top: 134, wick: 90, body: 28, red: false },
+    { top: 128, wick: 120, body: 36, red: true },
+    { top: 148, wick: 96, body: 30, red: false },
+  ];
+
+  return (
+    <div cla  otherIncome: 450,
   currency: "USD",
   fixedCosts: {
     rent: 1200,
