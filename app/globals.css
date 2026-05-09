@@ -1418,3 +1418,77 @@ body {
   height: 52px !important;
   margin-top: 14px !important;
 }
+/* ===== VISUAL FIX V5 — FIX APP NAV POSITION ===== */
+
+/* Запрещаем скролл всей страницы */
+html,
+body {
+  height: 100%;
+  overflow: hidden !important;
+}
+
+/* Всё приложение занимает только видимую область */
+.app-shell {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Телефон/экран не должен сам скроллиться */
+.phone {
+  height: 100dvh !important;
+  max-height: none !important;
+  overflow: hidden !important;
+  border-radius: 0 !important;
+}
+
+/* Скроллится только содержимое экрана */
+.screen {
+  height: 100dvh !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-bottom: 112px !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Нижнее меню приложения фиксируем отдельно от контента */
+.bottom-nav {
+  position: fixed !important;
+  left: 22px !important;
+  right: 22px !important;
+  bottom: 14px !important;
+  height: 66px !important;
+  z-index: 9999 !important;
+  transform: none !important;
+}
+
+/* Чтобы Add Expense не прятался под меню */
+.tiny-note {
+  margin-bottom: 22px !important;
+}
+
+/* На больших экранах оставляем телефон по центру */
+@media (min-width: 421px) {
+  .app-shell {
+    padding: 18px 10px !important;
+  }
+
+  .phone {
+    max-width: 430px !important;
+    height: calc(100dvh - 36px) !important;
+    border-radius: 34px !important;
+  }
+
+  .bottom-nav {
+    position: absolute !important;
+    left: 18px !important;
+    right: 18px !important;
+    bottom: 18px !important;
+  }
+
+  .screen {
+    height: 100% !important;
+  }
+}
