@@ -1343,3 +1343,78 @@ body {
     radial-gradient(circle at bottom left, rgba(183, 255, 25, 0.025), transparent 34%),
     linear-gradient(180deg, #040605 0%, #020302 100%) !important;
 }
+/* ===== VISUAL FIX V4 — MOBILE NAV FIX ===== */
+
+/* Убираем лишнюю прокрутку из-за слишком большого нижнего отступа */
+.screen {
+  padding-bottom: 92px !important;
+}
+
+/* Возвращаем нижнее меню приложения выше */
+.bottom-nav {
+  bottom: 18px !important;
+  left: 18px !important;
+  right: 18px !important;
+  height: 66px !important;
+  z-index: 50 !important;
+}
+
+/* На мобильном браузере держим меню выше системной панели телефона */
+@media (max-width: 420px) {
+  .screen {
+    padding-bottom: 102px !important;
+  }
+
+  .bottom-nav {
+    bottom: 58px !important;
+    height: 64px !important;
+  }
+}
+
+/* Исправление кнопки Needed — сейчас текст почти не видно */
+.choice.active {
+  background: linear-gradient(90deg, #aaff18, #d7ff27) !important;
+  color: #071006 !important;
+  border-color: rgba(183, 255, 25, 0.9) !important;
+  box-shadow: 0 0 18px rgba(183, 255, 25, 0.25) !important;
+}
+
+/* Неактивные кнопки сделать читаемее */
+.choice {
+  color: #f2f6ef !important;
+}
+
+/* Категории чуть компактнее, чтобы экран Add Expense лучше помещался */
+.category-grid {
+  gap: 8px !important;
+}
+
+.cat {
+  min-height: 78px !important;
+  padding: 7px 4px !important;
+}
+
+.cat img {
+  width: 34px !important;
+  height: 34px !important;
+}
+
+.cat span {
+  font-size: 10px !important;
+}
+
+/* Поле суммы чуть ниже по высоте */
+.amount-input {
+  padding: 11px 14px !important;
+}
+
+.amount-input span,
+.amount-input strong {
+  font-size: 26px !important;
+}
+
+/* Кнопка Add Expense компактнее */
+.primary-btn {
+  height: 52px !important;
+  margin-top: 14px !important;
+}
