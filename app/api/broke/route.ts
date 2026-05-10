@@ -93,6 +93,27 @@ type BadgeItem = BadgeDefinition & {
   earnedAt: string | null;
 };
 
+type BadgeMetrics = {
+  telegramId: number;
+  monthExpenses: Expense[];
+  totalExpenses: number;
+  totalIncome: number;
+  fixedCosts: number;
+  monthSpent: number;
+  totalLeaks: number;
+  availableAfterLifeCost: number;
+  realBalance: number;
+  walletHp: number;
+  trackedCount: number;
+  streak: Streak;
+  challengesStarted: number;
+  challengesCompleted: number;
+  totalXp: number;
+  trustLevel: number;
+  top10Daily: boolean;
+  top10Weekly: boolean;
+};
+
 type XpAction =
   | "open_app"
   | "add_expense"
@@ -287,6 +308,126 @@ const defaultBadges: BadgeDefinition[] = [
     title: "Streak",
     description: "Reach a 7-day tracking streak.",
     icon: "/badge_streak.png",
+  },
+  {
+    id: "first_expense",
+    title: "First Expense",
+    description: "Track your first expense.",
+    icon: "/badge_first_expense.png",
+  },
+  {
+    id: "10_expenses",
+    title: "10 Logs",
+    description: "Track 10 expenses.",
+    icon: "/badge_10_expenses.png",
+  },
+  {
+    id: "50_expenses",
+    title: "50 Logs",
+    description: "Track 50 expenses.",
+    icon: "/badge_50_expenses.png",
+  },
+  {
+    id: "100_expenses",
+    title: "100 Logs",
+    description: "Track 100 expenses.",
+    icon: "/badge_100_expenses.png",
+  },
+  {
+    id: "daily_tracker",
+    title: "Daily Tracker",
+    description: "Track at least one expense today.",
+    icon: "/badge_daily_tracker.png",
+  },
+  {
+    id: "3_day_streak",
+    title: "3 Day Streak",
+    description: "Reach a 3-day tracking streak.",
+    icon: "/badge_3_day_streak.png",
+  },
+  {
+    id: "7_day_streak",
+    title: "7 Day Streak",
+    description: "Reach a 7-day tracking streak.",
+    icon: "/badge_7_day_streak.png",
+  },
+  {
+    id: "14_day_streak",
+    title: "14 Day Streak",
+    description: "Reach a 14-day tracking streak.",
+    icon: "/badge_14_day_streak.png",
+  },
+  {
+    id: "30_day_streak",
+    title: "30 Day Streak",
+    description: "Reach a 30-day tracking streak.",
+    icon: "/badge_30_day_streak.png",
+  },
+  {
+    id: "streak_saver",
+    title: "Streak Saver",
+    description: "Keep a streak alive after building momentum.",
+    icon: "/badge_streak_saver.png",
+  },
+  {
+    id: "first_challenge",
+    title: "First Challenge",
+    description: "Start your first leak challenge.",
+    icon: "/badge_first_challenge.png",
+  },
+  {
+    id: "challenge_complete",
+    title: "Challenge Complete",
+    description: "Complete your first challenge.",
+    icon: "/badge_challenge_complete.png",
+  },
+  {
+    id: "3_challenges",
+    title: "3 Challenges",
+    description: "Complete 3 challenges.",
+    icon: "/badge_3_challenges.png",
+  },
+  {
+    id: "5_challenges",
+    title: "5 Challenges",
+    description: "Complete 5 challenges.",
+    icon: "/badge_5_challenges.png",
+  },
+  {
+    id: "challenge_master",
+    title: "Challenge Master",
+    description: "Complete 10 challenges.",
+    icon: "/badge_challenge_master.png",
+  },
+  {
+    id: "first_100_xp",
+    title: "100 XP",
+    description: "Earn your first 100 XP.",
+    icon: "/badge_first_100_xp.png",
+  },
+  {
+    id: "1000_xp",
+    title: "1000 XP",
+    description: "Earn 1000 total XP.",
+    icon: "/badge_1000_xp.png",
+  },
+  {
+    id: "top_10_daily",
+    title: "Daily Top 10",
+    description: "Reach top 10 in Daily Movers.",
+    icon: "/badge_top_10_daily.png",
+  },
+  {
+    id: "top_10_weekly",
+    title: "Weekly Top 10",
+    description: "Reach top 10 in Weekly Discipline.",
+    icon: "/badge_top_10_weekly.png",
+  },
+  {
+    id: "trust_level_3",
+    title: "Trust Level 3",
+    description: "Reach Trust Level 3.",
+    icon: "/badge_trust_level_3.png",
   },
 ];
 
@@ -656,6 +797,46 @@ function dbToLeaderboardProfile(row: Record<string, unknown>, rank?: number): Le
   };
 }
 
+async function isUserTop10Daily(telegramId: number) {
+  const today = dateKey(new Date());
+
+  try {
+    const rows = (await supabaseFetch(
+      `broke_leaderboard_profiles?public_leaderboard=eq.true&daily_key=eq.${today}&select=telegram_id&order=daily_xp.desc&limit=10`
+    )) as Record<string, unknown>[];
+
+    return rows.some((row) => Number(row.telegram_id) === telegramId);
+  } catch {
+    return false;
+  }
+}
+
+async function isUserTop10Weekly(telegramId: number) {
+  const week = getWeekKey(new Date());
+
+  try {
+    const rows = (await supabaseFetch(
+      `broke_leaderboard_profiles?public_leaderboard=eq.true&weekly_key=eq.${week}&select=telegram_id&order=weekly_xp.desc&limit=10`
+    )) as Record<string, unknown>[];
+
+    return rows.some((row) => Number(row.telegram_id) === telegramId);
+  } catch {
+    return false;
+  }
+}
+
+async function getStartedChallengeCount(telegramId: number) {
+  try {
+    const rows = (await supabaseFetch(
+      `broke_user_challenges?telegram_id=eq.${telegramId}&select=id`
+    )) as Record<string, unknown>[];
+
+    return rows.length;
+  } catch {
+    return 0;
+  }
+}
+
 async function getCompletedChallengeCount(telegramId: number) {
   try {
     const rows = (await supabaseFetch(
@@ -953,12 +1134,12 @@ async function awardBadges(telegramId: number, badgeIds: string[]) {
   }
 }
 
-function shouldUnlockBadge(
-  badgeId: string,
+async function buildBadgeMetrics(
+  telegramId: number,
   settings: Settings,
   expenses: Expense[],
   streak: Streak
-) {
+): Promise<BadgeMetrics> {
   const monthExpenses = getCurrentMonthExpenses(expenses);
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
@@ -977,7 +1158,58 @@ function shouldUnlockBadge(
     5,
     100
   );
-  const trackedCount = monthExpenses.length;
+
+  const [challengesStarted, challengesCompleted, rawProfile, top10Daily, top10Weekly] =
+    await Promise.all([
+      getStartedChallengeCount(telegramId),
+      getCompletedChallengeCount(telegramId),
+      getRawLeaderboardProfile(telegramId),
+      isUserTop10Daily(telegramId),
+      isUserTop10Weekly(telegramId),
+    ]);
+
+  return {
+    telegramId,
+    monthExpenses,
+    totalExpenses: expenses.length,
+    totalIncome,
+    fixedCosts,
+    monthSpent,
+    totalLeaks,
+    availableAfterLifeCost,
+    realBalance,
+    walletHp,
+    trackedCount: monthExpenses.length,
+    streak,
+    challengesStarted,
+    challengesCompleted,
+    totalXp: Number(rawProfile?.total_xp ?? 0),
+    trustLevel: Number(rawProfile?.trust_level ?? getTrustLevel(streak)),
+    top10Daily,
+    top10Weekly,
+  };
+}
+
+function shouldUnlockBadge(badgeId: string, metrics: BadgeMetrics) {
+  const {
+    monthExpenses,
+    totalExpenses,
+    totalLeaks,
+    availableAfterLifeCost,
+    realBalance,
+    monthSpent,
+    walletHp,
+    trackedCount,
+    streak,
+    challengesStarted,
+    challengesCompleted,
+    totalXp,
+    trustLevel,
+    top10Daily,
+    top10Weekly,
+  } = metrics;
+
+  const activeToday = streak.lastActiveDate === dateKey(new Date());
 
   switch (badgeId) {
     case "stable_wallet":
@@ -1000,6 +1232,51 @@ function shouldUnlockBadge(
       return trackedCount >= 5 && streak.currentStreak >= 3 && walletHp >= 70 && totalLeaks <= availableAfterLifeCost * 0.2;
     case "streak":
       return streak.bestStreak >= 7;
+
+    case "first_expense":
+      return totalExpenses >= 1;
+    case "10_expenses":
+      return totalExpenses >= 10;
+    case "50_expenses":
+      return totalExpenses >= 50;
+    case "100_expenses":
+      return totalExpenses >= 100;
+    case "daily_tracker":
+      return activeToday && totalExpenses >= 1;
+
+    case "3_day_streak":
+      return streak.bestStreak >= 3;
+    case "7_day_streak":
+      return streak.bestStreak >= 7;
+    case "14_day_streak":
+      return streak.bestStreak >= 14;
+    case "30_day_streak":
+      return streak.bestStreak >= 30;
+    case "streak_saver":
+      return streak.bestStreak >= 3 && streak.currentStreak >= 1 && activeToday;
+
+    case "first_challenge":
+      return challengesStarted >= 1;
+    case "challenge_complete":
+      return challengesCompleted >= 1;
+    case "3_challenges":
+      return challengesCompleted >= 3;
+    case "5_challenges":
+      return challengesCompleted >= 5;
+    case "challenge_master":
+      return challengesCompleted >= 10;
+
+    case "first_100_xp":
+      return totalXp >= 100;
+    case "1000_xp":
+      return totalXp >= 1000;
+    case "top_10_daily":
+      return top10Daily;
+    case "top_10_weekly":
+      return top10Weekly;
+    case "trust_level_3":
+      return trustLevel >= 3;
+
     default:
       return false;
   }
@@ -1015,8 +1292,9 @@ async function getBadgeState(
   const existing = await getUserBadges(telegramId);
   const earnedSet = new Set(existing.map((item) => item.badgeId));
 
+  const metrics = await buildBadgeMetrics(telegramId, settings, expenses, streak);
   const unlockedNow = defaultBadges
-    .filter((badge) => !earnedSet.has(badge.id) && shouldUnlockBadge(badge.id, settings, expenses, streak))
+    .filter((badge) => !earnedSet.has(badge.id) && shouldUnlockBadge(badge.id, metrics))
     .map((badge) => badge.id);
 
   if (unlockedNow.length) {
