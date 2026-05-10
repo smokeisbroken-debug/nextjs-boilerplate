@@ -788,35 +788,32 @@ function ChartScreen({
       </section>
 
       <section className="day-card">
-        <div className="day-title">
-          <strong>Today</strong>
-          <img src={A.calendar} alt="" />
-        </div>
-
-        <div className="day-info">
-        <div className="day-info">
-  <div>
-    <span>Open</span>
-    <b>{money(selectedDay.open, settings.currency)}</b>
+  <div className="day-title">
+    <strong>Today</strong>
+    <img src={A.calendar} alt="" />
   </div>
 
-  <div>
-    <span>Close</span>
-    <b>{money(selectedDay.close, settings.currency)}</b>
-  </div>
+  <div className="day-info">
+    <div>
+      <span>Open</span>
+      <b>{money(selectedDay.open, settings.currency)}</b>
+    </div>
 
-  <div>
-    <span>Daily Damage</span>
-    <b className="bad">
-      -{money(selectedDay.spent, settings.currency)}
-    </b>
+    <div>
+      <span>Close</span>
+      <b>{money(selectedDay.close, settings.currency)}</b>
+    </div>
+
+    <div>
+      <span>Daily Damage</span>
+      <b className="bad">
+        {selectedDay.spent > 0
+          ? `-${money(selectedDay.spent, settings.currency)}`
+          : money(0, settings.currency)}
+      </b>
+    </div>
   </div>
-</div>
-            <span>Daily Damage</span>
-            <b className="bad">-{money(selectedDay.spent, settings.currency)}</b>
-          </div>
-        </div>
-      </section>
+</section>
     </div>
   );
 }
