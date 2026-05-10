@@ -1520,16 +1520,18 @@ export async function POST(request: NextRequest) {
       const streak = await getAndUpdateStreak(telegramId, expenses);
       const challengeState = await getChallengeState(telegramId, expenses);
       await awardChallengeCompletionXp(telegramId, user, streak, challengeState);
-      await awardXp(telegramId, user, "add_expense", streak);
+      let xpAwarded = 0;
+
+      xpAwarded += await awardXp(telegramId, user, "add_expense", streak);
 
       if (expense.note.trim()) {
-        await awardXp(telegramId, user, "add_note", streak);
+        xpAwarded += await awardXp(telegramId, user, "add_note", streak);
       }
 
-      await awardXp(telegramId, user, "mark_need_type", streak);
+      xpAwarded += await awardXp(telegramId, user, "mark_need_type", streak);
 
       if (streak.lastActiveDate === dateKey(new Date())) {
-        await awardXp(telegramId, user, "daily_streak", streak, dateKey(new Date()));
+        xpAwarded += await awardXp(telegramId, user, "daily_streak", streak, dateKey(new Date()));
       }
 
       const badges = await getBadgeState(telegramId, user, settings, expenses, streak);
@@ -1541,6 +1543,7 @@ export async function POST(request: NextRequest) {
         streak,
         badges,
         leaderboard,
+        xpAwarded,
         ...challengeState,
       });
     }
@@ -1570,7 +1573,7 @@ export async function POST(request: NextRequest) {
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
       const challengeState = await getChallengeState(telegramId, expenses);
-      await awardXp(telegramId, user, "start_challenge", streak, String(body.challengeId));
+      const xpAwarded = await awardXp(telegramId, user, "start_challenge", streak, String(body.challengeId));
       await awardChallengeCompletionXp(telegramId, user, streak, challengeState);
       const badges = await getBadgeState(telegramId, user, settings, expenses, streak);
       const leaderboard = await getLeaderboardState(telegramId, user, streak);
@@ -1579,6 +1582,7 @@ export async function POST(request: NextRequest) {
         ok: true,
         badges,
         leaderboard,
+        xpAwarded,
         ...challengeState,
       });
     }
