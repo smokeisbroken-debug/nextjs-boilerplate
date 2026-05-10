@@ -164,6 +164,13 @@ type TelegramUser = {
   photo_url?: string;
 };
 
+type WebAuthSession = {
+  user: TelegramUser;
+  expiresAt: number;
+};
+
+const WEB_AUTH_COOKIE = "broke_tg_session";
+
 const defaultSettings: Settings = {
   currency: "USD",
   dailyReminder: true,
@@ -619,6 +626,76 @@ function verifyTelegramInitData(initData: string) {
 
   return JSON.parse(userRaw) as TelegramUser;
 }
+
+function getWebAuthSecret() {
+  return process.env.WEB_AUTH_SECRET || getEnv("TELEGRAM_BOT_TOKEN");
+}
+
+function signWebAuthPayload(payloadBase64: string) {
+  return crypto
+    .createHmac("sha256", getWebAuthSecret())
+    .update(payloadBase64)
+    .digest("base64url");
+}
+
+function safeCompare(a: string, b: string) {
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
+
+  if (aBuffer.length !== bBuffer.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(aBuffer, bBuffer);
+}
+
+function parseWebAuthCookie(request: NextRequest): TelegramUser | null {
+  const raw = request.cookies.get(WEB_AUTH_COOKIE)?.value;
+
+  if (!raw) return null;
+
+  const [payloadBase64, signature] = raw.split(".");
+
+  if (!payloadBase64 || !signature) return null;
+
+  const expectedSignature = signWebAuthPayload(payloadBase64);
+
+  if (!safeCompare(signature, expectedSignature)) {
+    return null;
+  }
+
+  try {
+    const session = JSON.parse(
+      Buffer.from(payloadBase64, "base64url").toString("utf8")
+    ) as WebAuthSession;
+
+    if (!session.user?.id || Date.now() > session.expiresAt) {
+      return null;
+    }
+
+    return session.user;
+  } catch {
+    return null;
+  }
+}
+
+function getAuthenticatedTelegramUser(request: NextRequest, body: Record<string, unknown>) {
+  const initData = String(body.initData || "");
+
+  if (initData) {
+    return verifyTelegramInitData(initData);
+  }
+
+  const webUser = parseWebAuthCookie(request);
+
+  if (webUser) {
+    return webUser;
+  }
+
+  throw new Error("Missing Telegram auth. Open in Telegram or login with Telegram on web.");
+}
+
+
 
 function settingsToDb(telegramId: number, settings: Settings) {
   return {
@@ -1881,6 +1958,7 @@ export async function GET(request: NextRequest) {
       TELEGRAM_BOT_TOKEN: hasEnv("TELEGRAM_BOT_TOKEN"),
       SUPABASE_URL: hasEnv("SUPABASE_URL"),
       SUPABASE_SERVICE_ROLE_KEY: hasEnv("SUPABASE_SERVICE_ROLE_KEY"),
+      WEB_AUTH_SECRET: hasEnv("WEB_AUTH_SECRET"),
     },
   };
 
@@ -1926,7 +2004,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const action = String(body.action || "");
-    const user = verifyTelegramInitData(String(body.initData || ""));
+    const user = getAuthenticatedTelegramUser(request, body as Record<string, unknown>);
     const telegramId = user.id;
 
     await upsertUser(user);
