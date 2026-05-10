@@ -4223,3 +4223,280 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
     padding: 4px 7px;
   }
 }
+/* ===== V35 DESKTOP / FULL-WIDTH WEB DEMO MODE ===== */
+/* Paste at the very bottom of app/globals.css.
+   This is safe for Telegram mobile because it only activates on wide screens. */
+
+@media (min-width: 900px) {
+  html,
+  body {
+    min-height: 100%;
+    overflow-x: hidden !important;
+  }
+
+  .app-shell {
+    width: 100% !important;
+    min-height: 100vh !important;
+    padding: 22px !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    background:
+      radial-gradient(circle at 12% 0%, rgba(183, 255, 25, 0.12), transparent 34%),
+      radial-gradient(circle at 88% 12%, rgba(183, 255, 25, 0.09), transparent 30%),
+      linear-gradient(180deg, #061306 0%, #020402 100%) !important;
+  }
+
+  .phone {
+    width: min(1480px, calc(100vw - 44px)) !important;
+    max-width: 1480px !important;
+    min-height: calc(100vh - 44px) !important;
+    height: auto !important;
+    margin: 0 auto !important;
+    border-radius: 34px !important;
+    overflow: visible !important;
+    border: 1px solid rgba(183, 255, 25, 0.12) !important;
+    box-shadow:
+      0 32px 90px rgba(0, 0, 0, 0.46),
+      inset 0 0 0 1px rgba(183, 255, 25, 0.035) !important;
+  }
+
+  .screen {
+    width: 100% !important;
+    max-width: none !important;
+    min-height: calc(100vh - 44px) !important;
+    padding: 28px 28px 120px !important;
+  }
+
+  .loading-screen,
+  .onboarding-screen {
+    max-width: 720px !important;
+    margin: 0 auto !important;
+  }
+
+  .header {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 40 !important;
+    margin: -28px -28px 22px !important;
+    padding: 18px 28px !important;
+    background: rgba(2, 4, 2, 0.72) !important;
+    border-bottom: 1px solid rgba(183, 255, 25, 0.10) !important;
+    backdrop-filter: blur(18px) !important;
+  }
+
+  .hero {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.05fr) minmax(260px, 430px) !important;
+    align-items: center !important;
+    gap: 28px !important;
+    min-height: 330px !important;
+  }
+
+  .hero h1 {
+    font-size: clamp(56px, 6vw, 104px) !important;
+    line-height: 0.92 !important;
+    max-width: 760px !important;
+  }
+
+  .home-mascot {
+    width: min(420px, 32vw) !important;
+    max-height: 420px !important;
+    justify-self: center !important;
+  }
+
+  .stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 18px !important;
+  }
+
+  .stat-card {
+    min-height: 190px !important;
+    padding: 22px !important;
+  }
+
+  .stat-card strong {
+    font-size: clamp(34px, 3.2vw, 54px) !important;
+  }
+
+  .tg-status {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .tg-status > div {
+    min-height: 76px !important;
+  }
+
+  .tg-status .tg-status-wide {
+    grid-column: span 2 !important;
+  }
+
+  .streak-card,
+  .hp-card,
+  .wallet-insights-panel,
+  .badges-strip,
+  .share-card,
+  .chart-preview,
+  .tracked-panel,
+  .leaderboard-panel,
+  .challenges-panel,
+  .whatif-total-card,
+  .whatif-hero,
+  .settings-card,
+  .day-card,
+  .volume,
+  .big-chart,
+  .chart-banner {
+    max-width: none !important;
+  }
+
+  .badges-strip,
+  .hp-card,
+  .wallet-insights-panel,
+  .share-card,
+  .chart-preview {
+    margin-top: 18px !important;
+  }
+
+  .wallet-insight-main {
+    grid-template-columns: 66px 1fr !important;
+    padding: 18px !important;
+  }
+
+  .wallet-insight-main img {
+    width: 62px !important;
+    height: 62px !important;
+  }
+
+  .wallet-insight-main strong {
+    font-size: 22px !important;
+  }
+
+  .wallet-insight-main p {
+    font-size: 16px !important;
+  }
+
+  .wallet-insight-main small {
+    font-size: 13px !important;
+  }
+
+  .chart-preview {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 420px) !important;
+    gap: 18px !important;
+    align-items: stretch !important;
+  }
+
+  .chart-preview .section-title {
+    grid-column: 1 / -1 !important;
+  }
+
+  .damage-card {
+    min-height: 220px !important;
+  }
+
+  .recent-list,
+  .settings-grid,
+  .category-summary-list,
+  .whatif-list,
+  .challenge-grid,
+  .leaderboard-list,
+  .badge-vault-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .add-card,
+  .settings-card {
+    max-width: 980px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .amount-box input {
+    font-size: clamp(46px, 5vw, 76px) !important;
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+  }
+
+  .type-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .big-chart {
+    min-height: 420px !important;
+  }
+
+  .chart-lines {
+    min-height: 360px !important;
+  }
+
+  .day-info {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .whatif-hero {
+    display: grid !important;
+    grid-template-columns: 220px 1fr !important;
+    align-items: center !important;
+  }
+
+  .whatif-hero img {
+    width: 200px !important;
+    height: 200px !important;
+  }
+
+  .whatif-hero h2 {
+    font-size: clamp(42px, 4vw, 72px) !important;
+  }
+
+  .bottom-nav {
+    position: fixed !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: 24px !important;
+    transform: translateX(-50%) !important;
+    width: min(760px, calc(100vw - 72px)) !important;
+    max-width: 760px !important;
+    z-index: 90 !important;
+    border-radius: 28px !important;
+  }
+
+  .app-toast {
+    bottom: 112px !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  .screen {
+    padding-left: 40px !important;
+    padding-right: 40px !important;
+  }
+
+  .hero {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 500px) !important;
+  }
+
+  .home-mascot {
+    width: min(480px, 31vw) !important;
+  }
+
+  .settings-menu,
+  .leaderboard-list,
+  .challenge-grid,
+  .whatif-list,
+  .badge-vault-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 899px) {
+  /* Explicitly keep the Telegram/mobile layout untouched. */
+}
