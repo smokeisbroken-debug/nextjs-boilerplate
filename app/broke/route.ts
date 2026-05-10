@@ -68,6 +68,10 @@ function getEnv(name: string) {
   return value;
 }
 
+function hasEnv(name: string) {
+  return Boolean(process.env[name]);
+}
+
 function getSupabaseHeaders() {
   const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -114,13 +118,13 @@ function verifyTelegramInitData(initData: string) {
     .digest("hex");
 
   if (calculatedHash !== hash) {
-    throw new Error("Invalid Telegram initData hash");
+    throw new Error("Invalid Telegram initData hash. Check TELEGRAM_BOT_TOKEN in Vercel.");
   }
 
   const userRaw = params.get("user");
 
   if (!userRaw) {
-    throw new Error("Telegram user not found");
+    throw new Error("Telegram user not found in initData");
   }
 
   return JSON.parse(userRaw) as TelegramUser;
@@ -192,7 +196,13 @@ async function supabaseFetch(path: string, options: RequestInit = {}) {
     return null;
   }
 
-  return response.json();
+  const text = await response.text();
+
+  if (!text) {
+    return null;
+  }
+
+  return JSON.parse(text);
 }
 
 async function upsertUser(user: TelegramUser) {
@@ -299,6 +309,18 @@ async function resetData(telegramId: number) {
   });
 
   await saveSettings(telegramId, defaultSettings);
+}
+
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    route: "/api/broke",
+    env: {
+      TELEGRAM_BOT_TOKEN: hasEnv("TELEGRAM_BOT_TOKEN"),
+      SUPABASE_URL: hasEnv("SUPABASE_URL"),
+      SUPABASE_SERVICE_ROLE_KEY: hasEnv("SUPABASE_SERVICE_ROLE_KEY"),
+    },
+  });
 }
 
 export async function POST(request: NextRequest) {
