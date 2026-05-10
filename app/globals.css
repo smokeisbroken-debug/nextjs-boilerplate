@@ -5515,3 +5515,87 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
     width: 350px;
   }
 }
+/* ===== V37.3 COMMUNITY READ-ONLY SIDEBAR ===== */
+/* Paste at the very bottom of app/globals.css, after the previous community CSS. */
+
+@media (min-width: 1180px) {
+  .app-shell-with-community {
+    padding-right: 318px !important;
+  }
+
+  .app-shell-with-community .phone {
+    width: min(1300px, calc(100vw - 342px)) !important;
+  }
+
+  .community-live-sidebar {
+    width: 288px;
+  }
+
+  .community-live-card {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+  }
+
+  .community-live-card header {
+    padding: 12px;
+  }
+
+  .community-live-feed {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 0;
+    gap: 8px;
+    overflow-y: auto;
+    padding: 12px;
+    scrollbar-width: thin;
+    scroll-behavior: smooth;
+  }
+
+  .community-live-footer {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px 12px;
+    border-top: 1px solid rgba(183, 255, 25, 0.10);
+    background: rgba(0, 0, 0, 0.16);
+  }
+
+  .community-live-footer strong {
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 900;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0.25px;
+  }
+
+  .community-live-footer p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .community-live-footer small {
+    color: #ff7f7f;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+
+  .community-live-form {
+    display: none !important;
+  }
+}
+
+@media (min-width: 1500px) {
+  .app-shell-with-community {
+    padding-right: 336px !important;
+  }
+
+  .app-shell-with-community .phone {
+    width: min(1380px, calc(100vw - 360px)) !important;
+  }
+
+  .community-live-sidebar {
+    width: 306px;
+  }
+}
