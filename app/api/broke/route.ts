@@ -9,6 +9,7 @@ type NeedType = "Needed" | "Not needed" | "Maybe";
 type Settings = {
   currency: Currency;
   dailyReminder: boolean;
+  onboardingCompleted?: boolean;
   income: {
     salary: number;
     side: number;
@@ -104,6 +105,7 @@ type TelegramUser = {
 const defaultSettings: Settings = {
   currency: "USD",
   dailyReminder: true,
+  onboardingCompleted: false,
   income: {
     salary: 2800,
     side: 600,
@@ -335,6 +337,7 @@ function settingsToDb(telegramId: number, settings: Settings) {
     telegram_id: telegramId,
     currency: settings.currency,
     daily_reminder: settings.dailyReminder,
+    onboarding_completed: Boolean(settings.onboardingCompleted),
     income_salary: settings.income.salary,
     income_side: settings.income.side,
     income_other: settings.income.other,
@@ -351,6 +354,7 @@ function dbToSettings(row: Record<string, unknown>): Settings {
   return {
     currency: (row.currency as Currency) || "USD",
     dailyReminder: Boolean(row.daily_reminder),
+    onboardingCompleted: Boolean(row.onboarding_completed),
     income: {
       salary: Number(row.income_salary ?? 0),
       side: Number(row.income_side ?? 0),
