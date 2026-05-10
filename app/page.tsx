@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, SetStateAction, FormEvent } from "react";
 
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
 type NeedType = "Needed" | "Not needed" | "Maybe";
@@ -142,6 +142,15 @@ type WalletInsight = {
   detail: string;
   icon: string;
   tone: "green" | "orange" | "red" | "gold";
+};
+
+type CommunityMessage = {
+  id: string;
+  senderName: string;
+  username: string | null;
+  text: string;
+  source: "telegram" | "web" | "system";
+  createdAt: string;
 };
 
 type AppToast = {
@@ -1951,7 +1960,7 @@ export default function Home() {
   };
 
   return (
-    <main className="app-shell">
+    <main className="app-shell app-shell-with-community">
       <section className="phone">
         {!loaded && (
           <div className="screen loading-screen">
@@ -2069,11 +2078,190 @@ export default function Home() {
 
         {toast && <AppToastView toast={toast} />}
       </section>
+
+      {loaded && onboardingCompleted && <CommunityLiveSidebar telegram={telegram} />}
     </main>
   );
 }
 
 
+
+
+function CommunityLiveSidebar({ telegram }: { telegram: TelegramState }) {
+  const [messages, setMessages] = useState<CommunityMessage[]>([]);
+  const [draft, setDraft] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "sending" | "error">("idle");
+  const [error, setError] = useState("");
+
+  const fallbackMessages: CommunityMessage[] = [
+    {
+      id: "fallback-1",
+      senderName: "$BROKE",
+      username: "SmokeIsBroke",
+      text: "Community Live will show recent Telegram group messages once the bot is connected.",
+      source: "system",
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: "fallback-2",
+      senderName: "$BROKE",
+      username: "SmokeIsBroke",
+      text: "Website visitors can send a message to the Telegram group through the bot.",
+      source: "system",
+      createdAt: new Date().toISOString(),
+    },
+  ];
+
+  const visibleMessages = messages.length ? messages : fallbackMessages;
+
+  const authorName =
+    telegram.user?.username
+      ? `@${telegram.user.username}`
+      : telegram.user?.first_name || displayName.trim() || "Web visitor";
+
+  async function loadMessages() {
+    try {
+      setStatus((prev) => (prev === "sending" ? prev : "loading"));
+      const response = await fetch("/api/community", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Community feed unavailable");
+      }
+
+      setMessages(data.messages || []);
+      setError("");
+      setStatus("idle");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Community feed unavailable");
+      setStatus("error");
+    }
+  }
+
+  useEffect(() => {
+    loadMessages();
+
+    const interval = window.setInterval(() => {
+      loadMessages();
+    }, 8000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  async function sendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const text = draft.trim();
+
+    if (!text) return;
+
+    try {
+      setStatus("sending");
+      const response = await fetch("/api/community", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "send",
+          text,
+          senderName: authorName,
+          username: telegram.user?.username || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Message was not sent");
+      }
+
+      setDraft("");
+      setMessages(data.messages || []);
+      setError("");
+      setStatus("idle");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Message was not sent");
+      setStatus("error");
+    }
+  }
+
+  return (
+    <aside className="community-live-sidebar">
+      <div className="community-live-card">
+        <header>
+          <div>
+            <span>$BROKE Community</span>
+            <strong>Live Telegram</strong>
+          </div>
+
+          <a
+            href="https://t.me/SmokeIsBroke"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Open TG
+          </a>
+        </header>
+
+        <div className="community-live-feed">
+          {visibleMessages.map((message) => (
+            <article
+              className={`community-message ${message.source}`}
+              key={message.id}
+            >
+              <div>
+                <strong>{message.senderName}</strong>
+                <time>{formatCommunityTime(message.createdAt)}</time>
+              </div>
+              <p>{message.text}</p>
+            </article>
+          ))}
+        </div>
+
+        <form className="community-live-form" onSubmit={sendMessage}>
+          {!telegram.user && (
+            <input
+              value={displayName}
+              onChange={(event) => setDisplayName(event.target.value)}
+              placeholder="Name / @username"
+              maxLength={32}
+            />
+          )}
+
+          <textarea
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            placeholder="Write to the community..."
+            maxLength={500}
+          />
+
+          <button type="submit" disabled={status === "sending" || !draft.trim()}>
+            {status === "sending" ? "Sending..." : "Send to TG"}
+          </button>
+
+          {error && <small>{error}</small>}
+        </form>
+      </div>
+    </aside>
+  );
+}
+
+function formatCommunityTime(value: string) {
+  try {
+    return new Intl.DateTimeFormat("en", {
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value));
+  } catch {
+    return "";
+  }
+}
 
 function AppToastView({ toast }: { toast: AppToast }) {
   return (
