@@ -2422,3 +2422,182 @@ img {
     margin-bottom: 8px;
   }
 }
+/* ===== V21 COMPACT STREAK CARD FIX ===== */
+/* Fixes oversized streak images on Home. Paste after all previous CSS. */
+
+section.streak-card {
+  margin: 10px 0 12px !important;
+  padding: 12px !important;
+  display: grid !important;
+  grid-template-columns: 52px 1fr 58px !important;
+  gap: 10px !important;
+  align-items: center !important;
+  overflow: hidden !important;
+  min-height: 84px !important;
+  max-height: 112px !important;
+  border-radius: 20px !important;
+  background:
+    radial-gradient(circle at top left, rgba(183, 255, 25, 0.12), transparent 44%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.046), rgba(255, 255, 255, 0.014)) !important;
+  border: 1px solid rgba(183, 255, 25, 0.16) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 255, 25, 0.028),
+    0 12px 30px rgba(0, 0, 0, 0.28) !important;
+}
+
+section.streak-card > img {
+  width: 48px !important;
+  height: 48px !important;
+  max-width: 48px !important;
+  max-height: 48px !important;
+  min-width: 48px !important;
+  min-height: 48px !important;
+  object-fit: contain !important;
+  border-radius: 14px !important;
+  display: block !important;
+  filter: drop-shadow(0 0 12px rgba(183, 255, 25, 0.22)) !important;
+}
+
+section.streak-card > div {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+section.streak-card .section-title,
+section.streak-card .streak-title {
+  margin: 0 0 3px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 8px !important;
+}
+
+section.streak-card .section-title span,
+section.streak-card .streak-title span {
+  font-size: 14px !important;
+  line-height: 1.1 !important;
+  font-weight: 950 !important;
+  color: var(--text) !important;
+  white-space: nowrap !important;
+}
+
+section.streak-card .section-title b,
+section.streak-card .streak-title b {
+  min-height: 24px !important;
+  padding: 4px 9px !important;
+  font-size: 10px !important;
+  line-height: 1 !important;
+  border-radius: 999px !important;
+  white-space: nowrap !important;
+}
+
+section.streak-card strong {
+  display: block !important;
+  margin: 0 !important;
+  color: var(--green) !important;
+  font-size: 25px !important;
+  line-height: 0.95 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.7px !important;
+}
+
+section.streak-card strong small {
+  display: inline !important;
+  color: var(--muted) !important;
+  font-size: 12px !important;
+  letter-spacing: 0 !important;
+}
+
+section.streak-card p {
+  margin: 4px 0 0 !important;
+  color: var(--muted) !important;
+  font-size: 10.5px !important;
+  line-height: 1.2 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+section.streak-card aside {
+  display: grid !important;
+  justify-items: center !important;
+  align-items: center !important;
+  gap: 2px !important;
+  padding: 5px 3px !important;
+  min-width: 0 !important;
+  border-radius: 14px !important;
+  background: rgba(183, 255, 25, 0.06) !important;
+  border: 1px solid rgba(183, 255, 25, 0.11) !important;
+}
+
+section.streak-card aside img {
+  width: 27px !important;
+  height: 27px !important;
+  max-width: 27px !important;
+  max-height: 27px !important;
+  object-fit: contain !important;
+  display: block !important;
+}
+
+section.streak-card aside span {
+  color: var(--muted) !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+}
+
+section.streak-card aside b {
+  color: var(--green) !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+
+/* On very narrow screens, make the card even tighter. */
+@media (max-width: 380px) {
+  section.streak-card {
+    grid-template-columns: 44px 1fr 50px !important;
+    gap: 8px !important;
+    padding: 9px !important;
+    min-height: 76px !important;
+    max-height: 96px !important;
+    border-radius: 18px !important;
+  }
+
+  section.streak-card > img {
+    width: 42px !important;
+    height: 42px !important;
+    max-width: 42px !important;
+    max-height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+  }
+
+  section.streak-card .section-title span,
+  section.streak-card .streak-title span {
+    font-size: 13px !important;
+  }
+
+  section.streak-card .section-title b,
+  section.streak-card .streak-title b {
+    padding: 4px 8px !important;
+    font-size: 9px !important;
+  }
+
+  section.streak-card strong {
+    font-size: 22px !important;
+  }
+
+  section.streak-card p {
+    font-size: 9.5px !important;
+  }
+
+  section.streak-card aside img {
+    width: 24px !important;
+    height: 24px !important;
+    max-width: 24px !important;
+    max-height: 24px !important;
+  }
+
+  section.streak-card aside b {
+    font-size: 14px !important;
+  }
+}
