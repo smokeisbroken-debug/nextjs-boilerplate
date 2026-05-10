@@ -17,6 +17,7 @@ type TelegramMessage = {
   chat?: {
     id?: number | string;
     type?: string;
+    title?: string;
   };
   from?: TelegramUser;
 };
@@ -146,37 +147,66 @@ function isTargetCommunityGroup(message: TelegramMessage) {
 
 async function saveCommunityTelegramMessage(message: TelegramMessage) {
   if (!isConfiguredForCommunityLogging()) {
-    return;
+    return {
+      saved: false,
+      reason: "community-logging-not-configured",
+    };
   }
 
   if (!isTargetCommunityGroup(message)) {
-    return;
+    return {
+      saved: false,
+      reason: "not-target-group",
+    };
   }
 
   if (message.from?.is_bot) {
-    return;
+    return {
+      saved: false,
+      reason: "bot-message-ignored",
+    };
   }
 
   const text = cleanMessageText(message.text || "");
 
   if (!text) {
-    return;
+    return {
+      saved: false,
+      reason: "empty-text",
+    };
   }
 
-  await supabaseFetch("broke_community_messages?on_conflict=telegram_message_id", {
-    method: "POST",
-    headers: {
-      Prefer: "resolution=ignore-duplicates,return=minimal",
-    },
-    body: JSON.stringify({
-      sender_name: getSenderName(message.from),
-      username: message.from?.username ?? null,
-      text,
-      source: "telegram",
-      telegram_message_id: message.message_id ?? null,
-      created_at: new Date((message.date || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
-    }),
-  });
+  try {
+    // Important:
+    // Do NOT use on_conflict here. Some Supabase/PostgREST setups reject
+    // partial unique indexes for on_conflict and the webhook silently fails.
+    await supabaseFetch("broke_community_messages", {
+      method: "POST",
+      headers: {
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        sender_name: getSenderName(message.from),
+        username: message.from?.username ?? null,
+        text,
+        source: "telegram",
+        telegram_message_id: message.message_id ?? null,
+        created_at: new Date((message.date || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+      }),
+    });
+
+    return {
+      saved: true,
+      reason: "saved",
+    };
+  } catch (error) {
+    console.error("Community Telegram message save failed:", error);
+
+    return {
+      saved: false,
+      reason: error instanceof Error ? error.message : "save-failed",
+    };
+  }
 }
 
 async function sendTelegramMessage(chatId: number | string, firstName?: string) {
@@ -252,10 +282,14 @@ export async function GET() {
     endpoint: "telegram-webhook",
     message: "POST updates from Telegram should arrive here after setWebhook.",
     community: {
+      groupId: getTelegramGroupId() || null,
       groupIdConfigured: Boolean(getTelegramGroupId()),
       supabaseConfigured: Boolean(
         getOptionalEnv("SUPABASE_URL") && getOptionalEnv("SUPABASE_SERVICE_ROLE_KEY")
       ),
+      botTokenConfigured: Boolean(getBotToken()),
+      webAppUrlConfigured: Boolean(getWebAppUrl()),
+      privacyReminder: "BotFather /setprivacy must be Disable for normal group messages.",
     },
   });
 }
@@ -290,11 +324,14 @@ export async function POST(request: NextRequest) {
 
   try {
     if (isTargetCommunityGroup(message)) {
-      await saveCommunityTelegramMessage(message);
+      const communityResult = await saveCommunityTelegramMessage(message);
 
       return NextResponse.json({
         ok: true,
-        communityLogged: Boolean(text),
+        groupMessage: true,
+        chatId: String(chatId),
+        textDetected: Boolean(text),
+        communityResult,
       });
     }
 
