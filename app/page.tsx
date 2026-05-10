@@ -42,6 +42,13 @@ type ChartPoint = {
   close: number;
 };
 
+type CategorySummary = {
+  category: string;
+  amount: number;
+  count: number;
+  icon: string;
+};
+
 const STORAGE_KEY = "broke-life-tracker-v1";
 
 const A = {
@@ -180,6 +187,40 @@ function getFixedCosts(settings: Settings) {
     settings.fixedCosts.transport,
     settings.fixedCosts.phone,
   ]);
+}
+
+function getCategoryIcon(category: string) {
+  return categories.find((item) => item.name === category)?.icon || A.custom;
+}
+
+function getCurrentMonthExpenses(expenses: Expense[]) {
+  const current = monthKey(new Date());
+
+  return expenses.filter((expense) => {
+    return monthKey(new Date(expense.createdAt)) === current;
+  });
+}
+
+function getCategorySummaries(expenses: Expense[]): CategorySummary[] {
+  const map = new Map<string, { amount: number; count: number }>();
+
+  for (const expense of expenses) {
+    const current = map.get(expense.category) || { amount: 0, count: 0 };
+
+    map.set(expense.category, {
+      amount: current.amount + expense.amount,
+      count: current.count + 1,
+    });
+  }
+
+  return Array.from(map.entries())
+    .map(([category, value]) => ({
+      category,
+      amount: value.amount,
+      count: value.count,
+      icon: getCategoryIcon(category),
+    }))
+    .sort((a, b) => b.amount - a.amount);
 }
 
 function buildChartData(
@@ -350,11 +391,7 @@ export default function Home() {
   }, [loaded, settings, expenses]);
 
   const currentMonthExpenses = useMemo(() => {
-    const current = monthKey(new Date());
-
-    return expenses.filter((expense) => {
-      return monthKey(new Date(expense.createdAt)) === current;
-    });
+    return getCurrentMonthExpenses(expenses);
   }, [expenses]);
 
   const totalIncome = getTotalIncome(settings);
@@ -396,51 +433,6 @@ export default function Home() {
   const chartDays = useMemo(() => {
     return buildChartData("week", expenses, settings);
   }, [expenses, settings]);
-
-  const whatIfCards = useMemo(() => {
-    const categoryTotal = (category: string) =>
-      sum(
-        currentMonthExpenses
-          .filter((expense) => expense.category === category)
-          .map((expense) => expense.amount)
-      );
-
-    const coffee = categoryTotal("Coffee") || 84;
-    const smoking = categoryTotal("Smoking")
-      ? categoryTotal("Smoking") * 0.5
-      : 60;
-    const takeouts = categoryTotal("Takeouts") || 120;
-    const shopping = categoryTotal("Shopping") || 98;
-
-    return [
-      {
-        title: "If you stop coffee",
-        save: coffee,
-        hp: "+8",
-        icon: A.coffee,
-      },
-      {
-        title: "If you reduce smoking by 50%",
-        save: smoking,
-        hp: "+6",
-        icon: A.smoking,
-      },
-      {
-        title: "If you stop takeouts",
-        save: takeouts,
-        hp: "+10",
-        icon: A.takeouts,
-      },
-      {
-        title: "If you cut random shopping",
-        save: shopping,
-        hp: "+8",
-        icon: A.shopping,
-      },
-    ];
-  }, [currentMonthExpenses]);
-
-  const totalPotentialSavings = sum(whatIfCards.map((item) => item.save)) * 12;
 
   function addExpense() {
     const value = safeNumber(amount);
@@ -520,11 +512,7 @@ export default function Home() {
         )}
 
         {activeTab === "whatif" && (
-          <WhatIfScreen
-            settings={settings}
-            cards={whatIfCards}
-            totalPotentialSavings={totalPotentialSavings}
-          />
+          <WhatIfScreen settings={settings} expenses={currentMonthExpenses} />
         )}
 
         {activeTab === "settings" && (
@@ -532,7 +520,9 @@ export default function Home() {
             settings={settings}
             setSettings={setSettings}
             expenses={expenses}
+            currentMonthExpenses={currentMonthExpenses}
             onReset={resetData}
+            onDeleteExpense={deleteExpense}
           />
         )}
 
@@ -713,10 +703,6 @@ function RecentExpenses({
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
 }) {
-  function getCategoryIcon(category: string) {
-    return categories.find((item) => item.name === category)?.icon || A.custom;
-  }
-
   return (
     <section className="recent-card">
       <div className="section-title">
@@ -732,31 +718,50 @@ function RecentExpenses({
       ) : (
         <div className="expense-list">
           {expenses.map((expense) => (
-            <div className="expense-row" key={expense.id}>
-              <img src={getCategoryIcon(expense.category)} alt="" />
-
-              <div>
-                <strong>{expense.category}</strong>
-                <span>
-                  {expense.needType}
-                  {expense.note ? ` · ${expense.note}` : ""}
-                </span>
-              </div>
-
-              <b>{money(expense.amount, settings.currency)}</b>
-
-              <button
-                type="button"
-                onClick={() => onDeleteExpense(expense.id)}
-                aria-label="Delete expense"
-              >
-                ×
-              </button>
-            </div>
+            <ExpenseRow
+              key={expense.id}
+              expense={expense}
+              currency={settings.currency}
+              onDeleteExpense={onDeleteExpense}
+            />
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+function ExpenseRow({
+  expense,
+  currency,
+  onDeleteExpense,
+}: {
+  expense: Expense;
+  currency: Currency;
+  onDeleteExpense: (id: string) => void;
+}) {
+  return (
+    <div className="expense-row">
+      <img src={getCategoryIcon(expense.category)} alt="" />
+
+      <div>
+        <strong>{expense.category}</strong>
+        <span>
+          {expense.needType}
+          {expense.note ? ` · ${expense.note}` : ""}
+        </span>
+      </div>
+
+      <b>{money(expense.amount, currency)}</b>
+
+      <button
+        type="button"
+        onClick={() => onDeleteExpense(expense.id)}
+        aria-label="Delete expense"
+      >
+        ×
+      </button>
+    </div>
   );
 }
 
@@ -1008,18 +1013,49 @@ function ChartScreen({
 
 function WhatIfScreen({
   settings,
-  cards,
-  totalPotentialSavings,
+  expenses,
 }: {
   settings: Settings;
-  cards: {
-    title: string;
-    save: number;
-    hp: string;
-    icon: string;
-  }[];
-  totalPotentialSavings: number;
+  expenses: Expense[];
 }) {
+  const [reductions, setReductions] = useState<Record<string, number>>({});
+
+  const categorySummaries = useMemo(() => {
+    return getCategorySummaries(expenses)
+      .filter((item) => item.amount > 0)
+      .slice(0, 6);
+  }, [expenses]);
+
+  const hasRealData = categorySummaries.length > 0;
+
+  const cards = useMemo<CategorySummary[]>(() => {
+    if (hasRealData) return categorySummaries;
+
+    return [
+      { category: "Coffee", amount: 84, count: 0, icon: A.coffee },
+      { category: "Smoking", amount: 120, count: 0, icon: A.smoking },
+      { category: "Takeouts", amount: 160, count: 0, icon: A.takeouts },
+      { category: "Shopping", amount: 98, count: 0, icon: A.shopping },
+    ];
+  }, [categorySummaries, hasRealData]);
+
+  const totalMonthlySavings = cards.reduce((acc, item) => {
+    const reduction = reductions[item.category] ?? defaultReduction(item.category);
+    return acc + item.amount * reduction;
+  }, 0);
+
+  function defaultReduction(category: string) {
+    if (category === "Smoking") return 0.5;
+    return 1;
+  }
+
+  function setReduction(category: string, value: number) {
+    setReductions((prev) => ({
+      ...prev,
+      [category]: value,
+    }));
+  }
+
   return (
     <div className="screen">
       <Header title="What If?" showBack rightIcon={A.help} />
@@ -1029,41 +1065,82 @@ function WhatIfScreen({
         <div>
           <h2>Small changes.</h2>
           <h2>Big wins.</h2>
+          <p>
+            {hasRealData
+              ? "Based on your tracked expenses this month."
+              : "Demo mode. Add expenses to get real scenarios."}
+          </p>
         </div>
       </section>
 
+      <section className="whatif-total-card">
+        <span>Potential savings</span>
+        <strong>{money(totalMonthlySavings, settings.currency)}</strong>
+        <small>
+          /month · {money(totalMonthlySavings * 12, settings.currency)}/year
+        </small>
+      </section>
+
       <section className="whatif-list">
-        {cards.map((item) => (
-          <div className="whatif-card" key={item.title}>
-            <img src={item.icon} alt="" />
+        {cards.map((item) => {
+          const reduction = reductions[item.category] ?? defaultReduction(item.category);
+          const monthlySave = item.amount * reduction;
+          const hpBonus = clamp(Math.round((monthlySave / 25) * 2), 2, 24);
 
-            <div>
-              <strong>{item.title}</strong>
-              <span>Save</span>
-              <b>
-                {money(item.save, settings.currency)}
-                <small>/month</small>
-              </b>
-              <em>{money(item.save * 12, settings.currency)}/year</em>
+          return (
+            <div className="whatif-card dynamic" key={item.category}>
+              <img src={item.icon} alt="" />
+
+              <div>
+                <strong>
+                  {reduction === 1
+                    ? `Cut ${item.category}`
+                    : `Reduce ${item.category}`}
+                </strong>
+                <span>
+                  {hasRealData
+                    ? `${item.count} tracked · ${Math.round(reduction * 100)}% reduction`
+                    : `${Math.round(reduction * 100)}% demo reduction`}
+                </span>
+
+                <b>
+                  {money(monthlySave, settings.currency)}
+                  <small>/month</small>
+                </b>
+                <em>{money(monthlySave * 12, settings.currency)}/year</em>
+
+                <div className="reduction-row">
+                  {[0.25, 0.5, 1].map((value) => (
+                    <button
+                      type="button"
+                      key={value}
+                      className={reduction === value ? "active" : ""}
+                      onClick={() => setReduction(item.category, value)}
+                    >
+                      {Math.round(value * 100)}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <aside>
+                <strong>+{hpBonus}</strong>
+                <span>Wallet HP</span>
+              </aside>
             </div>
-
-            <aside>
-              <strong>{item.hp}</strong>
-              <span>Wallet HP</span>
-            </aside>
-          </div>
-        ))}
+          );
+        })}
       </section>
 
       <section className="savings-card">
         <img src={A.walletMascot} alt="" />
         <div>
           <span>Total Potential Savings</span>
-          <strong>{money(totalPotentialSavings, settings.currency)}</strong>
+          <strong>{money(totalMonthlySavings * 12, settings.currency)}</strong>
           <small>/year</small>
         </div>
         <aside>
-          <b>+18</b>
+          <b>+{clamp(Math.round(totalMonthlySavings / 20), 3, 30)}</b>
           <span>Wallet HP</span>
         </aside>
       </section>
@@ -1075,15 +1152,22 @@ function SettingsScreen({
   settings,
   setSettings,
   expenses,
+  currentMonthExpenses,
   onReset,
+  onDeleteExpense,
 }: {
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
   expenses: Expense[];
+  currentMonthExpenses: Expense[];
   onReset: () => void;
+  onDeleteExpense: (id: string) => void;
 }) {
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
+  const monthSpent = sum(currentMonthExpenses.map((item) => item.amount));
+  const categorySummaries = getCategorySummaries(currentMonthExpenses);
+  const latestExpenses = expenses.slice(0, 8);
 
   function updateIncome(key: keyof Settings["income"], value: string) {
     setSettings((prev) => ({
@@ -1230,7 +1314,7 @@ function SettingsScreen({
         <MenuLine
           icon={A.categories}
           label="Tracked Expenses"
-          value={`${expenses.length} records`}
+          value={`${expenses.length} total · ${currentMonthExpenses.length} this month`}
         />
 
         <button className="menu-line menu-button danger" onClick={onReset}>
@@ -1242,6 +1326,114 @@ function SettingsScreen({
           <b>›</b>
         </button>
       </section>
+
+      <section className="tracked-panel">
+        <div className="section-title">
+          <span>Tracked Expenses</span>
+          <small>{money(monthSpent, settings.currency)} this month</small>
+        </div>
+
+        <div className="tracked-stats">
+          <div>
+            <span>Total records</span>
+            <strong>{expenses.length}</strong>
+          </div>
+          <div>
+            <span>This month</span>
+            <strong>{currentMonthExpenses.length}</strong>
+          </div>
+          <div>
+            <span>Month spent</span>
+            <strong>{money(monthSpent, settings.currency)}</strong>
+          </div>
+        </div>
+
+        <CategorySummaryList
+          summaries={categorySummaries}
+          currency={settings.currency}
+        />
+      </section>
+
+      <section className="recent-card">
+        <div className="section-title">
+          <span>Latest Records</span>
+          <small>{latestExpenses.length ? `${latestExpenses.length} latest` : "No records"}</small>
+        </div>
+
+        <LatestRecordsList
+          expenses={latestExpenses}
+          currency={settings.currency}
+          onDeleteExpense={onDeleteExpense}
+        />
+      </section>
+    </div>
+  );
+}
+
+function CategorySummaryList({
+  summaries,
+  currency,
+}: {
+  summaries: CategorySummary[];
+  currency: Currency;
+}) {
+  if (summaries.length === 0) {
+    return (
+      <div className="empty-expenses">
+        <img src={A.addFrog} alt="" />
+        <p>No tracked expenses this month.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="category-summary-list">
+      {summaries.slice(0, 6).map((item) => {
+        return (
+          <div className="category-summary-row" key={item.category}>
+            <img src={item.icon} alt="" />
+            <div>
+              <strong>{item.category}</strong>
+              <span>{item.count} records</span>
+            </div>
+            <b>{money(item.amount, currency)}</b>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function LatestRecordsList({
+  expenses,
+  currency,
+  onDeleteExpense,
+}: {
+  expenses: Expense[];
+  currency: Currency;
+  onDeleteExpense: (id: string) => void;
+}) {
+  if (expenses.length === 0) {
+    return (
+      <div className="empty-expenses">
+        <img src={A.addFrog} alt="" />
+        <p>No records yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="expense-list">
+      {expenses.map((expense) => {
+        return (
+          <ExpenseRow
+            key={expense.id}
+            expense={expense}
+            currency={currency}
+            onDeleteExpense={onDeleteExpense}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -1357,7 +1549,5 @@ function BottomNav({
         </button>
       ))}
     </nav>
-  );
-
   );
 }
