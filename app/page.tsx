@@ -179,6 +179,12 @@ type TelegramState = {
   initData: string;
 };
 
+type WebAuthState = {
+  authenticated: boolean;
+  loading: boolean;
+  user: TelegramUser | null;
+};
+
 type CloudStatus = "local" | "syncing" | "cloud" | "error";
 
 type BrokeApiResponse = {
@@ -232,6 +238,9 @@ const ONBOARDING_KEY = "broke-life-tracker-onboarding-completed-v1";
 const PROJECT_X_URL = "https://x.com/SmokeIsBroke";
 const PROJECT_TG_URL = "https://t.me/SmokeIsBrokeSol";
 const TELEGRAM_WEB_APP_SCRIPT = "https://telegram.org/js/telegram-web-app.js";
+const TELEGRAM_LOGIN_SCRIPT = "https://telegram.org/js/telegram-widget.js?22";
+const TELEGRAM_BOT_USERNAME =
+  process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "BrokeLifeTrackerBot";
 
 const emptyTelegramState: TelegramState = {
   isTelegram: false,
@@ -1411,6 +1420,11 @@ export default function Home() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [telegram, setTelegram] = useState<TelegramState>(emptyTelegramState);
+  const [webAuth, setWebAuth] = useState<WebAuthState>({
+    authenticated: false,
+    loading: true,
+    user: null,
+  });
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("local");
   const [cloudError, setCloudError] = useState("");
   const [streak, setStreak] = useState<Streak>(emptyStreak);
@@ -1432,6 +1446,11 @@ export default function Home() {
   const [note, setNote] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Coffee");
   const [expenseType, setExpenseType] = useState<NeedType>("Needed");
+
+  const cloudInitData = telegram.isTelegram ? telegram.initData : "";
+  const cloudAuthReady = Boolean(
+    (telegram.isTelegram && telegram.initData) || webAuth.authenticated
+  );
 
   function showToast(title: string, detail = "", tone: AppToast["tone"] = "info") {
     if (toastTimerRef.current) {
@@ -1582,7 +1601,47 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (!loaded || !telegram.isTelegram || !telegram.initData) return;
+    if (!loaded || telegram.isTelegram) return;
+
+    let cancelled = false;
+
+    async function loadWebAuth() {
+      try {
+        const response = await fetch("/api/auth/telegram/me", {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+        });
+
+        const data = await response.json();
+
+        if (cancelled) return;
+
+        setWebAuth({
+          authenticated: Boolean(data.authenticated),
+          loading: false,
+          user: data.user ?? null,
+        });
+      } catch {
+        if (cancelled) return;
+
+        setWebAuth({
+          authenticated: false,
+          loading: false,
+          user: null,
+        });
+      }
+    }
+
+    loadWebAuth();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loaded, telegram.isTelegram]);
+
+  useEffect(() => {
+    if (!loaded || !cloudAuthReady) return;
 
     let cancelled = false;
 
@@ -1591,7 +1650,7 @@ export default function Home() {
         setCloudStatus("syncing");
         setCloudError("");
 
-        const data = await callBrokeApi(telegram.initData, "sync", {
+        const data = await callBrokeApi(cloudInitData, "sync", {
           localData: {
             settings,
             expenses,
@@ -1632,7 +1691,7 @@ export default function Home() {
     return () => {
       cancelled = true;
     };
-  }, [loaded, telegram.isTelegram, telegram.initData]);
+  }, [loaded, cloudAuthReady, cloudInitData]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -1648,11 +1707,11 @@ export default function Home() {
   }, [loaded, settings, expenses, onboardingCompleted]);
 
   useEffect(() => {
-    if (!loaded || cloudStatus !== "cloud" || !telegram.initData) return;
+    if (!loaded || cloudStatus !== "cloud" || !cloudAuthReady) return;
 
     const timeout = window.setTimeout(async () => {
       try {
-        const data = await callBrokeApi(telegram.initData, "saveSettings", {
+        const data = await callBrokeApi(cloudInitData, "saveSettings", {
           settings,
         });
         applyApiFeedback(data, "Settings synced");
@@ -1663,14 +1722,13 @@ export default function Home() {
     }, 700);
 
     return () => window.clearTimeout(timeout);
-  }, [loaded, cloudStatus, telegram.initData, settings]);
+  }, [loaded, cloudStatus, cloudAuthReady, cloudInitData, settings]);
 
   useEffect(() => {
     if (
       !loaded ||
       !onboardingCompleted ||
-      !telegram.isTelegram ||
-      !telegram.initData ||
+      !cloudAuthReady ||
       cloudStatus !== "cloud" ||
       openAppTrackedRef.current
     ) {
@@ -1679,14 +1737,13 @@ export default function Home() {
 
     openAppTrackedRef.current = true;
     trackXpAction("open_app");
-  }, [loaded, onboardingCompleted, telegram.isTelegram, telegram.initData, cloudStatus]);
+  }, [loaded, onboardingCompleted, cloudAuthReady, cloudStatus]);
 
   useEffect(() => {
     if (
       !loaded ||
       !onboardingCompleted ||
-      !telegram.isTelegram ||
-      !telegram.initData ||
+      !cloudAuthReady ||
       cloudStatus !== "cloud"
     ) {
       return;
@@ -1699,7 +1756,7 @@ export default function Home() {
     if (activeTab === "whatif") {
       trackXpAction("check_challenge");
     }
-  }, [activeTab, loaded, onboardingCompleted, telegram.isTelegram, telegram.initData, cloudStatus]);
+  }, [activeTab, loaded, onboardingCompleted, cloudAuthReady, cloudStatus]);
 
   const currentMonthExpenses = useMemo(() => {
     return getCurrentMonthExpenses(expenses);
@@ -1749,7 +1806,7 @@ export default function Home() {
     return calculateStreakFromExpenses(expenses);
   }, [expenses]);
 
-  const activeStreak = telegram.isTelegram && cloudStatus === "cloud" ? streak : localStreak;
+  const activeStreak = cloudAuthReady && cloudStatus === "cloud" ? streak : localStreak;
 
   const walletInsights = useMemo(() => {
     return buildWalletInsights(expenses, settings);
@@ -1776,9 +1833,9 @@ export default function Home() {
     setExpenseType("Needed");
     setActiveTab("home");
 
-    if (telegram.isTelegram && telegram.initData) {
+    if (cloudAuthReady) {
       try {
-        const data = await callBrokeApi(telegram.initData, "addExpense", {
+        const data = await callBrokeApi(cloudInitData, "addExpense", {
           expense,
         });
 
@@ -1803,9 +1860,9 @@ export default function Home() {
     triggerHaptic("medium");
     setExpenses((prev) => prev.filter((expense) => expense.id !== id));
 
-    if (telegram.isTelegram && telegram.initData) {
+    if (cloudAuthReady) {
       try {
-        const data = await callBrokeApi(telegram.initData, "deleteExpense", { id });
+        const data = await callBrokeApi(cloudInitData, "deleteExpense", { id });
         if (data.streak) setStreak(data.streak);
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
@@ -1828,9 +1885,9 @@ export default function Home() {
     localStorage.removeItem(STORAGE_KEY);
     setActiveTab("home");
 
-    if (telegram.isTelegram && telegram.initData) {
+    if (cloudAuthReady) {
       try {
-        const data = await callBrokeApi(telegram.initData, "reset");
+        const data = await callBrokeApi(cloudInitData, "reset");
         setStreak(data.streak ?? emptyStreak);
         setActiveChallenge(data.activeChallenge ?? null);
         setChallengeProgress(data.challengeProgress ?? null);
@@ -1875,8 +1932,8 @@ export default function Home() {
     localStorage.setItem(ONBOARDING_KEY, "true");
     setActiveTab("home");
 
-    if (telegram.isTelegram && telegram.initData) {
-      callBrokeApi(telegram.initData, "saveSettings", {
+    if (cloudAuthReady) {
+      callBrokeApi(cloudInitData, "saveSettings", {
         settings: completedSettings,
       }).catch(() => {
         // Normal debounce save will try again after state updates.
@@ -1887,14 +1944,14 @@ export default function Home() {
   async function startChallenge(challengeId: string) {
     triggerHaptic("medium");
 
-    if (!telegram.isTelegram || !telegram.initData) {
-      window.alert("Open this Mini App through Telegram to start challenges.");
+    if (!cloudAuthReady) {
+      window.alert("Connect Telegram to sync your account and start challenges.");
       return;
     }
 
     try {
       setChallengeLoading(true);
-      const data = await callBrokeApi(telegram.initData, "startChallenge", {
+      const data = await callBrokeApi(cloudInitData, "startChallenge", {
         challengeId,
       });
 
@@ -1912,10 +1969,10 @@ export default function Home() {
   }
 
   async function trackXpAction(xpAction: XpAction) {
-    if (!telegram.isTelegram || !telegram.initData) return;
+    if (!cloudAuthReady) return;
 
     try {
-      const data = await callBrokeApi(telegram.initData, "trackXp", {
+      const data = await callBrokeApi(cloudInitData, "trackXp", {
         xpAction,
       });
 
@@ -1926,14 +1983,14 @@ export default function Home() {
   }
 
   async function toggleLeaderboardPublic(nextValue: boolean) {
-    if (!telegram.isTelegram || !telegram.initData) {
-      window.alert("Open this Mini App through Telegram to use public leaderboard.");
+    if (!cloudAuthReady) {
+      window.alert("Connect Telegram to use the public leaderboard.");
       return;
     }
 
     try {
       setLeaderboardLoading(true);
-      const data = await callBrokeApi(telegram.initData, "setLeaderboardOptIn", {
+      const data = await callBrokeApi(cloudInitData, "setLeaderboardOptIn", {
         publicLeaderboard: nextValue,
       });
 
@@ -2002,6 +2059,7 @@ export default function Home() {
             expenses={currentMonthExpenses.slice(0, 6)}
             onDeleteExpense={deleteExpense}
             telegram={telegram}
+            webAuth={webAuth}
             cloudStatus={cloudStatus}
             cloudError={cloudError}
             onBellClick={openProjectTelegram}
@@ -2517,6 +2575,7 @@ function DashboardScreen({
   expenses,
   onDeleteExpense,
   telegram,
+  webAuth,
   cloudStatus,
   cloudError,
   onBellClick,
@@ -2538,6 +2597,7 @@ function DashboardScreen({
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
   telegram: TelegramState;
+  webAuth: WebAuthState;
   cloudStatus: CloudStatus;
   cloudError: string;
   onBellClick: () => void;
@@ -2625,6 +2685,8 @@ function DashboardScreen({
 
       <WalletInsightsPanel insights={walletInsights} />
 
+      <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
+
       <ShareResultCard
         settings={settings}
         walletHp={summary.walletHp}
@@ -2667,6 +2729,70 @@ function DashboardScreen({
 
 
 
+
+
+function WebTelegramSyncCard({
+  telegram,
+  webAuth,
+}: {
+  telegram: TelegramState;
+  webAuth: WebAuthState;
+}) {
+  const widgetRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (telegram.isTelegram || webAuth.authenticated || webAuth.loading) return;
+    if (!widgetRef.current) return;
+
+    widgetRef.current.innerHTML = "";
+
+    const script = document.createElement("script");
+    script.src = TELEGRAM_LOGIN_SCRIPT;
+    script.async = true;
+    script.setAttribute("data-telegram-login", TELEGRAM_BOT_USERNAME);
+    script.setAttribute("data-size", "large");
+    script.setAttribute("data-radius", "12");
+    script.setAttribute("data-userpic", "false");
+    script.setAttribute("data-request-access", "write");
+    script.setAttribute("data-auth-url", "/api/auth/telegram");
+
+    widgetRef.current.appendChild(script);
+
+    return () => {
+      script.remove();
+    };
+  }, [telegram.isTelegram, webAuth.authenticated, webAuth.loading]);
+
+  if (telegram.isTelegram) return null;
+
+  return (
+    <section className={`web-sync-card ${webAuth.authenticated ? "connected" : ""}`}>
+      <div>
+        <span>Account sync</span>
+        <strong>
+          {webAuth.authenticated
+            ? `Synced with ${webAuth.user?.username ? `@${webAuth.user.username}` : webAuth.user?.first_name || "Telegram"}`
+            : "Use one account on website and Telegram"}
+        </strong>
+        <p>
+          {webAuth.authenticated
+            ? "Website progress now uses the same Supabase profile as your Telegram Mini App."
+            : "Login with Telegram to sync expenses, streaks, badges, challenges and leaderboard across website and Telegram."}
+        </p>
+      </div>
+
+      {webAuth.authenticated ? (
+        <a className="web-sync-logout" href="/api/auth/telegram/logout">
+          Log out
+        </a>
+      ) : (
+        <div className="telegram-login-widget" ref={widgetRef}>
+          {webAuth.loading ? "Checking..." : "Loading Telegram login..."}
+        </div>
+      )}
+    </section>
+  );
+}
 
 function WalletInsightsPanel({
   insights,
@@ -2881,22 +3007,27 @@ function BadgeVaultPanel({ badges }: { badges: BadgeItem[] }) {
 
 function TelegramMiniStatus({
   telegram,
+  webAuth,
   cloudStatus,
   cloudError,
   compact = false,
 }: {
   telegram: TelegramState;
+  webAuth?: WebAuthState;
   cloudStatus: CloudStatus;
   cloudError: string;
   compact?: boolean;
 }) {
-  const username = telegram.user?.username
-    ? `@${telegram.user.username}`
-    : telegram.user?.first_name || "Telegram user";
+  const activeUser = telegram.user ?? webAuth?.user ?? null;
+  const username = activeUser?.username
+    ? `@${activeUser.username}`
+    : activeUser?.first_name || "Telegram user";
 
-  const cloudLabel = !telegram.isTelegram
-    ? "Local demo"
-    : cloudStatus === "cloud"
+  const cloudLabel = !telegram.isTelegram && webAuth?.authenticated
+    ? "Web cloud"
+    : !telegram.isTelegram
+      ? "Local demo"
+      : cloudStatus === "cloud"
       ? "Cloud synced"
       : cloudStatus === "syncing"
         ? "Syncing..."
@@ -2904,9 +3035,11 @@ function TelegramMiniStatus({
           ? "Sync error"
           : "Local only";
 
-  const statusText = !telegram.isTelegram
-    ? "Web demo mode. Telegram cloud sync is disabled here."
-    : cloudStatus === "error"
+  const statusText = !telegram.isTelegram && webAuth?.authenticated
+    ? "Website is synced with your Telegram account."
+    : !telegram.isTelegram
+      ? "Web demo mode. Login with Telegram to enable cloud sync."
+      : cloudStatus === "error"
       ? cloudError || "Check Vercel logs"
       : "Ready";
 
@@ -2914,7 +3047,7 @@ function TelegramMiniStatus({
     <section className={compact ? "tg-status tg-status-compact" : "tg-status"}>
       <div>
         <span>Mode</span>
-        <strong>{telegram.isTelegram ? "Telegram App" : "Web Demo"}</strong>
+        <strong>{telegram.isTelegram ? "Telegram App" : webAuth?.authenticated ? "Web Synced" : "Web Demo"}</strong>
       </div>
 
       <div>
@@ -2926,11 +3059,11 @@ function TelegramMiniStatus({
         <>
           <div>
             <span>User</span>
-            <strong>{telegram.user ? username : "Not detected"}</strong>
+            <strong>{activeUser ? username : "Not detected"}</strong>
           </div>
           <div>
             <span>User ID</span>
-            <strong>{telegram.user?.id ?? "-"}</strong>
+            <strong>{activeUser?.id ?? "-"}</strong>
           </div>
           <div>
             <span>Platform</span>
@@ -4096,6 +4229,7 @@ function SettingsScreen({
         <summary>Technical status</summary>
         <TelegramMiniStatus
           telegram={telegram}
+          webAuth={webAuth}
           cloudStatus={cloudStatus}
           cloudError={cloudError}
         />
