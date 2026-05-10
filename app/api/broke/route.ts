@@ -32,6 +32,13 @@ type Expense = {
   createdAt: string;
 };
 
+type Streak = {
+  currentStreak: number;
+  bestStreak: number;
+  lastActiveDate: string | null;
+  updatedAt?: string | null;
+};
+
 type TelegramUser = {
   id: number;
   first_name?: string;
@@ -56,6 +63,13 @@ const defaultSettings: Settings = {
     transport: 150,
     phone: 80,
   },
+};
+
+const emptyStreak: Streak = {
+  currentStreak: 0,
+  bestStreak: 0,
+  lastActiveDate: null,
+  updatedAt: null,
 };
 
 function getEnv(name: string) {
@@ -182,6 +196,120 @@ function dbToExpense(row: Record<string, unknown>): Expense {
     note: String(row.note ?? ""),
     createdAt: String(row.created_at ?? new Date().toISOString()),
   };
+}
+
+function dateKey(date: Date) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function calculateStreakFromExpenses(expenses: Expense[]): Streak {
+  const dates = Array.from(
+    new Set(expenses.map((expense) => dateKey(new Date(expense.createdAt))))
+  ).sort();
+
+  if (dates.length === 0) {
+    return emptyStreak;
+  }
+
+  const dateSet = new Set(dates);
+  const lastActiveDate = dates[dates.length - 1];
+
+  let bestStreak = 0;
+  let rollingStreak = 0;
+  let previousTime = 0;
+
+  for (const key of dates) {
+    const time = new Date(`${key}T00:00:00Z`).getTime();
+
+    if (previousTime && time - previousTime === 24 * 60 * 60 * 1000) {
+      rollingStreak += 1;
+    } else {
+      rollingStreak = 1;
+    }
+
+    bestStreak = Math.max(bestStreak, rollingStreak);
+    previousTime = time;
+  }
+
+  const today = dateKey(new Date());
+  const yesterdayDate = new Date();
+  yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
+  const yesterday = dateKey(yesterdayDate);
+
+  let currentStreak = 0;
+
+  if (dateSet.has(today) || dateSet.has(yesterday)) {
+    const startKey = dateSet.has(today) ? today : yesterday;
+    const cursor = new Date(`${startKey}T00:00:00Z`);
+
+    while (dateSet.has(dateKey(cursor))) {
+      currentStreak += 1;
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
+  }
+
+  return {
+    currentStreak,
+    bestStreak,
+    lastActiveDate,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function dbToStreak(row: Record<string, unknown>): Streak {
+  return {
+    currentStreak: Number(row.current_streak ?? 0),
+    bestStreak: Number(row.best_streak ?? 0),
+    lastActiveDate: row.last_active_date ? String(row.last_active_date) : null,
+    updatedAt: row.updated_at ? String(row.updated_at) : null,
+  };
+}
+
+async function getSavedStreak(telegramId: number) {
+  const rows = (await supabaseFetch(
+    `broke_streaks?telegram_id=eq.${telegramId}&select=*`
+  )) as Record<string, unknown>[];
+
+  return rows.length > 0 ? dbToStreak(rows[0]) : emptyStreak;
+}
+
+async function saveStreak(telegramId: number, streak: Streak) {
+  await supabaseFetch("broke_streaks?on_conflict=telegram_id", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates",
+    },
+    body: JSON.stringify({
+      telegram_id: telegramId,
+      current_streak: streak.currentStreak,
+      best_streak: streak.bestStreak,
+      last_active_date: streak.lastActiveDate,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+}
+
+async function getAndUpdateStreak(telegramId: number, expenses: Expense[]) {
+  const calculated = calculateStreakFromExpenses(expenses);
+  const saved = await getSavedStreak(telegramId);
+
+  const streak: Streak = {
+    currentStreak: calculated.currentStreak,
+    bestStreak: Math.max(saved.bestStreak, calculated.bestStreak),
+    lastActiveDate: calculated.lastActiveDate,
+    updatedAt: new Date().toISOString(),
+  };
+
+  await saveStreak(telegramId, streak);
+  return streak;
+}
+
+async function resetStreak(telegramId: number) {
+  await saveStreak(telegramId, emptyStreak);
+  return emptyStreak;
 }
 
 async function supabaseFetch(path: string, options: RequestInit = {}) {
@@ -366,6 +494,7 @@ export async function GET(request: NextRequest) {
       checkSupabaseTable("broke_users"),
       checkSupabaseTable("broke_settings"),
       checkSupabaseTable("broke_expenses"),
+      checkSupabaseTable("broke_streaks"),
     ]);
 
     return NextResponse.json({
@@ -410,28 +539,36 @@ export async function POST(request: NextRequest) {
       }
 
       const expenses = await getExpenses(telegramId);
+      const streak = await getAndUpdateStreak(telegramId, expenses);
 
       return NextResponse.json({
         ok: true,
         settings,
         expenses,
+        streak,
       });
     }
 
     if (action === "addExpense") {
       const expense = await addExpense(telegramId, body.expense as Expense);
+      const expenses = await getExpenses(telegramId);
+      const streak = await getAndUpdateStreak(telegramId, expenses);
 
       return NextResponse.json({
         ok: true,
         expense,
+        streak,
       });
     }
 
     if (action === "deleteExpense") {
       await deleteExpense(telegramId, String(body.id));
+      const expenses = await getExpenses(telegramId);
+      const streak = await getAndUpdateStreak(telegramId, expenses);
 
       return NextResponse.json({
         ok: true,
+        streak,
       });
     }
 
@@ -445,11 +582,13 @@ export async function POST(request: NextRequest) {
 
     if (action === "reset") {
       await resetData(telegramId);
+      const streak = await resetStreak(telegramId);
 
       return NextResponse.json({
         ok: true,
         settings: defaultSettings,
         expenses: [],
+        streak,
       });
     }
 
