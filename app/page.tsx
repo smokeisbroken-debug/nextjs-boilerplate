@@ -1846,31 +1846,41 @@ function BadgeMiniStrip({ badges }: { badges: BadgeItem[] }) {
 
 function BadgeVaultPanel({ badges }: { badges: BadgeItem[] }) {
   const earnedCount = badges.filter((badge) => badge.earned).length;
+  const latestEarned = badges.find((badge) => badge.earned);
 
   return (
-    <section className="tracked-panel badge-vault-panel">
-      <div className="section-title">
-        <span>Badge Vault</span>
-        <small>{earnedCount}/{badges.length} unlocked</small>
-      </div>
+    <details className="badge-vault-details">
+      <summary>
+        <div>
+          <strong>Badge Vault</strong>
+          <span>
+            {earnedCount > 0
+              ? `Latest: ${latestEarned?.title ?? "Unlocked badge"}`
+              : "Achievements are hidden"}
+          </span>
+        </div>
+        <b>{earnedCount}/{badges.length} unlocked</b>
+      </summary>
 
-      <div className="badge-vault-grid">
-        {badges.map((badge) => (
-          <article
-            key={badge.id}
-            className={badge.earned ? "badge-vault-card earned" : "badge-vault-card"}
-          >
-            <img src={badge.icon} alt="" />
-            <div>
-              <strong>{badge.title}</strong>
-              <p>{badge.description}</p>
-            </div>
-            <b>{badge.earned ? "Unlocked" : "Locked"}</b>
-            <span>{badge.earnedAt ? badge.earnedAt.slice(0, 10) : "Keep going"}</span>
-          </article>
-        ))}
-      </div>
-    </section>
+      <section className="tracked-panel badge-vault-panel">
+        <div className="badge-vault-grid">
+          {badges.map((badge) => (
+            <article
+              key={badge.id}
+              className={badge.earned ? "badge-vault-card earned" : "badge-vault-card"}
+            >
+              <img src={badge.icon} alt="" />
+              <div>
+                <strong>{badge.title}</strong>
+                <p>{badge.description}</p>
+              </div>
+              <b>{badge.earned ? "Unlocked" : "Locked"}</b>
+              <span>{badge.earnedAt ? badge.earnedAt.slice(0, 10) : "Keep going"}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+    </details>
   );
 }
 
