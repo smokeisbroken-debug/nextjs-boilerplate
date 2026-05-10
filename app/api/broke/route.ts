@@ -75,6 +75,23 @@ type ChallengeProgress = {
   percentUsed: number;
 };
 
+type BadgeDefinition = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+};
+
+type UserBadge = {
+  badgeId: string;
+  earnedAt: string | null;
+};
+
+type BadgeItem = BadgeDefinition & {
+  earned: boolean;
+  earnedAt: string | null;
+};
+
 type TelegramUser = {
   id: number;
   first_name?: string;
@@ -168,6 +185,69 @@ const defaultChallengeTemplates: ChallengeTemplate[] = [
     maxSpend: 120,
     rewardHp: 15,
     icon: "/45_challenge_wallet_recovery.png",
+  },
+];
+
+const defaultBadges: BadgeDefinition[] = [
+  {
+    id: "stable_wallet",
+    title: "Stable Wallet",
+    description: "Keep Wallet HP high and leaks low.",
+    icon: "/badge_stable_wallet.png",
+  },
+  {
+    id: "small_leak",
+    title: "Small Leak",
+    description: "Track a month with only small leaks.",
+    icon: "/badge_small_leak.png",
+  },
+  {
+    id: "pressure_mode",
+    title: "Pressure Mode",
+    description: "Leaks are starting to pressure the wallet.",
+    icon: "/badge_pressure_mode.png",
+  },
+  {
+    id: "heavy_leak",
+    title: "Heavy Leak",
+    description: "A large share of your free money is leaking away.",
+    icon: "/badge_heavy_leak.png",
+  },
+  {
+    id: "full_broke_mode",
+    title: "Full $BROKE Mode",
+    description: "Real balance dropped to danger zone.",
+    icon: "/badge_full_broke_mode.png",
+  },
+  {
+    id: "saving_mode",
+    title: "Saving Mode",
+    description: "You kept leaks tight and protected your balance.",
+    icon: "/badge_saving_mode.png",
+  },
+  {
+    id: "good_month",
+    title: "Good Month",
+    description: "A strong month with healthy balance and discipline.",
+    icon: "/badge_good_month.png",
+  },
+  {
+    id: "overspending",
+    title: "Overspending",
+    description: "You spent more than your post-life-cost budget.",
+    icon: "/badge_overspending.png",
+  },
+  {
+    id: "recovery_mode",
+    title: "Recovery Mode",
+    description: "A streak and better habits pushed the wallet back up.",
+    icon: "/badge_recovery_mode.png",
+  },
+  {
+    id: "streak",
+    title: "Streak",
+    description: "Reach a 7-day tracking streak.",
+    icon: "/badge_streak.png",
   },
 ];
 
@@ -411,6 +491,164 @@ async function resetStreak(telegramId: number) {
   return emptyStreak;
 }
 
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function sum(values: number[]) {
+  return values.reduce((acc, value) => acc + value, 0);
+}
+
+function monthKey(date: Date) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+function getCurrentMonthExpenses(expenses: Expense[]) {
+  const current = monthKey(new Date());
+  return expenses.filter((expense) => monthKey(new Date(expense.createdAt)) === current);
+}
+
+function getTotalIncome(settings: Settings) {
+  return sum([
+    settings.income.salary,
+    settings.income.side,
+    settings.income.other,
+  ]);
+}
+
+function getFixedCosts(settings: Settings) {
+  return sum([
+    settings.fixedCosts.rent,
+    settings.fixedCosts.utilities,
+    settings.fixedCosts.food,
+    settings.fixedCosts.transport,
+    settings.fixedCosts.phone,
+  ]);
+}
+
+function dbToUserBadge(row: Record<string, unknown>): UserBadge {
+  return {
+    badgeId: String(row.badge_id ?? ""),
+    earnedAt: row.earned_at ? String(row.earned_at) : null,
+  };
+}
+
+async function getUserBadges(telegramId: number) {
+  try {
+    const rows = (await supabaseFetch(
+      `broke_user_badges?telegram_id=eq.${telegramId}&select=badge_id,earned_at`
+    )) as Record<string, unknown>[];
+
+    return rows.map(dbToUserBadge);
+  } catch {
+    return [] as UserBadge[];
+  }
+}
+
+async function awardBadges(telegramId: number, badgeIds: string[]) {
+  if (!badgeIds.length) return;
+
+  try {
+    await supabaseFetch("broke_user_badges?on_conflict=telegram_id,badge_id", {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify(
+        badgeIds.map((badgeId) => ({
+          telegram_id: telegramId,
+          badge_id: badgeId,
+          earned_at: new Date().toISOString(),
+        }))
+      ),
+    });
+  } catch {
+    // Badge table may not exist yet. SQL file must be applied first.
+  }
+}
+
+function shouldUnlockBadge(
+  badgeId: string,
+  settings: Settings,
+  expenses: Expense[],
+  streak: Streak
+) {
+  const monthExpenses = getCurrentMonthExpenses(expenses);
+  const totalIncome = getTotalIncome(settings);
+  const fixedCosts = getFixedCosts(settings);
+  const monthSpent = sum(monthExpenses.map((item) => item.amount));
+  const moneyLeaks = sum(
+    monthExpenses.filter((item) => item.needType === "Not needed").map((item) => item.amount)
+  );
+  const maybeLeaks = sum(
+    monthExpenses.filter((item) => item.needType === "Maybe").map((item) => item.amount * 0.5)
+  );
+  const totalLeaks = moneyLeaks + maybeLeaks;
+  const availableAfterLifeCost = Math.max(totalIncome - fixedCosts, 1);
+  const realBalance = totalIncome - fixedCosts - monthSpent;
+  const walletHp = clamp(
+    100 - Math.round((totalLeaks / availableAfterLifeCost) * 100),
+    5,
+    100
+  );
+  const trackedCount = monthExpenses.length;
+
+  switch (badgeId) {
+    case "stable_wallet":
+      return trackedCount >= 3 && walletHp >= 85 && totalLeaks <= availableAfterLifeCost * 0.1;
+    case "small_leak":
+      return trackedCount >= 1 && totalLeaks > 0 && totalLeaks <= availableAfterLifeCost * 0.15;
+    case "pressure_mode":
+      return trackedCount >= 2 && totalLeaks >= availableAfterLifeCost * 0.2;
+    case "heavy_leak":
+      return trackedCount >= 3 && totalLeaks >= availableAfterLifeCost * 0.35;
+    case "full_broke_mode":
+      return trackedCount >= 3 && (realBalance <= 0 || walletHp <= 10);
+    case "saving_mode":
+      return trackedCount >= 5 && totalLeaks <= availableAfterLifeCost * 0.08 && realBalance > 0;
+    case "good_month":
+      return trackedCount >= 5 && realBalance >= availableAfterLifeCost * 0.5 && totalLeaks <= availableAfterLifeCost * 0.12;
+    case "overspending":
+      return trackedCount >= 1 && monthSpent > availableAfterLifeCost;
+    case "recovery_mode":
+      return trackedCount >= 5 && streak.currentStreak >= 3 && walletHp >= 70 && totalLeaks <= availableAfterLifeCost * 0.2;
+    case "streak":
+      return streak.bestStreak >= 7;
+    default:
+      return false;
+  }
+}
+
+async function getBadgeState(
+  telegramId: number,
+  settings: Settings,
+  expenses: Expense[],
+  streak: Streak
+) {
+  const existing = await getUserBadges(telegramId);
+  const earnedSet = new Set(existing.map((item) => item.badgeId));
+
+  const unlockedNow = defaultBadges
+    .filter((badge) => !earnedSet.has(badge.id) && shouldUnlockBadge(badge.id, settings, expenses, streak))
+    .map((badge) => badge.id);
+
+  if (unlockedNow.length) {
+    await awardBadges(telegramId, unlockedNow);
+  }
+
+  const fresh = await getUserBadges(telegramId);
+  const freshMap = new Map(fresh.map((item) => [item.badgeId, item.earnedAt]));
+
+  return defaultBadges.map((badge) => ({
+    ...badge,
+    earned: freshMap.has(badge.id),
+    earnedAt: freshMap.get(badge.id) ?? null,
+  })) as BadgeItem[];
+}
+
 async function supabaseFetch(path: string, options: RequestInit = {}) {
   const response = await fetch(supabaseUrl(path), {
     ...options,
@@ -541,6 +779,22 @@ async function resetData(telegramId: number) {
   await supabaseFetch(`broke_expenses?telegram_id=eq.${telegramId}`, {
     method: "DELETE",
   });
+
+  try {
+    await supabaseFetch(`broke_user_challenges?telegram_id=eq.${telegramId}`, {
+      method: "DELETE",
+    });
+  } catch {
+    // ignore if table not ready
+  }
+
+  try {
+    await supabaseFetch(`broke_user_badges?telegram_id=eq.${telegramId}`, {
+      method: "DELETE",
+    });
+  } catch {
+    // ignore if table not ready
+  }
 
   await saveSettings(telegramId, defaultSettings);
 }
@@ -786,6 +1040,7 @@ export async function GET(request: NextRequest) {
       checkSupabaseTable("broke_streaks"),
       checkSupabaseTable("broke_challenges"),
       checkSupabaseTable("broke_user_challenges"),
+      checkSupabaseTable("broke_user_badges"),
     ]);
 
     return NextResponse.json({
@@ -832,59 +1087,76 @@ export async function POST(request: NextRequest) {
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
       const challengeState = await getChallengeState(telegramId, expenses);
+      const badges = await getBadgeState(telegramId, settings, expenses, streak);
 
       return NextResponse.json({
         ok: true,
         settings,
         expenses,
         streak,
+        badges,
         ...challengeState,
       });
     }
 
     if (action === "addExpense") {
       const expense = await addExpense(telegramId, body.expense as Expense);
+      const settings = await getSettings(telegramId);
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
       const challengeState = await getChallengeState(telegramId, expenses);
+      const badges = await getBadgeState(telegramId, settings, expenses, streak);
 
       return NextResponse.json({
         ok: true,
         expense,
         streak,
+        badges,
         ...challengeState,
       });
     }
 
     if (action === "deleteExpense") {
       await deleteExpense(telegramId, String(body.id));
+      const settings = await getSettings(telegramId);
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
       const challengeState = await getChallengeState(telegramId, expenses);
+      const badges = await getBadgeState(telegramId, settings, expenses, streak);
 
       return NextResponse.json({
         ok: true,
         streak,
+        badges,
         ...challengeState,
       });
     }
 
     if (action === "startChallenge") {
       await startChallenge(telegramId, String(body.challengeId));
+      const settings = await getSettings(telegramId);
       const expenses = await getExpenses(telegramId);
+      const streak = await getAndUpdateStreak(telegramId, expenses);
       const challengeState = await getChallengeState(telegramId, expenses);
+      const badges = await getBadgeState(telegramId, settings, expenses, streak);
 
       return NextResponse.json({
         ok: true,
+        badges,
         ...challengeState,
       });
     }
 
     if (action === "saveSettings") {
-      await saveSettings(telegramId, body.settings as Settings);
+      const settings = body.settings as Settings;
+      await saveSettings(telegramId, settings);
+      const expenses = await getExpenses(telegramId);
+      const streak = await getAndUpdateStreak(telegramId, expenses);
+      const badges = await getBadgeState(telegramId, settings, expenses, streak);
 
       return NextResponse.json({
         ok: true,
+        badges,
       });
     }
 
@@ -892,12 +1164,18 @@ export async function POST(request: NextRequest) {
       await resetData(telegramId);
       const streak = await resetStreak(telegramId);
       const challengeState = await getChallengeState(telegramId, []);
+      const badges = defaultBadges.map((badge) => ({
+        ...badge,
+        earned: false,
+        earnedAt: null,
+      })) as BadgeItem[];
 
       return NextResponse.json({
         ok: true,
         settings: defaultSettings,
         expenses: [],
         streak,
+        badges,
         ...challengeState,
       });
     }
