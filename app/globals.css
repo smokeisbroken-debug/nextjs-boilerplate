@@ -1492,3 +1492,141 @@ body {
     height: 100% !important;
   }
 }
+/* ===== WORKING MECHANICS UI PATCH ===== */
+
+.amount-input input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.amount-input input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.note-box input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.note-box input::placeholder {
+  color: var(--muted);
+}
+
+.setting-input-line {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: 12px;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #dce5d6;
+  font-size: 13px;
+}
+
+.setting-input-line div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px;
+  align-items: center;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(183, 255, 25, 0.12);
+}
+
+.setting-input-line small {
+  color: var(--green);
+  font-weight: 900;
+}
+
+.setting-input-line input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f4f7f0;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.settings-select {
+  width: 100%;
+  margin-top: 2px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.settings-select option {
+  background: #071009;
+  color: #f4f7f0;
+}
+
+.menu-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  padding: 0;
+}
+
+.toggle.off {
+  background: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+}
+
+.toggle.off::after {
+  left: 4px;
+  right: auto;
+}
+
+/* bigger premium nav icons */
+.bottom-nav {
+  height: 74px !important;
+  padding: 7px 8px !important;
+}
+
+.bottom-nav button img {
+  width: 34px !important;
+  height: 34px !important;
+  opacity: 0.82 !important;
+}
+
+.bottom-nav button.active img {
+  opacity: 1 !important;
+}
+
+.bottom-nav button span {
+  margin-top: -2px;
+  font-size: 10px !important;
+}
+
+/* keep content above bigger nav */
+.screen {
+  padding-bottom: 132px !important;
+}
+
+@media (max-width: 420px) {
+  .screen {
+    padding-bottom: 136px !important;
+  }
+
+  .bottom-nav {
+    bottom: 16px !important;
+  }
+    }
