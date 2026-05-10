@@ -265,6 +265,69 @@ const categories = [
   { name: "Custom", icon: A.custom },
 ];
 
+const defaultChallengeTemplates: ChallengeTemplate[] = [
+  {
+    id: "no_takeout_3",
+    title: "No Takeout 3 Days",
+    description: "Keep takeout spending under the limit for 3 days.",
+    category: "Takeouts",
+    durationDays: 3,
+    maxSpend: 30,
+    rewardHp: 10,
+    icon: A.challengeTakeout,
+  },
+  {
+    id: "coffee_control_7",
+    title: "Coffee Control",
+    description: "Keep coffee leaks under control for one week.",
+    category: "Coffee",
+    durationDays: 7,
+    maxSpend: 25,
+    rewardHp: 8,
+    icon: A.challengeCoffee,
+  },
+  {
+    id: "smoking_cut_7",
+    title: "Smoking Cut 7 Days",
+    description: "Reduce smoking spend for one week.",
+    category: "Smoking",
+    durationDays: 7,
+    maxSpend: 60,
+    rewardHp: 12,
+    icon: A.challengeSmoking,
+  },
+  {
+    id: "shopping_freeze_7",
+    title: "Shopping Freeze",
+    description: "Avoid random shopping leaks for 7 days.",
+    category: "Shopping",
+    durationDays: 7,
+    maxSpend: 40,
+    rewardHp: 12,
+    icon: A.challengeShopping,
+  },
+  {
+    id: "subscription_killer",
+    title: "Subscription Killer",
+    description: "Control subscriptions and recurring costs.",
+    category: "Subscriptions",
+    durationDays: 7,
+    maxSpend: 20,
+    rewardHp: 10,
+    icon: A.challengeSubscriptions,
+  },
+  {
+    id: "wallet_recovery_7",
+    title: "Wallet HP Recovery",
+    description: "Keep total leaks low and rebuild Wallet HP.",
+    category: "All",
+    durationDays: 7,
+    maxSpend: 120,
+    rewardHp: 15,
+    icon: A.challengeWalletRecovery,
+  },
+];
+
 const navItems: {
   id: Tab;
   label: string;
