@@ -794,6 +794,24 @@ export default function Home() {
     }
   }
 
+  function goHome() {
+    setActiveTab("home");
+  }
+
+  function openProjectTelegram() {
+    openTelegramUrl(PROJECT_TG_URL);
+  }
+
+  function openHelp() {
+    window.alert(
+      "$BROKE Life Tracker\n\nAdd expenses, mark them as Needed / Not needed / Maybe, then check your Wallet HP, chart, and savings scenarios."
+    );
+  }
+
+  function openExportHelp() {
+    window.alert("Share and export options are available on the Home dashboard.");
+  }
+
   const summary = {
     totalIncome,
     fixedCosts,
@@ -817,6 +835,7 @@ export default function Home() {
             telegram={telegram}
             cloudStatus={cloudStatus}
             cloudError={cloudError}
+            onBellClick={openProjectTelegram}
           />
         )}
 
@@ -832,15 +851,27 @@ export default function Home() {
             expenseType={expenseType}
             setExpenseType={setExpenseType}
             onAdd={addExpense}
+            onBack={goHome}
+            onHelp={openHelp}
           />
         )}
 
         {activeTab === "chart" && (
-          <ChartScreen settings={settings} expenses={expenses} />
+          <ChartScreen
+            settings={settings}
+            expenses={expenses}
+            onBack={goHome}
+            onExport={openExportHelp}
+          />
         )}
 
         {activeTab === "whatif" && (
-          <WhatIfScreen settings={settings} expenses={currentMonthExpenses} />
+          <WhatIfScreen
+            settings={settings}
+            expenses={currentMonthExpenses}
+            onBack={goHome}
+            onHelp={openHelp}
+          />
         )}
 
         {activeTab === "settings" && (
@@ -854,6 +885,7 @@ export default function Home() {
             telegram={telegram}
             cloudStatus={cloudStatus}
             cloudError={cloudError}
+            onBack={goHome}
           />
         )}
 
@@ -867,29 +899,55 @@ function Header({
   title,
   showBack = false,
   rightIcon,
+  onBack,
+  onRight,
 }: {
   title: string;
   showBack?: boolean;
   rightIcon?: string;
+  onBack?: () => void;
+  onRight?: () => void;
 }) {
   return (
     <div className="screen-header">
       <div className="header-side">
-        {showBack ? (
-          <img className="header-icon" src={A.back} alt="Back" />
-        ) : (
-          <img className="app-icon" src={A.appFrog} alt="$BROKE" />
-        )}
+        <button
+          className="header-button"
+          type="button"
+          onClick={() => {
+            triggerHaptic("light");
+            if (showBack) {
+              onBack?.();
+            }
+          }}
+          aria-label={showBack ? "Back" : "App"}
+        >
+          {showBack ? (
+            <img className="header-icon" src={A.back} alt="Back" />
+          ) : (
+            <img className="app-icon" src={A.appFrog} alt="$BROKE" />
+          )}
+        </button>
       </div>
 
       <div className="header-title">{title}</div>
 
       <div className="header-side right">
-        {rightIcon ? (
-          <img className="header-icon" src={rightIcon} alt="" />
-        ) : (
-          <img className="header-icon" src={A.bell} alt="Notifications" />
-        )}
+        <button
+          className="header-button"
+          type="button"
+          onClick={() => {
+            triggerHaptic("light");
+            onRight?.();
+          }}
+          aria-label="Action"
+        >
+          {rightIcon ? (
+            <img className="header-icon" src={rightIcon} alt="" />
+          ) : (
+            <img className="header-icon" src={A.bell} alt="Notifications" />
+          )}
+        </button>
       </div>
     </div>
   );
@@ -904,6 +962,7 @@ function DashboardScreen({
   telegram,
   cloudStatus,
   cloudError,
+  onBellClick,
 }: {
   settings: Settings;
   summary: {
@@ -921,6 +980,7 @@ function DashboardScreen({
   telegram: TelegramState;
   cloudStatus: CloudStatus;
   cloudError: string;
+  onBellClick: () => void;
 }) {
   const stats = [
     {
@@ -955,14 +1015,7 @@ function DashboardScreen({
 
   return (
     <div className="screen">
-      <Header title="$BROKE Life Tracker" />
-
-      <TelegramMiniStatus
-        telegram={telegram}
-        cloudStatus={cloudStatus}
-        cloudError={cloudError}
-        compact
-      />
+      <Header title="$BROKE Life Tracker" onRight={onBellClick} />
 
       <section className="hero">
         <div>
@@ -1329,6 +1382,8 @@ function AddExpenseScreen({
   expenseType,
   setExpenseType,
   onAdd,
+  onBack,
+  onHelp,
 }: {
   settings: Settings;
   amount: string;
@@ -1340,6 +1395,8 @@ function AddExpenseScreen({
   expenseType: NeedType;
   setExpenseType: (value: NeedType) => void;
   onAdd: () => void;
+  onBack: () => void;
+  onHelp: () => void;
 }) {
   return (
     <form
@@ -1349,7 +1406,7 @@ function AddExpenseScreen({
         onAdd();
       }}
     >
-      <Header title="Add Expense" showBack rightIcon={A.help} />
+      <Header title="Add Expense" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
       <section className="amount-box">
         <label>Amount</label>
@@ -1426,9 +1483,13 @@ function AddExpenseScreen({
 function ChartScreen({
   settings,
   expenses,
+  onBack,
+  onExport,
 }: {
   settings: Settings;
   expenses: Expense[];
+  onBack: () => void;
+  onExport: () => void;
 }) {
   const [range, setRange] = useState<ChartRange>("week");
 
@@ -1452,7 +1513,7 @@ function ChartScreen({
 
   return (
     <div className="screen">
-      <Header title="$BROKE Chart" showBack rightIcon={A.export} />
+      <Header title="$BROKE Chart" showBack rightIcon={A.export} onBack={onBack} onRight={onExport} />
 
       <section className="chart-banner">
         <p>
@@ -1567,9 +1628,13 @@ function ChartScreen({
 function WhatIfScreen({
   settings,
   expenses,
+  onBack,
+  onHelp,
 }: {
   settings: Settings;
   expenses: Expense[];
+  onBack: () => void;
+  onHelp: () => void;
 }) {
   const [reductions, setReductions] = useState<Record<string, number>>({});
 
@@ -1611,7 +1676,7 @@ function WhatIfScreen({
 
   return (
     <div className="screen">
-      <Header title="Save" showBack rightIcon={A.help} />
+      <Header title="Save" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
       <section className="whatif-hero">
         <img src={A.whatIfFrog} alt="" />
@@ -1711,6 +1776,7 @@ function SettingsScreen({
   telegram,
   cloudStatus,
   cloudError,
+  onBack,
 }: {
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
@@ -1721,6 +1787,7 @@ function SettingsScreen({
   telegram: TelegramState;
   cloudStatus: CloudStatus;
   cloudError: string;
+  onBack: () => void;
 }) {
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
@@ -1750,13 +1817,7 @@ function SettingsScreen({
 
   return (
     <div className="screen">
-      <Header title="Settings" showBack />
-
-      <TelegramMiniStatus
-        telegram={telegram}
-        cloudStatus={cloudStatus}
-        cloudError={cloudError}
-      />
+      <Header title="Settings" showBack onBack={onBack} />
 
       <section className="settings-group">
         <h3>Income (Monthly)</h3>
@@ -1999,7 +2060,16 @@ function LatestRecordsList({
           />
         );
       })}
-    </div>
+
+
+      <details className="tech-details">
+        <summary>Technical status</summary>
+        <TelegramMiniStatus
+          telegram={telegram}
+          cloudStatus={cloudStatus}
+          cloudError={cloudError}
+        />
+      </details>    </div>
   );
 }
 
