@@ -1992,6 +1992,15 @@ function SettingsScreen({
           onDeleteExpense={onDeleteExpense}
         />
       </section>
+
+      <details className="tech-details">
+        <summary>Technical status</summary>
+        <TelegramMiniStatus
+          telegram={telegram}
+          cloudStatus={cloudStatus}
+          cloudError={cloudError}
+        />
+      </details>
     </div>
   );
 }
@@ -2059,17 +2068,7 @@ function LatestRecordsList({
             onDeleteExpense={onDeleteExpense}
           />
         );
-      })}
-
-
-      <details className="tech-details">
-        <summary>Technical status</summary>
-        <TelegramMiniStatus
-          telegram={telegram}
-          cloudStatus={cloudStatus}
-          cloudError={cloudError}
-        />
-      </details>    </div>
+      })}    </div>
   );
 }
 
