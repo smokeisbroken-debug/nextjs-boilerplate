@@ -1358,4 +1358,6 @@ function BottomNav({
       ))}
     </nav>
   );
+
+  );
 }
