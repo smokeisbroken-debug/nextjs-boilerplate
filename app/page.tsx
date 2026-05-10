@@ -49,10 +49,70 @@ type CategorySummary = {
   icon: string;
 };
 
+type TelegramUser = {
+  id: number;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
+  photo_url?: string;
+};
+
+type TelegramState = {
+  isTelegram: boolean;
+  user: TelegramUser | null;
+  platform: string;
+  version: string;
+  colorScheme: string;
+  startParam: string;
+  initData: string;
+};
+
+type TelegramWebApp = {
+  initData?: string;
+  initDataUnsafe?: {
+    user?: TelegramUser;
+    start_param?: string;
+  };
+  platform?: string;
+  version?: string;
+  colorScheme?: string;
+  ready?: () => void;
+  expand?: () => void;
+  close?: () => void;
+  setHeaderColor?: (color: string) => void;
+  setBackgroundColor?: (color: string) => void;
+  openTelegramLink?: (url: string) => void;
+  openLink?: (url: string) => void;
+  HapticFeedback?: {
+    impactOccurred?: (style: "light" | "medium" | "heavy" | "rigid" | "soft") => void;
+    notificationOccurred?: (type: "error" | "success" | "warning") => void;
+    selectionChanged?: () => void;
+  };
+};
+
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: TelegramWebApp;
+    };
+  }
+}
+
 const STORAGE_KEY = "broke-life-tracker-v1";
 const PROJECT_X_URL = "https://x.com/SmokeIsBroke";
 const PROJECT_TG_URL = "https://t.me/SmokeIsBrokeSol";
+const TELEGRAM_WEB_APP_SCRIPT = "https://telegram.org/js/telegram-web-app.js";
 
+const emptyTelegramState: TelegramState = {
+  isTelegram: false,
+  user: null,
+  platform: "browser",
+  version: "-",
+  colorScheme: "dark",
+  startParam: "",
+  initData: "",
+};
 
 const A = {
   appFrog: "/01_app_frog_icon.png",
@@ -226,6 +286,71 @@ function getCategorySummaries(expenses: Expense[]): CategorySummary[] {
     .sort((a, b) => b.amount - a.amount);
 }
 
+
+function getTelegramWebApp() {
+  if (typeof window === "undefined") return undefined;
+  return window.Telegram?.WebApp;
+}
+
+function triggerHaptic(type: "light" | "medium" | "success" | "error" = "light") {
+  const haptic = getTelegramWebApp()?.HapticFeedback;
+
+  try {
+    if (type === "success" || type === "error") {
+      haptic?.notificationOccurred?.(type);
+      return;
+    }
+
+    haptic?.impactOccurred?.(type);
+  } catch {
+    // Telegram haptics are optional.
+  }
+}
+
+function openExternalUrl(url: string) {
+  const webApp = getTelegramWebApp();
+
+  if (webApp?.openLink) {
+    webApp.openLink(url);
+    return;
+  }
+
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+function openTelegramUrl(url: string) {
+  const webApp = getTelegramWebApp();
+
+  if (webApp?.openTelegramLink) {
+    webApp.openTelegramLink(url);
+    return;
+  }
+
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+function readTelegramState(): TelegramState {
+  const webApp = getTelegramWebApp();
+
+  if (!webApp) {
+    return emptyTelegramState;
+  }
+
+  const user = webApp.initDataUnsafe?.user ?? null;
+  const initData = webApp.initData ?? "";
+  const isTelegram = Boolean(initData || user);
+
+  return {
+    isTelegram,
+    user,
+    platform: webApp.platform ?? "telegram",
+    version: webApp.version ?? "-",
+    colorScheme: webApp.colorScheme ?? "dark",
+    startParam: webApp.initDataUnsafe?.start_param ?? "",
+    initData,
+  };
+}
+
 function buildChartData(
   range: ChartRange,
   expenses: Expense[],
@@ -339,11 +464,63 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [telegram, setTelegram] = useState<TelegramState>(emptyTelegramState);
 
   const [amount, setAmount] = useState("25.00");
   const [note, setNote] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Coffee");
   const [expenseType, setExpenseType] = useState<NeedType>("Needed");
+
+  useEffect(() => {
+    function applyTelegramWebApp() {
+      const webApp = getTelegramWebApp();
+
+      if (!webApp) {
+        setTelegram(emptyTelegramState);
+        return;
+      }
+
+      try {
+        webApp.ready?.();
+        webApp.expand?.();
+        webApp.setHeaderColor?.("#050806");
+        webApp.setBackgroundColor?.("#050806");
+      } catch {
+        // Telegram methods are optional outside Telegram.
+      }
+
+      setTelegram(readTelegramState());
+    }
+
+    if (getTelegramWebApp()) {
+      applyTelegramWebApp();
+      return;
+    }
+
+    const existingScript = document.getElementById("telegram-web-app-script");
+
+    if (existingScript) {
+      existingScript.addEventListener("load", applyTelegramWebApp);
+      window.setTimeout(applyTelegramWebApp, 600);
+      return () => {
+        existingScript.removeEventListener("load", applyTelegramWebApp);
+      };
+    }
+
+    const script = document.createElement("script");
+    script.id = "telegram-web-app-script";
+    script.src = TELEGRAM_WEB_APP_SCRIPT;
+    script.async = true;
+    script.onload = applyTelegramWebApp;
+    document.head.appendChild(script);
+
+    const fallback = window.setTimeout(applyTelegramWebApp, 900);
+
+    return () => {
+      window.clearTimeout(fallback);
+      script.onload = null;
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -451,6 +628,7 @@ export default function Home() {
       createdAt: new Date().toISOString(),
     };
 
+    triggerHaptic("success");
     setExpenses((prev) => [expense, ...prev]);
     setAmount("");
     setNote("");
@@ -459,6 +637,7 @@ export default function Home() {
   }
 
   function deleteExpense(id: string) {
+    triggerHaptic("medium");
     setExpenses((prev) => prev.filter((expense) => expense.id !== id));
   }
 
@@ -466,6 +645,7 @@ export default function Home() {
     const ok = window.confirm("Delete all $BROKE Life Tracker data?");
     if (!ok) return;
 
+    triggerHaptic("error");
     setSettings(defaultSettings);
     setExpenses([]);
     localStorage.removeItem(STORAGE_KEY);
@@ -492,6 +672,7 @@ export default function Home() {
             chartDays={chartDays}
             expenses={currentMonthExpenses.slice(0, 6)}
             onDeleteExpense={deleteExpense}
+            telegram={telegram}
           />
         )}
 
@@ -526,6 +707,7 @@ export default function Home() {
             currentMonthExpenses={currentMonthExpenses}
             onReset={resetData}
             onDeleteExpense={deleteExpense}
+            telegram={telegram}
           />
         )}
 
@@ -573,6 +755,7 @@ function DashboardScreen({
   chartDays,
   expenses,
   onDeleteExpense,
+  telegram,
 }: {
   settings: Settings;
   summary: {
@@ -587,6 +770,7 @@ function DashboardScreen({
   chartDays: ChartPoint[];
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
+  telegram: TelegramState;
 }) {
   const stats = [
     {
@@ -622,6 +806,8 @@ function DashboardScreen({
   return (
     <div className="screen">
       <Header title="$BROKE Life Tracker" />
+
+      <TelegramMiniStatus telegram={telegram} compact />
 
       <section className="hero">
         <div>
@@ -706,6 +892,54 @@ function DashboardScreen({
 }
 
 
+
+function TelegramMiniStatus({
+  telegram,
+  compact = false,
+}: {
+  telegram: TelegramState;
+  compact?: boolean;
+}) {
+  const username = telegram.user?.username
+    ? `@${telegram.user.username}`
+    : telegram.user?.first_name || "Telegram user";
+
+  return (
+    <section className={compact ? "tg-status tg-status-compact" : "tg-status"}>
+      <div>
+        <span>Telegram Mini App</span>
+        <strong>{telegram.isTelegram ? "Connected" : "Browser preview"}</strong>
+      </div>
+
+      <div>
+        <span>User</span>
+        <strong>{telegram.user ? username : "Not detected"}</strong>
+      </div>
+
+      {!compact && (
+        <>
+          <div>
+            <span>User ID</span>
+            <strong>{telegram.user?.id ?? "-"}</strong>
+          </div>
+          <div>
+            <span>Platform</span>
+            <strong>{telegram.platform}</strong>
+          </div>
+          <div>
+            <span>Version</span>
+            <strong>{telegram.version}</strong>
+          </div>
+          <div>
+            <span>Start param</span>
+            <strong>{telegram.startParam || "-"}</strong>
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
 function buildShareText({
   settings,
   walletHp,
@@ -755,19 +989,22 @@ function ShareResultCard({
   });
 
   function openXShare() {
+    triggerHaptic("light");
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    openExternalUrl(url);
   }
 
   function openTelegramShare() {
+    triggerHaptic("light");
     const url = `https://t.me/share/url?url=${encodeURIComponent(
       PROJECT_TG_URL
     )}&text=${encodeURIComponent(shareText)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    openTelegramUrl(url);
   }
 
   async function nativeShare() {
     try {
+      triggerHaptic("light");
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({
           title: "$BROKE Life Tracker",
@@ -785,6 +1022,7 @@ function ShareResultCard({
   async function copyShareText() {
     try {
       await navigator.clipboard.writeText(shareText);
+      triggerHaptic("success");
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
@@ -1294,6 +1532,7 @@ function SettingsScreen({
   currentMonthExpenses,
   onReset,
   onDeleteExpense,
+  telegram,
 }: {
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
@@ -1301,6 +1540,7 @@ function SettingsScreen({
   currentMonthExpenses: Expense[];
   onReset: () => void;
   onDeleteExpense: (id: string) => void;
+  telegram: TelegramState;
 }) {
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
@@ -1331,6 +1571,8 @@ function SettingsScreen({
   return (
     <div className="screen">
       <Header title="Settings" showBack />
+
+      <TelegramMiniStatus telegram={telegram} />
 
       <section className="settings-group">
         <h3>Income (Monthly)</h3>
@@ -1680,7 +1922,10 @@ function BottomNav({
       {navItems.map((item) => (
         <button
           key={item.id}
-          onClick={() => setActiveTab(item.id)}
+          onClick={() => {
+            triggerHaptic("light");
+            setActiveTab(item.id);
+          }}
           className={activeTab === item.id ? "active" : ""}
         >
           <img src={item.icon} alt="" />
