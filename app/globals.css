@@ -4500,3 +4500,313 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
 @media (max-width: 899px) {
   /* Explicitly keep the Telegram/mobile layout untouched. */
 }
+/* ===== V35.1 DESKTOP COMPACT / LESS SCROLL ===== */
+/* Paste at the very bottom of app/globals.css, AFTER v35 CSS.
+   Desktop/web only. Telegram mobile layout stays unchanged. */
+
+@media (min-width: 900px) {
+  .app-shell {
+    padding: 12px !important;
+  }
+
+  .phone {
+    width: min(1560px, calc(100vw - 24px)) !important;
+    min-height: calc(100vh - 24px) !important;
+    border-radius: 26px !important;
+  }
+
+  .screen {
+    min-height: calc(100vh - 24px) !important;
+    padding: 18px 22px 94px !important;
+  }
+
+  .header {
+    margin: -18px -22px 14px !important;
+    padding: 12px 22px !important;
+    min-height: 54px !important;
+  }
+
+  .hero {
+    min-height: 210px !important;
+    gap: 18px !important;
+    grid-template-columns: minmax(0, 1.2fr) minmax(220px, 340px) !important;
+    margin-bottom: 12px !important;
+  }
+
+  .hero h1 {
+    font-size: clamp(42px, 4.2vw, 74px) !important;
+    line-height: 0.9 !important;
+    margin: 0 !important;
+  }
+
+  .home-mascot {
+    width: min(315px, 22vw) !important;
+    max-height: 315px !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    margin: 10px 0 !important;
+  }
+
+  .stat-card {
+    min-height: 132px !important;
+    padding: 14px !important;
+    border-radius: 18px !important;
+  }
+
+  .stat-top {
+    margin-bottom: 12px !important;
+  }
+
+  .stat-top img {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .stat-card strong {
+    font-size: clamp(27px, 2.3vw, 40px) !important;
+    line-height: 1 !important;
+  }
+
+  .streak-card {
+    min-height: 86px !important;
+    padding: 12px 14px !important;
+    border-radius: 18px !important;
+    grid-template-columns: 54px 1fr 76px !important;
+    margin: 10px 0 !important;
+  }
+
+  .streak-card > img {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .streak-card strong {
+    font-size: 28px !important;
+  }
+
+  .streak-card p {
+    margin-top: 2px !important;
+    font-size: 11px !important;
+  }
+
+  .streak-card aside {
+    min-height: 62px !important;
+    padding: 8px !important;
+    border-radius: 14px !important;
+  }
+
+  .badges-strip,
+  .hp-card,
+  .wallet-insights-panel,
+  .share-card,
+  .chart-preview,
+  .tracked-panel,
+  .leaderboard-panel,
+  .challenges-panel,
+  .settings-card,
+  .day-card,
+  .volume,
+  .chart-banner,
+  .whatif-total-card,
+  .whatif-hero {
+    margin-top: 10px !important;
+  }
+
+  .badges-strip,
+  .hp-card,
+  .share-card,
+  .chart-preview,
+  .tracked-panel,
+  .leaderboard-panel,
+  .challenges-panel,
+  .settings-card,
+  .day-card {
+    padding: 12px !important;
+    border-radius: 18px !important;
+  }
+
+  .hp-card {
+    display: grid !important;
+    grid-template-columns: 220px 1fr auto !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+
+  .hp-card .section-title,
+  .hp-card p {
+    margin: 0 !important;
+  }
+
+  .wallet-insight-main {
+    min-height: 92px !important;
+    grid-template-columns: 48px 1fr !important;
+    padding: 12px 14px !important;
+    border-radius: 18px !important;
+  }
+
+  .wallet-insight-main img {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .wallet-insight-main strong {
+    font-size: 17px !important;
+  }
+
+  .wallet-insight-main p {
+    margin-top: 3px !important;
+    font-size: 13px !important;
+  }
+
+  .wallet-insight-main small {
+    margin-top: 3px !important;
+    font-size: 11px !important;
+  }
+
+  .wallet-insight-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .share-card {
+    display: none !important;
+  }
+
+  .chart-preview {
+    grid-template-columns: minmax(0, 1.5fr) minmax(240px, 330px) !important;
+    gap: 12px !important;
+  }
+
+  .mini-chart {
+    min-height: 160px !important;
+  }
+
+  .damage-card {
+    min-height: 160px !important;
+    border-radius: 18px !important;
+  }
+
+  .damage-card img {
+    width: 120px !important;
+    height: 120px !important;
+  }
+
+  .recent-list,
+  .settings-grid,
+  .category-summary-list,
+  .whatif-list,
+  .challenge-grid,
+  .leaderboard-list,
+  .badge-vault-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 9px !important;
+  }
+
+  .tracked-item,
+  .leaderboard-row,
+  .challenge-template-card,
+  .badge-row,
+  .wallet-insight-item {
+    min-height: 58px !important;
+    padding: 8px !important;
+    border-radius: 14px !important;
+  }
+
+  .big-chart {
+    min-height: 300px !important;
+    padding: 14px !important;
+    border-radius: 20px !important;
+  }
+
+  .chart-lines {
+    min-height: 250px !important;
+  }
+
+  .day-info {
+    gap: 9px !important;
+  }
+
+  .whatif-hero {
+    min-height: 170px !important;
+    grid-template-columns: 150px 1fr !important;
+    padding: 14px !important;
+  }
+
+  .whatif-hero img {
+    width: 140px !important;
+    height: 140px !important;
+  }
+
+  .whatif-hero h2 {
+    font-size: clamp(32px, 3vw, 50px) !important;
+  }
+
+  .whatif-total-card strong {
+    font-size: clamp(34px, 3.2vw, 56px) !important;
+  }
+
+  .add-card,
+  .settings-card {
+    max-width: 1180px !important;
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .category-button {
+    min-height: 76px !important;
+    padding: 8px !important;
+    border-radius: 15px !important;
+  }
+
+  .category-button img {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .amount-box {
+    padding: 16px !important;
+    border-radius: 22px !important;
+  }
+
+  .amount-box input {
+    font-size: clamp(38px, 3.6vw, 58px) !important;
+  }
+
+  .bottom-nav {
+    bottom: 14px !important;
+    width: min(650px, calc(100vw - 56px)) !important;
+    min-height: 68px !important;
+    padding: 8px 12px !important;
+    border-radius: 22px !important;
+  }
+
+  .bottom-nav button img {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .bottom-nav button span {
+    font-size: 11px !important;
+  }
+
+  .app-toast {
+    bottom: 92px !important;
+  }
+}
+
+@media (min-width: 1500px) {
+  .recent-list,
+  .settings-grid,
+  .category-summary-list,
+  .whatif-list,
+  .challenge-grid,
+  .leaderboard-list,
+  .badge-vault-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
