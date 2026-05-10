@@ -6,6 +6,7 @@ import type { Dispatch, SetStateAction } from "react";
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
 type NeedType = "Needed" | "Not needed" | "Maybe";
 type Currency = "USD" | "EUR" | "MDL";
+type ChartRange = "day" | "week" | "month";
 
 type Expense = {
   id: string;
@@ -31,6 +32,14 @@ type Settings = {
     transport: number;
     phone: number;
   };
+};
+
+type ChartPoint = {
+  label: string;
+  key: string;
+  spent: number;
+  open: number;
+  close: number;
 };
 
 const STORAGE_KEY = "broke-life-tracker-v1";
@@ -173,6 +182,114 @@ function getFixedCosts(settings: Settings) {
   ]);
 }
 
+function buildChartData(
+  range: ChartRange,
+  expenses: Expense[],
+  settings: Settings
+): ChartPoint[] {
+  const totalIncome = getTotalIncome(settings);
+  const fixedCosts = getFixedCosts(settings);
+  const baseBalance = totalIncome - fixedCosts;
+  const now = new Date();
+
+  if (range === "day") {
+    const points: ChartPoint[] = [];
+    const today = dayKey(now);
+    let runningBalance = baseBalance;
+
+    for (let hour = 0; hour < 24; hour++) {
+      const spent = sum(
+        expenses
+          .filter((expense) => {
+            const date = new Date(expense.createdAt);
+            return dayKey(date) === today && date.getHours() === hour;
+          })
+          .map((expense) => expense.amount)
+      );
+
+      const open = runningBalance;
+      const close = runningBalance - spent;
+
+      points.push({
+        label: `${String(hour).padStart(2, "0")}:00`,
+        key: `${today}-${hour}`,
+        spent,
+        open,
+        close,
+      });
+
+      runningBalance = close;
+    }
+
+    return points;
+  }
+
+  if (range === "week") {
+    const points: ChartPoint[] = [];
+    let runningBalance = baseBalance;
+
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+
+      const key = dayKey(date);
+
+      const spent = sum(
+        expenses
+          .filter((expense) => dayKey(new Date(expense.createdAt)) === key)
+          .map((expense) => expense.amount)
+      );
+
+      const open = runningBalance;
+      const close = runningBalance - spent;
+
+      points.push({
+        label: date.toLocaleDateString("en-US", { weekday: "short" }),
+        key,
+        spent,
+        open,
+        close,
+      });
+
+      runningBalance = close;
+    }
+
+    return points;
+  }
+
+  const points: ChartPoint[] = [];
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const todayDate = now.getDate();
+  let runningBalance = baseBalance;
+
+  for (let day = 1; day <= todayDate; day++) {
+    const date = new Date(year, month, day);
+    const key = dayKey(date);
+
+    const spent = sum(
+      expenses
+        .filter((expense) => dayKey(new Date(expense.createdAt)) === key)
+        .map((expense) => expense.amount)
+    );
+
+    const open = runningBalance;
+    const close = runningBalance - spent;
+
+    points.push({
+      label: String(day),
+      key,
+      spent,
+      open,
+      close,
+    });
+
+    runningBalance = close;
+  }
+
+  return points;
+}
+
 export default function Home() {
   const [loaded, setLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
@@ -277,47 +394,8 @@ export default function Home() {
   }, [expenses]);
 
   const chartDays = useMemo(() => {
-    const days: {
-      label: string;
-      key: string;
-      spent: number;
-      open: number;
-      close: number;
-    }[] = [];
-
-    let balance = totalIncome - fixedCosts;
-
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-
-      const key = dayKey(d);
-      const label = d.toLocaleDateString("en-US", {
-        weekday: "short",
-      });
-
-      const spent = sum(
-        expenses
-          .filter((e) => dayKey(new Date(e.createdAt)) === key)
-          .map((e) => e.amount)
-      );
-
-      const open = balance;
-      const close = balance - spent;
-
-      days.push({
-        label,
-        key,
-        spent,
-        open,
-        close,
-      });
-
-      balance = close;
-    }
-
-    return days;
-  }, [expenses, fixedCosts, totalIncome]);
+    return buildChartData("week", expenses, settings);
+  }, [expenses, settings]);
 
   const whatIfCards = useMemo(() => {
     const categoryTotal = (category: string) =>
@@ -438,7 +516,7 @@ export default function Home() {
         )}
 
         {activeTab === "chart" && (
-          <ChartScreen settings={settings} chartDays={chartDays} />
+          <ChartScreen settings={settings} expenses={expenses} />
         )}
 
         {activeTab === "whatif" && (
@@ -513,13 +591,7 @@ function DashboardScreen({
     walletHp: number;
     todaySpent: number;
   };
-  chartDays: {
-    label: string;
-    key: string;
-    spent: number;
-    open: number;
-    close: number;
-  }[];
+  chartDays: ChartPoint[];
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
 }) {
@@ -795,19 +867,30 @@ function AddExpenseScreen({
 
 function ChartScreen({
   settings,
-  chartDays,
+  expenses,
 }: {
   settings: Settings;
-  chartDays: {
-    label: string;
-    key: string;
-    spent: number;
-    open: number;
-    close: number;
-  }[];
+  expenses: Expense[];
 }) {
-  const maxSpent = Math.max(...chartDays.map((day) => day.spent), 1);
-  const selectedDay = chartDays[chartDays.length - 1];
+  const [range, setRange] = useState<ChartRange>("week");
+
+  const chartData = useMemo(() => {
+    return buildChartData(range, expenses, settings);
+  }, [range, expenses, settings]);
+
+  const maxSpent = Math.max(...chartData.map((point) => point.spent), 1);
+  const selectedPoint = chartData[chartData.length - 1];
+
+  const periodOpen = chartData[0]?.open ?? 0;
+  const periodSpent = sum(chartData.map((point) => point.spent));
+  const periodClose = periodOpen - periodSpent;
+
+  const title =
+    range === "day"
+      ? "Today"
+      : range === "week"
+        ? "Last 7 days"
+        : "This month";
 
   return (
     <div className="screen">
@@ -822,42 +905,62 @@ function ChartScreen({
       </section>
 
       <div className="switcher">
-        <button>Day</button>
-        <button className="active">Week</button>
-        <button>Month</button>
+        <button
+          type="button"
+          className={range === "day" ? "active" : ""}
+          onClick={() => setRange("day")}
+        >
+          Day
+        </button>
+
+        <button
+          type="button"
+          className={range === "week" ? "active" : ""}
+          onClick={() => setRange("week")}
+        >
+          Week
+        </button>
+
+        <button
+          type="button"
+          className={range === "month" ? "active" : ""}
+          onClick={() => setRange("month")}
+        >
+          Month
+        </button>
       </div>
 
-      <section className="big-chart">
+      <section className={`big-chart ${range}`}>
         <div className="chart-lines">
-          {chartDays.map((day) => {
-            const height = clamp(24 + (day.spent / maxSpent) * 68, 18, 92);
+          {chartData.map((point) => {
+            const height = clamp(24 + (point.spent / maxSpent) * 68, 18, 92);
 
             return (
               <i
-                key={day.key}
-                className={day.spent > 0 ? "red" : "green"}
+                key={point.key}
+                className={point.spent > 0 ? "red" : "green"}
                 style={{ height: `${height}%` }}
-                title={day.label}
+                title={`${point.label}: ${money(point.spent, settings.currency)}`}
               />
             );
           })}
         </div>
 
         <div className="price-line">
-          <span>{money(selectedDay.close, settings.currency)}</span>
+          <span>{money(periodClose, settings.currency)}</span>
         </div>
       </section>
 
       <section className="volume">
-        <label>Spending Volume</label>
-        <div>
-          {chartDays.map((day) => {
-            const height = clamp(12 + (day.spent / maxSpent) * 75, 10, 90);
+        <label>Spending Volume — {title}</label>
+        <div className={range}>
+          {chartData.map((point) => {
+            const height = clamp(12 + (point.spent / maxSpent) * 75, 10, 90);
 
             return (
               <i
-                key={day.key}
-                className={day.spent > 0 ? "red" : "green"}
+                key={point.key}
+                className={point.spent > 0 ? "red" : "green"}
                 style={{ height: `${height}%` }}
               />
             );
@@ -867,29 +970,36 @@ function ChartScreen({
 
       <section className="day-card">
         <div className="day-title">
-          <strong>Today</strong>
+          <strong>{title}</strong>
           <img src={A.calendar} alt="" />
         </div>
 
         <div className="day-info">
           <div>
             <span>Open</span>
-            <b>{money(selectedDay.open, settings.currency)}</b>
+            <b>{money(periodOpen, settings.currency)}</b>
           </div>
 
           <div>
             <span>Close</span>
-            <b>{money(selectedDay.close, settings.currency)}</b>
+            <b>{money(periodClose, settings.currency)}</b>
           </div>
 
           <div>
-            <span>Daily Damage</span>
+            <span>Damage</span>
             <b className="bad">
-              {selectedDay.spent > 0
-                ? `-${money(selectedDay.spent, settings.currency)}`
+              {periodSpent > 0
+                ? `-${money(periodSpent, settings.currency)}`
                 : money(0, settings.currency)}
             </b>
           </div>
+        </div>
+
+        <div className="chart-range-note">
+          <span>
+            Current point: {selectedPoint?.label ?? "-"} ·{" "}
+            {money(selectedPoint?.spent ?? 0, settings.currency)} spent
+          </span>
         </div>
       </section>
     </div>
@@ -1207,17 +1317,7 @@ function MenuLine({
   );
 }
 
-function MiniChart({
-  chartDays,
-}: {
-  chartDays: {
-    label: string;
-    key: string;
-    spent: number;
-    open: number;
-    close: number;
-  }[];
-}) {
+function MiniChart({ chartDays }: { chartDays: ChartPoint[] }) {
   const max = Math.max(...chartDays.map((day) => day.spent), 1);
 
   return (
