@@ -1992,3 +1992,124 @@ img {
     grid-template-columns: 1fr;
   }
 }
+/* ===== V18 SMALL SCREEN FIX ===== */
+/* Fixes narrow Telegram Mini App screens where dashboard cards become 1 column. */
+
+@media (max-width: 380px) {
+  .screen {
+    padding: 18px 12px 142px !important;
+  }
+
+  .screen-header {
+    grid-template-columns: 46px 1fr 46px !important;
+    min-height: 44px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .header-title {
+    font-size: 17px !important;
+    letter-spacing: -0.4px !important;
+  }
+
+  .app-icon,
+  .header-icon {
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  .hero {
+    grid-template-columns: 1.08fr 0.92fr !important;
+    gap: 10px !important;
+    margin: 12px 0 14px !important;
+  }
+
+  .hero h1 {
+    font-size: clamp(33px, 10.5vw, 40px) !important;
+    line-height: 0.96 !important;
+    letter-spacing: -1.7px !important;
+  }
+
+  .home-mascot {
+    max-width: none !important;
+    justify-self: auto !important;
+    border-radius: 24px !important;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+
+  .stat-card {
+    min-height: 112px !important;
+    padding: 12px !important;
+    border-radius: 18px !important;
+  }
+
+  .stat-top {
+    gap: 7px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .stat-top img {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  .stat-top span {
+    font-size: 12px !important;
+  }
+
+  .stat-card strong {
+    font-size: 25px !important;
+    letter-spacing: -0.8px !important;
+  }
+
+  .stat-card small {
+    font-size: 11px !important;
+  }
+
+  .hp-card,
+  .chart-preview,
+  .share-card,
+  .settings-group,
+  .settings-menu,
+  .recent-card,
+  .tracked-panel,
+  .whatif-hero,
+  .whatif-card,
+  .day-card {
+    border-radius: 18px !important;
+  }
+
+  .bottom-nav {
+    width: min(calc(100% - 20px), 428px) !important;
+    height: 72px !important;
+    bottom: 12px !important;
+    padding: 6px 7px !important;
+    border-radius: 23px !important;
+  }
+
+  .bottom-nav button img {
+    width: 31px !important;
+    height: 31px !important;
+  }
+
+  .bottom-nav button span {
+    font-size: 9.5px !important;
+  }
+}
+
+@media (max-width: 340px) {
+  .hero h1 {
+    font-size: 31px !important;
+  }
+
+  .stat-card strong {
+    font-size: 22px !important;
+  }
+
+  .stat-top span {
+    font-size: 11px !important;
+  }
+}
