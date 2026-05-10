@@ -1528,3 +1528,16 @@ img {
     text-align: left;
   }
 }
+/* ===== V11 FULL ERROR DISPLAY ===== */
+
+.tg-status .tg-status-wide {
+  grid-column: 1 / -1;
+}
+
+.tg-status .tg-status-wide strong {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  word-break: break-word;
+  line-height: 1.35;
+}
