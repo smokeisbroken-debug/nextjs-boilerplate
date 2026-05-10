@@ -2352,6 +2352,15 @@ function EditableMoneyLine({
   currency: Currency;
   onChange: (value: string) => void;
 }) {
+  const [draftValue, setDraftValue] = useState(String(value));
+  const [focused, setFocused] = useState(false);
+
+  useEffect(() => {
+    if (!focused) {
+      setDraftValue(String(value));
+    }
+  }, [focused, value]);
+
   return (
     <div className="setting-input-line">
       <span>{label}</span>
@@ -2362,8 +2371,24 @@ function EditableMoneyLine({
           inputMode="decimal"
           min="0"
           step="1"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
+          value={focused ? draftValue : value}
+          onFocus={(event) => {
+            setFocused(true);
+            setDraftValue(value === 0 ? "" : String(value));
+            window.setTimeout(() => event.currentTarget.select(), 0);
+          }}
+          onBlur={() => {
+            setFocused(false);
+            if (draftValue.trim() === "") {
+              setDraftValue("0");
+              onChange("0");
+            }
+          }}
+          onChange={(event) => {
+            const nextValue = event.target.value;
+            setDraftValue(nextValue);
+            onChange(nextValue.trim() === "" ? "0" : nextValue);
+          }}
         />
       </div>
     </div>
