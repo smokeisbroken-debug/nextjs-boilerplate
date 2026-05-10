@@ -3076,3 +3076,113 @@ section.streak-card aside b {
     font-size: 13px;
   }
 }
+/* V26 Badges mechanics */
+.badges-strip {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(20, 35, 12, 0.94), rgba(7, 10, 8, 0.96));
+  border: 1px solid rgba(153, 255, 0, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 30px rgba(140,255,0,0.07);
+}
+
+.badge-chip-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.badge-chip {
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(153,255,0,0.12);
+}
+
+.badge-chip img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 14px;
+}
+
+.badge-chip strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.1;
+}
+
+.badge-chip span,
+.badge-strip-empty {
+  color: rgba(255,255,255,0.62);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.badge-vault-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.badge-vault-card {
+  padding: 14px;
+  border-radius: 22px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.05);
+  display: grid;
+  gap: 10px;
+  min-height: 210px;
+}
+
+.badge-vault-card.earned {
+  border-color: rgba(153,255,0,0.16);
+  box-shadow: 0 0 24px rgba(153,255,0,0.08);
+}
+
+.badge-vault-card img {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  object-fit: cover;
+}
+
+.badge-vault-card strong {
+  display: block;
+  font-size: 16px;
+  line-height: 1.15;
+}
+
+.badge-vault-card p {
+  margin: 6px 0 0;
+  color: rgba(255,255,255,0.68);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.badge-vault-card b {
+  display: inline-flex;
+  width: fit-content;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: #d8ff76;
+  background: rgba(153,255,0,0.08);
+  border: 1px solid rgba(153,255,0,0.14);
+}
+
+.badge-vault-card span {
+  color: rgba(255,255,255,0.56);
+  font-size: 11px;
+}
+
+@media (max-width: 420px) {
+  .badge-vault-grid {
+    grid-template-columns: 1fr;
+  }
+}
