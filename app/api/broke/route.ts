@@ -39,6 +39,42 @@ type Streak = {
   updatedAt?: string | null;
 };
 
+type ChallengeStatus = "active" | "completed" | "failed";
+
+type ChallengeTemplate = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  durationDays: number;
+  maxSpend: number;
+  rewardHp: number;
+  icon: string;
+};
+
+type UserChallenge = {
+  id: string;
+  challengeId: string;
+  status: ChallengeStatus;
+  startedAt: string;
+  endsAt: string;
+  completedAt?: string | null;
+};
+
+type ChallengeProgress = {
+  title: string;
+  description: string;
+  category: string;
+  icon: string;
+  status: ChallengeStatus;
+  spent: number;
+  maxSpend: number;
+  rewardHp: number;
+  durationDays: number;
+  daysLeft: number;
+  percentUsed: number;
+};
+
 type TelegramUser = {
   id: number;
   first_name?: string;
@@ -71,6 +107,69 @@ const emptyStreak: Streak = {
   lastActiveDate: null,
   updatedAt: null,
 };
+
+const defaultChallengeTemplates: ChallengeTemplate[] = [
+  {
+    id: "no_takeout_3",
+    title: "No Takeout 3 Days",
+    description: "Keep takeout spending under the limit for 3 days.",
+    category: "Takeouts",
+    durationDays: 3,
+    maxSpend: 30,
+    rewardHp: 10,
+    icon: "/40_challenge_takeout.png",
+  },
+  {
+    id: "coffee_control_7",
+    title: "Coffee Control",
+    description: "Keep coffee leaks under control for one week.",
+    category: "Coffee",
+    durationDays: 7,
+    maxSpend: 25,
+    rewardHp: 8,
+    icon: "/42_challenge_coffee.png",
+  },
+  {
+    id: "smoking_cut_7",
+    title: "Smoking Cut 7 Days",
+    description: "Reduce smoking spend for one week.",
+    category: "Smoking",
+    durationDays: 7,
+    maxSpend: 60,
+    rewardHp: 12,
+    icon: "/41_challenge_smoking.png",
+  },
+  {
+    id: "shopping_freeze_7",
+    title: "Shopping Freeze",
+    description: "Avoid random shopping leaks for 7 days.",
+    category: "Shopping",
+    durationDays: 7,
+    maxSpend: 40,
+    rewardHp: 12,
+    icon: "/43_challenge_shopping.png",
+  },
+  {
+    id: "subscription_killer",
+    title: "Subscription Killer",
+    description: "Control subscriptions and recurring costs.",
+    category: "Subscriptions",
+    durationDays: 7,
+    maxSpend: 20,
+    rewardHp: 10,
+    icon: "/44_challenge_subscriptions.png",
+  },
+  {
+    id: "wallet_recovery_7",
+    title: "Wallet HP Recovery",
+    description: "Keep total leaks low and rebuild Wallet HP.",
+    category: "All",
+    durationDays: 7,
+    maxSpend: 120,
+    rewardHp: 15,
+    icon: "/45_challenge_wallet_recovery.png",
+  },
+];
 
 function getEnv(name: string) {
   const value = process.env[name];
@@ -446,6 +545,196 @@ async function resetData(telegramId: number) {
   await saveSettings(telegramId, defaultSettings);
 }
 
+
+function dbToChallengeTemplate(row: Record<string, unknown>): ChallengeTemplate {
+  return {
+    id: String(row.id),
+    title: String(row.title ?? ""),
+    description: String(row.description ?? ""),
+    category: String(row.category ?? "All"),
+    durationDays: Number(row.duration_days ?? 7),
+    maxSpend: Number(row.max_spend ?? 0),
+    rewardHp: Number(row.reward_hp ?? 0),
+    icon: String(row.icon ?? "/49_challenge_trophy.png"),
+  };
+}
+
+function dbToUserChallenge(row: Record<string, unknown>): UserChallenge {
+  return {
+    id: String(row.id),
+    challengeId: String(row.challenge_id),
+    status: String(row.status ?? "active") as ChallengeStatus,
+    startedAt: String(row.started_at),
+    endsAt: String(row.ends_at),
+    completedAt: row.completed_at ? String(row.completed_at) : null,
+  };
+}
+
+async function getChallengeTemplates() {
+  try {
+    const rows = (await supabaseFetch(
+      "broke_challenges?is_active=eq.true&select=*&order=sort_order.asc"
+    )) as Record<string, unknown>[];
+
+    if (!rows.length) return defaultChallengeTemplates;
+
+    return rows.map(dbToChallengeTemplate);
+  } catch {
+    return defaultChallengeTemplates;
+  }
+}
+
+async function getLatestUserChallenge(telegramId: number) {
+  const rows = (await supabaseFetch(
+    `broke_user_challenges?telegram_id=eq.${telegramId}&select=*&order=started_at.desc&limit=1`
+  )) as Record<string, unknown>[];
+
+  return rows.length ? dbToUserChallenge(rows[0]) : null;
+}
+
+function getChallengeSpent(
+  template: ChallengeTemplate,
+  challenge: UserChallenge,
+  expenses: Expense[]
+) {
+  const startedAt = new Date(challenge.startedAt).getTime();
+  const endsAt = new Date(challenge.endsAt).getTime();
+
+  return expenses
+    .filter((expense) => {
+      const expenseTime = new Date(expense.createdAt).getTime();
+      const categoryMatch =
+        template.category === "All" || expense.category === template.category;
+
+      return categoryMatch && expenseTime >= startedAt && expenseTime <= endsAt;
+    })
+    .reduce((acc, expense) => acc + expense.amount, 0);
+}
+
+function buildChallengeProgress(
+  template: ChallengeTemplate,
+  challenge: UserChallenge,
+  expenses: Expense[]
+): ChallengeProgress {
+  const now = Date.now();
+  const endsAt = new Date(challenge.endsAt).getTime();
+  const spent = getChallengeSpent(template, challenge, expenses);
+  const daysLeft = Math.max(
+    0,
+    Math.ceil((endsAt - now) / (24 * 60 * 60 * 1000))
+  );
+
+  let status = challenge.status;
+
+  if (status === "active" && now > endsAt) {
+    status = spent <= template.maxSpend ? "completed" : "failed";
+  }
+
+  return {
+    title: template.title,
+    description: template.description,
+    category: template.category,
+    icon: template.icon,
+    status,
+    spent,
+    maxSpend: template.maxSpend,
+    rewardHp: template.rewardHp,
+    durationDays: template.durationDays,
+    daysLeft,
+    percentUsed: template.maxSpend > 0 ? (spent / template.maxSpend) * 100 : 0,
+  };
+}
+
+async function updateChallengeStatus(id: string, status: ChallengeStatus) {
+  await supabaseFetch(`broke_user_challenges?id=eq.${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      status,
+      completed_at: status === "active" ? null : new Date().toISOString(),
+    }),
+  });
+}
+
+async function getChallengeState(telegramId: number, expenses?: Expense[]) {
+  const challengeTemplates = await getChallengeTemplates();
+  const activeChallenge = await getLatestUserChallenge(telegramId);
+
+  if (!activeChallenge) {
+    return {
+      challengeTemplates,
+      activeChallenge: null,
+      challengeProgress: null,
+    };
+  }
+
+  const template =
+    challengeTemplates.find((item) => item.id === activeChallenge.challengeId) ??
+    defaultChallengeTemplates.find((item) => item.id === activeChallenge.challengeId);
+
+  if (!template) {
+    return {
+      challengeTemplates,
+      activeChallenge: null,
+      challengeProgress: null,
+    };
+  }
+
+  const allExpenses = expenses ?? (await getExpenses(telegramId));
+  const challengeProgress = buildChallengeProgress(template, activeChallenge, allExpenses);
+
+  if (activeChallenge.status === "active" && challengeProgress.status !== "active") {
+    await updateChallengeStatus(activeChallenge.id, challengeProgress.status);
+  }
+
+  return {
+    challengeTemplates,
+    activeChallenge: {
+      ...activeChallenge,
+      status: challengeProgress.status,
+      completedAt:
+        challengeProgress.status === "active"
+          ? activeChallenge.completedAt
+          : activeChallenge.completedAt ?? new Date().toISOString(),
+    },
+    challengeProgress,
+  };
+}
+
+async function startChallenge(telegramId: number, challengeId: string) {
+  const challengeTemplates = await getChallengeTemplates();
+  const template = challengeTemplates.find((item) => item.id === challengeId);
+
+  if (!template) {
+    throw new Error("Challenge not found");
+  }
+
+  const latest = await getLatestUserChallenge(telegramId);
+
+  if (latest?.status === "active" && new Date(latest.endsAt).getTime() > Date.now()) {
+    throw new Error("You already have an active challenge");
+  }
+
+  const startedAt = new Date();
+  const endsAt = new Date(startedAt);
+  endsAt.setUTCDate(endsAt.getUTCDate() + template.durationDays);
+
+  const rows = (await supabaseFetch("broke_user_challenges?select=*", {
+    method: "POST",
+    headers: {
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({
+      telegram_id: telegramId,
+      challenge_id: template.id,
+      started_at: startedAt.toISOString(),
+      ends_at: endsAt.toISOString(),
+      status: "active",
+    }),
+  })) as Record<string, unknown>[];
+
+  return dbToUserChallenge(rows[0]);
+}
+
 async function checkSupabaseTable(tableName: string) {
   try {
     const response = await fetch(supabaseUrl(`${tableName}?select=*&limit=1`), {
@@ -495,6 +784,8 @@ export async function GET(request: NextRequest) {
       checkSupabaseTable("broke_settings"),
       checkSupabaseTable("broke_expenses"),
       checkSupabaseTable("broke_streaks"),
+      checkSupabaseTable("broke_challenges"),
+      checkSupabaseTable("broke_user_challenges"),
     ]);
 
     return NextResponse.json({
@@ -540,12 +831,14 @@ export async function POST(request: NextRequest) {
 
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
+      const challengeState = await getChallengeState(telegramId, expenses);
 
       return NextResponse.json({
         ok: true,
         settings,
         expenses,
         streak,
+        ...challengeState,
       });
     }
 
@@ -553,11 +846,13 @@ export async function POST(request: NextRequest) {
       const expense = await addExpense(telegramId, body.expense as Expense);
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
+      const challengeState = await getChallengeState(telegramId, expenses);
 
       return NextResponse.json({
         ok: true,
         expense,
         streak,
+        ...challengeState,
       });
     }
 
@@ -565,10 +860,23 @@ export async function POST(request: NextRequest) {
       await deleteExpense(telegramId, String(body.id));
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
+      const challengeState = await getChallengeState(telegramId, expenses);
 
       return NextResponse.json({
         ok: true,
         streak,
+        ...challengeState,
+      });
+    }
+
+    if (action === "startChallenge") {
+      await startChallenge(telegramId, String(body.challengeId));
+      const expenses = await getExpenses(telegramId);
+      const challengeState = await getChallengeState(telegramId, expenses);
+
+      return NextResponse.json({
+        ok: true,
+        ...challengeState,
       });
     }
 
@@ -583,12 +891,14 @@ export async function POST(request: NextRequest) {
     if (action === "reset") {
       await resetData(telegramId);
       const streak = await resetStreak(telegramId);
+      const challengeState = await getChallengeState(telegramId, []);
 
       return NextResponse.json({
         ok: true,
         settings: defaultSettings,
         expenses: [],
         streak,
+        ...challengeState,
       });
     }
 
