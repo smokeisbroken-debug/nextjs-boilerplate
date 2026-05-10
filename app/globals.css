@@ -3186,3 +3186,254 @@ section.streak-card aside b {
     grid-template-columns: 1fr;
   }
 }
+/* ===== V27 BADGE VAULT COMPACT FIX ===== */
+/* Paste this AFTER v26 CSS, at the very bottom of app/globals.css. */
+
+/* Home badge strip: keep it compact */
+section.badges-strip {
+  margin-top: 10px !important;
+  padding: 12px !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+}
+
+section.badges-strip .badge-chip-list {
+  display: flex !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  padding-bottom: 2px !important;
+  scrollbar-width: none !important;
+}
+
+section.badges-strip .badge-chip-list::-webkit-scrollbar {
+  display: none !important;
+}
+
+section.badges-strip .badge-chip {
+  min-width: 150px !important;
+  max-width: 170px !important;
+  display: grid !important;
+  grid-template-columns: 36px 1fr !important;
+  gap: 8px !important;
+  align-items: center !important;
+  padding: 8px !important;
+  border-radius: 14px !important;
+}
+
+section.badges-strip .badge-chip img {
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  max-width: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  object-fit: cover !important;
+  border-radius: 10px !important;
+  display: block !important;
+}
+
+section.badges-strip .badge-chip strong {
+  font-size: 11px !important;
+  line-height: 1.05 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+section.badges-strip .badge-chip span {
+  font-size: 9px !important;
+  line-height: 1 !important;
+}
+
+/* Settings Badge Vault: force small cards, no giant images */
+section.badge-vault-panel {
+  overflow: hidden !important;
+}
+
+section.badge-vault-panel .badge-vault-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 9px !important;
+  margin-top: 12px !important;
+}
+
+section.badge-vault-panel .badge-vault-card {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: 52px 1fr auto !important;
+  grid-template-rows: auto auto !important;
+  gap: 7px 10px !important;
+  align-items: center !important;
+  min-height: 74px !important;
+  height: auto !important;
+  padding: 9px 10px !important;
+  border-radius: 17px !important;
+  background: rgba(255, 255, 255, 0.028) !important;
+  border: 1px solid rgba(255, 255, 255, 0.055) !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+}
+
+section.badge-vault-panel .badge-vault-card.earned {
+  border-color: rgba(183, 255, 25, 0.22) !important;
+  background:
+    radial-gradient(circle at left, rgba(183, 255, 25, 0.09), transparent 48%),
+    rgba(255, 255, 255, 0.035) !important;
+  box-shadow: 0 0 18px rgba(183, 255, 25, 0.06) !important;
+}
+
+section.badge-vault-panel .badge-vault-card > img {
+  grid-column: 1 !important;
+  grid-row: 1 / 3 !important;
+  width: 50px !important;
+  height: 50px !important;
+  min-width: 50px !important;
+  min-height: 50px !important;
+  max-width: 50px !important;
+  max-height: 50px !important;
+  object-fit: cover !important;
+  border-radius: 13px !important;
+  display: block !important;
+  transform: none !important;
+}
+
+/* Locked badges must look locked, not unlocked */
+section.badge-vault-panel .badge-vault-card:not(.earned) > img {
+  filter: grayscale(1) brightness(0.36) contrast(0.85) !important;
+  opacity: 0.42 !important;
+}
+
+section.badge-vault-panel .badge-vault-card.earned > img {
+  filter: drop-shadow(0 0 10px rgba(183, 255, 25, 0.25)) !important;
+  opacity: 1 !important;
+}
+
+section.badge-vault-panel .badge-vault-card > div {
+  grid-column: 2 !important;
+  grid-row: 1 / 3 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+section.badge-vault-panel .badge-vault-card strong {
+  display: block !important;
+  font-size: 13px !important;
+  line-height: 1.1 !important;
+  color: var(--text) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+section.badge-vault-panel .badge-vault-card p {
+  margin: 4px 0 0 !important;
+  color: rgba(255, 255, 255, 0.58) !important;
+  font-size: 10px !important;
+  line-height: 1.2 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+section.badge-vault-panel .badge-vault-card > b {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  min-width: 54px !important;
+  height: 24px !important;
+  padding: 0 8px !important;
+  border-radius: 999px !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  color: rgba(255, 255, 255, 0.56) !important;
+  background: rgba(255, 255, 255, 0.045) !important;
+  border: 1px solid rgba(255, 255, 255, 0.075) !important;
+}
+
+section.badge-vault-panel .badge-vault-card.earned > b {
+  color: var(--green) !important;
+  background: rgba(183, 255, 25, 0.10) !important;
+  border-color: rgba(183, 255, 25, 0.18) !important;
+}
+
+section.badge-vault-panel .badge-vault-card > span {
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+  color: rgba(255, 255, 255, 0.38) !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+  text-align: right !important;
+  white-space: nowrap !important;
+}
+
+/* Visual lock marker for locked badges */
+section.badge-vault-panel .badge-vault-card:not(.earned)::after {
+  content: "LOCKED" !important;
+  position: absolute !important;
+  left: 16px !important;
+  bottom: 7px !important;
+  padding: 2px 5px !important;
+  border-radius: 999px !important;
+  color: rgba(255, 255, 255, 0.58) !important;
+  background: rgba(0, 0, 0, 0.58) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  font-size: 7px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.4px !important;
+}
+
+/* Avoid bottom nav covering the last badge */
+.screen {
+  padding-bottom: 150px !important;
+}
+
+@media (max-width: 380px) {
+  section.badge-vault-panel .badge-vault-card {
+    grid-template-columns: 44px 1fr auto !important;
+    min-height: 66px !important;
+    padding: 8px !important;
+    gap: 6px 8px !important;
+    border-radius: 15px !important;
+  }
+
+  section.badge-vault-panel .badge-vault-card > img {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    max-width: 42px !important;
+    max-height: 42px !important;
+    border-radius: 11px !important;
+  }
+
+  section.badge-vault-panel .badge-vault-card strong {
+    font-size: 12px !important;
+  }
+
+  section.badge-vault-panel .badge-vault-card p {
+    font-size: 9.5px !important;
+    -webkit-line-clamp: 1 !important;
+  }
+
+  section.badge-vault-panel .badge-vault-card > b {
+    min-width: 46px !important;
+    height: 22px !important;
+    padding: 0 6px !important;
+    font-size: 8px !important;
+  }
+
+  section.badge-vault-panel .badge-vault-card > span {
+    display: none !important;
+  }
+
+  section.badge-vault-panel .badge-vault-card:not(.earned)::after {
+    left: 12px !important;
+    bottom: 5px !important;
+    font-size: 6px !important;
+  }
+}
