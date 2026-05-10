@@ -49,6 +49,13 @@ type CategorySummary = {
   icon: string;
 };
 
+type Streak = {
+  currentStreak: number;
+  bestStreak: number;
+  lastActiveDate: string | null;
+  updatedAt?: string | null;
+};
+
 type TelegramUser = {
   id: number;
   first_name?: string;
@@ -75,6 +82,7 @@ type BrokeApiResponse = {
   settings?: Settings;
   expenses?: Expense[];
   expense?: Expense;
+  streak?: Streak;
   error?: string;
 };
 
@@ -125,6 +133,13 @@ const emptyTelegramState: TelegramState = {
   initData: "",
 };
 
+const emptyStreak: Streak = {
+  currentStreak: 0,
+  bestStreak: 0,
+  lastActiveDate: null,
+  updatedAt: null,
+};
+
 const A = {
   appFrog: "/01_app_frog_icon.png",
   homeMascot: "/02_main_home_mascot.png",
@@ -164,6 +179,13 @@ const A = {
   reminder: "/31_icon_daily_reminder.png",
   categories: "/32_icon_custom_categories.png",
   deleteData: "/33_icon_delete_my_data.png",
+
+  streakFire: "/34_streak_fire_icon.png",
+  streakFrog: "/35_streak_card_frog.png",
+  bestStreak: "/36_best_streak_icon.png",
+  dailyCheck: "/37_daily_check_icon.png",
+  progressFlame: "/38_progress_flame_badge.png",
+  streakBroken: "/39_streak_broken_icon.png",
 };
 
 const defaultSettings: Settings = {
@@ -362,6 +384,70 @@ function readTelegramState(): TelegramState {
   };
 }
 
+
+function calculateStreakFromExpenses(expenses: Expense[]): Streak {
+  const dates = Array.from(
+    new Set(expenses.map((expense) => dayKey(new Date(expense.createdAt))))
+  ).sort();
+
+  if (dates.length === 0) {
+    return emptyStreak;
+  }
+
+  const dateSet = new Set(dates);
+  const lastActiveDate = dates[dates.length - 1];
+
+  let bestStreak = 0;
+  let rollingStreak = 0;
+  let previousTime = 0;
+
+  for (const key of dates) {
+    const time = new Date(`${key}T00:00:00`).getTime();
+
+    if (previousTime && time - previousTime === 24 * 60 * 60 * 1000) {
+      rollingStreak += 1;
+    } else {
+      rollingStreak = 1;
+    }
+
+    bestStreak = Math.max(bestStreak, rollingStreak);
+    previousTime = time;
+  }
+
+  const today = dayKey(new Date());
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterday = dayKey(yesterdayDate);
+
+  let currentStreak = 0;
+
+  if (dateSet.has(today) || dateSet.has(yesterday)) {
+    const cursor = new Date(`${dateSet.has(today) ? today : yesterday}T00:00:00`);
+
+    while (dateSet.has(dayKey(cursor))) {
+      currentStreak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+  }
+
+  return {
+    currentStreak,
+    bestStreak,
+    lastActiveDate,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function isStreakActiveToday(streak: Streak) {
+  return streak.lastActiveDate === dayKey(new Date());
+}
+
+function getStreakLabel(streak: Streak) {
+  if (streak.currentStreak <= 0) return "Start today";
+  if (isStreakActiveToday(streak)) return "Alive today";
+  return "Track today";
+}
+
 function buildChartData(
   range: ChartRange,
   expenses: Expense[],
@@ -515,6 +601,7 @@ export default function Home() {
   const [telegram, setTelegram] = useState<TelegramState>(emptyTelegramState);
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("local");
   const [cloudError, setCloudError] = useState("");
+  const [streak, setStreak] = useState<Streak>(emptyStreak);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   const [amount, setAmount] = useState("25.00");
@@ -639,6 +726,7 @@ export default function Home() {
 
         if (data.settings) setSettings(data.settings);
         if (data.expenses) setExpenses(data.expenses);
+        if (data.streak) setStreak(data.streak);
 
         setCloudStatus("cloud");
       } catch (error) {
@@ -730,6 +818,12 @@ export default function Home() {
     return buildChartData("week", expenses, settings);
   }, [expenses, settings]);
 
+  const localStreak = useMemo(() => {
+    return calculateStreakFromExpenses(expenses);
+  }, [expenses]);
+
+  const activeStreak = telegram.isTelegram && cloudStatus === "cloud" ? streak : localStreak;
+
   async function addExpense() {
     const value = safeNumber(amount);
 
@@ -761,6 +855,7 @@ export default function Home() {
           setExpenses((prev) =>
             prev.map((item) => (item.id === expense.id ? data.expense! : item))
           );
+          if (data.streak) setStreak(data.streak);
           setCloudStatus("cloud");
         }
       } catch (error) {
@@ -776,7 +871,8 @@ export default function Home() {
 
     if (telegram.isTelegram && telegram.initData) {
       try {
-        await callBrokeApi(telegram.initData, "deleteExpense", { id });
+        const data = await callBrokeApi(telegram.initData, "deleteExpense", { id });
+        if (data.streak) setStreak(data.streak);
         setCloudStatus("cloud");
       } catch (error) {
         setCloudStatus("error");
@@ -797,7 +893,8 @@ export default function Home() {
 
     if (telegram.isTelegram && telegram.initData) {
       try {
-        await callBrokeApi(telegram.initData, "reset");
+        const data = await callBrokeApi(telegram.initData, "reset");
+        setStreak(data.streak ?? emptyStreak);
         setCloudStatus("cloud");
       } catch (error) {
         setCloudStatus("error");
@@ -840,6 +937,7 @@ export default function Home() {
     realBalance,
     walletHp,
     todaySpent,
+    streak: activeStreak,
   };
 
   return (
@@ -924,6 +1022,7 @@ export default function Home() {
             telegram={telegram}
             cloudStatus={cloudStatus}
             cloudError={cloudError}
+            streak={activeStreak}
             onBack={goHome}
           />
         )}
@@ -1242,6 +1341,7 @@ function DashboardScreen({
     realBalance: number;
     walletHp: number;
     todaySpent: number;
+    streak: Streak;
   };
   chartDays: ChartPoint[];
   expenses: Expense[];
@@ -1298,6 +1398,8 @@ function DashboardScreen({
 
         <img className="home-mascot" src={A.homeMascot} alt="Mascot" />
       </section>
+
+      <StreakCard streak={summary.streak} />
 
       <section className="stats-grid">
         {stats.map((item) => (
@@ -1369,6 +1471,75 @@ function DashboardScreen({
 }
 
 
+
+
+function StreakCard({ streak }: { streak: Streak }) {
+  const activeToday = isStreakActiveToday(streak);
+  const icon = streak.currentStreak > 0
+    ? activeToday
+      ? A.streakFire
+      : A.dailyCheck
+    : A.streakBroken;
+
+  return (
+    <section className="streak-card">
+      <img src={icon} alt="" />
+
+      <div>
+        <div className="section-title streak-title">
+          <span>Daily Streak</span>
+          <b>{getStreakLabel(streak)}</b>
+        </div>
+
+        <strong>
+          {streak.currentStreak}
+          <small> day{streak.currentStreak === 1 ? "" : "s"}</small>
+        </strong>
+
+        <p>
+          {activeToday
+            ? "You already tracked a leak today."
+            : "Add one expense today to keep the streak alive."}
+        </p>
+      </div>
+
+      <aside>
+        <img src={A.bestStreak} alt="" />
+        <span>Best</span>
+        <b>{streak.bestStreak}</b>
+      </aside>
+    </section>
+  );
+}
+
+function StreakSettingsPanel({ streak }: { streak: Streak }) {
+  return (
+    <section className="tracked-panel streak-settings-panel">
+      <div className="section-title">
+        <span>Streak Progress</span>
+        <small>{getStreakLabel(streak)}</small>
+      </div>
+
+      <div className="streak-settings-grid">
+        <div>
+          <img src={A.streakFire} alt="" />
+          <span>Current streak</span>
+          <strong>{streak.currentStreak} days</strong>
+        </div>
+        <div>
+          <img src={A.bestStreak} alt="" />
+          <span>Best streak</span>
+          <strong>{streak.bestStreak} days</strong>
+        </div>
+        <div>
+          <img src={A.dailyCheck} alt="" />
+          <span>Last active</span>
+          <strong>{streak.lastActiveDate ?? "No activity"}</strong>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function TelegramMiniStatus({
   telegram,
@@ -2045,6 +2216,7 @@ function SettingsScreen({
   telegram,
   cloudStatus,
   cloudError,
+  streak,
   onBack,
 }: {
   settings: Settings;
@@ -2056,6 +2228,7 @@ function SettingsScreen({
   telegram: TelegramState;
   cloudStatus: CloudStatus;
   cloudError: string;
+  streak: Streak;
   onBack: () => void;
 }) {
   const totalIncome = getTotalIncome(settings);
@@ -2221,6 +2394,8 @@ function SettingsScreen({
           <b>›</b>
         </button>
       </section>
+
+      <StreakSettingsPanel streak={streak} />
 
       <section className="tracked-panel">
         <div className="section-title">
