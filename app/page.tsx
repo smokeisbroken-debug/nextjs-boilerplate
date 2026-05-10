@@ -50,6 +50,9 @@ type CategorySummary = {
 };
 
 const STORAGE_KEY = "broke-life-tracker-v1";
+const PROJECT_X_URL = "https://x.com/SmokeIsBroke";
+const PROJECT_TG_URL = "https://t.me/SmokeIsBrokeSol";
+
 
 const A = {
   appFrog: "/01_app_frog_icon.png",
@@ -663,6 +666,14 @@ function DashboardScreen({
         <p>Hold the line, fix the leaks.</p>
       </section>
 
+      <ShareResultCard
+        settings={settings}
+        walletHp={summary.walletHp}
+        totalLeaks={summary.totalLeaks}
+        realBalance={summary.realBalance}
+        potentialYearlySavings={summary.totalLeaks * 12}
+      />
+
       <section className="chart-preview">
         <div className="section-title">
           <span>$BROKE Chart</span>
@@ -691,6 +702,134 @@ function DashboardScreen({
         onDeleteExpense={onDeleteExpense}
       />
     </div>
+  );
+}
+
+
+function buildShareText({
+  settings,
+  walletHp,
+  totalLeaks,
+  realBalance,
+  potentialYearlySavings,
+}: {
+  settings: Settings;
+  walletHp: number;
+  totalLeaks: number;
+  realBalance: number;
+  potentialYearlySavings: number;
+}) {
+  return [
+    `My $BROKE Wallet HP: ${walletHp}/100`,
+    `Money leaks this month: ${money(totalLeaks, settings.currency)}`,
+    `Real balance: ${money(realBalance, settings.currency)}`,
+    `Potential yearly savings: ${money(potentialYearlySavings, settings.currency)}`,
+    "",
+    "Track your leaks. Fix your life.",
+    PROJECT_X_URL,
+    PROJECT_TG_URL,
+  ].join("\n");
+}
+
+function ShareResultCard({
+  settings,
+  walletHp,
+  totalLeaks,
+  realBalance,
+  potentialYearlySavings,
+}: {
+  settings: Settings;
+  walletHp: number;
+  totalLeaks: number;
+  realBalance: number;
+  potentialYearlySavings: number;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const shareText = buildShareText({
+    settings,
+    walletHp,
+    totalLeaks,
+    realBalance,
+    potentialYearlySavings,
+  });
+
+  function openXShare() {
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  function openTelegramShare() {
+    const url = `https://t.me/share/url?url=${encodeURIComponent(
+      PROJECT_TG_URL
+    )}&text=${encodeURIComponent(shareText)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  async function nativeShare() {
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "$BROKE Life Tracker",
+          text: shareText,
+          url: PROJECT_TG_URL,
+        });
+      } else {
+        await copyShareText();
+      }
+    } catch {
+      // User cancelled native share. No action needed.
+    }
+  }
+
+  async function copyShareText() {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <section className="share-card">
+      <div className="section-title">
+        <span>Share Result</span>
+        <small>Telegram / X ready</small>
+      </div>
+
+      <div className="share-preview">
+        <div>
+          <span>Wallet HP</span>
+          <strong>{walletHp}/100</strong>
+        </div>
+        <div>
+          <span>Leaks</span>
+          <strong>{money(totalLeaks, settings.currency)}</strong>
+        </div>
+        <div>
+          <span>Balance</span>
+          <strong>{money(realBalance, settings.currency)}</strong>
+        </div>
+      </div>
+
+      <div className="share-buttons">
+        <button type="button" onClick={openXShare}>
+          Share on X
+        </button>
+        <button type="button" onClick={openTelegramShare}>
+          Share in TG
+        </button>
+        <button type="button" onClick={nativeShare}>
+          Share
+        </button>
+      </div>
+
+      <button type="button" className="copy-share-btn" onClick={copyShareText}>
+        {copied ? "Copied" : "Copy share text"}
+      </button>
+    </section>
   );
 }
 
