@@ -110,6 +110,7 @@ declare global {
 }
 
 const STORAGE_KEY = "broke-life-tracker-v1";
+const ONBOARDING_KEY = "broke-life-tracker-onboarding-completed-v1";
 const PROJECT_X_URL = "https://x.com/SmokeIsBroke";
 const PROJECT_TG_URL = "https://t.me/SmokeIsBrokeSol";
 const TELEGRAM_WEB_APP_SCRIPT = "https://telegram.org/js/telegram-web-app.js";
@@ -514,6 +515,7 @@ export default function Home() {
   const [telegram, setTelegram] = useState<TelegramState>(emptyTelegramState);
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("local");
   const [cloudError, setCloudError] = useState("");
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   const [amount, setAmount] = useState("25.00");
   const [note, setNote] = useState("");
@@ -579,6 +581,7 @@ export default function Home() {
         const parsed = JSON.parse(raw) as {
           settings?: Settings;
           expenses?: Expense[];
+          onboardingCompleted?: boolean;
         };
 
         if (parsed.settings) {
@@ -599,6 +602,14 @@ export default function Home() {
         if (Array.isArray(parsed.expenses)) {
           setExpenses(parsed.expenses);
         }
+
+        if (parsed.onboardingCompleted === true) {
+          setOnboardingCompleted(true);
+        }
+      }
+
+      if (localStorage.getItem(ONBOARDING_KEY) === "true") {
+        setOnboardingCompleted(true);
       }
     } catch {
       localStorage.removeItem(STORAGE_KEY);
@@ -653,9 +664,10 @@ export default function Home() {
       JSON.stringify({
         settings,
         expenses,
+        onboardingCompleted,
       })
     );
-  }, [loaded, settings, expenses]);
+  }, [loaded, settings, expenses, onboardingCompleted]);
 
   useEffect(() => {
     if (!loaded || cloudStatus !== "cloud" || !telegram.initData) return;
@@ -812,6 +824,14 @@ export default function Home() {
     window.alert("Share and export options are available on the Home dashboard.");
   }
 
+  function completeOnboarding(nextSettings: Settings) {
+    triggerHaptic("success");
+    setSettings(nextSettings);
+    setOnboardingCompleted(true);
+    localStorage.setItem(ONBOARDING_KEY, "true");
+    setActiveTab("home");
+  }
+
   const summary = {
     totalIncome,
     fixedCosts,
@@ -825,7 +845,26 @@ export default function Home() {
   return (
     <main className="app-shell">
       <section className="phone">
-        {activeTab === "home" && (
+        {!loaded && (
+          <div className="screen loading-screen">
+            <Header title="$BROKE Life Tracker" />
+            <div className="loading-card">
+              <img src={A.walletMascot} alt="" />
+              <strong>Loading tracker...</strong>
+              <span>Checking your wallet leaks.</span>
+            </div>
+          </div>
+        )}
+
+        {loaded && !onboardingCompleted && (
+          <OnboardingScreen
+            settings={settings}
+            telegram={telegram}
+            onComplete={completeOnboarding}
+          />
+        )}
+
+        {loaded && onboardingCompleted && activeTab === "home" && (
           <DashboardScreen
             settings={settings}
             summary={summary}
@@ -839,7 +878,7 @@ export default function Home() {
           />
         )}
 
-        {activeTab === "add" && (
+        {loaded && onboardingCompleted && activeTab === "add" && (
           <AddExpenseScreen
             settings={settings}
             amount={amount}
@@ -856,7 +895,7 @@ export default function Home() {
           />
         )}
 
-        {activeTab === "chart" && (
+        {loaded && onboardingCompleted && activeTab === "chart" && (
           <ChartScreen
             settings={settings}
             expenses={expenses}
@@ -865,7 +904,7 @@ export default function Home() {
           />
         )}
 
-        {activeTab === "whatif" && (
+        {loaded && onboardingCompleted && activeTab === "whatif" && (
           <WhatIfScreen
             settings={settings}
             expenses={currentMonthExpenses}
@@ -874,7 +913,7 @@ export default function Home() {
           />
         )}
 
-        {activeTab === "settings" && (
+        {loaded && onboardingCompleted && activeTab === "settings" && (
           <SettingsScreen
             settings={settings}
             setSettings={setSettings}
@@ -889,9 +928,239 @@ export default function Home() {
           />
         )}
 
-        <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+        {loaded && onboardingCompleted && (
+          <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+        )}
       </section>
     </main>
+  );
+}
+
+
+function OnboardingScreen({
+  settings,
+  telegram,
+  onComplete,
+}: {
+  settings: Settings;
+  telegram: TelegramState;
+  onComplete: (settings: Settings) => void;
+}) {
+  const [step, setStep] = useState(0);
+  const [draft, setDraft] = useState<Settings>(settings);
+
+  const firstName = telegram.user?.first_name || "there";
+  const totalIncome = getTotalIncome(draft);
+  const totalFixedCosts = getFixedCosts(draft);
+  const realBalance = totalIncome - totalFixedCosts;
+
+  function updateIncome(key: keyof Settings["income"], value: string) {
+    setDraft((prev) => ({
+      ...prev,
+      income: {
+        ...prev.income,
+        [key]: safeNumber(value),
+      },
+    }));
+  }
+
+  function updateFixedCost(key: keyof Settings["fixedCosts"], value: string) {
+    setDraft((prev) => ({
+      ...prev,
+      fixedCosts: {
+        ...prev.fixedCosts,
+        [key]: safeNumber(value),
+      },
+    }));
+  }
+
+  function next() {
+    triggerHaptic("light");
+    setStep((prev) => Math.min(prev + 1, 3));
+  }
+
+  function back() {
+    triggerHaptic("light");
+    setStep((prev) => Math.max(prev - 1, 0));
+  }
+
+  return (
+    <div className="screen onboarding-screen">
+      <div className="onboarding-top">
+        <img src={A.appFrog} alt="$BROKE" />
+        <div>
+          <span>Step {step + 1} / 4</span>
+          <strong>$BROKE Setup</strong>
+        </div>
+      </div>
+
+      <div className="onboarding-progress">
+        <i style={{ width: `${((step + 1) / 4) * 100}%` }} />
+      </div>
+
+      {step === 0 && (
+        <section className="onboarding-card intro">
+          <img src={A.walletMascot} alt="" />
+          <h1>Welcome, {firstName}.</h1>
+          <p>
+            This tracker is not about being rich. It is about seeing where your
+            money leaks before the month disappears.
+          </p>
+
+          <div className="onboarding-points">
+            <div>
+              <b>01</b>
+              <span>Track expenses</span>
+            </div>
+            <div>
+              <b>02</b>
+              <span>Find money leaks</span>
+            </div>
+            <div>
+              <b>03</b>
+              <span>Build Wallet HP</span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {step === 1 && (
+        <section className="onboarding-card">
+          <h2>Monthly income</h2>
+          <p>Enter realistic numbers. You can edit them later in Settings.</p>
+
+          <div className="onboarding-fields">
+            <EditableMoneyLine
+              label="Salary"
+              value={draft.income.salary}
+              currency={draft.currency}
+              onChange={(value) => updateIncome("salary", value)}
+            />
+
+            <EditableMoneyLine
+              label="Side income"
+              value={draft.income.side}
+              currency={draft.currency}
+              onChange={(value) => updateIncome("side", value)}
+            />
+
+            <EditableMoneyLine
+              label="Other income"
+              value={draft.income.other}
+              currency={draft.currency}
+              onChange={(value) => updateIncome("other", value)}
+            />
+          </div>
+
+          <div className="onboarding-total">
+            <span>Total income</span>
+            <strong>{money(totalIncome, draft.currency)}</strong>
+          </div>
+        </section>
+      )}
+
+      {step === 2 && (
+        <section className="onboarding-card">
+          <h2>Fixed life costs</h2>
+          <p>These are the costs you expect every month before random spending.</p>
+
+          <div className="onboarding-fields">
+            <EditableMoneyLine
+              label="Rent"
+              value={draft.fixedCosts.rent}
+              currency={draft.currency}
+              onChange={(value) => updateFixedCost("rent", value)}
+            />
+
+            <EditableMoneyLine
+              label="Utilities"
+              value={draft.fixedCosts.utilities}
+              currency={draft.currency}
+              onChange={(value) => updateFixedCost("utilities", value)}
+            />
+
+            <EditableMoneyLine
+              label="Food basics"
+              value={draft.fixedCosts.food}
+              currency={draft.currency}
+              onChange={(value) => updateFixedCost("food", value)}
+            />
+
+            <EditableMoneyLine
+              label="Transport"
+              value={draft.fixedCosts.transport}
+              currency={draft.currency}
+              onChange={(value) => updateFixedCost("transport", value)}
+            />
+
+            <EditableMoneyLine
+              label="Phone / Internet"
+              value={draft.fixedCosts.phone}
+              currency={draft.currency}
+              onChange={(value) => updateFixedCost("phone", value)}
+            />
+          </div>
+
+          <div className="onboarding-total">
+            <span>Total fixed costs</span>
+            <strong>{money(totalFixedCosts, draft.currency)}</strong>
+          </div>
+        </section>
+      )}
+
+      {step === 3 && (
+        <section className="onboarding-card final">
+          <img src={A.homeMascot} alt="" />
+          <h2>Your tracker is ready.</h2>
+
+          <div className="onboarding-summary">
+            <div>
+              <span>Income</span>
+              <strong>{money(totalIncome, draft.currency)}</strong>
+            </div>
+            <div>
+              <span>Life cost</span>
+              <strong>{money(totalFixedCosts, draft.currency)}</strong>
+            </div>
+            <div>
+              <span>Real balance</span>
+              <strong>{money(realBalance, draft.currency)}</strong>
+            </div>
+          </div>
+
+          <p>
+            Start with small daily expenses. Coffee, taxis, takeouts, smoking,
+            subscriptions. That is where the leaks become visible.
+          </p>
+        </section>
+      )}
+
+      <div className="onboarding-actions">
+        {step > 0 ? (
+          <button type="button" className="secondary-btn" onClick={back}>
+            Back
+          </button>
+        ) : (
+          <button type="button" className="secondary-btn ghost" onClick={() => onComplete(draft)}>
+            Skip
+          </button>
+        )}
+
+        {step < 3 ? (
+          <button type="button" className="primary-btn onboarding-next" onClick={next}>
+            Continue
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="primary-btn onboarding-next"
+            onClick={() => onComplete(draft)}
+          >
+            Start Tracking
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -1242,6 +1511,10 @@ function ShareResultCard({
         });
       } else {
         await copyShareText();
+      }
+
+      if (localStorage.getItem(ONBOARDING_KEY) === "true") {
+        setOnboardingCompleted(true);
       }
     } catch {
       // User cancelled native share. No action needed.
