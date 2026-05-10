@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, SetStateAction, FormEvent } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
 type NeedType = "Needed" | "Not needed" | "Maybe";
@@ -2079,7 +2079,7 @@ export default function Home() {
         {toast && <AppToastView toast={toast} />}
       </section>
 
-      {loaded && onboardingCompleted && <CommunityLiveSidebar telegram={telegram} />}
+      {loaded && onboardingCompleted && <CommunityLiveSidebar />}
     </main>
   );
 }
@@ -2087,12 +2087,11 @@ export default function Home() {
 
 
 
-function CommunityLiveSidebar({ telegram }: { telegram: TelegramState }) {
+function CommunityLiveSidebar() {
   const [messages, setMessages] = useState<CommunityMessage[]>([]);
-  const [draft, setDraft] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "sending" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [error, setError] = useState("");
+  const feedRef = useRef<HTMLDivElement | null>(null);
 
   const fallbackMessages: CommunityMessage[] = [
     {
@@ -2107,7 +2106,7 @@ function CommunityLiveSidebar({ telegram }: { telegram: TelegramState }) {
       id: "fallback-2",
       senderName: "$BROKE",
       username: "SmokeIsBroke",
-      text: "Website visitors can send a message to the Telegram group through the bot.",
+      text: "This sidebar is read-only. Open Telegram if you want to join the conversation.",
       source: "system",
       createdAt: new Date().toISOString(),
     },
@@ -2115,14 +2114,9 @@ function CommunityLiveSidebar({ telegram }: { telegram: TelegramState }) {
 
   const visibleMessages = messages.length ? messages : fallbackMessages;
 
-  const authorName =
-    telegram.user?.username
-      ? `@${telegram.user.username}`
-      : telegram.user?.first_name || displayName.trim() || "Web visitor";
-
   async function loadMessages() {
     try {
-      setStatus((prev) => (prev === "sending" ? prev : "loading"));
+      setStatus("loading");
       const response = await fetch("/api/community", {
         method: "GET",
         cache: "no-store",
@@ -2153,43 +2147,18 @@ function CommunityLiveSidebar({ telegram }: { telegram: TelegramState }) {
     return () => window.clearInterval(interval);
   }, []);
 
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  useEffect(() => {
+    const feed = feedRef.current;
 
-    const text = draft.trim();
+    if (!feed) return;
 
-    if (!text) return;
+    const goBottom = () => {
+      feed.scrollTop = feed.scrollHeight;
+    };
 
-    try {
-      setStatus("sending");
-      const response = await fetch("/api/community", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "send",
-          text,
-          senderName: authorName,
-          username: telegram.user?.username || null,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "Message was not sent");
-      }
-
-      setDraft("");
-      setMessages(data.messages || []);
-      setError("");
-      setStatus("idle");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Message was not sent");
-      setStatus("error");
-    }
-  }
+    const id = window.setTimeout(goBottom, 20);
+    return () => window.clearTimeout(id);
+  }, [visibleMessages.length, status]);
 
   return (
     <aside className="community-live-sidebar">
@@ -2209,7 +2178,7 @@ function CommunityLiveSidebar({ telegram }: { telegram: TelegramState }) {
           </a>
         </header>
 
-        <div className="community-live-feed">
+        <div className="community-live-feed" ref={feedRef}>
           {visibleMessages.map((message) => (
             <article
               className={`community-message ${message.source}`}
@@ -2224,29 +2193,11 @@ function CommunityLiveSidebar({ telegram }: { telegram: TelegramState }) {
           ))}
         </div>
 
-        <form className="community-live-form" onSubmit={sendMessage}>
-          {!telegram.user && (
-            <input
-              value={displayName}
-              onChange={(event) => setDisplayName(event.target.value)}
-              placeholder="Name / @username"
-              maxLength={32}
-            />
-          )}
-
-          <textarea
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder="Write to the community..."
-            maxLength={500}
-          />
-
-          <button type="submit" disabled={status === "sending" || !draft.trim()}>
-            {status === "sending" ? "Sending..." : "Send to TG"}
-          </button>
-
+        <div className="community-live-footer">
+          <strong>Read only</strong>
+          <p>Newest messages stay at the bottom. To reply, open the Telegram group.</p>
           {error && <small>{error}</small>}
-        </form>
+        </div>
       </div>
     </aside>
   );
