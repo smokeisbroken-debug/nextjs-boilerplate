@@ -1512,10 +1512,6 @@ function ShareResultCard({
       } else {
         await copyShareText();
       }
-
-      if (localStorage.getItem(ONBOARDING_KEY) === "true") {
-        setOnboardingCompleted(true);
-      }
     } catch {
       // User cancelled native share. No action needed.
     }
