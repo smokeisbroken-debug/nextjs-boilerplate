@@ -311,8 +311,36 @@ async function resetData(telegramId: number) {
   await saveSettings(telegramId, defaultSettings);
 }
 
-export async function GET() {
-  return NextResponse.json({
+async function checkSupabaseTable(tableName: string) {
+  try {
+    const response = await fetch(supabaseUrl(`${tableName}?select=*&limit=1`), {
+      method: "GET",
+      headers: getSupabaseHeaders(),
+      cache: "no-store",
+    });
+
+    const text = await response.text();
+
+    return {
+      table: tableName,
+      ok: response.ok,
+      status: response.status,
+      body: text.slice(0, 600),
+    };
+  } catch (error) {
+    return {
+      table: tableName,
+      ok: false,
+      status: 0,
+      body: error instanceof Error ? error.message : "Unknown check error",
+    };
+  }
+}
+
+export async function GET(request: NextRequest) {
+  const check = request.nextUrl.searchParams.get("check");
+
+  const base = {
     ok: true,
     route: "/api/broke",
     env: {
@@ -320,7 +348,36 @@ export async function GET() {
       SUPABASE_URL: hasEnv("SUPABASE_URL"),
       SUPABASE_SERVICE_ROLE_KEY: hasEnv("SUPABASE_SERVICE_ROLE_KEY"),
     },
-  });
+  };
+
+  if (check !== "supabase") {
+    return NextResponse.json(base);
+  }
+
+  try {
+    const tables = await Promise.all([
+      checkSupabaseTable("broke_users"),
+      checkSupabaseTable("broke_settings"),
+      checkSupabaseTable("broke_expenses"),
+    ]);
+
+    return NextResponse.json({
+      ...base,
+      supabase: {
+        urlHost: new URL(getEnv("SUPABASE_URL")).host,
+        tables,
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ...base,
+        ok: false,
+        supabaseError: error instanceof Error ? error.message : "Unknown diagnostic error",
+      },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(request: NextRequest) {
