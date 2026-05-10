@@ -92,6 +92,15 @@ type ChallengeProgress = {
   percentUsed: number;
 };
 
+type BadgeItem = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  earned: boolean;
+  earnedAt: string | null;
+};
+
 type TelegramUser = {
   id: number;
   first_name?: string;
@@ -122,6 +131,7 @@ type BrokeApiResponse = {
   challengeTemplates?: ChallengeTemplate[];
   activeChallenge?: UserChallenge | null;
   challengeProgress?: ChallengeProgress | null;
+  badges?: BadgeItem[];
   error?: string;
 };
 
@@ -236,6 +246,17 @@ const A = {
   challengeCompleted: "/47_challenge_completed.png",
   challengeFailed: "/48_challenge_failed.png",
   challengeTrophy: "/49_challenge_trophy.png",
+
+  badgeStableWallet: "/badge_stable_wallet.png",
+  badgeSmallLeak: "/badge_small_leak.png",
+  badgePressureMode: "/badge_pressure_mode.png",
+  badgeHeavyLeak: "/badge_heavy_leak.png",
+  badgeFullBrokeMode: "/badge_full_broke_mode.png",
+  badgeSavingMode: "/badge_saving_mode.png",
+  badgeGoodMonth: "/badge_good_month.png",
+  badgeOverspending: "/badge_overspending.png",
+  badgeRecoveryMode: "/badge_recovery_mode.png",
+  badgeStreak: "/badge_streak.png",
 };
 
 const defaultSettings: Settings = {
@@ -325,6 +346,89 @@ const defaultChallengeTemplates: ChallengeTemplate[] = [
     maxSpend: 120,
     rewardHp: 15,
     icon: A.challengeWalletRecovery,
+  },
+];
+
+const defaultBadges: BadgeItem[] = [
+  {
+    id: "stable_wallet",
+    title: "Stable Wallet",
+    description: "Keep Wallet HP high and leaks low.",
+    icon: A.badgeStableWallet,
+    earned: false,
+    earnedAt: null,
+  },
+  {
+    id: "small_leak",
+    title: "Small Leak",
+    description: "Track a month with only small leaks.",
+    icon: A.badgeSmallLeak,
+    earned: false,
+    earnedAt: null,
+  },
+  {
+    id: "pressure_mode",
+    title: "Pressure Mode",
+    description: "Leaks are starting to pressure the wallet.",
+    icon: A.badgePressureMode,
+    earned: false,
+    earnedAt: null,
+  },
+  {
+    id: "heavy_leak",
+    title: "Heavy Leak",
+    description: "A large share of your free money is leaking away.",
+    icon: A.badgeHeavyLeak,
+    earned: false,
+    earnedAt: null,
+  },
+  {
+    id: "full_broke_mode",
+    title: "Full $BROKE Mode",
+    description: "Real balance dropped to danger zone.",
+    icon: A.badgeFullBrokeMode,
+    earned: false,
+    earnedAt: null,
+  },
+  {
+    id: "saving_mode",
+    title: "Saving Mode",
+    description: "You kept leaks tight and protected your balance.",
+    icon: A.badgeSavingMode,
+    earned: false,
+    earnedAt: null,
+  },
+  {
+    id: "good_month",
+    title: "Good Month",
+    description: "A strong month with healthy balance and discipline.",
+    icon: A.badgeGoodMonth,
+    earned: false,
+    earnedAt: null,
+  },
+  {
+    id: "overspending",
+    title: "Overspending",
+    description: "You spent more than your post-life-cost budget.",
+    icon: A.badgeOverspending,
+    earned: false,
+    earnedAt: null,
+  },
+  {
+    id: "recovery_mode",
+    title: "Recovery Mode",
+    description: "A streak and better habits pushed the wallet back up.",
+    icon: A.badgeRecoveryMode,
+    earned: false,
+    earnedAt: null,
+  },
+  {
+    id: "streak",
+    title: "Streak",
+    description: "Reach a 7-day tracking streak.",
+    icon: A.badgeStreak,
+    earned: false,
+    earnedAt: null,
   },
 ];
 
@@ -719,6 +823,7 @@ export default function Home() {
   const [activeChallenge, setActiveChallenge] = useState<UserChallenge | null>(null);
   const [challengeProgress, setChallengeProgress] = useState<ChallengeProgress | null>(null);
   const [challengeLoading, setChallengeLoading] = useState(false);
+  const [badges, setBadges] = useState<BadgeItem[]>(defaultBadges);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   const [amount, setAmount] = useState("25.00");
@@ -847,6 +952,7 @@ export default function Home() {
         if (data.challengeTemplates) setChallengeTemplates(data.challengeTemplates);
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
+        if (data.badges) setBadges(data.badges);
 
         setCloudStatus("cloud");
       } catch (error) {
@@ -882,9 +988,10 @@ export default function Home() {
 
     const timeout = window.setTimeout(async () => {
       try {
-        await callBrokeApi(telegram.initData, "saveSettings", {
+        const data = await callBrokeApi(telegram.initData, "saveSettings", {
           settings,
         });
+        if (data.badges) setBadges(data.badges);
       } catch (error) {
         setCloudStatus("error");
         setCloudError(error instanceof Error ? error.message : "Settings cloud save failed");
@@ -978,6 +1085,7 @@ export default function Home() {
           if (data.streak) setStreak(data.streak);
           if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
           if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
+          if (data.badges) setBadges(data.badges);
           setCloudStatus("cloud");
         }
       } catch (error) {
@@ -997,6 +1105,7 @@ export default function Home() {
         if (data.streak) setStreak(data.streak);
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
+        if (data.badges) setBadges(data.badges);
         setCloudStatus("cloud");
       } catch (error) {
         setCloudStatus("error");
@@ -1021,6 +1130,7 @@ export default function Home() {
         setStreak(data.streak ?? emptyStreak);
         setActiveChallenge(data.activeChallenge ?? null);
         setChallengeProgress(data.challengeProgress ?? null);
+        if (data.badges) setBadges(data.badges);
         setCloudStatus("cloud");
       } catch (error) {
         setCloudStatus("error");
@@ -1072,6 +1182,7 @@ export default function Home() {
       if (data.challengeTemplates) setChallengeTemplates(data.challengeTemplates);
       setActiveChallenge(data.activeChallenge ?? null);
       setChallengeProgress(data.challengeProgress ?? null);
+      if (data.badges) setBadges(data.badges);
       setCloudStatus("cloud");
     } catch (error) {
       setCloudStatus("error");
@@ -1118,6 +1229,7 @@ export default function Home() {
           <DashboardScreen
             settings={settings}
             summary={summary}
+            badges={badges}
             chartDays={chartDays}
             expenses={currentMonthExpenses.slice(0, 6)}
             onDeleteExpense={deleteExpense}
@@ -1180,6 +1292,7 @@ export default function Home() {
             cloudStatus={cloudStatus}
             cloudError={cloudError}
             streak={activeStreak}
+            badges={badges}
             onBack={goHome}
           />
         )}
@@ -1481,6 +1594,7 @@ function Header({
 function DashboardScreen({
   settings,
   summary,
+  badges,
   chartDays,
   expenses,
   onDeleteExpense,
@@ -1500,6 +1614,7 @@ function DashboardScreen({
     todaySpent: number;
     streak: Streak;
   };
+  badges: BadgeItem[];
   chartDays: ChartPoint[];
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
@@ -1570,6 +1685,7 @@ function DashboardScreen({
       </section>
 
       <StreakCard streak={summary.streak} />
+      <BadgeMiniStrip badges={badges} />
 
       <section className="hp-card">
         <div className="section-title">
@@ -1693,6 +1809,66 @@ function StreakSettingsPanel({ streak }: { streak: Streak }) {
           <span>Last active</span>
           <strong>{streak.lastActiveDate ?? "No activity"}</strong>
         </div>
+      </div>
+    </section>
+  );
+}
+
+function BadgeMiniStrip({ badges }: { badges: BadgeItem[] }) {
+  const earned = badges.filter((badge) => badge.earned);
+  const preview = earned.slice(0, 4);
+
+  return (
+    <section className="badges-strip">
+      <div className="section-title">
+        <span>Badge Vault</span>
+        <small>{earned.length}/{badges.length} unlocked</small>
+      </div>
+
+      {preview.length > 0 ? (
+        <div className="badge-chip-list">
+          {preview.map((badge) => (
+            <div className="badge-chip" key={badge.id} title={badge.title}>
+              <img src={badge.icon} alt="" />
+              <div>
+                <strong>{badge.title}</strong>
+                <span>{badge.earnedAt ? badge.earnedAt.slice(0, 10) : "Unlocked"}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="badge-strip-empty">Start tracking and the first badges will unlock here.</div>
+      )}
+    </section>
+  );
+}
+
+function BadgeVaultPanel({ badges }: { badges: BadgeItem[] }) {
+  const earnedCount = badges.filter((badge) => badge.earned).length;
+
+  return (
+    <section className="tracked-panel badge-vault-panel">
+      <div className="section-title">
+        <span>Badge Vault</span>
+        <small>{earnedCount}/{badges.length} unlocked</small>
+      </div>
+
+      <div className="badge-vault-grid">
+        {badges.map((badge) => (
+          <article
+            key={badge.id}
+            className={badge.earned ? "badge-vault-card earned" : "badge-vault-card"}
+          >
+            <img src={badge.icon} alt="" />
+            <div>
+              <strong>{badge.title}</strong>
+              <p>{badge.description}</p>
+            </div>
+            <b>{badge.earned ? "Unlocked" : "Locked"}</b>
+            <span>{badge.earnedAt ? badge.earnedAt.slice(0, 10) : "Keep going"}</span>
+          </article>
+        ))}
       </div>
     </section>
   );
@@ -2506,6 +2682,7 @@ function SettingsScreen({
   cloudStatus,
   cloudError,
   streak,
+  badges,
   onBack,
 }: {
   settings: Settings;
@@ -2518,6 +2695,7 @@ function SettingsScreen({
   cloudStatus: CloudStatus;
   cloudError: string;
   streak: Streak;
+  badges: BadgeItem[];
   onBack: () => void;
 }) {
   const totalIncome = getTotalIncome(settings);
@@ -2685,6 +2863,7 @@ function SettingsScreen({
       </section>
 
       <StreakSettingsPanel streak={streak} />
+      <BadgeVaultPanel badges={badges} />
 
       <section className="tracked-panel">
         <div className="section-title">
