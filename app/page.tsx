@@ -1399,8 +1399,6 @@ function DashboardScreen({
         <img className="home-mascot" src={A.homeMascot} alt="Mascot" />
       </section>
 
-      <StreakCard streak={summary.streak} />
-
       <section className="stats-grid">
         {stats.map((item) => (
           <div className={`stat-card ${item.tone}`} key={item.title}>
@@ -1413,6 +1411,8 @@ function DashboardScreen({
           </div>
         ))}
       </section>
+
+      <StreakCard streak={summary.streak} />
 
       <section className="hp-card">
         <div className="section-title">
