@@ -2755,8 +2755,9 @@ function TelegramMiniStatus({
     ? `@${telegram.user.username}`
     : telegram.user?.first_name || "Telegram user";
 
-  const cloudLabel =
-    cloudStatus === "cloud"
+  const cloudLabel = !telegram.isTelegram
+    ? "Local demo"
+    : cloudStatus === "cloud"
       ? "Cloud synced"
       : cloudStatus === "syncing"
         ? "Syncing..."
@@ -2764,11 +2765,17 @@ function TelegramMiniStatus({
           ? "Sync error"
           : "Local only";
 
+  const statusText = !telegram.isTelegram
+    ? "Web demo mode. Telegram cloud sync is disabled here."
+    : cloudStatus === "error"
+      ? cloudError || "Check Vercel logs"
+      : "Ready";
+
   return (
     <section className={compact ? "tg-status tg-status-compact" : "tg-status"}>
       <div>
-        <span>Telegram Mini App</span>
-        <strong>{telegram.isTelegram ? "Connected" : "Browser preview"}</strong>
+        <span>Mode</span>
+        <strong>{telegram.isTelegram ? "Telegram App" : "Web Demo"}</strong>
       </div>
 
       <div>
@@ -2800,7 +2807,7 @@ function TelegramMiniStatus({
           </div>
           <div className="tg-status-wide">
             <span>Status</span>
-            <strong>{cloudStatus === "error" ? cloudError || "Check Vercel logs" : "Ready"}</strong>
+            <strong>{statusText}</strong>
           </div>
         </>
       )}
