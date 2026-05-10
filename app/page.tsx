@@ -200,7 +200,7 @@ const navItems: {
   { id: "home", label: "Home", icon: A.navHome },
   { id: "add", label: "Add", icon: A.navAdd },
   { id: "chart", label: "Chart", icon: A.navChart },
-  { id: "whatif", label: "What If", icon: A.navWhatIf },
+  { id: "whatif", label: "Save", icon: A.navWhatIf },
   { id: "settings", label: "Settings", icon: A.navSettings },
 ];
 
@@ -1601,7 +1601,7 @@ function WhatIfScreen({
 
   return (
     <div className="screen">
-      <Header title="What If?" showBack rightIcon={A.help} />
+      <Header title="Save" showBack rightIcon={A.help} />
 
       <section className="whatif-hero">
         <img src={A.whatIfFrog} alt="" />
