@@ -112,6 +112,10 @@ type BadgeMetrics = {
   trustLevel: number;
   top10Daily: boolean;
   top10Weekly: boolean;
+  top3Daily: boolean;
+  top3Weekly: boolean;
+  top1Daily: boolean;
+  top1Weekly: boolean;
 };
 
 type XpAction =
@@ -428,6 +432,96 @@ const defaultBadges: BadgeDefinition[] = [
     title: "Trust Level 3",
     description: "Reach Trust Level 3.",
     icon: "/badge_trust_level_3.png",
+  },
+  {
+    id: "premium_early_supporter",
+    title: "Premium Early Supporter",
+    description: "Rare early premium badge for active public-test users.",
+    icon: "/premium_badge_early_supporter.png",
+  },
+  {
+    id: "premium_founder",
+    title: "Premium Founder",
+    description: "Build trust, XP, and challenge activity early.",
+    icon: "/premium_badge_founder.png",
+  },
+  {
+    id: "premium_og_tracker",
+    title: "Premium OG Tracker",
+    description: "Track a serious number of expenses over time.",
+    icon: "/premium_badge_og_tracker.png",
+  },
+  {
+    id: "premium_wallet_king",
+    title: "Premium Wallet King",
+    description: "Keep Wallet HP elite while actively tracking.",
+    icon: "/premium_badge_wallet_king.png",
+  },
+  {
+    id: "premium_diamond_hands",
+    title: "Premium Diamond Hands",
+    description: "Hold long-term discipline without breaking momentum.",
+    icon: "/premium_badge_diamond_hands.png",
+  },
+  {
+    id: "premium_leak_destroyer",
+    title: "Premium Leak Destroyer",
+    description: "Destroy leaks through completed challenges.",
+    icon: "/premium_badge_leak_destroyer.png",
+  },
+  {
+    id: "premium_challenge_elite",
+    title: "Premium Challenge Elite",
+    description: "Complete 10 challenges.",
+    icon: "/premium_badge_challenge_elite.png",
+  },
+  {
+    id: "premium_streak_legend",
+    title: "Premium Streak Legend",
+    description: "Reach a 60-day tracking streak.",
+    icon: "/premium_badge_streak_legend.png",
+  },
+  {
+    id: "premium_top_1_daily",
+    title: "Premium Top 1 Daily",
+    description: "Reach #1 in Daily Movers.",
+    icon: "/premium_badge_top_1_daily.png",
+  },
+  {
+    id: "premium_top_1_weekly",
+    title: "Premium Top 1 Weekly",
+    description: "Reach #1 in Weekly Discipline.",
+    icon: "/premium_badge_top_1_weekly.png",
+  },
+  {
+    id: "premium_top_3_daily",
+    title: "Premium Top 3 Daily",
+    description: "Reach top 3 in Daily Movers.",
+    icon: "/premium_badge_top_3_daily.png",
+  },
+  {
+    id: "premium_top_3_weekly",
+    title: "Premium Top 3 Weekly",
+    description: "Reach top 3 in Weekly Discipline.",
+    icon: "/premium_badge_top_3_weekly.png",
+  },
+  {
+    id: "premium_5000_xp",
+    title: "Premium 5000 XP",
+    description: "Earn 5000 total XP.",
+    icon: "/premium_badge_5000_xp.png",
+  },
+  {
+    id: "premium_10000_xp",
+    title: "Premium 10000 XP",
+    description: "Earn 10000 total XP.",
+    icon: "/premium_badge_10000_xp.png",
+  },
+  {
+    id: "premium_trust_legend",
+    title: "Premium Trust Legend",
+    description: "Reach Trust Level 3 with strong total XP.",
+    icon: "/premium_badge_trust_legend.png",
   },
 ];
 
@@ -825,6 +919,34 @@ async function isUserTop10Weekly(telegramId: number) {
   }
 }
 
+async function isUserTopRankDaily(telegramId: number, rankLimit: number) {
+  const today = dateKey(new Date());
+
+  try {
+    const rows = (await supabaseFetch(
+      `broke_leaderboard_profiles?public_leaderboard=eq.true&daily_key=eq.${today}&select=telegram_id&order=daily_xp.desc&limit=${rankLimit}`
+    )) as Record<string, unknown>[];
+
+    return rows.some((row) => Number(row.telegram_id) === telegramId);
+  } catch {
+    return false;
+  }
+}
+
+async function isUserTopRankWeekly(telegramId: number, rankLimit: number) {
+  const week = getWeekKey(new Date());
+
+  try {
+    const rows = (await supabaseFetch(
+      `broke_leaderboard_profiles?public_leaderboard=eq.true&weekly_key=eq.${week}&select=telegram_id&order=weekly_xp.desc&limit=${rankLimit}`
+    )) as Record<string, unknown>[];
+
+    return rows.some((row) => Number(row.telegram_id) === telegramId);
+  } catch {
+    return false;
+  }
+}
+
 async function getStartedChallengeCount(telegramId: number) {
   try {
     const rows = (await supabaseFetch(
@@ -1159,14 +1281,27 @@ async function buildBadgeMetrics(
     100
   );
 
-  const [challengesStarted, challengesCompleted, rawProfile, top10Daily, top10Weekly] =
-    await Promise.all([
-      getStartedChallengeCount(telegramId),
-      getCompletedChallengeCount(telegramId),
-      getRawLeaderboardProfile(telegramId),
-      isUserTop10Daily(telegramId),
-      isUserTop10Weekly(telegramId),
-    ]);
+  const [
+    challengesStarted,
+    challengesCompleted,
+    rawProfile,
+    top10Daily,
+    top10Weekly,
+    top3Daily,
+    top3Weekly,
+    top1Daily,
+    top1Weekly,
+  ] = await Promise.all([
+    getStartedChallengeCount(telegramId),
+    getCompletedChallengeCount(telegramId),
+    getRawLeaderboardProfile(telegramId),
+    isUserTop10Daily(telegramId),
+    isUserTop10Weekly(telegramId),
+    isUserTopRankDaily(telegramId, 3),
+    isUserTopRankWeekly(telegramId, 3),
+    isUserTopRankDaily(telegramId, 1),
+    isUserTopRankWeekly(telegramId, 1),
+  ]);
 
   return {
     telegramId,
@@ -1187,6 +1322,10 @@ async function buildBadgeMetrics(
     trustLevel: Number(rawProfile?.trust_level ?? getTrustLevel(streak)),
     top10Daily,
     top10Weekly,
+    top3Daily,
+    top3Weekly,
+    top1Daily,
+    top1Weekly,
   };
 }
 
@@ -1207,6 +1346,10 @@ function shouldUnlockBadge(badgeId: string, metrics: BadgeMetrics) {
     trustLevel,
     top10Daily,
     top10Weekly,
+    top3Daily,
+    top3Weekly,
+    top1Daily,
+    top1Weekly,
   } = metrics;
 
   const activeToday = streak.lastActiveDate === dateKey(new Date());
@@ -1276,6 +1419,37 @@ function shouldUnlockBadge(badgeId: string, metrics: BadgeMetrics) {
       return top10Weekly;
     case "trust_level_3":
       return trustLevel >= 3;
+
+    case "premium_early_supporter":
+      return totalXp >= 500 && totalExpenses >= 5;
+    case "premium_founder":
+      return trustLevel >= 2 && totalXp >= 1000 && challengesStarted >= 1;
+    case "premium_og_tracker":
+      return totalExpenses >= 250;
+    case "premium_wallet_king":
+      return totalExpenses >= 20 && walletHp >= 95 && realBalance > 0;
+    case "premium_diamond_hands":
+      return streak.bestStreak >= 30 && totalXp >= 5000;
+    case "premium_leak_destroyer":
+      return challengesCompleted >= 5 && walletHp >= 80;
+    case "premium_challenge_elite":
+      return challengesCompleted >= 10;
+    case "premium_streak_legend":
+      return streak.bestStreak >= 60;
+    case "premium_top_1_daily":
+      return top1Daily;
+    case "premium_top_1_weekly":
+      return top1Weekly;
+    case "premium_top_3_daily":
+      return top3Daily;
+    case "premium_top_3_weekly":
+      return top3Weekly;
+    case "premium_5000_xp":
+      return totalXp >= 5000;
+    case "premium_10000_xp":
+      return totalXp >= 10000;
+    case "premium_trust_legend":
+      return trustLevel >= 3 && totalXp >= 5000;
 
     default:
       return false;
