@@ -68,6 +68,16 @@ type TelegramState = {
   initData: string;
 };
 
+type CloudStatus = "local" | "syncing" | "cloud" | "error";
+
+type BrokeApiResponse = {
+  ok: boolean;
+  settings?: Settings;
+  expenses?: Expense[];
+  expense?: Expense;
+  error?: string;
+};
+
 type TelegramWebApp = {
   initData?: string;
   initDataUnsafe?: {
@@ -459,12 +469,41 @@ function buildChartData(
   return points;
 }
 
+
+async function callBrokeApi(
+  initData: string,
+  action: string,
+  payload: Record<string, unknown> = {}
+): Promise<BrokeApiResponse> {
+  const response = await fetch("/api/broke", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action,
+      initData,
+      ...payload,
+    }),
+  });
+
+  const data = (await response.json()) as BrokeApiResponse;
+
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error || "Cloud sync failed");
+  }
+
+  return data;
+}
+
 export default function Home() {
   const [loaded, setLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [telegram, setTelegram] = useState<TelegramState>(emptyTelegramState);
+  const [cloudStatus, setCloudStatus] = useState<CloudStatus>("local");
+  const [cloudError, setCloudError] = useState("");
 
   const [amount, setAmount] = useState("25.00");
   const [note, setNote] = useState("");
@@ -559,6 +598,44 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!loaded || !telegram.isTelegram || !telegram.initData) return;
+
+    let cancelled = false;
+
+    async function syncCloudData() {
+      try {
+        setCloudStatus("syncing");
+        setCloudError("");
+
+        const data = await callBrokeApi(telegram.initData, "sync", {
+          localData: {
+            settings,
+            expenses,
+          },
+        });
+
+        if (cancelled) return;
+
+        if (data.settings) setSettings(data.settings);
+        if (data.expenses) setExpenses(data.expenses);
+
+        setCloudStatus("cloud");
+      } catch (error) {
+        if (cancelled) return;
+
+        setCloudStatus("error");
+        setCloudError(error instanceof Error ? error.message : "Cloud sync failed");
+      }
+    }
+
+    syncCloudData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loaded, telegram.isTelegram, telegram.initData]);
+
+  useEffect(() => {
     if (!loaded) return;
 
     localStorage.setItem(
@@ -569,6 +646,23 @@ export default function Home() {
       })
     );
   }, [loaded, settings, expenses]);
+
+  useEffect(() => {
+    if (!loaded || cloudStatus !== "cloud" || !telegram.initData) return;
+
+    const timeout = window.setTimeout(async () => {
+      try {
+        await callBrokeApi(telegram.initData, "saveSettings", {
+          settings,
+        });
+      } catch (error) {
+        setCloudStatus("error");
+        setCloudError(error instanceof Error ? error.message : "Settings cloud save failed");
+      }
+    }, 700);
+
+    return () => window.clearTimeout(timeout);
+  }, [loaded, cloudStatus, telegram.initData, settings]);
 
   const currentMonthExpenses = useMemo(() => {
     return getCurrentMonthExpenses(expenses);
@@ -614,7 +708,7 @@ export default function Home() {
     return buildChartData("week", expenses, settings);
   }, [expenses, settings]);
 
-  function addExpense() {
+  async function addExpense() {
     const value = safeNumber(amount);
 
     if (value <= 0) return;
@@ -634,14 +728,42 @@ export default function Home() {
     setNote("");
     setExpenseType("Needed");
     setActiveTab("home");
+
+    if (telegram.isTelegram && telegram.initData) {
+      try {
+        const data = await callBrokeApi(telegram.initData, "addExpense", {
+          expense,
+        });
+
+        if (data.expense) {
+          setExpenses((prev) =>
+            prev.map((item) => (item.id === expense.id ? data.expense! : item))
+          );
+          setCloudStatus("cloud");
+        }
+      } catch (error) {
+        setCloudStatus("error");
+        setCloudError(error instanceof Error ? error.message : "Expense cloud save failed");
+      }
+    }
   }
 
-  function deleteExpense(id: string) {
+  async function deleteExpense(id: string) {
     triggerHaptic("medium");
     setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+
+    if (telegram.isTelegram && telegram.initData) {
+      try {
+        await callBrokeApi(telegram.initData, "deleteExpense", { id });
+        setCloudStatus("cloud");
+      } catch (error) {
+        setCloudStatus("error");
+        setCloudError(error instanceof Error ? error.message : "Expense cloud delete failed");
+      }
+    }
   }
 
-  function resetData() {
+  async function resetData() {
     const ok = window.confirm("Delete all $BROKE Life Tracker data?");
     if (!ok) return;
 
@@ -650,6 +772,16 @@ export default function Home() {
     setExpenses([]);
     localStorage.removeItem(STORAGE_KEY);
     setActiveTab("home");
+
+    if (telegram.isTelegram && telegram.initData) {
+      try {
+        await callBrokeApi(telegram.initData, "reset");
+        setCloudStatus("cloud");
+      } catch (error) {
+        setCloudStatus("error");
+        setCloudError(error instanceof Error ? error.message : "Cloud reset failed");
+      }
+    }
   }
 
   const summary = {
@@ -673,6 +805,8 @@ export default function Home() {
             expenses={currentMonthExpenses.slice(0, 6)}
             onDeleteExpense={deleteExpense}
             telegram={telegram}
+            cloudStatus={cloudStatus}
+            cloudError={cloudError}
           />
         )}
 
@@ -708,6 +842,8 @@ export default function Home() {
             onReset={resetData}
             onDeleteExpense={deleteExpense}
             telegram={telegram}
+            cloudStatus={cloudStatus}
+            cloudError={cloudError}
           />
         )}
 
@@ -756,6 +892,8 @@ function DashboardScreen({
   expenses,
   onDeleteExpense,
   telegram,
+  cloudStatus,
+  cloudError,
 }: {
   settings: Settings;
   summary: {
@@ -771,6 +909,8 @@ function DashboardScreen({
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
   telegram: TelegramState;
+  cloudStatus: CloudStatus;
+  cloudError: string;
 }) {
   const stats = [
     {
@@ -807,7 +947,12 @@ function DashboardScreen({
     <div className="screen">
       <Header title="$BROKE Life Tracker" />
 
-      <TelegramMiniStatus telegram={telegram} compact />
+      <TelegramMiniStatus
+        telegram={telegram}
+        cloudStatus={cloudStatus}
+        cloudError={cloudError}
+        compact
+      />
 
       <section className="hero">
         <div>
@@ -895,14 +1040,27 @@ function DashboardScreen({
 
 function TelegramMiniStatus({
   telegram,
+  cloudStatus,
+  cloudError,
   compact = false,
 }: {
   telegram: TelegramState;
+  cloudStatus: CloudStatus;
+  cloudError: string;
   compact?: boolean;
 }) {
   const username = telegram.user?.username
     ? `@${telegram.user.username}`
     : telegram.user?.first_name || "Telegram user";
+
+  const cloudLabel =
+    cloudStatus === "cloud"
+      ? "Cloud synced"
+      : cloudStatus === "syncing"
+        ? "Syncing..."
+        : cloudStatus === "error"
+          ? "Sync error"
+          : "Local only";
 
   return (
     <section className={compact ? "tg-status tg-status-compact" : "tg-status"}>
@@ -912,12 +1070,16 @@ function TelegramMiniStatus({
       </div>
 
       <div>
-        <span>User</span>
-        <strong>{telegram.user ? username : "Not detected"}</strong>
+        <span>Data</span>
+        <strong>{cloudLabel}</strong>
       </div>
 
       {!compact && (
         <>
+          <div>
+            <span>User</span>
+            <strong>{telegram.user ? username : "Not detected"}</strong>
+          </div>
           <div>
             <span>User ID</span>
             <strong>{telegram.user?.id ?? "-"}</strong>
@@ -933,6 +1095,10 @@ function TelegramMiniStatus({
           <div>
             <span>Start param</span>
             <strong>{telegram.startParam || "-"}</strong>
+          </div>
+          <div>
+            <span>Status</span>
+            <strong>{cloudStatus === "error" ? cloudError || "Check Vercel logs" : "Ready"}</strong>
           </div>
         </>
       )}
@@ -1533,6 +1699,8 @@ function SettingsScreen({
   onReset,
   onDeleteExpense,
   telegram,
+  cloudStatus,
+  cloudError,
 }: {
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
@@ -1541,6 +1709,8 @@ function SettingsScreen({
   onReset: () => void;
   onDeleteExpense: (id: string) => void;
   telegram: TelegramState;
+  cloudStatus: CloudStatus;
+  cloudError: string;
 }) {
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
@@ -1572,7 +1742,11 @@ function SettingsScreen({
     <div className="screen">
       <Header title="Settings" showBack />
 
-      <TelegramMiniStatus telegram={telegram} />
+      <TelegramMiniStatus
+        telegram={telegram}
+        cloudStatus={cloudStatus}
+        cloudError={cloudError}
+      />
 
       <section className="settings-group">
         <h3>Income (Monthly)</h3>
