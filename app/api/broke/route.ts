@@ -82,8 +82,15 @@ function getSupabaseHeaders() {
   };
 }
 
+function getSupabaseBaseUrl() {
+  return getEnv("SUPABASE_URL")
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/rest\/v1$/, "");
+}
+
 function supabaseUrl(path: string) {
-  return `${getEnv("SUPABASE_URL").replace(/\/$/, "")}/rest/v1/${path}`;
+  return `${getSupabaseBaseUrl()}/rest/v1/${path}`;
 }
 
 function verifyTelegramInitData(initData: string) {
@@ -364,7 +371,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       ...base,
       supabase: {
-        urlHost: new URL(getEnv("SUPABASE_URL")).host,
+        originalUrl: getEnv("SUPABASE_URL").replace(/\?.*$/, ""),
+        normalizedBaseUrl: getSupabaseBaseUrl(),
+        urlHost: new URL(getSupabaseBaseUrl()).host,
         tables,
       },
     });
