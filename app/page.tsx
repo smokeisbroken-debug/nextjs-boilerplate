@@ -20,6 +20,7 @@ type Expense = {
 type Settings = {
   currency: Currency;
   dailyReminder: boolean;
+  onboardingCompleted?: boolean;
   income: {
     salary: number;
     side: number;
@@ -262,6 +263,7 @@ const A = {
 const defaultSettings: Settings = {
   currency: "USD",
   dailyReminder: true,
+  onboardingCompleted: false,
   income: {
     salary: 2800,
     side: 600,
@@ -954,6 +956,15 @@ export default function Home() {
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
         if (data.badges) setBadges(data.badges);
 
+        const cloudOnboardingCompleted =
+          data.settings?.onboardingCompleted === true ||
+          Boolean(data.expenses && data.expenses.length > 0);
+
+        if (cloudOnboardingCompleted) {
+          setOnboardingCompleted(true);
+          localStorage.setItem(ONBOARDING_KEY, "true");
+        }
+
         setCloudStatus("cloud");
       } catch (error) {
         if (cancelled) return;
@@ -1159,10 +1170,24 @@ export default function Home() {
 
   function completeOnboarding(nextSettings: Settings) {
     triggerHaptic("success");
-    setSettings(nextSettings);
+
+    const completedSettings: Settings = {
+      ...nextSettings,
+      onboardingCompleted: true,
+    };
+
+    setSettings(completedSettings);
     setOnboardingCompleted(true);
     localStorage.setItem(ONBOARDING_KEY, "true");
     setActiveTab("home");
+
+    if (telegram.isTelegram && telegram.initData) {
+      callBrokeApi(telegram.initData, "saveSettings", {
+        settings: completedSettings,
+      }).catch(() => {
+        // Normal debounce save will try again after state updates.
+      });
+    }
   }
 
   async function startChallenge(challengeId: string) {
@@ -1217,7 +1242,18 @@ export default function Home() {
           </div>
         )}
 
-        {loaded && !onboardingCompleted && (
+        {loaded && telegram.isTelegram && cloudStatus === "syncing" && !onboardingCompleted && (
+          <div className="screen loading-screen">
+            <Header title="$BROKE Life Tracker" />
+            <div className="loading-card">
+              <img src={A.walletMascot} alt="" />
+              <strong>Syncing cloud progress...</strong>
+              <span>Checking your Telegram profile before setup.</span>
+            </div>
+          </div>
+        )}
+
+        {loaded && !(telegram.isTelegram && cloudStatus === "syncing") && !onboardingCompleted && (
           <OnboardingScreen
             settings={settings}
             telegram={telegram}
