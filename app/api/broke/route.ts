@@ -93,6 +93,43 @@ type BadgeItem = BadgeDefinition & {
   earnedAt: string | null;
 };
 
+type XpAction =
+  | "open_app"
+  | "add_expense"
+  | "add_note"
+  | "mark_need_type"
+  | "open_chart"
+  | "check_challenge"
+  | "start_challenge"
+  | "daily_streak"
+  | "complete_challenge"
+  | "unlock_badge";
+
+type LeaderboardProfile = {
+  telegramId: number;
+  displayName: string;
+  username: string | null;
+  publicLeaderboard: boolean;
+  brokeScore: number;
+  dailyXp: number;
+  weeklyXp: number;
+  totalXp: number;
+  trustLevel: number;
+  currentStreak: number;
+  bestStreak: number;
+  badgeCount: number;
+  challengesCompleted: number;
+  updatedAt: string | null;
+  rank?: number;
+};
+
+type LeaderboardState = {
+  me: LeaderboardProfile | null;
+  daily: LeaderboardProfile[];
+  weekly: LeaderboardProfile[];
+  allTime: LeaderboardProfile[];
+};
+
 type TelegramUser = {
   id: number;
   first_name?: string;
@@ -252,6 +289,22 @@ const defaultBadges: BadgeDefinition[] = [
     icon: "/badge_streak.png",
   },
 ];
+
+const XP_RULES: Record<
+  XpAction,
+  { xp: number; cooldownMinutes: number; dailyActionMax: number }
+> = {
+  open_app: { xp: 5, cooldownMinutes: 15, dailyActionMax: 80 },
+  add_expense: { xp: 10, cooldownMinutes: 2, dailyActionMax: 200 },
+  add_note: { xp: 5, cooldownMinutes: 2, dailyActionMax: 80 },
+  mark_need_type: { xp: 5, cooldownMinutes: 2, dailyActionMax: 100 },
+  open_chart: { xp: 5, cooldownMinutes: 15, dailyActionMax: 60 },
+  check_challenge: { xp: 10, cooldownMinutes: 15, dailyActionMax: 100 },
+  start_challenge: { xp: 50, cooldownMinutes: 0, dailyActionMax: 200 },
+  daily_streak: { xp: 50, cooldownMinutes: 0, dailyActionMax: 50 },
+  complete_challenge: { xp: 150, cooldownMinutes: 0, dailyActionMax: 300 },
+  unlock_badge: { xp: 75, cooldownMinutes: 0, dailyActionMax: 750 },
+};
 
 function getEnv(name: string) {
   const value = process.env[name];
@@ -552,6 +605,332 @@ async function getUserBadges(telegramId: number) {
   }
 }
 
+function getDisplayName(user: TelegramUser) {
+  if (user.username) return `@${user.username}`;
+  return [user.first_name, user.last_name].filter(Boolean).join(" ") || "Broke User";
+}
+
+function getWeekKey(date: Date) {
+  const copy = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = copy.getUTCDay() || 7;
+  copy.setUTCDate(copy.getUTCDate() - day + 1);
+  return dateKey(copy);
+}
+
+function getTrustLevel(streak: Streak) {
+  if (streak.bestStreak >= 14) return 3;
+  if (streak.bestStreak >= 7) return 2;
+  if (streak.bestStreak >= 3) return 1;
+  return 0;
+}
+
+function getTrustCaps(level: number) {
+  if (level >= 3) return { dailyCap: 500, weeklyCap: 2500 };
+  if (level === 2) return { dailyCap: 400, weeklyCap: 2000 };
+  if (level === 1) return { dailyCap: 250, weeklyCap: 1250 };
+  return { dailyCap: 150, weeklyCap: 750 };
+}
+
+function dbToLeaderboardProfile(row: Record<string, unknown>, rank?: number): LeaderboardProfile {
+  const today = dateKey(new Date());
+  const week = getWeekKey(new Date());
+  const dailyKey = String(row.daily_key ?? "");
+  const weeklyKey = String(row.weekly_key ?? "");
+
+  return {
+    telegramId: Number(row.telegram_id),
+    displayName: String(row.display_name ?? "Broke User"),
+    username: row.username ? String(row.username) : null,
+    publicLeaderboard: Boolean(row.public_leaderboard),
+    brokeScore: Number(row.total_xp ?? 0),
+    dailyXp: dailyKey === today ? Number(row.daily_xp ?? 0) : 0,
+    weeklyXp: weeklyKey === week ? Number(row.weekly_xp ?? 0) : 0,
+    totalXp: Number(row.total_xp ?? 0),
+    trustLevel: Number(row.trust_level ?? 0),
+    currentStreak: Number(row.current_streak ?? 0),
+    bestStreak: Number(row.best_streak ?? 0),
+    badgeCount: Number(row.badge_count ?? 0),
+    challengesCompleted: Number(row.challenges_completed ?? 0),
+    updatedAt: row.updated_at ? String(row.updated_at) : null,
+    rank,
+  };
+}
+
+async function getCompletedChallengeCount(telegramId: number) {
+  try {
+    const rows = (await supabaseFetch(
+      `broke_user_challenges?telegram_id=eq.${telegramId}&status=eq.completed&select=id`
+    )) as Record<string, unknown>[];
+
+    return rows.length;
+  } catch {
+    return 0;
+  }
+}
+
+async function getRawLeaderboardProfile(telegramId: number) {
+  try {
+    const rows = (await supabaseFetch(
+      `broke_leaderboard_profiles?telegram_id=eq.${telegramId}&select=*`
+    )) as Record<string, unknown>[];
+
+    return rows.length ? rows[0] : null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveLeaderboardProfile(row: Record<string, unknown>) {
+  try {
+    await supabaseFetch("broke_leaderboard_profiles?on_conflict=telegram_id", {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify(row),
+    });
+  } catch {
+    // Leaderboard SQL may not be applied yet.
+  }
+}
+
+async function refreshLeaderboardProfile(
+  telegramId: number,
+  user: TelegramUser,
+  streak: Streak,
+  addXp = 0
+) {
+  const now = new Date();
+  const today = dateKey(now);
+  const week = getWeekKey(now);
+  const existing = await getRawLeaderboardProfile(telegramId);
+  const badgeCount = (await getUserBadges(telegramId)).length;
+  const challengesCompleted = await getCompletedChallengeCount(telegramId);
+
+  const previousDailyKey = String(existing?.daily_key ?? today);
+  const previousWeeklyKey = String(existing?.weekly_key ?? week);
+
+  const dailyXp =
+    previousDailyKey === today ? Number(existing?.daily_xp ?? 0) + addXp : addXp;
+  const weeklyXp =
+    previousWeeklyKey === week ? Number(existing?.weekly_xp ?? 0) + addXp : addXp;
+  const totalXp = Number(existing?.total_xp ?? 0) + addXp;
+
+  const row = {
+    telegram_id: telegramId,
+    display_name: getDisplayName(user),
+    username: user.username ?? null,
+    public_leaderboard: Boolean(existing?.public_leaderboard),
+    total_xp: totalXp,
+    daily_xp: dailyXp,
+    weekly_xp: weeklyXp,
+    daily_key: today,
+    weekly_key: week,
+    trust_level: getTrustLevel(streak),
+    current_streak: streak.currentStreak,
+    best_streak: streak.bestStreak,
+    badge_count: badgeCount,
+    challenges_completed: challengesCompleted,
+    last_seen_at: now.toISOString(),
+    updated_at: now.toISOString(),
+  };
+
+  await saveLeaderboardProfile(row);
+  return dbToLeaderboardProfile(row);
+}
+
+async function getXpSum(path: string) {
+  try {
+    const rows = (await supabaseFetch(path)) as Record<string, unknown>[];
+    return rows.reduce((acc, row) => acc + Number(row.xp ?? 0), 0);
+  } catch {
+    return 0;
+  }
+}
+
+async function hasXpEvent(path: string) {
+  try {
+    const rows = (await supabaseFetch(path)) as Record<string, unknown>[];
+    return rows.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function awardXp(
+  telegramId: number,
+  user: TelegramUser,
+  action: XpAction,
+  streak: Streak,
+  sourceKey?: string
+) {
+  const rule = XP_RULES[action];
+  if (!rule) return 0;
+
+  const now = new Date();
+  const today = dateKey(now);
+  const week = getWeekKey(now);
+  const profile = await refreshLeaderboardProfile(telegramId, user, streak, 0);
+  const caps = getTrustCaps(profile.trustLevel);
+
+  if (sourceKey) {
+    const duplicate = await hasXpEvent(
+      `broke_xp_events?telegram_id=eq.${telegramId}&action=eq.${action}&source_key=eq.${encodeURIComponent(
+        sourceKey
+      )}&select=id&limit=1`
+    );
+
+    if (duplicate) return 0;
+  }
+
+  if (rule.cooldownMinutes > 0) {
+    const since = new Date(now.getTime() - rule.cooldownMinutes * 60 * 1000).toISOString();
+    const recent = await hasXpEvent(
+      `broke_xp_events?telegram_id=eq.${telegramId}&action=eq.${action}&created_at=gte.${encodeURIComponent(
+        since
+      )}&select=id&limit=1`
+    );
+
+    if (recent) return 0;
+  }
+
+  const dayStart = `${today}T00:00:00.000Z`;
+  const weekStart = `${week}T00:00:00.000Z`;
+
+  const actionToday = await getXpSum(
+    `broke_xp_events?telegram_id=eq.${telegramId}&action=eq.${action}&created_at=gte.${encodeURIComponent(
+      dayStart
+    )}&select=xp`
+  );
+
+  const totalToday = await getXpSum(
+    `broke_xp_events?telegram_id=eq.${telegramId}&created_at=gte.${encodeURIComponent(
+      dayStart
+    )}&select=xp`
+  );
+
+  const totalWeek = await getXpSum(
+    `broke_xp_events?telegram_id=eq.${telegramId}&created_at=gte.${encodeURIComponent(
+      weekStart
+    )}&select=xp`
+  );
+
+  const available = Math.min(
+    rule.xp,
+    Math.max(0, rule.dailyActionMax - actionToday),
+    Math.max(0, caps.dailyCap - totalToday),
+    Math.max(0, caps.weeklyCap - totalWeek)
+  );
+
+  if (available <= 0) return 0;
+
+  try {
+    await supabaseFetch("broke_xp_events", {
+      method: "POST",
+      body: JSON.stringify({
+        telegram_id: telegramId,
+        action,
+        xp: available,
+        source_key: sourceKey ?? null,
+        created_at: now.toISOString(),
+      }),
+    });
+  } catch {
+    return 0;
+  }
+
+  await refreshLeaderboardProfile(telegramId, user, streak, available);
+  return available;
+}
+
+async function getLeaderboardState(
+  telegramId: number,
+  user: TelegramUser,
+  streak: Streak
+): Promise<LeaderboardState> {
+  await refreshLeaderboardProfile(telegramId, user, streak, 0);
+
+  const today = dateKey(new Date());
+  const week = getWeekKey(new Date());
+
+  async function list(path: string) {
+    try {
+      const rows = (await supabaseFetch(path)) as Record<string, unknown>[];
+      return rows.map((row, index) => dbToLeaderboardProfile(row, index + 1));
+    } catch {
+      return [] as LeaderboardProfile[];
+    }
+  }
+
+  const meRaw = await getRawLeaderboardProfile(telegramId);
+  const me = meRaw ? dbToLeaderboardProfile(meRaw) : null;
+
+  const [daily, weekly, allTime] = await Promise.all([
+    list(
+      `broke_leaderboard_profiles?public_leaderboard=eq.true&daily_key=eq.${today}&select=*&order=daily_xp.desc&limit=25`
+    ),
+    list(
+      `broke_leaderboard_profiles?public_leaderboard=eq.true&weekly_key=eq.${week}&select=*&order=weekly_xp.desc&limit=25`
+    ),
+    list(
+      "broke_leaderboard_profiles?public_leaderboard=eq.true&select=*&order=total_xp.desc&limit=25"
+    ),
+  ]);
+
+  return { me, daily, weekly, allTime };
+}
+
+async function setLeaderboardOptIn(
+  telegramId: number,
+  user: TelegramUser,
+  streak: Streak,
+  publicLeaderboard: boolean
+) {
+  const profile = await refreshLeaderboardProfile(telegramId, user, streak, 0);
+
+  await saveLeaderboardProfile({
+    telegram_id: telegramId,
+    display_name: profile.displayName,
+    username: profile.username,
+    public_leaderboard: publicLeaderboard,
+    total_xp: profile.totalXp,
+    daily_xp: profile.dailyXp,
+    weekly_xp: profile.weeklyXp,
+    daily_key: dateKey(new Date()),
+    weekly_key: getWeekKey(new Date()),
+    trust_level: profile.trustLevel,
+    current_streak: profile.currentStreak,
+    best_streak: profile.bestStreak,
+    badge_count: profile.badgeCount,
+    challenges_completed: profile.challengesCompleted,
+    last_seen_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+}
+
+async function awardChallengeCompletionXp(
+  telegramId: number,
+  user: TelegramUser,
+  streak: Streak,
+  challengeState: {
+    activeChallenge: UserChallenge | null;
+    challengeProgress: ChallengeProgress | null;
+  }
+) {
+  if (
+    challengeState.activeChallenge &&
+    challengeState.challengeProgress?.status === "completed"
+  ) {
+    await awardXp(
+      telegramId,
+      user,
+      "complete_challenge",
+      streak,
+      challengeState.activeChallenge.id
+    );
+  }
+}
+
 async function awardBadges(telegramId: number, badgeIds: string[]) {
   if (!badgeIds.length) return;
 
@@ -628,6 +1007,7 @@ function shouldUnlockBadge(
 
 async function getBadgeState(
   telegramId: number,
+  user: TelegramUser,
   settings: Settings,
   expenses: Expense[],
   streak: Streak
@@ -641,6 +1021,10 @@ async function getBadgeState(
 
   if (unlockedNow.length) {
     await awardBadges(telegramId, unlockedNow);
+
+    for (const badgeId of unlockedNow) {
+      await awardXp(telegramId, user, "unlock_badge", streak, badgeId);
+    }
   }
 
   const fresh = await getUserBadges(telegramId);
@@ -794,6 +1178,22 @@ async function resetData(telegramId: number) {
 
   try {
     await supabaseFetch(`broke_user_badges?telegram_id=eq.${telegramId}`, {
+      method: "DELETE",
+    });
+  } catch {
+    // ignore if table not ready
+  }
+
+  try {
+    await supabaseFetch(`broke_xp_events?telegram_id=eq.${telegramId}`, {
+      method: "DELETE",
+    });
+  } catch {
+    // ignore if table not ready
+  }
+
+  try {
+    await supabaseFetch(`broke_leaderboard_profiles?telegram_id=eq.${telegramId}`, {
       method: "DELETE",
     });
   } catch {
@@ -1045,6 +1445,8 @@ export async function GET(request: NextRequest) {
       checkSupabaseTable("broke_challenges"),
       checkSupabaseTable("broke_user_challenges"),
       checkSupabaseTable("broke_user_badges"),
+      checkSupabaseTable("broke_xp_events"),
+      checkSupabaseTable("broke_leaderboard_profiles"),
     ]);
 
     return NextResponse.json({
@@ -1091,7 +1493,14 @@ export async function POST(request: NextRequest) {
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
       const challengeState = await getChallengeState(telegramId, expenses);
-      const badges = await getBadgeState(telegramId, settings, expenses, streak);
+      await awardChallengeCompletionXp(telegramId, user, streak, challengeState);
+      const badges = await getBadgeState(telegramId, user, settings, expenses, streak);
+
+      if (streak.lastActiveDate === dateKey(new Date())) {
+        await awardXp(telegramId, user, "daily_streak", streak, dateKey(new Date()));
+      }
+
+      const leaderboard = await getLeaderboardState(telegramId, user, streak);
 
       return NextResponse.json({
         ok: true,
@@ -1099,6 +1508,7 @@ export async function POST(request: NextRequest) {
         expenses,
         streak,
         badges,
+        leaderboard,
         ...challengeState,
       });
     }
@@ -1109,13 +1519,28 @@ export async function POST(request: NextRequest) {
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
       const challengeState = await getChallengeState(telegramId, expenses);
-      const badges = await getBadgeState(telegramId, settings, expenses, streak);
+      await awardChallengeCompletionXp(telegramId, user, streak, challengeState);
+      await awardXp(telegramId, user, "add_expense", streak);
+
+      if (expense.note.trim()) {
+        await awardXp(telegramId, user, "add_note", streak);
+      }
+
+      await awardXp(telegramId, user, "mark_need_type", streak);
+
+      if (streak.lastActiveDate === dateKey(new Date())) {
+        await awardXp(telegramId, user, "daily_streak", streak, dateKey(new Date()));
+      }
+
+      const badges = await getBadgeState(telegramId, user, settings, expenses, streak);
+      const leaderboard = await getLeaderboardState(telegramId, user, streak);
 
       return NextResponse.json({
         ok: true,
         expense,
         streak,
         badges,
+        leaderboard,
         ...challengeState,
       });
     }
@@ -1126,12 +1551,15 @@ export async function POST(request: NextRequest) {
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
       const challengeState = await getChallengeState(telegramId, expenses);
-      const badges = await getBadgeState(telegramId, settings, expenses, streak);
+      await awardChallengeCompletionXp(telegramId, user, streak, challengeState);
+      const badges = await getBadgeState(telegramId, user, settings, expenses, streak);
+      const leaderboard = await getLeaderboardState(telegramId, user, streak);
 
       return NextResponse.json({
         ok: true,
         streak,
         badges,
+        leaderboard,
         ...challengeState,
       });
     }
@@ -1142,12 +1570,59 @@ export async function POST(request: NextRequest) {
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
       const challengeState = await getChallengeState(telegramId, expenses);
-      const badges = await getBadgeState(telegramId, settings, expenses, streak);
+      await awardXp(telegramId, user, "start_challenge", streak, String(body.challengeId));
+      await awardChallengeCompletionXp(telegramId, user, streak, challengeState);
+      const badges = await getBadgeState(telegramId, user, settings, expenses, streak);
+      const leaderboard = await getLeaderboardState(telegramId, user, streak);
 
       return NextResponse.json({
         ok: true,
         badges,
+        leaderboard,
         ...challengeState,
+      });
+    }
+
+    if (action === "trackXp") {
+      const settings = await getSettings(telegramId);
+      const expenses = await getExpenses(telegramId);
+      const streak = await getAndUpdateStreak(telegramId, expenses);
+      const xpAction = String(body.xpAction || "") as XpAction;
+
+      if (!XP_RULES[xpAction]) {
+        return NextResponse.json(
+          { ok: false, error: "Unknown XP action" },
+          { status: 400 }
+        );
+      }
+
+      const xpAwarded = await awardXp(telegramId, user, xpAction, streak);
+      const badges = await getBadgeState(telegramId, user, settings, expenses, streak);
+      const leaderboard = await getLeaderboardState(telegramId, user, streak);
+
+      return NextResponse.json({
+        ok: true,
+        xpAwarded,
+        badges,
+        leaderboard,
+      });
+    }
+
+    if (action === "setLeaderboardOptIn") {
+      const expenses = await getExpenses(telegramId);
+      const streak = await getAndUpdateStreak(telegramId, expenses);
+      await setLeaderboardOptIn(
+        telegramId,
+        user,
+        streak,
+        Boolean(body.publicLeaderboard)
+      );
+
+      const leaderboard = await getLeaderboardState(telegramId, user, streak);
+
+      return NextResponse.json({
+        ok: true,
+        leaderboard,
       });
     }
 
@@ -1156,11 +1631,13 @@ export async function POST(request: NextRequest) {
       await saveSettings(telegramId, settings);
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
-      const badges = await getBadgeState(telegramId, settings, expenses, streak);
+      const badges = await getBadgeState(telegramId, user, settings, expenses, streak);
+      const leaderboard = await getLeaderboardState(telegramId, user, streak);
 
       return NextResponse.json({
         ok: true,
         badges,
+        leaderboard,
       });
     }
 
@@ -1173,6 +1650,7 @@ export async function POST(request: NextRequest) {
         earned: false,
         earnedAt: null,
       })) as BadgeItem[];
+      const leaderboard = await getLeaderboardState(telegramId, user, streak);
 
       return NextResponse.json({
         ok: true,
@@ -1180,6 +1658,7 @@ export async function POST(request: NextRequest) {
         expenses: [],
         streak,
         badges,
+        leaderboard,
         ...challengeState,
       });
     }
