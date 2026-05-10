@@ -1169,7 +1169,7 @@ function buildWalletInsights(expenses: Expense[], settings: Settings): WalletIns
       title: "Hidden bill",
       body: `Small leaks this week are already bigger than your phone bill.`,
       detail: `${money(weekLeaks, settings.currency)} in leaks vs ${money(settings.fixedCosts.phone, settings.currency)} phone cost.`,
-      icon: A.phone,
+      icon: A.lifeCost,
       tone: "red",
     });
   }
@@ -1195,7 +1195,7 @@ function buildWalletInsights(expenses: Expense[], settings: Settings): WalletIns
       title: "Monthly projection",
       body: `At this pace, leaks could reach ${money(projectedLeaks, settings.currency)} this month.`,
       detail: "That is not one mistake. That is the monthly rhythm.",
-      icon: A.chart,
+      icon: A.navChart,
       tone: projectedLeaks >= availableAfterLifeCost * 0.25 ? "red" : "gold",
     });
   }
