@@ -1,8 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
+type NeedType = "Needed" | "Not needed" | "Maybe";
+type Currency = "USD" | "EUR" | "MDL";
+
+type Expense = {
+  id: string;
+  amount: number;
+  category: string;
+  needType: NeedType;
+  note: string;
+  createdAt: string;
+};
+
+type Settings = {
+  currency: Currency;
+  dailyReminder: boolean;
+  income: {
+    salary: number;
+    side: number;
+    other: number;
+  };
+  fixedCosts: {
+    rent: number;
+    utilities: number;
+    food: number;
+    transport: number;
+    phone: number;
+  };
+};
+
+const STORAGE_KEY = "broke-life-tracker-v1";
 
 const A = {
   appFrog: "/01_app_frog_icon.png",
@@ -45,36 +75,22 @@ const A = {
   deleteData: "/33_icon_delete_my_data.png",
 };
 
-const stats = [
-  {
-    title: "Income",
-    value: "$3,850",
-    subtitle: "This month",
-    icon: A.income,
-    tone: "green",
+const defaultSettings: Settings = {
+  currency: "USD",
+  dailyReminder: true,
+  income: {
+    salary: 2800,
+    side: 600,
+    other: 450,
   },
-  {
-    title: "Life Cost",
-    value: "$2,410",
-    subtitle: "This month",
-    icon: A.lifeCost,
-    tone: "red",
+  fixedCosts: {
+    rent: 1200,
+    utilities: 200,
+    food: 350,
+    transport: 150,
+    phone: 80,
   },
-  {
-    title: "Money Leaks",
-    value: "$610",
-    subtitle: "This month",
-    icon: A.leaks,
-    tone: "orange",
-  },
-  {
-    title: "Real Balance",
-    value: "$830",
-    subtitle: "Left to stack",
-    icon: A.balance,
-    tone: "green",
-  },
-];
+};
 
 const categories = [
   { name: "Coffee", icon: A.coffee },
@@ -84,37 +100,6 @@ const categories = [
   { name: "Subscriptions", icon: A.subscriptions },
   { name: "Taxi", icon: A.taxi },
   { name: "Custom", icon: A.custom },
-];
-
-const whatIfCards = [
-  {
-    title: "If you stop coffee",
-    save: "$84",
-    year: "$1,008",
-    hp: "+8",
-    icon: A.coffee,
-  },
-  {
-    title: "If you reduce smoking by 50%",
-    save: "$60",
-    year: "$720",
-    hp: "+6",
-    icon: A.smoking,
-  },
-  {
-    title: "If you stop takeouts",
-    save: "$120",
-    year: "$1,440",
-    hp: "+10",
-    icon: A.takeouts,
-  },
-  {
-    title: "If you cut random shopping",
-    save: "$98",
-    year: "$1,176",
-    hp: "+8",
-    icon: A.shopping,
-  },
 ];
 
 const navItems: {
@@ -129,26 +114,337 @@ const navItems: {
   { id: "settings", label: "Settings", icon: A.navSettings },
 ];
 
+function uid() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function monthKey(date: Date) {
+  return `${date.getFullYear()}-${date.getMonth() + 1}`;
+}
+
+function dayKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function currencySymbol(currency: Currency) {
+  if (currency === "EUR") return "€";
+  if (currency === "MDL") return "L";
+  return "$";
+}
+
+function money(value: number, currency: Currency) {
+  const symbol = currencySymbol(currency);
+  const abs = Math.abs(Math.round(value)).toLocaleString("en-US");
+  return value < 0 ? `-${symbol}${abs}` : `${symbol}${abs}`;
+}
+
+function safeNumber(value: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function sum(values: number[]) {
+  return values.reduce((acc, value) => acc + value, 0);
+}
+
+function getTotalIncome(settings: Settings) {
+  return sum([
+    settings.income.salary,
+    settings.income.side,
+    settings.income.other,
+  ]);
+}
+
+function getFixedCosts(settings: Settings) {
+  return sum([
+    settings.fixedCosts.rent,
+    settings.fixedCosts.utilities,
+    settings.fixedCosts.food,
+    settings.fixedCosts.transport,
+    settings.fixedCosts.phone,
+  ]);
+}
+
 export default function Home() {
+  const [loaded, setLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
+  const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+
+  const [amount, setAmount] = useState("25.00");
+  const [note, setNote] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Coffee");
-  const [expenseType, setExpenseType] = useState("Needed");
+  const [expenseType, setExpenseType] = useState<NeedType>("Needed");
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+
+      if (raw) {
+        const parsed = JSON.parse(raw) as {
+          settings?: Settings;
+          expenses?: Expense[];
+        };
+
+        if (parsed.settings) {
+          setSettings({
+            ...defaultSettings,
+            ...parsed.settings,
+            income: {
+              ...defaultSettings.income,
+              ...parsed.settings.income,
+            },
+            fixedCosts: {
+              ...defaultSettings.fixedCosts,
+              ...parsed.settings.fixedCosts,
+            },
+          });
+        }
+
+        if (Array.isArray(parsed.expenses)) {
+          setExpenses(parsed.expenses);
+        }
+      }
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
+    } finally {
+      setLoaded(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        settings,
+        expenses,
+      })
+    );
+  }, [loaded, settings, expenses]);
+
+  const currentMonthExpenses = useMemo(() => {
+    const current = monthKey(new Date());
+
+    return expenses.filter((expense) => {
+      return monthKey(new Date(expense.createdAt)) === current;
+    });
+  }, [expenses]);
+
+  const totalIncome = getTotalIncome(settings);
+  const fixedCosts = getFixedCosts(settings);
+  const spentThisMonth = sum(currentMonthExpenses.map((e) => e.amount));
+
+  const moneyLeaks = sum(
+    currentMonthExpenses
+      .filter((e) => e.needType === "Not needed")
+      .map((e) => e.amount)
+  );
+
+  const maybeLeaks = sum(
+    currentMonthExpenses
+      .filter((e) => e.needType === "Maybe")
+      .map((e) => e.amount * 0.5)
+  );
+
+  const totalLeaks = moneyLeaks + maybeLeaks;
+  const realBalance = totalIncome - fixedCosts - spentThisMonth;
+  const availableAfterLifeCost = Math.max(totalIncome - fixedCosts, 1);
+
+  const walletHp = clamp(
+    100 - Math.round((totalLeaks / availableAfterLifeCost) * 100),
+    5,
+    100
+  );
+
+  const todaySpent = useMemo(() => {
+    const today = dayKey(new Date());
+
+    return sum(
+      expenses
+        .filter((e) => dayKey(new Date(e.createdAt)) === today)
+        .map((e) => e.amount)
+    );
+  }, [expenses]);
+
+  const chartDays = useMemo(() => {
+    const days: {
+      label: string;
+      key: string;
+      spent: number;
+      open: number;
+      close: number;
+    }[] = [];
+
+    let balance = totalIncome - fixedCosts;
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+
+      const key = dayKey(d);
+      const label = d.toLocaleDateString("en-US", {
+        weekday: "short",
+      });
+
+      const spent = sum(
+        expenses
+          .filter((e) => dayKey(new Date(e.createdAt)) === key)
+          .map((e) => e.amount)
+      );
+
+      const open = balance;
+      const close = balance - spent;
+
+      days.push({
+        label,
+        key,
+        spent,
+        open,
+        close,
+      });
+
+      balance = close;
+    }
+
+    return days;
+  }, [expenses, fixedCosts, totalIncome]);
+
+  const whatIfCards = useMemo(() => {
+    const categoryTotal = (category: string) =>
+      sum(
+        currentMonthExpenses
+          .filter((expense) => expense.category === category)
+          .map((expense) => expense.amount)
+      );
+
+    const coffee = categoryTotal("Coffee") || 84;
+    const smoking = categoryTotal("Smoking") ? categoryTotal("Smoking") * 0.5 : 60;
+    const takeouts = categoryTotal("Takeouts") || 120;
+    const shopping = categoryTotal("Shopping") || 98;
+
+    return [
+      {
+        title: "If you stop coffee",
+        save: coffee,
+        hp: "+8",
+        icon: A.coffee,
+      },
+      {
+        title: "If you reduce smoking by 50%",
+        save: smoking,
+        hp: "+6",
+        icon: A.smoking,
+      },
+      {
+        title: "If you stop takeouts",
+        save: takeouts,
+        hp: "+10",
+        icon: A.takeouts,
+      },
+      {
+        title: "If you cut random shopping",
+        save: shopping,
+        hp: "+8",
+        icon: A.shopping,
+      },
+    ];
+  }, [currentMonthExpenses]);
+
+  const totalPotentialSavings = sum(whatIfCards.map((item) => item.save)) * 12;
+
+  function addExpense() {
+    const value = safeNumber(amount);
+
+    if (value <= 0) return;
+
+    const expense: Expense = {
+      id: uid(),
+      amount: value,
+      category: selectedCategory,
+      needType: expenseType,
+      note,
+      createdAt: new Date().toISOString(),
+    };
+
+    setExpenses((prev) => [expense, ...prev]);
+    setAmount("");
+    setNote("");
+    setExpenseType("Needed");
+    setActiveTab("home");
+  }
+
+  function resetData() {
+    const ok = window.confirm("Delete all $BROKE Life Tracker data?");
+    if (!ok) return;
+
+    setSettings(defaultSettings);
+    setExpenses([]);
+    localStorage.removeItem(STORAGE_KEY);
+    setActiveTab("home");
+  }
+
+  const summary = {
+    totalIncome,
+    fixedCosts,
+    spentThisMonth,
+    totalLeaks,
+    realBalance,
+    walletHp,
+    todaySpent,
+  };
 
   return (
     <main className="app-shell">
       <section className="phone">
-        {activeTab === "home" && <DashboardScreen />}
+        {activeTab === "home" && (
+          <DashboardScreen
+            settings={settings}
+            summary={summary}
+            chartDays={chartDays}
+          />
+        )}
+
         {activeTab === "add" && (
           <AddExpenseScreen
+            settings={settings}
+            amount={amount}
+            setAmount={setAmount}
+            note={note}
+            setNote={setNote}
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
             expenseType={expenseType}
             setExpenseType={setExpenseType}
+            onAdd={addExpense}
           />
         )}
-        {activeTab === "chart" && <ChartScreen />}
-        {activeTab === "whatif" && <WhatIfScreen />}
-        {activeTab === "settings" && <SettingsScreen />}
+
+        {activeTab === "chart" && (
+          <ChartScreen settings={settings} chartDays={chartDays} />
+        )}
+
+        {activeTab === "whatif" && (
+          <WhatIfScreen
+            settings={settings}
+            cards={whatIfCards}
+            totalPotentialSavings={totalPotentialSavings}
+          />
+        )}
+
+        {activeTab === "settings" && (
+          <SettingsScreen
+            settings={settings}
+            setSettings={setSettings}
+            expenses={expenses}
+            onReset={resetData}
+          />
+        )}
 
         <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
       </section>
@@ -188,7 +484,60 @@ function Header({
   );
 }
 
-function DashboardScreen() {
+function DashboardScreen({
+  settings,
+  summary,
+  chartDays,
+}: {
+  settings: Settings;
+  summary: {
+    totalIncome: number;
+    fixedCosts: number;
+    spentThisMonth: number;
+    totalLeaks: number;
+    realBalance: number;
+    walletHp: number;
+    todaySpent: number;
+  };
+  chartDays: {
+    label: string;
+    key: string;
+    spent: number;
+    open: number;
+    close: number;
+  }[];
+}) {
+  const stats = [
+    {
+      title: "Income",
+      value: money(summary.totalIncome, settings.currency),
+      subtitle: "This month",
+      icon: A.income,
+      tone: "green",
+    },
+    {
+      title: "Life Cost",
+      value: money(summary.fixedCosts, settings.currency),
+      subtitle: "This month",
+      icon: A.lifeCost,
+      tone: "red",
+    },
+    {
+      title: "Money Leaks",
+      value: money(summary.totalLeaks, settings.currency),
+      subtitle: "This month",
+      icon: A.leaks,
+      tone: "orange",
+    },
+    {
+      title: "Real Balance",
+      value: money(summary.realBalance, settings.currency),
+      subtitle: "Left to stack",
+      icon: A.balance,
+      tone: "green",
+    },
+  ];
+
   return (
     <div className="screen">
       <Header title="$BROKE Life Tracker" />
@@ -222,15 +571,15 @@ function DashboardScreen() {
       <section className="hp-card">
         <div className="section-title">
           <span>Wallet HP</span>
-          <b>Small Leak</b>
+          <b>{summary.walletHp >= 80 ? "Stable Wallet" : "Small Leak"}</b>
         </div>
 
         <div className="hp-row">
           <img src={A.walletHp} alt="Wallet HP" />
           <div className="hp-bar">
-            <div />
+            <div style={{ width: `${summary.walletHp}%` }} />
           </div>
-          <strong>77 / 100</strong>
+          <strong>{summary.walletHp} / 100</strong>
         </div>
 
         <p>Hold the line, fix the leaks.</p>
@@ -242,13 +591,17 @@ function DashboardScreen() {
           <small>7D Preview</small>
         </div>
 
-        <MiniChart />
+        <MiniChart chartDays={chartDays} />
 
         <div className="damage-card">
           <div>
             <small>Today's Damage</small>
-            <strong>-$68</strong>
-            <span>vs yesterday</span>
+            <strong>
+              {summary.todaySpent > 0
+                ? `-${money(summary.todaySpent, settings.currency)}`
+                : money(0, settings.currency)}
+            </strong>
+            <span>tracked today</span>
           </div>
           <img src={A.chartFrog} alt="Chart frog" />
         </div>
@@ -258,26 +611,52 @@ function DashboardScreen() {
 }
 
 function AddExpenseScreen({
+  settings,
+  amount,
+  setAmount,
+  note,
+  setNote,
   selectedCategory,
   setSelectedCategory,
   expenseType,
   setExpenseType,
+  onAdd,
 }: {
+  settings: Settings;
+  amount: string;
+  setAmount: (value: string) => void;
+  note: string;
+  setNote: (value: string) => void;
   selectedCategory: string;
   setSelectedCategory: (value: string) => void;
-  expenseType: string;
-  setExpenseType: (value: string) => void;
+  expenseType: NeedType;
+  setExpenseType: (value: NeedType) => void;
+  onAdd: () => void;
 }) {
   return (
-    <div className="screen">
+    <form
+      className="screen"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onAdd();
+      }}
+    >
       <Header title="Add Expense" showBack rightIcon={A.help} />
 
       <section className="amount-box">
         <label>Amount</label>
         <div className="amount-input">
-          <span>$</span>
-          <strong>25.00</strong>
-          <b>USD</b>
+          <span>{currencySymbol(settings.currency)}</span>
+          <input
+            value={amount}
+            inputMode="decimal"
+            type="number"
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            onChange={(event) => setAmount(event.target.value)}
+          />
+          <b>{settings.currency}</b>
         </div>
       </section>
 
@@ -286,6 +665,7 @@ function AddExpenseScreen({
         <div className="category-grid">
           {categories.map((cat) => (
             <button
+              type="button"
               className={selectedCategory === cat.name ? "cat active" : "cat"}
               key={cat.name}
               onClick={() => setSelectedCategory(cat.name)}
@@ -300,8 +680,9 @@ function AddExpenseScreen({
       <section>
         <label className="field-label">Was it needed?</label>
         <div className="choice-row">
-          {["Needed", "Not needed", "Maybe"].map((type) => (
+          {(["Needed", "Not needed", "Maybe"] as NeedType[]).map((type) => (
             <button
+              type="button"
               key={type}
               onClick={() => setExpenseType(type)}
               className={expenseType === type ? "choice active" : "choice"}
@@ -313,11 +694,15 @@ function AddExpenseScreen({
       </section>
 
       <section className="note-box">
-        <span>Add a quick note...</span>
+        <input
+          value={note}
+          placeholder="Add a quick note..."
+          onChange={(event) => setNote(event.target.value)}
+        />
         <img src={A.pencil} alt="" />
       </section>
 
-      <button className="primary-btn">
+      <button className="primary-btn" type="submit">
         <span>+</span>
         Add Expense
       </button>
@@ -326,12 +711,25 @@ function AddExpenseScreen({
         <img src={A.addFrog} alt="" />
         <span>Track daily leaks. Small leaks sink big wallets.</span>
       </div>
-    </div>
+    </form>
   );
 }
 
-function ChartScreen() {
-  const bars = [68, 50, 43, 75, 64, 58, 40, 34, 29, 38, 41, 46, 55, 72];
+function ChartScreen({
+  settings,
+  chartDays,
+}: {
+  settings: Settings;
+  chartDays: {
+    label: string;
+    key: string;
+    spent: number;
+    open: number;
+    close: number;
+  }[];
+}) {
+  const maxSpent = Math.max(...chartDays.map((day) => day.spent), 1);
+  const selectedDay = chartDays[chartDays.length - 1];
 
   return (
     <div className="screen">
@@ -353,67 +751,61 @@ function ChartScreen() {
 
       <section className="big-chart">
         <div className="chart-lines">
-          {bars.map((height, index) => (
-            <i
-              key={index}
-              className={index % 3 === 0 ? "red" : "green"}
-              style={{ height: `${height}%` }}
-            />
-          ))}
+          {chartDays.map((day) => {
+            const height = clamp(24 + (day.spent / maxSpent) * 68, 18, 92);
+
+            return (
+              <i
+                key={day.key}
+                className={day.spent > 0 ? "red" : "green"}
+                style={{ height: `${height}%` }}
+                title={day.label}
+              />
+            );
+          })}
         </div>
 
         <div className="price-line">
-          <span>$830</span>
+          <span>{money(selectedDay.close, settings.currency)}</span>
         </div>
       </section>
 
       <section className="volume">
         <label>Spending Volume</label>
         <div>
-          {bars.map((height, index) => (
-            <i
-              key={index}
-              className={index % 3 === 0 ? "red" : "green"}
-              style={{ height: `${height / 1.6}%` }}
-            />
-          ))}
+          {chartDays.map((day) => {
+            const height = clamp(12 + (day.spent / maxSpent) * 75, 10, 90);
+
+            return (
+              <i
+                key={day.key}
+                className={day.spent > 0 ? "red" : "green"}
+                style={{ height: `${height}%` }}
+              />
+            );
+          })}
         </div>
       </section>
 
       <section className="day-card">
         <div className="day-title">
-          <strong>Friday, May 9</strong>
+          <strong>Today</strong>
           <img src={A.calendar} alt="" />
         </div>
 
         <div className="day-info">
           <div>
             <span>Open</span>
-            <b>$962</b>
+            <b>{money(selectedDay.open, settings.currency)}</b>
           </div>
           <div>
             <span>Close</span>
-            <b>$830</b>
+            <b>{money(selectedDay.close, settings.currency)}</b>
+        settings.currency)}</b>
           </div>
           <div>
             <span>Daily Damage</span>
-            <b className="bad">-$132</b>
-          </div>
-        </div>
-
-        <div className="leak-list">
-          <p>Top Leaks</p>
-          <div>
-            <span>Takeout</span>
-            <b>$46</b>
-          </div>
-          <div>
-            <span>Shopping</span>
-            <b>$32</b>
-          </div>
-          <div>
-            <span>Taxi</span>
-            <b>$18</b>
+            <b className="bad">-{money(selectedDay.spent, settings.currency)}</b>
           </div>
         </div>
       </section>
@@ -421,7 +813,20 @@ function ChartScreen() {
   );
 }
 
-function WhatIfScreen() {
+function WhatIfScreen({
+  settings,
+  cards,
+  totalPotentialSavings,
+}: {
+  settings: Settings;
+  cards: {
+    title: string;
+    save: number;
+    hp: string;
+    icon: string;
+  }[];
+  totalPotentialSavings: number;
+}) {
   return (
     <div className="screen">
       <Header title="What If?" showBack rightIcon={A.help} />
@@ -435,7 +840,7 @@ function WhatIfScreen() {
       </section>
 
       <section className="whatif-list">
-        {whatIfCards.map((item) => (
+        {cards.map((item) => (
           <div className="whatif-card" key={item.title}>
             <img src={item.icon} alt="" />
 
@@ -443,10 +848,10 @@ function WhatIfScreen() {
               <strong>{item.title}</strong>
               <span>Save</span>
               <b>
-                {item.save}
+                {money(item.save, settings.currency)}
                 <small>/month</small>
               </b>
-              <em>{item.year}/year</em>
+              <em>{money(item.save * 12, settings.currency)}/year</em>
             </div>
 
             <aside>
@@ -461,7 +866,7 @@ function WhatIfScreen() {
         <img src={A.walletMascot} alt="" />
         <div>
           <span>Total Potential Savings</span>
-          <strong>$3,344</strong>
+          <strong>{money(totalPotentialSavings, settings.currency)}</strong>
           <small>/year</small>
         </div>
         <aside>
@@ -473,35 +878,206 @@ function WhatIfScreen() {
   );
 }
 
-function SettingsScreen() {
+function SettingsScreen({
+  settings,
+  setSettings,
+  expenses,
+  onReset,
+}: {
+  settings: Settings;
+  setSettings: React.Dispatch<React.SetStateAction<Settings>>;
+  expenses: Expense[];
+  onReset: () => void;
+}) {
+  const totalIncome = getTotalIncome(settings);
+  const fixedCosts = getFixedCosts(settings);
+
+  function updateIncome(key: keyof Settings["income"], value: string) {
+    setSettings((prev) => ({
+      ...prev,
+      income: {
+        ...prev.income,
+        [key]: safeNumber(value),
+      },
+    }));
+  }
+
+  function updateFixedCost(key: keyof Settings["fixedCosts"], value: string) {
+    setSettings((prev) => ({
+      ...prev,
+      fixedCosts: {
+        ...prev.fixedCosts,
+        [key]: safeNumber(value),
+      },
+    }));
+  }
+
   return (
     <div className="screen">
       <Header title="Settings" showBack />
 
       <section className="settings-group">
         <h3>Income (Monthly)</h3>
-        <SettingLine label="Salary" value="$2,800" />
-        <SettingLine label="Side income" value="$600" />
-        <SettingLine label="Other income" value="$450" />
-        <SettingLine label="Total Income" value="$3,850" strong good />
+
+        <EditableMoneyLine
+          label="Salary"
+          value={settings.income.salary}
+          currency={settings.currency}
+          onChange={(value) => updateIncome("salary", value)}
+        />
+
+        <EditableMoneyLine
+          label="Side income"
+          value={settings.income.side}
+          currency={settings.currency}
+          onChange={(value) => updateIncome("side", value)}
+        />
+
+        <EditableMoneyLine
+          label="Other income"
+          value={settings.income.other}
+          currency={settings.currency}
+          onChange={(value) => updateIncome("other", value)}
+        />
+
+        <SettingLine
+          label="Total Income"
+          value={money(totalIncome, settings.currency)}
+          strong
+          good
+        />
       </section>
 
       <section className="settings-group">
         <h3>Fixed Life Costs (Monthly)</h3>
-        <SettingLine label="Rent" value="$1,200" />
-        <SettingLine label="Utilities" value="$200" />
-        <SettingLine label="Food basics" value="$350" />
-        <SettingLine label="Transport" value="$150" />
-        <SettingLine label="Phone / Internet" value="$80" />
-        <SettingLine label="Total Fixed Costs" value="$1,980" strong bad />
+
+        <EditableMoneyLine
+          label="Rent"
+          value={settings.fixedCosts.rent}
+          currency={settings.currency}
+          onChange={(value) => updateFixedCost("rent", value)}
+        />
+
+        <EditableMoneyLine
+          label="Utilities"
+          value={settings.fixedCosts.utilities}
+          currency={settings.currency}
+          onChange={(value) => updateFixedCost("utilities", value)}
+        />
+
+        <EditableMoneyLine
+          label="Food basics"
+          value={settings.fixedCosts.food}
+          currency={settings.currency}
+          onChange={(value) => updateFixedCost("food", value)}
+        />
+
+        <EditableMoneyLine
+          label="Transport"
+          value={settings.fixedCosts.transport}
+          currency={settings.currency}
+          onChange={(value) => updateFixedCost("transport", value)}
+        />
+
+        <EditableMoneyLine
+          label="Phone / Internet"
+          value={settings.fixedCosts.phone}
+          currency={settings.currency}
+          onChange={(value) => updateFixedCost("phone", value)}
+        />
+
+        <SettingLine
+          label="Total Fixed Costs"
+          value={money(fixedCosts, settings.currency)}
+          strong
+          bad
+        />
       </section>
 
       <section className="settings-menu">
-        <MenuLine icon={A.currency} label="Currency" value="USD ($)" />
-        <MenuLine icon={A.reminder} label="Daily Reminder" value="On" toggle />
-        <MenuLine icon={A.categories} label="Custom Categories" value="Manage" />
-        <MenuLine icon={A.deleteData} label="Delete My Data" value="Permanent" danger />
+        <div className="menu-line">
+          <img src={A.currency} alt="" />
+          <div>
+            <strong>Currency</strong>
+            <select
+              className="settings-select"
+              value={settings.currency}
+              onChange={(event) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  currency: event.target.value as Currency,
+                }))
+              }
+            >
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="MDL">MDL (L)</option>
+            </select>
+          </div>
+          <b>›</b>
+        </div>
+
+        <button
+          className="menu-line menu-button"
+          onClick={() =>
+            setSettings((prev) => ({
+              ...prev,
+              dailyReminder: !prev.dailyReminder,
+            }))
+          }
+        >
+          <img src={A.reminder} alt="" />
+          <div>
+            <strong>Daily Reminder</strong>
+            <span>{settings.dailyReminder ? "On" : "Off"}</span>
+          </div>
+          <i className={settings.dailyReminder ? "toggle" : "toggle off"} />
+        </button>
+
+        <MenuLine
+          icon={A.categories}
+          label="Tracked Expenses"
+          value={`${expenses.length} records`}
+        />
+
+        <button className="menu-line menu-button danger" onClick={onReset}>
+          <img src={A.deleteData} alt="" />
+          <div>
+            <strong>Delete My Data</strong>
+            <span>Permanent</span>
+          </div>
+          <b>›</b>
+        </button>
       </section>
+    </div>
+  );
+}
+
+function EditableMoneyLine({
+  label,
+  value,
+  currency,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  currency: Currency;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="setting-input-line">
+      <span>{label}</span>
+      <div>
+        <small>{currencySymbol(currency)}</small>
+        <input
+          type="number"
+          inputMode="decimal"
+          min="0"
+          step="1"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+      </div>
     </div>
   );
 }
@@ -531,39 +1107,49 @@ function MenuLine({
   icon,
   label,
   value,
-  toggle,
-  danger,
 }: {
   icon: string;
   label: string;
   value: string;
-  toggle?: boolean;
-  danger?: boolean;
 }) {
   return (
-    <div className={`menu-line ${danger ? "danger" : ""}`}>
+    <div className="menu-line">
       <img src={icon} alt="" />
       <div>
         <strong>{label}</strong>
         <span>{value}</span>
       </div>
-      {toggle ? <i className="toggle" /> : <b>›</b>}
+      <b>›</b>
     </div>
   );
 }
 
-function MiniChart() {
-  const values = [20, 42, 35, 28, 18, 25, 32, 30, 26, 36, 48, 52, 58, 68];
+function MiniChart({
+  chartDays,
+}: {
+  chartDays: {
+    label: string;
+    key: string;
+    spent: number;
+    open: number;
+    close: number;
+  }[];
+}) {
+  const max = Math.max(...chartDays.map((day) => day.spent), 1);
 
   return (
     <div className="mini-chart">
-      {values.map((height, index) => (
-        <i
-          key={index}
-          className={index % 4 === 0 ? "red" : "green"}
-          style={{ height: `${height}%` }}
-        />
-      ))}
+      {chartDays.map((day) => {
+        const height = clamp(18 + (day.spent / max) * 62, 14, 80);
+
+        return (
+          <i
+            key={day.key}
+            className={day.spent > 0 ? "red" : "green"}
+            style={{ height: `${height}%` }}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -589,4 +1175,4 @@ function BottomNav({
       ))}
     </nav>
   );
-}
+  }
