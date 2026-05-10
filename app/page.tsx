@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
@@ -102,6 +102,39 @@ type BadgeItem = {
   earnedAt: string | null;
 };
 
+type XpAction =
+  | "open_app"
+  | "add_expense"
+  | "add_note"
+  | "mark_need_type"
+  | "open_chart"
+  | "check_challenge";
+
+type LeaderboardProfile = {
+  telegramId: number;
+  displayName: string;
+  username: string | null;
+  publicLeaderboard: boolean;
+  brokeScore: number;
+  dailyXp: number;
+  weeklyXp: number;
+  totalXp: number;
+  trustLevel: number;
+  currentStreak: number;
+  bestStreak: number;
+  badgeCount: number;
+  challengesCompleted: number;
+  updatedAt: string | null;
+  rank?: number;
+};
+
+type LeaderboardState = {
+  me: LeaderboardProfile | null;
+  daily: LeaderboardProfile[];
+  weekly: LeaderboardProfile[];
+  allTime: LeaderboardProfile[];
+};
+
 type TelegramUser = {
   id: number;
   first_name?: string;
@@ -133,6 +166,8 @@ type BrokeApiResponse = {
   activeChallenge?: UserChallenge | null;
   challengeProgress?: ChallengeProgress | null;
   badges?: BadgeItem[];
+  leaderboard?: LeaderboardState;
+  xpAwarded?: number;
   error?: string;
 };
 
@@ -826,7 +861,11 @@ export default function Home() {
   const [challengeProgress, setChallengeProgress] = useState<ChallengeProgress | null>(null);
   const [challengeLoading, setChallengeLoading] = useState(false);
   const [badges, setBadges] = useState<BadgeItem[]>(defaultBadges);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardState | null>(null);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+
+  const openAppTrackedRef = useRef(false);
 
   const [amount, setAmount] = useState("25.00");
   const [note, setNote] = useState("");
@@ -955,6 +994,7 @@ export default function Home() {
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
         if (data.badges) setBadges(data.badges);
+        if (data.leaderboard) setLeaderboard(data.leaderboard);
 
         const cloudOnboardingCompleted =
           data.settings?.onboardingCompleted === true ||
@@ -1003,6 +1043,7 @@ export default function Home() {
           settings,
         });
         if (data.badges) setBadges(data.badges);
+        if (data.leaderboard) setLeaderboard(data.leaderboard);
       } catch (error) {
         setCloudStatus("error");
         setCloudError(error instanceof Error ? error.message : "Settings cloud save failed");
@@ -1011,6 +1052,42 @@ export default function Home() {
 
     return () => window.clearTimeout(timeout);
   }, [loaded, cloudStatus, telegram.initData, settings]);
+
+  useEffect(() => {
+    if (
+      !loaded ||
+      !onboardingCompleted ||
+      !telegram.isTelegram ||
+      !telegram.initData ||
+      cloudStatus !== "cloud" ||
+      openAppTrackedRef.current
+    ) {
+      return;
+    }
+
+    openAppTrackedRef.current = true;
+    trackXpAction("open_app");
+  }, [loaded, onboardingCompleted, telegram.isTelegram, telegram.initData, cloudStatus]);
+
+  useEffect(() => {
+    if (
+      !loaded ||
+      !onboardingCompleted ||
+      !telegram.isTelegram ||
+      !telegram.initData ||
+      cloudStatus !== "cloud"
+    ) {
+      return;
+    }
+
+    if (activeTab === "chart") {
+      trackXpAction("open_chart");
+    }
+
+    if (activeTab === "whatif") {
+      trackXpAction("check_challenge");
+    }
+  }, [activeTab, loaded, onboardingCompleted, telegram.isTelegram, telegram.initData, cloudStatus]);
 
   const currentMonthExpenses = useMemo(() => {
     return getCurrentMonthExpenses(expenses);
@@ -1097,6 +1174,7 @@ export default function Home() {
           if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
           if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
           if (data.badges) setBadges(data.badges);
+          if (data.leaderboard) setLeaderboard(data.leaderboard);
           setCloudStatus("cloud");
         }
       } catch (error) {
@@ -1117,6 +1195,7 @@ export default function Home() {
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
         if (data.badges) setBadges(data.badges);
+        if (data.leaderboard) setLeaderboard(data.leaderboard);
         setCloudStatus("cloud");
       } catch (error) {
         setCloudStatus("error");
@@ -1142,6 +1221,7 @@ export default function Home() {
         setActiveChallenge(data.activeChallenge ?? null);
         setChallengeProgress(data.challengeProgress ?? null);
         if (data.badges) setBadges(data.badges);
+        if (data.leaderboard) setLeaderboard(data.leaderboard);
         setCloudStatus("cloud");
       } catch (error) {
         setCloudStatus("error");
@@ -1208,12 +1288,50 @@ export default function Home() {
       setActiveChallenge(data.activeChallenge ?? null);
       setChallengeProgress(data.challengeProgress ?? null);
       if (data.badges) setBadges(data.badges);
+      if (data.leaderboard) setLeaderboard(data.leaderboard);
       setCloudStatus("cloud");
     } catch (error) {
       setCloudStatus("error");
       setCloudError(error instanceof Error ? error.message : "Challenge failed");
     } finally {
       setChallengeLoading(false);
+    }
+  }
+
+  async function trackXpAction(xpAction: XpAction) {
+    if (!telegram.isTelegram || !telegram.initData) return;
+
+    try {
+      const data = await callBrokeApi(telegram.initData, "trackXp", {
+        xpAction,
+      });
+
+      if (data.leaderboard) setLeaderboard(data.leaderboard);
+      if (data.badges) setBadges(data.badges);
+    } catch {
+      // XP tracking must never block the app.
+    }
+  }
+
+  async function toggleLeaderboardPublic(nextValue: boolean) {
+    if (!telegram.isTelegram || !telegram.initData) {
+      window.alert("Open this Mini App through Telegram to use public leaderboard.");
+      return;
+    }
+
+    try {
+      setLeaderboardLoading(true);
+      const data = await callBrokeApi(telegram.initData, "setLeaderboardOptIn", {
+        publicLeaderboard: nextValue,
+      });
+
+      if (data.leaderboard) setLeaderboard(data.leaderboard);
+      setCloudStatus("cloud");
+    } catch (error) {
+      setCloudStatus("error");
+      setCloudError(error instanceof Error ? error.message : "Leaderboard update failed");
+    } finally {
+      setLeaderboardLoading(false);
     }
   }
 
@@ -1310,6 +1428,9 @@ export default function Home() {
             activeChallenge={activeChallenge}
             challengeProgress={challengeProgress}
             challengeLoading={challengeLoading}
+            leaderboard={leaderboard}
+            leaderboardLoading={leaderboardLoading}
+            onToggleLeaderboard={toggleLeaderboardPublic}
             onStartChallenge={startChallenge}
             onBack={goHome}
             onHelp={openHelp}
@@ -1329,6 +1450,9 @@ export default function Home() {
             cloudError={cloudError}
             streak={activeStreak}
             badges={badges}
+            leaderboard={leaderboard}
+            leaderboardLoading={leaderboardLoading}
+            onToggleLeaderboard={toggleLeaderboardPublic}
             onBack={goHome}
           />
         )}
@@ -2445,6 +2569,145 @@ function ChartScreen({
 }
 
 
+
+function LeaderboardPanel({
+  leaderboard,
+  loading,
+  onToggleLeaderboard,
+}: {
+  leaderboard: LeaderboardState | null;
+  loading: boolean;
+  onToggleLeaderboard: (nextValue: boolean) => void;
+}) {
+  const [board, setBoard] = useState<"daily" | "weekly" | "allTime">("daily");
+  const me = leaderboard?.me ?? null;
+  const rows =
+    board === "daily"
+      ? leaderboard?.daily ?? []
+      : board === "weekly"
+        ? leaderboard?.weekly ?? []
+        : leaderboard?.allTime ?? [];
+
+  const isPublic = Boolean(me?.publicLeaderboard);
+
+  return (
+    <section className="leaderboard-panel">
+      <div className="section-title">
+        <span>$BROKE Score</span>
+        <small>{isPublic ? "Public progress" : "Private mode"}</small>
+      </div>
+
+      <div className="leaderboard-me-card">
+        <img src={A.challengeTrophy} alt="" />
+        <div>
+          <span>Your score</span>
+          <strong>{me ? me.brokeScore.toLocaleString("en-US") : "0"} XP</strong>
+          <small>
+            Trust L{me?.trustLevel ?? 0} · {me?.currentStreak ?? 0}d streak ·{" "}
+            {me?.badgeCount ?? 0} badges
+          </small>
+        </div>
+        <button
+          type="button"
+          disabled={loading}
+          onClick={() => onToggleLeaderboard(!isPublic)}
+        >
+          {isPublic ? "Hide" : "Join"}
+        </button>
+      </div>
+
+      <div className="leaderboard-tabs">
+        <button
+          type="button"
+          className={board === "daily" ? "active" : ""}
+          onClick={() => setBoard("daily")}
+        >
+          Daily
+        </button>
+        <button
+          type="button"
+          className={board === "weekly" ? "active" : ""}
+          onClick={() => setBoard("weekly")}
+        >
+          Weekly
+        </button>
+        <button
+          type="button"
+          className={board === "allTime" ? "active" : ""}
+          onClick={() => setBoard("allTime")}
+        >
+          All
+        </button>
+      </div>
+
+      <div className="leaderboard-list">
+        {rows.length === 0 ? (
+          <div className="leaderboard-empty">
+            No public players yet. Join the board to make the first move.
+          </div>
+        ) : (
+          rows.slice(0, 10).map((row, index) => (
+            <LeaderboardRow
+              key={`${board}-${row.telegramId}`}
+              row={row}
+              rank={row.rank ?? index + 1}
+              mode={board}
+            />
+          ))
+        )}
+      </div>
+
+      <details className="leaderboard-faq">
+        <summary>
+          <img src={A.help} alt="" />
+          <span>How does this leaderboard work?</span>
+        </summary>
+        <div>
+          <p>
+            Leaderboard is not based on income, private expenses, or claimed savings.
+            Those numbers can be faked too easily.
+          </p>
+          <p>
+            $BROKE Score is based on consistency, tracking activity, streaks,
+            challenges, badges, and trust level.
+          </p>
+          <p>
+            Private financial data is never shown. Public ranking shows only score,
+            streak, badges, completed challenges, and trust level.
+          </p>
+        </div>
+      </details>
+    </section>
+  );
+}
+
+function LeaderboardRow({
+  row,
+  rank,
+  mode,
+}: {
+  row: LeaderboardProfile;
+  rank: number;
+  mode: "daily" | "weekly" | "allTime";
+}) {
+  const score =
+    mode === "daily" ? row.dailyXp : mode === "weekly" ? row.weeklyXp : row.totalXp;
+
+  return (
+    <article className="leaderboard-row">
+      <b>#{rank}</b>
+      <div>
+        <strong>{row.displayName}</strong>
+        <span>
+          L{row.trustLevel} · {row.currentStreak}d streak · {row.badgeCount} badges ·{" "}
+          {row.challengesCompleted} challenges
+        </span>
+      </div>
+      <em>{score.toLocaleString("en-US")} XP</em>
+    </article>
+  );
+}
+
 function ChallengesPanel({
   templates,
   activeChallenge,
@@ -2564,6 +2827,9 @@ function WhatIfScreen({
   activeChallenge,
   challengeProgress,
   challengeLoading,
+  leaderboard,
+  leaderboardLoading,
+  onToggleLeaderboard,
   onStartChallenge,
   onBack,
   onHelp,
@@ -2574,6 +2840,9 @@ function WhatIfScreen({
   activeChallenge: UserChallenge | null;
   challengeProgress: ChallengeProgress | null;
   challengeLoading: boolean;
+  leaderboard: LeaderboardState | null;
+  leaderboardLoading: boolean;
+  onToggleLeaderboard: (nextValue: boolean) => void;
   onStartChallenge: (challengeId: string) => void;
   onBack: () => void;
   onHelp: () => void;
@@ -2648,6 +2917,12 @@ function WhatIfScreen({
         loading={challengeLoading}
         currency={settings.currency}
         onStartChallenge={onStartChallenge}
+      />
+
+      <LeaderboardPanel
+        leaderboard={leaderboard}
+        loading={leaderboardLoading}
+        onToggleLeaderboard={onToggleLeaderboard}
       />
 
       <section className="whatif-list">
@@ -2729,6 +3004,9 @@ function SettingsScreen({
   cloudError,
   streak,
   badges,
+  leaderboard,
+  leaderboardLoading,
+  onToggleLeaderboard,
   onBack,
 }: {
   settings: Settings;
@@ -2742,6 +3020,9 @@ function SettingsScreen({
   cloudError: string;
   streak: Streak;
   badges: BadgeItem[];
+  leaderboard: LeaderboardState | null;
+  leaderboardLoading: boolean;
+  onToggleLeaderboard: (nextValue: boolean) => void;
   onBack: () => void;
 }) {
   const totalIncome = getTotalIncome(settings);
@@ -2749,6 +3030,7 @@ function SettingsScreen({
   const monthSpent = sum(currentMonthExpenses.map((item) => item.amount));
   const categorySummaries = getCategorySummaries(currentMonthExpenses);
   const latestExpenses = expenses.slice(0, 8);
+  const publicLeaderboard = Boolean(leaderboard?.me?.publicLeaderboard);
 
   function updateIncome(key: keyof Settings["income"], value: string) {
     setSettings((prev) => ({
@@ -2897,6 +3179,19 @@ function SettingsScreen({
           label="Tracked Expenses"
           value={`${expenses.length} total · ${currentMonthExpenses.length} this month`}
         />
+
+        <button
+          className="menu-line menu-button"
+          disabled={leaderboardLoading}
+          onClick={() => onToggleLeaderboard(!publicLeaderboard)}
+        >
+          <img src={A.challengeTrophy} alt="" />
+          <div>
+            <strong>Public Leaderboard</strong>
+            <span>{publicLeaderboard ? "Visible" : "Private"}</span>
+          </div>
+          <i className={publicLeaderboard ? "toggle" : "toggle off"} />
+        </button>
 
         <button className="menu-line menu-button danger" onClick={onReset}>
           <img src={A.deleteData} alt="" />
