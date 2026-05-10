@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
 type NeedType = "Needed" | "Not needed" | "Maybe";
@@ -127,7 +128,10 @@ function monthKey(date: Date) {
 }
 
 function dayKey(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function currencySymbol(currency: Currency) {
@@ -324,7 +328,9 @@ export default function Home() {
       );
 
     const coffee = categoryTotal("Coffee") || 84;
-    const smoking = categoryTotal("Smoking") ? categoryTotal("Smoking") * 0.5 : 60;
+    const smoking = categoryTotal("Smoking")
+      ? categoryTotal("Smoking") * 0.5
+      : 60;
     const takeouts = categoryTotal("Takeouts") || 120;
     const shopping = categoryTotal("Shopping") || 98;
 
@@ -379,6 +385,10 @@ export default function Home() {
     setActiveTab("home");
   }
 
+  function deleteExpense(id: string) {
+    setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+  }
+
   function resetData() {
     const ok = window.confirm("Delete all $BROKE Life Tracker data?");
     if (!ok) return;
@@ -407,6 +417,8 @@ export default function Home() {
             settings={settings}
             summary={summary}
             chartDays={chartDays}
+            expenses={currentMonthExpenses.slice(0, 6)}
+            onDeleteExpense={deleteExpense}
           />
         )}
 
@@ -488,6 +500,8 @@ function DashboardScreen({
   settings,
   summary,
   chartDays,
+  expenses,
+  onDeleteExpense,
 }: {
   settings: Settings;
   summary: {
@@ -506,6 +520,8 @@ function DashboardScreen({
     open: number;
     close: number;
   }[];
+  expenses: Expense[];
+  onDeleteExpense: (id: string) => void;
 }) {
   const stats = [
     {
@@ -606,7 +622,69 @@ function DashboardScreen({
           <img src={A.chartFrog} alt="Chart frog" />
         </div>
       </section>
+
+      <RecentExpenses
+        settings={settings}
+        expenses={expenses}
+        onDeleteExpense={onDeleteExpense}
+      />
     </div>
+  );
+}
+
+function RecentExpenses({
+  settings,
+  expenses,
+  onDeleteExpense,
+}: {
+  settings: Settings;
+  expenses: Expense[];
+  onDeleteExpense: (id: string) => void;
+}) {
+  function getCategoryIcon(category: string) {
+    return categories.find((item) => item.name === category)?.icon || A.custom;
+  }
+
+  return (
+    <section className="recent-card">
+      <div className="section-title">
+        <span>Recent Expenses</span>
+        <small>{expenses.length ? `${expenses.length} latest` : "No records"}</small>
+      </div>
+
+      {expenses.length === 0 ? (
+        <div className="empty-expenses">
+          <img src={A.addFrog} alt="" />
+          <p>No leaks tracked yet. Add your first expense.</p>
+        </div>
+      ) : (
+        <div className="expense-list">
+          {expenses.map((expense) => (
+            <div className="expense-row" key={expense.id}>
+              <img src={getCategoryIcon(expense.category)} alt="" />
+
+              <div>
+                <strong>{expense.category}</strong>
+                <span>
+                  {expense.needType}
+                  {expense.note ? ` · ${expense.note}` : ""}
+                </span>
+              </div>
+
+              <b>{money(expense.amount, settings.currency)}</b>
+
+              <button
+                type="button"
+                onClick={() => onDeleteExpense(expense.id)}
+                aria-label="Delete expense"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -788,32 +866,32 @@ function ChartScreen({
       </section>
 
       <section className="day-card">
-  <div className="day-title">
-    <strong>Today</strong>
-    <img src={A.calendar} alt="" />
-  </div>
+        <div className="day-title">
+          <strong>Today</strong>
+          <img src={A.calendar} alt="" />
+        </div>
 
-  <div className="day-info">
-    <div>
-      <span>Open</span>
-      <b>{money(selectedDay.open, settings.currency)}</b>
-    </div>
+        <div className="day-info">
+          <div>
+            <span>Open</span>
+            <b>{money(selectedDay.open, settings.currency)}</b>
+          </div>
 
-    <div>
-      <span>Close</span>
-      <b>{money(selectedDay.close, settings.currency)}</b>
-    </div>
+          <div>
+            <span>Close</span>
+            <b>{money(selectedDay.close, settings.currency)}</b>
+          </div>
 
-    <div>
-      <span>Daily Damage</span>
-      <b className="bad">
-        {selectedDay.spent > 0
-          ? `-${money(selectedDay.spent, settings.currency)}`
-          : money(0, settings.currency)}
-      </b>
-    </div>
-  </div>
-</section>
+          <div>
+            <span>Daily Damage</span>
+            <b className="bad">
+              {selectedDay.spent > 0
+                ? `-${money(selectedDay.spent, settings.currency)}`
+                : money(0, settings.currency)}
+            </b>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -890,7 +968,7 @@ function SettingsScreen({
   onReset,
 }: {
   settings: Settings;
-  setSettings: React.Dispatch<React.SetStateAction<Settings>>;
+  setSettings: Dispatch<SetStateAction<Settings>>;
   expenses: Expense[];
   onReset: () => void;
 }) {
@@ -1180,4 +1258,4 @@ function BottomNav({
       ))}
     </nav>
   );
-  }
+}
