@@ -5303,3 +5303,215 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
     grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
   }
 }
+/* ===== V37 COMMUNITY LIVE SIDEBAR ===== */
+/* Paste at the very bottom of app/globals.css, AFTER v35.2 CSS.
+   Desktop/web only. Telegram mobile layout stays unchanged. */
+
+.community-live-sidebar {
+  display: none;
+}
+
+@media (min-width: 1180px) {
+  .app-shell-with-community {
+    padding-right: 340px !important;
+  }
+
+  .app-shell-with-community .phone {
+    width: min(1260px, calc(100vw - 370px)) !important;
+  }
+
+  .community-live-sidebar {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 80;
+    display: block;
+    width: 310px;
+    pointer-events: none;
+  }
+
+  .community-live-card {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    overflow: hidden;
+    border-radius: 24px;
+    background:
+      radial-gradient(circle at top right, rgba(183, 255, 25, 0.13), transparent 42%),
+      linear-gradient(180deg, rgba(8, 18, 8, 0.96), rgba(2, 5, 3, 0.96));
+    border: 1px solid rgba(183, 255, 25, 0.16);
+    box-shadow:
+      0 30px 90px rgba(0, 0, 0, 0.48),
+      inset 0 0 0 1px rgba(183, 255, 25, 0.035);
+    backdrop-filter: blur(16px);
+    pointer-events: auto;
+  }
+
+  .community-live-card header {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    padding: 14px;
+    border-bottom: 1px solid rgba(183, 255, 25, 0.10);
+  }
+
+  .community-live-card header span {
+    display: block;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .community-live-card header strong {
+    display: block;
+    margin-top: 3px;
+    color: var(--text);
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  .community-live-card header a {
+    min-height: 32px;
+    padding: 8px 10px;
+    border-radius: 999px;
+    color: #071006;
+    background: linear-gradient(90deg, var(--green-2), var(--green-3));
+    font-size: 11px;
+    font-weight: 950;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .community-live-feed {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    overflow-y: auto;
+    padding: 12px;
+    scrollbar-width: thin;
+  }
+
+  .community-message {
+    padding: 9px;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.055);
+  }
+
+  .community-message.web {
+    border-color: rgba(183, 255, 25, 0.16);
+    background: rgba(183, 255, 25, 0.055);
+  }
+
+  .community-message.system {
+    border-color: rgba(255, 226, 80, 0.16);
+    background: rgba(255, 226, 80, 0.045);
+  }
+
+  .community-message > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+
+  .community-message strong {
+    min-width: 0;
+    color: var(--green);
+    font-size: 11px;
+    line-height: 1.1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .community-message time {
+    color: var(--muted);
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  .community-message p {
+    margin: 0;
+    color: var(--text);
+    font-size: 11px;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+  .community-live-form {
+    display: grid;
+    gap: 8px;
+    padding: 12px;
+    border-top: 1px solid rgba(183, 255, 25, 0.10);
+    background: rgba(0, 0, 0, 0.16);
+  }
+
+  .community-live-form input,
+  .community-live-form textarea {
+    width: 100%;
+    border: 1px solid rgba(183, 255, 25, 0.12);
+    border-radius: 13px;
+    outline: none;
+    background: rgba(0, 0, 0, 0.26);
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+  }
+
+  .community-live-form input {
+    min-height: 36px;
+    padding: 0 10px;
+  }
+
+  .community-live-form textarea {
+    min-height: 72px;
+    max-height: 120px;
+    resize: vertical;
+    padding: 10px;
+  }
+
+  .community-live-form input::placeholder,
+  .community-live-form textarea::placeholder {
+    color: rgba(229, 242, 214, 0.48);
+  }
+
+  .community-live-form button {
+    min-height: 38px;
+    border: 0;
+    border-radius: 14px;
+    color: #071006;
+    background: linear-gradient(90deg, var(--green-2), var(--green-3));
+    font-weight: 950;
+    font-size: 12px;
+  }
+
+  .community-live-form button:disabled {
+    opacity: 0.52;
+  }
+
+  .community-live-form small {
+    color: #ff7f7f;
+    font-size: 10px;
+    line-height: 1.25;
+  }
+}
+
+@media (min-width: 1500px) {
+  .app-shell-with-community {
+    padding-right: 380px !important;
+  }
+
+  .app-shell-with-community .phone {
+    width: min(1340px, calc(100vw - 410px)) !important;
+  }
+
+  .community-live-sidebar {
+    width: 350px;
+  }
+}
