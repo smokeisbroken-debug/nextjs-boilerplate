@@ -135,6 +135,15 @@ type LeaderboardState = {
   allTime: LeaderboardProfile[];
 };
 
+type WalletInsight = {
+  id: string;
+  title: string;
+  body: string;
+  detail: string;
+  icon: string;
+  tone: "green" | "orange" | "red" | "gold";
+};
+
 type AppToast = {
   id: number;
   title: string;
@@ -1026,6 +1035,222 @@ function getStreakLabel(streak: Streak) {
   return "Track today";
 }
 
+
+function sentenceCase(value: string) {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function categoryLabel(category: string) {
+  return category === "Takeouts" ? "delivery / takeout" : category.toLowerCase();
+}
+
+function getStartOfToday() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function getLastSevenDaysExpenses(expenses: Expense[]) {
+  const start = new Date();
+  start.setDate(start.getDate() - 6);
+  start.setHours(0, 0, 0, 0);
+
+  return expenses.filter((expense) => new Date(expense.createdAt) >= start);
+}
+
+function getTodayExpenses(expenses: Expense[]) {
+  const today = dayKey(new Date());
+
+  return expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === today);
+}
+
+function getDaysInCurrentMonth() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+}
+
+function getCurrentDayOfMonth() {
+  return Math.max(1, new Date().getDate());
+}
+
+function buildWalletInsights(expenses: Expense[], settings: Settings): WalletInsight[] {
+  const insights: WalletInsight[] = [];
+  const todayExpenses = getTodayExpenses(expenses);
+  const weekExpenses = getLastSevenDaysExpenses(expenses);
+  const monthExpenses = getCurrentMonthExpenses(expenses);
+
+  const todayCategories = getCategorySummaries(todayExpenses)
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+
+  const weekCategories = getCategorySummaries(weekExpenses)
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+
+  const monthCategories = getCategorySummaries(monthExpenses)
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+
+  const totalIncome = getTotalIncome(settings);
+  const fixedCosts = getFixedCosts(settings);
+  const availableAfterLifeCost = Math.max(totalIncome - fixedCosts, 1);
+
+  const notNeededWeek = sum(
+    weekExpenses.filter((item) => item.needType === "Not needed").map((item) => item.amount)
+  );
+  const maybeWeek = sum(
+    weekExpenses.filter((item) => item.needType === "Maybe").map((item) => item.amount * 0.5)
+  );
+  const weekLeaks = notNeededWeek + maybeWeek;
+
+  const notNeededMonth = sum(
+    monthExpenses.filter((item) => item.needType === "Not needed").map((item) => item.amount)
+  );
+  const maybeMonth = sum(
+    monthExpenses.filter((item) => item.needType === "Maybe").map((item) => item.amount * 0.5)
+  );
+  const monthLeaks = notNeededMonth + maybeMonth;
+
+  const monthSpent = sum(monthExpenses.map((item) => item.amount));
+  const realBalance = totalIncome - fixedCosts - monthSpent;
+  const walletHp = clamp(
+    100 - Math.round((monthLeaks / availableAfterLifeCost) * 100),
+    5,
+    100
+  );
+
+  const todayTop = todayCategories[0];
+
+  if (todayTop) {
+    insights.push({
+      id: "daily_projection",
+      title: "Today’s leak",
+      body: `You spent ${money(todayTop.amount, settings.currency)} on ${categoryLabel(todayTop.category)} today.`,
+      detail: `That becomes ${money(todayTop.amount * 30, settings.currency)}/month if this rhythm repeats.`,
+      icon: getCategoryIcon(todayTop.category),
+      tone: todayTop.amount >= availableAfterLifeCost * 0.06 ? "red" : "orange",
+    });
+  }
+
+  const weekTop = weekCategories[0];
+
+  if (weekTop && settings.fixedCosts.rent > 0) {
+    const rentPercent = Math.round((weekTop.amount / settings.fixedCosts.rent) * 100);
+
+    if (rentPercent >= 5) {
+      insights.push({
+        id: "rent_comparison",
+        title: "Rent comparison",
+        body: `${sentenceCase(categoryLabel(weekTop.category))} is already ${rentPercent}% of your rent in the last 7 days.`,
+        detail: rentPercent >= 20
+          ? "That is no longer a small purchase. That is a pattern."
+          : "It looks small until you compare it to a real bill.",
+        icon: A.lifeCost,
+        tone: rentPercent >= 20 ? "red" : "orange",
+      });
+    }
+  }
+
+  if (weekLeaks > 0) {
+    insights.push({
+      id: "not_needed_week",
+      title: "Marked leaks",
+      body: `${money(weekLeaks, settings.currency)} was marked as Not needed / Maybe in the last 7 days.`,
+      detail: "This is where the wallet starts leaking quietly.",
+      icon: A.leaks,
+      tone: weekLeaks >= availableAfterLifeCost * 0.15 ? "red" : "orange",
+    });
+  }
+
+  if (settings.fixedCosts.phone > 0 && weekLeaks >= settings.fixedCosts.phone) {
+    insights.push({
+      id: "phone_bill_comparison",
+      title: "Hidden bill",
+      body: `Small leaks this week are already bigger than your phone bill.`,
+      detail: `${money(weekLeaks, settings.currency)} in leaks vs ${money(settings.fixedCosts.phone, settings.currency)} phone cost.`,
+      icon: A.phone,
+      tone: "red",
+    });
+  }
+
+  const repeating = weekCategories.find((item) => item.count >= 3);
+
+  if (repeating) {
+    insights.push({
+      id: "repeating_category",
+      title: "Repeating pattern",
+      body: `${sentenceCase(categoryLabel(repeating.category))} appeared ${repeating.count} times in the last 7 days.`,
+      detail: "One time is a purchase. Repeating is a habit.",
+      icon: getCategoryIcon(repeating.category),
+      tone: repeating.count >= 5 ? "red" : "orange",
+    });
+  }
+
+  if (monthLeaks > 0) {
+    const projectedLeaks = (monthLeaks / getCurrentDayOfMonth()) * getDaysInCurrentMonth();
+
+    insights.push({
+      id: "monthly_projection",
+      title: "Monthly projection",
+      body: `At this pace, leaks could reach ${money(projectedLeaks, settings.currency)} this month.`,
+      detail: "That is not one mistake. That is the monthly rhythm.",
+      icon: A.chart,
+      tone: projectedLeaks >= availableAfterLifeCost * 0.25 ? "red" : "gold",
+    });
+  }
+
+  if (walletHp < 65) {
+    insights.push({
+      id: "wallet_hp_warning",
+      title: "Wallet HP warning",
+      body: `Wallet HP is down to ${walletHp}/100.`,
+      detail: "The wallet is not broken. It is bleeding through repeated decisions.",
+      icon: A.walletHp,
+      tone: walletHp < 35 ? "red" : "orange",
+    });
+  } else if (monthExpenses.length >= 3 && realBalance > 0) {
+    insights.push({
+      id: "wallet_hp_stable",
+      title: "Wallet still breathing",
+      body: `Wallet HP is ${walletHp}/100 and real balance is still positive.`,
+      detail: "Good. Now keep the leaks from turning into a monthly bill.",
+      icon: A.walletHp,
+      tone: "green",
+    });
+  }
+
+  const challengeCategory = weekCategories.find((item) =>
+    ["Coffee", "Smoking", "Takeouts", "Shopping", "Subscriptions"].includes(item.category)
+  );
+
+  if (challengeCategory && challengeCategory.count >= 2) {
+    insights.push({
+      id: "challenge_suggestion",
+      title: "Challenge signal",
+      body: `${sentenceCase(categoryLabel(challengeCategory.category))} is repeating this week.`,
+      detail: `This is a good moment to start a ${challengeCategory.category} control challenge.`,
+      icon: A.challengeTrophy,
+      tone: "gold",
+    });
+  }
+
+  if (!insights.length) {
+    return [
+      {
+        id: "empty_state",
+        title: "No clear leak yet",
+        body: "Track a few expenses and $BROKE will show what your wallet is trying to tell you.",
+        detail: "The app needs real patterns before it can make the uncomfortable part visible.",
+        icon: A.help,
+        tone: "green",
+      },
+    ];
+  }
+
+  return insights.slice(0, 6);
+}
+
 function buildChartData(
   range: ChartRange,
   expenses: Expense[],
@@ -1517,6 +1742,10 @@ export default function Home() {
 
   const activeStreak = telegram.isTelegram && cloudStatus === "cloud" ? streak : localStreak;
 
+  const walletInsights = useMemo(() => {
+    return buildWalletInsights(expenses, settings);
+  }, [expenses, settings]);
+
   async function addExpense() {
     const value = safeNumber(amount);
 
@@ -1759,6 +1988,7 @@ export default function Home() {
             settings={settings}
             summary={summary}
             badges={badges}
+            walletInsights={walletInsights}
             chartDays={chartDays}
             expenses={currentMonthExpenses.slice(0, 6)}
             onDeleteExpense={deleteExpense}
@@ -1790,6 +2020,7 @@ export default function Home() {
           <ChartScreen
             settings={settings}
             expenses={expenses}
+            walletInsights={walletInsights}
             onBack={goHome}
             onExport={openExportHelp}
           />
@@ -2142,6 +2373,7 @@ function DashboardScreen({
   settings,
   summary,
   badges,
+  walletInsights,
   chartDays,
   expenses,
   onDeleteExpense,
@@ -2162,6 +2394,7 @@ function DashboardScreen({
     streak: Streak;
   };
   badges: BadgeItem[];
+  walletInsights: WalletInsight[];
   chartDays: ChartPoint[];
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
@@ -2251,6 +2484,8 @@ function DashboardScreen({
         <p>Hold the line, fix the leaks.</p>
       </section>
 
+      <WalletInsightsPanel insights={walletInsights} />
+
       <ShareResultCard
         settings={settings}
         walletHp={summary.walletHp}
@@ -2292,6 +2527,80 @@ function DashboardScreen({
 
 
 
+
+
+function WalletInsightsPanel({
+  insights,
+  compact = false,
+}: {
+  insights: WalletInsight[];
+  compact?: boolean;
+}) {
+  const [index, setIndex] = useState(0);
+  const [expanded, setExpanded] = useState(false);
+  const safeInsights = insights.length ? insights : buildWalletInsights([], defaultSettings);
+  const active = safeInsights[index % safeInsights.length];
+
+  useEffect(() => {
+    if (safeInsights.length <= 1 || expanded) return;
+
+    const interval = window.setInterval(() => {
+      setIndex((prev) => (prev + 1) % safeInsights.length);
+    }, 6500);
+
+    return () => window.clearInterval(interval);
+  }, [safeInsights.length, expanded]);
+
+  useEffect(() => {
+    setIndex(0);
+  }, [safeInsights.length]);
+
+  return (
+    <section className={`wallet-insights-panel ${compact ? "compact" : ""} ${expanded ? "expanded" : ""}`}>
+      <button
+        type="button"
+        className={`wallet-insight-main ${active.tone}`}
+        onClick={() => setExpanded((prev) => !prev)}
+      >
+        <img src={active.icon} alt="" />
+
+        <div>
+          <div className="wallet-insight-head">
+            <span>Leak Insight</span>
+            <b>{expanded ? "Hide" : "Tap for all"}</b>
+          </div>
+
+          <strong>{active.title}</strong>
+          <p>{active.body}</p>
+          <small>{active.detail}</small>
+        </div>
+      </button>
+
+      {safeInsights.length > 1 && (
+        <div className="wallet-insight-dots" aria-hidden="true">
+          {safeInsights.map((item, itemIndex) => (
+            <i key={item.id} className={itemIndex === index % safeInsights.length ? "active" : ""} />
+          ))}
+        </div>
+      )}
+
+      {expanded && (
+        <div className="wallet-insight-list">
+          {safeInsights.map((insight) => (
+            <article className={`wallet-insight-item ${insight.tone}`} key={insight.id}>
+              <img src={insight.icon} alt="" />
+              <div>
+                <strong>{insight.title}</strong>
+                <p>{insight.body}</p>
+                <span>{insight.detail}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
 
 function StreakCard({ streak }: { streak: Streak }) {
   const activeToday = isStreakActiveToday(streak);
@@ -2813,11 +3122,13 @@ function AddExpenseScreen({
 function ChartScreen({
   settings,
   expenses,
+  walletInsights,
   onBack,
   onExport,
 }: {
   settings: Settings;
   expenses: Expense[];
+  walletInsights: WalletInsight[];
   onBack: () => void;
   onExport: () => void;
 }) {
@@ -2951,6 +3262,8 @@ function ChartScreen({
           </span>
         </div>
       </section>
+
+      <WalletInsightsPanel insights={walletInsights} compact />
     </div>
   );
 }
