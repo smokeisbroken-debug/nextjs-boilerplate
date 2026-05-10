@@ -6,12 +6,22 @@ function getBotToken() {
   return process.env.TELEGRAM_BOT_TOKEN || "";
 }
 
+function getWebAppUrl() {
+  return process.env.WEBAPP_URL || process.env.NEXT_PUBLIC_WEBAPP_URL || "";
+}
+
+function getWebhookSecret() {
+  return process.env.TELEGRAM_WEBHOOK_SECRET || "";
+}
+
 function getSetupSecret() {
   return process.env.TELEGRAM_SETUP_SECRET || "";
 }
 
 export async function GET(request: NextRequest) {
   const botToken = getBotToken();
+  const webAppUrl = getWebAppUrl();
+  const webhookSecret = getWebhookSecret();
   const setupSecret = getSetupSecret();
 
   if (setupSecret) {
@@ -22,22 +32,27 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  if (!botToken) {
+  if (!botToken || !webAppUrl) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Missing TELEGRAM_BOT_TOKEN environment variable",
+        error: "Missing TELEGRAM_BOT_TOKEN or WEBAPP_URL environment variable",
       },
       { status: 500 }
     );
   }
 
-  const response = await fetch(`https://api.telegram.org/bot${botToken}/deleteWebhook`, {
+  const webhookUrl = new URL("/api/telegram", webAppUrl).toString();
+
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/setWebhook`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      url: webhookUrl,
+      allowed_updates: ["message"],
+      secret_token: webhookSecret || undefined,
       drop_pending_updates: true,
     }),
   });
@@ -46,6 +61,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json({
     ok: telegram.ok === true,
+    webhookUrl,
     telegram,
   });
 }
