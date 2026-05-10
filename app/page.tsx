@@ -487,7 +487,17 @@ async function callBrokeApi(
     }),
   });
 
-  const data = (await response.json()) as BrokeApiResponse;
+  const text = await response.text();
+  let data: BrokeApiResponse;
+
+  try {
+    data = JSON.parse(text) as BrokeApiResponse;
+  } catch {
+    const shortText = text.slice(0, 80).replace(/\s+/g, " ");
+    throw new Error(
+      `API /api/broke returned non-JSON. Check app/api/broke/route.ts. Response: ${shortText}`
+    );
+  }
 
   if (!response.ok || !data.ok) {
     throw new Error(data.error || "Cloud sync failed");
