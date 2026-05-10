@@ -1106,7 +1106,7 @@ function TelegramMiniStatus({
             <span>Start param</span>
             <strong>{telegram.startParam || "-"}</strong>
           </div>
-          <div>
+          <div className="tg-status-wide">
             <span>Status</span>
             <strong>{cloudStatus === "error" ? cloudError || "Check Vercel logs" : "Ready"}</strong>
           </div>
