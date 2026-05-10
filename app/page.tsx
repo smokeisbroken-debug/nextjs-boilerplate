@@ -56,6 +56,42 @@ type Streak = {
   updatedAt?: string | null;
 };
 
+type ChallengeStatus = "active" | "completed" | "failed";
+
+type ChallengeTemplate = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  durationDays: number;
+  maxSpend: number;
+  rewardHp: number;
+  icon: string;
+};
+
+type UserChallenge = {
+  id: string;
+  challengeId: string;
+  status: ChallengeStatus;
+  startedAt: string;
+  endsAt: string;
+  completedAt?: string | null;
+};
+
+type ChallengeProgress = {
+  title: string;
+  description: string;
+  category: string;
+  icon: string;
+  status: ChallengeStatus;
+  spent: number;
+  maxSpend: number;
+  rewardHp: number;
+  durationDays: number;
+  daysLeft: number;
+  percentUsed: number;
+};
+
 type TelegramUser = {
   id: number;
   first_name?: string;
@@ -83,6 +119,9 @@ type BrokeApiResponse = {
   expenses?: Expense[];
   expense?: Expense;
   streak?: Streak;
+  challengeTemplates?: ChallengeTemplate[];
+  activeChallenge?: UserChallenge | null;
+  challengeProgress?: ChallengeProgress | null;
   error?: string;
 };
 
@@ -186,6 +225,17 @@ const A = {
   dailyCheck: "/37_daily_check_icon.png",
   progressFlame: "/38_progress_flame_badge.png",
   streakBroken: "/39_streak_broken_icon.png",
+
+  challengeTakeout: "/40_challenge_takeout.png",
+  challengeSmoking: "/41_challenge_smoking.png",
+  challengeCoffee: "/42_challenge_coffee.png",
+  challengeShopping: "/43_challenge_shopping.png",
+  challengeSubscriptions: "/44_challenge_subscriptions.png",
+  challengeWalletRecovery: "/45_challenge_wallet_recovery.png",
+  challengeLocked: "/46_challenge_locked.png",
+  challengeCompleted: "/47_challenge_completed.png",
+  challengeFailed: "/48_challenge_failed.png",
+  challengeTrophy: "/49_challenge_trophy.png",
 };
 
 const defaultSettings: Settings = {
@@ -602,6 +652,10 @@ export default function Home() {
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("local");
   const [cloudError, setCloudError] = useState("");
   const [streak, setStreak] = useState<Streak>(emptyStreak);
+  const [challengeTemplates, setChallengeTemplates] = useState<ChallengeTemplate[]>([]);
+  const [activeChallenge, setActiveChallenge] = useState<UserChallenge | null>(null);
+  const [challengeProgress, setChallengeProgress] = useState<ChallengeProgress | null>(null);
+  const [challengeLoading, setChallengeLoading] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   const [amount, setAmount] = useState("25.00");
@@ -727,6 +781,9 @@ export default function Home() {
         if (data.settings) setSettings(data.settings);
         if (data.expenses) setExpenses(data.expenses);
         if (data.streak) setStreak(data.streak);
+        if (data.challengeTemplates) setChallengeTemplates(data.challengeTemplates);
+        if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
+        if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
 
         setCloudStatus("cloud");
       } catch (error) {
@@ -856,6 +913,8 @@ export default function Home() {
             prev.map((item) => (item.id === expense.id ? data.expense! : item))
           );
           if (data.streak) setStreak(data.streak);
+          if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
+          if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
           setCloudStatus("cloud");
         }
       } catch (error) {
@@ -873,6 +932,8 @@ export default function Home() {
       try {
         const data = await callBrokeApi(telegram.initData, "deleteExpense", { id });
         if (data.streak) setStreak(data.streak);
+        if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
+        if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
         setCloudStatus("cloud");
       } catch (error) {
         setCloudStatus("error");
@@ -895,6 +956,8 @@ export default function Home() {
       try {
         const data = await callBrokeApi(telegram.initData, "reset");
         setStreak(data.streak ?? emptyStreak);
+        setActiveChallenge(data.activeChallenge ?? null);
+        setChallengeProgress(data.challengeProgress ?? null);
         setCloudStatus("cloud");
       } catch (error) {
         setCloudStatus("error");
@@ -927,6 +990,32 @@ export default function Home() {
     setOnboardingCompleted(true);
     localStorage.setItem(ONBOARDING_KEY, "true");
     setActiveTab("home");
+  }
+
+  async function startChallenge(challengeId: string) {
+    triggerHaptic("medium");
+
+    if (!telegram.isTelegram || !telegram.initData) {
+      window.alert("Open this Mini App through Telegram to start challenges.");
+      return;
+    }
+
+    try {
+      setChallengeLoading(true);
+      const data = await callBrokeApi(telegram.initData, "startChallenge", {
+        challengeId,
+      });
+
+      if (data.challengeTemplates) setChallengeTemplates(data.challengeTemplates);
+      setActiveChallenge(data.activeChallenge ?? null);
+      setChallengeProgress(data.challengeProgress ?? null);
+      setCloudStatus("cloud");
+    } catch (error) {
+      setCloudStatus("error");
+      setCloudError(error instanceof Error ? error.message : "Challenge failed");
+    } finally {
+      setChallengeLoading(false);
+    }
   }
 
   const summary = {
@@ -1006,6 +1095,11 @@ export default function Home() {
           <WhatIfScreen
             settings={settings}
             expenses={currentMonthExpenses}
+            challengeTemplates={challengeTemplates}
+            activeChallenge={activeChallenge}
+            challengeProgress={challengeProgress}
+            challengeLoading={challengeLoading}
+            onStartChallenge={startChallenge}
             onBack={goHome}
             onHelp={openHelp}
           />
@@ -2065,14 +2159,137 @@ function ChartScreen({
   );
 }
 
+
+function ChallengesPanel({
+  templates,
+  activeChallenge,
+  progress,
+  loading,
+  currency,
+  onStartChallenge,
+}: {
+  templates: ChallengeTemplate[];
+  activeChallenge: UserChallenge | null;
+  progress: ChallengeProgress | null;
+  loading: boolean;
+  currency: Currency;
+  onStartChallenge: (challengeId: string) => void;
+}) {
+  const availableTemplates = templates.slice(0, 6);
+
+  return (
+    <section className="challenges-panel">
+      <div className="section-title">
+        <span>Leak Challenges</span>
+        <small>{activeChallenge ? "Active now" : "Choose one"}</small>
+      </div>
+
+      {progress ? (
+        <ActiveChallengeCard progress={progress} currency={currency} />
+      ) : (
+        <div className="challenge-grid">
+          {availableTemplates.map((template) => (
+            <button
+              type="button"
+              key={template.id}
+              className="challenge-template-card"
+              disabled={loading}
+              onClick={() => onStartChallenge(template.id)}
+            >
+              <img src={template.icon} alt="" />
+              <div>
+                <strong>{template.title}</strong>
+                <span>
+                  {template.durationDays}d · limit {money(template.maxSpend, currency)}
+                </span>
+              </div>
+              <b>+{template.rewardHp} HP</b>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeChallenge && !progress && (
+        <div className="challenge-note">
+          Challenge data is syncing. Reopen the app if this stays visible.
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ActiveChallengeCard({
+  progress,
+  currency,
+}: {
+  progress: ChallengeProgress;
+  currency: Currency;
+}) {
+  const icon =
+    progress.status === "completed"
+      ? A.challengeCompleted
+      : progress.status === "failed"
+        ? A.challengeFailed
+        : progress.icon;
+
+  const statusLabel =
+    progress.status === "completed"
+      ? "Completed"
+      : progress.status === "failed"
+        ? "Failed"
+        : `${progress.daysLeft}d left`;
+
+  return (
+    <article className={`active-challenge-card ${progress.status}`}>
+      <img src={icon} alt="" />
+
+      <div className="active-challenge-body">
+        <div className="active-challenge-head">
+          <div>
+            <span>Active Challenge</span>
+            <strong>{progress.title}</strong>
+          </div>
+          <b>{statusLabel}</b>
+        </div>
+
+        <p>{progress.description}</p>
+
+        <div className="challenge-progress-row">
+          <span>{money(progress.spent, currency)}</span>
+          <small>/ {money(progress.maxSpend, currency)} limit</small>
+        </div>
+
+        <div className="challenge-progress-bar">
+          <div style={{ width: `${Math.min(100, Math.max(0, progress.percentUsed))}%` }} />
+        </div>
+
+        <footer>
+          <span>{progress.category === "All" ? "All leaks" : progress.category}</span>
+          <strong>+{progress.rewardHp} Wallet HP</strong>
+        </footer>
+      </div>
+    </article>
+  );
+}
+
 function WhatIfScreen({
   settings,
   expenses,
+  challengeTemplates,
+  activeChallenge,
+  challengeProgress,
+  challengeLoading,
+  onStartChallenge,
   onBack,
   onHelp,
 }: {
   settings: Settings;
   expenses: Expense[];
+  challengeTemplates: ChallengeTemplate[];
+  activeChallenge: UserChallenge | null;
+  challengeProgress: ChallengeProgress | null;
+  challengeLoading: boolean;
+  onStartChallenge: (challengeId: string) => void;
   onBack: () => void;
   onHelp: () => void;
 }) {
@@ -2138,6 +2355,15 @@ function WhatIfScreen({
           /month · {money(totalMonthlySavings * 12, settings.currency)}/year
         </small>
       </section>
+
+      <ChallengesPanel
+        templates={challengeTemplates.length ? challengeTemplates : defaultChallengeTemplates}
+        activeChallenge={activeChallenge}
+        progress={challengeProgress}
+        loading={challengeLoading}
+        currency={settings.currency}
+        onStartChallenge={onStartChallenge}
+      />
 
       <section className="whatif-list">
         {cards.map((item) => {
