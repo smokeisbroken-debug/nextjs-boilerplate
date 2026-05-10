@@ -135,6 +135,13 @@ type LeaderboardState = {
   allTime: LeaderboardProfile[];
 };
 
+type AppToast = {
+  id: number;
+  title: string;
+  detail: string;
+  tone: "xp" | "badge" | "info";
+};
+
 type TelegramUser = {
   id: number;
   first_name?: string;
@@ -863,14 +870,61 @@ export default function Home() {
   const [badges, setBadges] = useState<BadgeItem[]>(defaultBadges);
   const [leaderboard, setLeaderboard] = useState<LeaderboardState | null>(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [toast, setToast] = useState<AppToast | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   const openAppTrackedRef = useRef(false);
+  const badgesReadyRef = useRef(false);
+  const toastTimerRef = useRef<number | null>(null);
 
   const [amount, setAmount] = useState("25.00");
   const [note, setNote] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Coffee");
   const [expenseType, setExpenseType] = useState<NeedType>("Needed");
+
+  function showToast(title: string, detail = "", tone: AppToast["tone"] = "info") {
+    if (toastTimerRef.current) {
+      window.clearTimeout(toastTimerRef.current);
+    }
+
+    setToast({
+      id: Date.now(),
+      title,
+      detail,
+      tone,
+    });
+
+    toastTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+      toastTimerRef.current = null;
+    }, 2400);
+  }
+
+  function applyBadges(nextBadges: BadgeItem[], silent = false) {
+    const newlyUnlocked =
+      !silent && badgesReadyRef.current
+        ? nextBadges.find((badge) => {
+            const previous = badges.find((item) => item.id === badge.id);
+            return badge.earned && !previous?.earned;
+          })
+        : null;
+
+    setBadges(nextBadges);
+    badgesReadyRef.current = true;
+
+    if (newlyUnlocked) {
+      showToast("Badge unlocked", newlyUnlocked.title, "badge");
+    }
+  }
+
+  function applyApiFeedback(data: BrokeApiResponse, context = "$BROKE Score updated") {
+    if (data.leaderboard) setLeaderboard(data.leaderboard);
+    if (data.badges) applyBadges(data.badges);
+
+    if (data.xpAwarded && data.xpAwarded > 0) {
+      showToast(`+${data.xpAwarded} XP`, context, "xp");
+    }
+  }
 
   useEffect(() => {
     function applyTelegramWebApp() {
@@ -920,6 +974,14 @@ export default function Home() {
     return () => {
       window.clearTimeout(fallback);
       script.onload = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        window.clearTimeout(toastTimerRef.current);
+      }
     };
   }, []);
 
@@ -993,8 +1055,8 @@ export default function Home() {
         if (data.challengeTemplates) setChallengeTemplates(data.challengeTemplates);
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
-        if (data.badges) setBadges(data.badges);
         if (data.leaderboard) setLeaderboard(data.leaderboard);
+        if (data.badges) applyBadges(data.badges, true);
 
         const cloudOnboardingCompleted =
           data.settings?.onboardingCompleted === true ||
@@ -1042,8 +1104,7 @@ export default function Home() {
         const data = await callBrokeApi(telegram.initData, "saveSettings", {
           settings,
         });
-        if (data.badges) setBadges(data.badges);
-        if (data.leaderboard) setLeaderboard(data.leaderboard);
+        applyApiFeedback(data, "Settings synced");
       } catch (error) {
         setCloudStatus("error");
         setCloudError(error instanceof Error ? error.message : "Settings cloud save failed");
@@ -1173,8 +1234,7 @@ export default function Home() {
           if (data.streak) setStreak(data.streak);
           if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
           if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
-          if (data.badges) setBadges(data.badges);
-          if (data.leaderboard) setLeaderboard(data.leaderboard);
+          applyApiFeedback(data, "Expense tracked");
           setCloudStatus("cloud");
         }
       } catch (error) {
@@ -1194,8 +1254,7 @@ export default function Home() {
         if (data.streak) setStreak(data.streak);
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
-        if (data.badges) setBadges(data.badges);
-        if (data.leaderboard) setLeaderboard(data.leaderboard);
+        applyApiFeedback(data, "Record updated");
         setCloudStatus("cloud");
       } catch (error) {
         setCloudStatus("error");
@@ -1220,7 +1279,7 @@ export default function Home() {
         setStreak(data.streak ?? emptyStreak);
         setActiveChallenge(data.activeChallenge ?? null);
         setChallengeProgress(data.challengeProgress ?? null);
-        if (data.badges) setBadges(data.badges);
+        if (data.badges) applyBadges(data.badges, true);
         if (data.leaderboard) setLeaderboard(data.leaderboard);
         setCloudStatus("cloud");
       } catch (error) {
@@ -1287,8 +1346,7 @@ export default function Home() {
       if (data.challengeTemplates) setChallengeTemplates(data.challengeTemplates);
       setActiveChallenge(data.activeChallenge ?? null);
       setChallengeProgress(data.challengeProgress ?? null);
-      if (data.badges) setBadges(data.badges);
-      if (data.leaderboard) setLeaderboard(data.leaderboard);
+      applyApiFeedback(data, "Challenge started");
       setCloudStatus("cloud");
     } catch (error) {
       setCloudStatus("error");
@@ -1306,8 +1364,7 @@ export default function Home() {
         xpAction,
       });
 
-      if (data.leaderboard) setLeaderboard(data.leaderboard);
-      if (data.badges) setBadges(data.badges);
+      applyApiFeedback(data);
     } catch {
       // XP tracking must never block the app.
     }
@@ -1326,6 +1383,7 @@ export default function Home() {
       });
 
       if (data.leaderboard) setLeaderboard(data.leaderboard);
+      showToast(nextValue ? "Leaderboard joined" : "Private mode", nextValue ? "Your public progress is visible." : "You are hidden from public ranking.", "info");
       setCloudStatus("cloud");
     } catch (error) {
       setCloudStatus("error");
@@ -1460,11 +1518,23 @@ export default function Home() {
         {loaded && onboardingCompleted && (
           <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
         )}
+
+        {toast && <AppToastView toast={toast} />}
       </section>
     </main>
   );
 }
 
+
+
+function AppToastView({ toast }: { toast: AppToast }) {
+  return (
+    <div className={`app-toast ${toast.tone}`} key={toast.id}>
+      <strong>{toast.title}</strong>
+      {toast.detail && <span>{toast.detail}</span>}
+    </div>
+  );
+}
 
 function OnboardingScreen({
   settings,
@@ -2665,15 +2735,15 @@ function LeaderboardPanel({
         <div>
           <p>
             Leaderboard is not based on income, private expenses, or claimed savings.
-            Those numbers can be faked too easily.
+            Those numbers are private and easy to fake.
           </p>
           <p>
-            $BROKE Score is based on consistency, tracking activity, streaks,
+            $BROKE Score is based on consistency: tracking activity, streaks,
             challenges, badges, and trust level.
           </p>
           <p>
-            Private financial data is never shown. Public ranking shows only score,
-            streak, badges, completed challenges, and trust level.
+            Public ranking shows only score, streak, badges, completed challenges,
+            and trust level. Financial details stay private.
           </p>
         </div>
       </details>
