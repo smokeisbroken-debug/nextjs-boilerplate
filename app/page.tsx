@@ -2698,6 +2698,7 @@ function DashboardScreen({
         realBalance={summary.realBalance}
         potentialYearlySavings={summary.totalLeaks * 12}
         leaderboard={leaderboard}
+        shareInitData={telegram.isTelegram ? telegram.initData : ""}
       />
 
       <section className="chart-preview">
@@ -3189,9 +3190,7 @@ async function createShareImageFileFromElement(element: HTMLElement) {
   });
 }
 
-async function shareImageOnlyFromElement(element: HTMLElement) {
-  const imageFile = await createShareImageFileFromElement(element);
-
+async function tryNativeImageShare(imageFile: File) {
   if (
     typeof navigator !== "undefined" &&
     typeof navigator.canShare === "function" &&
@@ -3202,9 +3201,35 @@ async function shareImageOnlyFromElement(element: HTMLElement) {
       files: [imageFile],
     });
 
-    return "shared";
+    return true;
   }
 
+  return false;
+}
+
+async function sendShareImageViaBot(imageFile: File, initData: string, caption: string) {
+  const formData = new FormData();
+  formData.append("image", imageFile);
+  formData.append("caption", caption);
+  formData.append("initData", initData);
+  formData.append("target", "user");
+
+  const response = await fetch("/api/share-result", {
+    method: "POST",
+    body: formData,
+    credentials: "include",
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error || "Telegram image send failed");
+  }
+
+  return data;
+}
+
+function downloadImageFile(imageFile: File) {
   const url = URL.createObjectURL(imageFile);
   const link = document.createElement("a");
   link.href = url;
@@ -3214,8 +3239,6 @@ async function shareImageOnlyFromElement(element: HTMLElement) {
   link.remove();
 
   window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-
-  return "downloaded";
 }
 
 function ShareResultCard({
@@ -3225,6 +3248,7 @@ function ShareResultCard({
   realBalance,
   potentialYearlySavings,
   leaderboard,
+  shareInitData,
 }: {
   settings: Settings;
   walletHp: number;
@@ -3232,6 +3256,7 @@ function ShareResultCard({
   realBalance: number;
   potentialYearlySavings: number;
   leaderboard: LeaderboardState | null;
+  shareInitData: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [imageSharing, setImageSharing] = useState(false);
@@ -3295,10 +3320,20 @@ function ShareResultCard({
       triggerHaptic("light");
       setImageSharing(true);
 
-      const result = await shareImageOnlyFromElement(shareCardRef.current);
+      const imageFile = await createShareImageFileFromElement(shareCardRef.current);
+      const nativeShared = await tryNativeImageShare(imageFile);
 
-      if (result === "downloaded") {
-        window.alert("Image was created. Your browser cannot share image files directly, so the PNG was downloaded instead.");
+      if (nativeShared) {
+        return;
+      }
+
+      try {
+        await sendShareImageViaBot(imageFile, shareInitData, shareText);
+        window.alert("Image was sent to your Telegram bot chat. Open the bot chat and forward it anywhere.");
+        return;
+      } catch {
+        downloadImageFile(imageFile);
+        window.alert("Telegram WebView cannot share image files directly. Bot delivery failed too, so the PNG was downloaded.");
       }
     } catch {
       window.alert("Image sharing was cancelled or is not supported by this browser.");
@@ -3354,7 +3389,7 @@ function ShareResultCard({
       </button>
 
       <button type="button" className="copy-share-btn share-image-only-btn" onClick={shareImageOnly}>
-        {imageSharing ? "Preparing image..." : "Share image only"}
+        {imageSharing ? "Preparing image..." : "Send image to TG"}
       </button>
     </section>
   );
