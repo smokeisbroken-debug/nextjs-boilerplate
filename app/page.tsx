@@ -2765,6 +2765,7 @@ function WebTelegramSyncCard({
   useEffect(() => {
     if (!linkCode || webAuth.authenticated) return;
 
+    const currentLinkCode = linkCode;
     let cancelled = false;
 
     async function pollLinkStatus() {
@@ -2777,7 +2778,7 @@ function WebTelegramSyncCard({
           credentials: "include",
           body: JSON.stringify({
             action: "status",
-            token: linkCode.token,
+            token: currentLinkCode.token,
           }),
         });
 
