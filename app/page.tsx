@@ -185,12 +185,6 @@ type WebAuthState = {
   user: TelegramUser | null;
 };
 
-type LinkCodeState = {
-  code: string;
-  token: string;
-  expiresAt: string;
-};
-
 type CloudStatus = "local" | "syncing" | "cloud" | "error";
 
 type BrokeApiResponse = {
@@ -2062,6 +2056,7 @@ export default function Home() {
             badges={badges}
             walletInsights={walletInsights}
             chartDays={chartDays}
+            leaderboard={leaderboard}
             expenses={currentMonthExpenses.slice(0, 6)}
             onDeleteExpense={deleteExpense}
             telegram={telegram}
@@ -2125,7 +2120,6 @@ export default function Home() {
             onReset={resetData}
             onDeleteExpense={deleteExpense}
             telegram={telegram}
-            webAuth={webAuth}
             cloudStatus={cloudStatus}
             cloudError={cloudError}
             streak={activeStreak}
@@ -2579,6 +2573,7 @@ function DashboardScreen({
   badges,
   walletInsights,
   chartDays,
+  leaderboard,
   expenses,
   onDeleteExpense,
   telegram,
@@ -2601,6 +2596,7 @@ function DashboardScreen({
   badges: BadgeItem[];
   walletInsights: WalletInsight[];
   chartDays: ChartPoint[];
+  leaderboard: LeaderboardState | null;
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
   telegram: TelegramState;
@@ -2700,6 +2696,7 @@ function DashboardScreen({
         totalLeaks={summary.totalLeaks}
         realBalance={summary.realBalance}
         potentialYearlySavings={summary.totalLeaks * 12}
+        leaderboard={leaderboard}
       />
 
       <section className="chart-preview">
@@ -2745,111 +2742,32 @@ function WebTelegramSyncCard({
   telegram: TelegramState;
   webAuth: WebAuthState;
 }) {
-  const [linkCode, setLinkCode] = useState<LinkCodeState | null>(null);
-  const [linkStatus, setLinkStatus] = useState<"idle" | "creating" | "waiting" | "linked" | "error">("idle");
-  const [linkError, setLinkError] = useState("");
-  const [isFramed, setIsFramed] = useState(false);
-  const [fullAppUrl, setFullAppUrl] = useState("");
+  const widgetRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    try {
-      const framed = window.self !== window.top;
-      setIsFramed(framed);
-      setFullAppUrl(window.location.origin + window.location.pathname);
-    } catch {
-      setIsFramed(true);
-      setFullAppUrl("/");
-    }
-  }, []);
+    if (telegram.isTelegram || webAuth.authenticated || webAuth.loading) return;
+    if (!widgetRef.current) return;
 
-  useEffect(() => {
-    if (!linkCode || webAuth.authenticated) return;
+    widgetRef.current.innerHTML = "";
 
-    const currentLinkCode = linkCode;
-    let cancelled = false;
+    const script = document.createElement("script");
+    script.src = TELEGRAM_LOGIN_SCRIPT;
+    script.async = true;
+    script.setAttribute("data-telegram-login", TELEGRAM_BOT_USERNAME);
+    script.setAttribute("data-size", "large");
+    script.setAttribute("data-radius", "12");
+    script.setAttribute("data-userpic", "false");
+    script.setAttribute("data-request-access", "write");
+    script.setAttribute("data-auth-url", "/api/auth/telegram");
 
-    async function pollLinkStatus() {
-      try {
-        const response = await fetch("/api/auth/link-code", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            action: "status",
-            token: currentLinkCode.token,
-          }),
-        });
-
-        const data = await response.json();
-
-        if (cancelled) return;
-
-        if (!response.ok || !data.ok) {
-          throw new Error(data.error || "Link check failed");
-        }
-
-        if (data.linked) {
-          setLinkStatus("linked");
-          window.setTimeout(() => window.location.reload(), 700);
-        }
-      } catch (error) {
-        if (cancelled) return;
-
-        setLinkStatus("error");
-        setLinkError(error instanceof Error ? error.message : "Link check failed");
-      }
-    }
-
-    pollLinkStatus();
-    const interval = window.setInterval(pollLinkStatus, 2500);
+    widgetRef.current.appendChild(script);
 
     return () => {
-      cancelled = true;
-      window.clearInterval(interval);
+      script.remove();
     };
-  }, [linkCode, webAuth.authenticated]);
-
-  async function createLinkCode() {
-    try {
-      setLinkStatus("creating");
-      setLinkError("");
-
-      const response = await fetch("/api/auth/link-code", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
-          action: "create",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "Could not create link code");
-      }
-
-      setLinkCode({
-        code: data.code,
-        token: data.token,
-        expiresAt: data.expiresAt,
-      });
-      setLinkStatus("waiting");
-    } catch (error) {
-      setLinkStatus("error");
-      setLinkError(error instanceof Error ? error.message : "Could not create link code");
-    }
-  }
+  }, [telegram.isTelegram, webAuth.authenticated, webAuth.loading]);
 
   if (telegram.isTelegram) return null;
-
-  const botLink = linkCode
-    ? `https://t.me/${TELEGRAM_BOT_USERNAME}?start=link_${linkCode.code}`
-    : `https://t.me/${TELEGRAM_BOT_USERNAME}`;
 
   return (
     <section className={`web-sync-card ${webAuth.authenticated ? "connected" : ""}`}>
@@ -2858,48 +2776,23 @@ function WebTelegramSyncCard({
         <strong>
           {webAuth.authenticated
             ? `Synced with ${webAuth.user?.username ? `@${webAuth.user.username}` : webAuth.user?.first_name || "Telegram"}`
-            : isFramed
-              ? "Open full app to link your Telegram account"
-              : linkCode
-                ? `Send code ${linkCode.code} to the bot`
-                : "Use one account on website and Telegram"}
+            : "Use one account on website and Telegram"}
         </strong>
         <p>
           {webAuth.authenticated
             ? "Website progress now uses the same Supabase profile as your Telegram Mini App."
-            : isFramed
-              ? "Open the full app first. Embedded mode is read-only for account linking."
-              : linkCode
-                ? "Open the bot and send the code. This page will connect automatically after confirmation."
-                : "No Telegram SMS needed. Generate a code, open the bot, and link the website to your Telegram account."}
+            : "Login with Telegram to sync expenses, streaks, badges, challenges and leaderboard across website and Telegram."}
         </p>
-
-        {linkCode && !webAuth.authenticated && (
-          <div className="manual-link-code">
-            <b>{linkCode.code}</b>
-            <span>expires soon</span>
-          </div>
-        )}
-
-        {linkError && <small className="web-sync-error">{linkError}</small>}
       </div>
 
       {webAuth.authenticated ? (
         <a className="web-sync-logout" href="/api/auth/telegram/logout">
           Log out
         </a>
-      ) : isFramed ? (
-        <a className="web-sync-logout" href={fullAppUrl || "/"} target="_blank" rel="noreferrer">
-          Open full app
-        </a>
-      ) : linkCode ? (
-        <a className="web-sync-logout" href={botLink} target="_blank" rel="noreferrer">
-          Open bot
-        </a>
       ) : (
-        <button className="web-sync-button" type="button" onClick={createLinkCode} disabled={linkStatus === "creating"}>
-          {linkStatus === "creating" ? "Creating..." : "Link Telegram"}
-        </button>
+        <div className="telegram-login-widget" ref={widgetRef}>
+          {webAuth.loading ? "Checking..." : "Loading Telegram login..."}
+        </div>
       )}
     </section>
   );
@@ -3198,28 +3091,77 @@ function TelegramMiniStatus({
   );
 }
 
+function getLeaderboardRank(rows: LeaderboardProfile[] | undefined, telegramId?: number) {
+  if (!rows?.length || !telegramId) return null;
+
+  const index = rows.findIndex((row) => row.telegramId === telegramId);
+
+  return index >= 0 ? index + 1 : null;
+}
+
+function getShareLeaderboardStats(leaderboard: LeaderboardState | null) {
+  const me = leaderboard?.me ?? null;
+  const dailyRank = getLeaderboardRank(leaderboard?.daily, me?.telegramId);
+  const weeklyRank = getLeaderboardRank(leaderboard?.weekly, me?.telegramId);
+  const allTimeRank = getLeaderboardRank(leaderboard?.allTime, me?.telegramId);
+
+  const bestRank = dailyRank ?? weeklyRank ?? allTimeRank;
+  const bestRankLabel = dailyRank
+    ? `#${dailyRank} Daily`
+    : weeklyRank
+      ? `#${weeklyRank} Weekly`
+      : allTimeRank
+        ? `#${allTimeRank} All`
+        : me?.publicLeaderboard
+          ? "Top pending"
+          : "Private";
+
+  return {
+    xp: me?.brokeScore ?? 0,
+    dailyXp: me?.dailyXp ?? 0,
+    weeklyXp: me?.weeklyXp ?? 0,
+    totalXp: me?.totalXp ?? me?.brokeScore ?? 0,
+    rank: bestRank,
+    rankLabel: bestRankLabel,
+    badgeCount: me?.badgeCount ?? 0,
+    currentStreak: me?.currentStreak ?? 0,
+    publicLeaderboard: Boolean(me?.publicLeaderboard),
+  };
+}
+
 function buildShareText({
   settings,
   walletHp,
   totalLeaks,
-  realBalance,
   potentialYearlySavings,
+  leaderboard,
 }: {
   settings: Settings;
   walletHp: number;
   totalLeaks: number;
-  realBalance: number;
   potentialYearlySavings: number;
+  leaderboard: LeaderboardState | null;
 }) {
+  const shareStats = getShareLeaderboardStats(leaderboard);
+  const rankLine =
+    shareStats.rank || shareStats.publicLeaderboard
+      ? `Leaderboard: ${shareStats.rankLabel}`
+      : "Leaderboard: private";
+
   return [
-    `My $BROKE Wallet HP: ${walletHp}/100`,
-    `Money leaks this month: ${money(totalLeaks, settings.currency)}`,
-    `Real balance: ${money(realBalance, settings.currency)}`,
+    "My wallet is not broken.",
+    "It is leaking.",
+    "",
+    `Wallet HP: ${walletHp}/100`,
+    `Leaks found: ${money(totalLeaks, settings.currency)}`,
+    `$BROKE Score: ${shareStats.xp.toLocaleString("en-US")} XP`,
+    rankLine,
+    `Streak: ${shareStats.currentStreak} days`,
+    `Badges: ${shareStats.badgeCount}/45`,
+    "",
     `Potential yearly savings: ${money(potentialYearlySavings, settings.currency)}`,
     "",
-    "Track your leaks. Fix your life.",
-    PROJECT_X_URL,
-    PROJECT_TG_URL,
+    "$BROKE Life Tracker made the leaks visible.",
   ].join("\n");
 }
 
@@ -3229,21 +3171,24 @@ function ShareResultCard({
   totalLeaks,
   realBalance,
   potentialYearlySavings,
+  leaderboard,
 }: {
   settings: Settings;
   walletHp: number;
   totalLeaks: number;
   realBalance: number;
   potentialYearlySavings: number;
+  leaderboard: LeaderboardState | null;
 }) {
   const [copied, setCopied] = useState(false);
+  const shareStats = getShareLeaderboardStats(leaderboard);
 
   const shareText = buildShareText({
     settings,
     walletHp,
     totalLeaks,
-    realBalance,
     potentialYearlySavings,
+    leaderboard,
   });
 
   function openXShare() {
@@ -3295,7 +3240,7 @@ function ShareResultCard({
         <small>Telegram / X ready</small>
       </div>
 
-      <div className="share-preview">
+      <div className="share-preview share-preview-social">
         <div>
           <span>Wallet HP</span>
           <strong>{walletHp}/100</strong>
@@ -3305,9 +3250,17 @@ function ShareResultCard({
           <strong>{money(totalLeaks, settings.currency)}</strong>
         </div>
         <div>
-          <span>Balance</span>
-          <strong>{money(realBalance, settings.currency)}</strong>
+          <span>XP</span>
+          <strong>{shareStats.xp.toLocaleString("en-US")}</strong>
         </div>
+        <div>
+          <span>Top</span>
+          <strong>{shareStats.rankLabel}</strong>
+        </div>
+      </div>
+
+      <div className="share-privacy-note">
+        <span>Public share hides income and real balance.</span>
       </div>
 
       <div className="share-buttons">
@@ -4090,7 +4043,6 @@ function SettingsScreen({
   onReset,
   onDeleteExpense,
   telegram,
-  webAuth,
   cloudStatus,
   cloudError,
   streak,
@@ -4107,7 +4059,6 @@ function SettingsScreen({
   onReset: () => void;
   onDeleteExpense: (id: string) => void;
   telegram: TelegramState;
-  webAuth: WebAuthState;
   cloudStatus: CloudStatus;
   cloudError: string;
   streak: Streak;
@@ -4260,8 +4211,8 @@ function SettingsScreen({
         >
           <img src={A.reminder} alt="" />
           <div>
-            <strong>Gentle Notifications</strong>
-            <span>{settings.dailyReminder ? "On · max 1 soft check-in/day" : "Off"}</span>
+            <strong>Daily Reminder</strong>
+            <span>{settings.dailyReminder ? "On" : "Off"}</span>
           </div>
           <i className={settings.dailyReminder ? "toggle" : "toggle off"} />
         </button>
