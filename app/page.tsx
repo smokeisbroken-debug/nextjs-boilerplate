@@ -2119,6 +2119,7 @@ export default function Home() {
             onReset={resetData}
             onDeleteExpense={deleteExpense}
             telegram={telegram}
+            webAuth={webAuth}
             cloudStatus={cloudStatus}
             cloudError={cloudError}
             streak={activeStreak}
@@ -3979,6 +3980,7 @@ function SettingsScreen({
   onReset,
   onDeleteExpense,
   telegram,
+  webAuth,
   cloudStatus,
   cloudError,
   streak,
@@ -3995,6 +3997,7 @@ function SettingsScreen({
   onReset: () => void;
   onDeleteExpense: (id: string) => void;
   telegram: TelegramState;
+  webAuth: WebAuthState;
   cloudStatus: CloudStatus;
   cloudError: string;
   streak: Streak;
