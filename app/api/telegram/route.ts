@@ -209,6 +209,135 @@ async function saveCommunityTelegramMessage(message: TelegramMessage) {
   }
 }
 
+
+function isPrivateChat(message: TelegramMessage) {
+  return message.chat?.type === "private";
+}
+
+function parseLinkCode(text: string) {
+  const trimmed = text.trim();
+  const startMatch = trimmed.match(/^\/start\s+link_([A-Z0-9]{6})$/i);
+  const linkMatch = trimmed.match(/^\/link\s+([A-Z0-9]{6})$/i);
+
+  return (startMatch?.[1] || linkMatch?.[1] || "").toUpperCase();
+}
+
+async function sendPlainTelegramMessage(chatId: number | string, text: string) {
+  const botToken = getBotToken();
+
+  if (!botToken) {
+    throw new Error("Missing TELEGRAM_BOT_TOKEN");
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      disable_web_page_preview: true,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.ok) {
+    throw new Error(data.description || "Telegram sendMessage failed");
+  }
+
+  return data;
+}
+
+async function linkWebsiteAccountFromTelegram(message: TelegramMessage, code: string) {
+  if (!message.from?.id) {
+    return {
+      linked: false,
+      reason: "missing-user",
+    };
+  }
+
+  const rows = (await supabaseFetch(
+    `broke_web_link_codes?select=*&code=eq.${encodeURIComponent(code)}&status=eq.pending&order=created_at.desc&limit=1`
+  )) as Record<string, unknown>[];
+
+  const row = rows[0];
+
+  if (!row) {
+    return {
+      linked: false,
+      reason: "code-not-found",
+    };
+  }
+
+  if (new Date(String(row.expires_at)).getTime() < Date.now()) {
+    await supabaseFetch(`broke_web_link_codes?id=eq.${encodeURIComponent(String(row.id))}`, {
+      method: "PATCH",
+      headers: {
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        status: "expired",
+      }),
+    });
+
+    return {
+      linked: false,
+      reason: "expired",
+    };
+  }
+
+  await supabaseFetch(`broke_web_link_codes?id=eq.${encodeURIComponent(String(row.id))}`, {
+    method: "PATCH",
+    headers: {
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({
+      status: "linked",
+      telegram_user_id: message.from.id,
+      telegram_username: message.from.username ?? null,
+      telegram_first_name: message.from.first_name ?? null,
+      telegram_last_name: message.from.last_name ?? null,
+      linked_at: new Date().toISOString(),
+    }),
+  });
+
+  return {
+    linked: true,
+    reason: "linked",
+  };
+}
+
+async function handleWebsiteLinkCommand(message: TelegramMessage, text: string) {
+  const code = parseLinkCode(text);
+
+  if (!code || !message.chat?.id) {
+    return false;
+  }
+
+  const result = await linkWebsiteAccountFromTelegram(message, code);
+
+  if (result.linked) {
+    await sendPlainTelegramMessage(
+      message.chat.id,
+      "✅ Website linked. Go back to the $BROKE Life Tracker page. It will sync automatically."
+    );
+  } else if (result.reason === "expired") {
+    await sendPlainTelegramMessage(
+      message.chat.id,
+      "Link code expired. Generate a new code on the website and try again."
+    );
+  } else {
+    await sendPlainTelegramMessage(
+      message.chat.id,
+      "Invalid link code. Generate a new code on the website and send it again."
+    );
+  }
+
+  return true;
+}
+
 async function sendTelegramMessage(chatId: number | string, firstName?: string) {
   const botToken = getBotToken();
   const webAppUrl = getWebAppUrl();
@@ -323,6 +452,17 @@ export async function POST(request: NextRequest) {
   const text = (message.text || "").trim();
 
   try {
+    if (isPrivateChat(message) && text) {
+      const handledLink = await handleWebsiteLinkCommand(message, text);
+
+      if (handledLink) {
+        return NextResponse.json({
+          ok: true,
+          websiteLinkCommand: true,
+        });
+      }
+    }
+
     if (isTargetCommunityGroup(message)) {
       const communityResult = await saveCommunityTelegramMessage(message);
 
