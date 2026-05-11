@@ -2060,7 +2060,6 @@ export default function Home() {
             expenses={currentMonthExpenses.slice(0, 6)}
             onDeleteExpense={deleteExpense}
             telegram={telegram}
-            webAuth={webAuth}
             cloudStatus={cloudStatus}
             cloudError={cloudError}
             onBellClick={openProjectTelegram}
@@ -4293,7 +4292,6 @@ function SettingsScreen({
         <summary>Technical status</summary>
         <TelegramMiniStatus
           telegram={telegram}
-          webAuth={webAuth}
           cloudStatus={cloudStatus}
           cloudError={cloudError}
         />
