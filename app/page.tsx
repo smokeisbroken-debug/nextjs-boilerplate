@@ -2765,7 +2765,6 @@ function WebTelegramSyncCard({
   useEffect(() => {
     if (!linkCode || webAuth.authenticated) return;
 
-    const currentLinkCode = linkCode;
     let cancelled = false;
 
     async function pollLinkStatus() {
@@ -2778,7 +2777,7 @@ function WebTelegramSyncCard({
           credentials: "include",
           body: JSON.stringify({
             action: "status",
-            token: currentLinkCode.token,
+            token: linkCode.token,
           }),
         });
 
@@ -4260,8 +4259,8 @@ function SettingsScreen({
         >
           <img src={A.reminder} alt="" />
           <div>
-            <strong>Daily Reminder</strong>
-            <span>{settings.dailyReminder ? "On" : "Off"}</span>
+            <strong>Gentle Notifications</strong>
+            <span>{settings.dailyReminder ? "On · max 1 soft check-in/day" : "Off"}</span>
           </div>
           <i className={settings.dailyReminder ? "toggle" : "toggle off"} />
         </button>
