@@ -3165,6 +3165,280 @@ function buildShareText({
   ].join("\n");
 }
 
+
+function loadCanvasImage(src: string) {
+  return new Promise<HTMLImageElement | null>((resolve) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = src;
+  });
+}
+
+function roundRectPath(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
+  const r = Math.min(radius, width / 2, height / 2);
+
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+  ctx.closePath();
+}
+
+function drawRoundedRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  fill: string,
+  stroke?: string
+) {
+  roundRectPath(ctx, x, y, width, height, radius);
+  ctx.fillStyle = fill;
+  ctx.fill();
+
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+  }
+}
+
+function drawCardText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  options: {
+    size: number;
+    weight?: number;
+    color?: string;
+    align?: CanvasTextAlign;
+    maxWidth?: number;
+  }
+) {
+  ctx.font = `${options.weight ?? 800} ${options.size}px Arial, Helvetica, sans-serif`;
+  ctx.fillStyle = options.color ?? "#f3ffe9";
+  ctx.textAlign = options.align ?? "left";
+  ctx.textBaseline = "top";
+  ctx.fillText(text, x, y, options.maxWidth);
+}
+
+async function createShareCardBlob({
+  settings,
+  walletHp,
+  totalLeaks,
+  potentialYearlySavings,
+  shareStats,
+}: {
+  settings: Settings;
+  walletHp: number;
+  totalLeaks: number;
+  potentialYearlySavings: number;
+  shareStats: ReturnType<typeof getShareLeaderboardStats>;
+}) {
+  const width = 1080;
+  const height = 1350;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    throw new Error("Canvas is not supported");
+  }
+
+  const bg = ctx.createLinearGradient(0, 0, 0, height);
+  bg.addColorStop(0, "#051204");
+  bg.addColorStop(0.48, "#020602");
+  bg.addColorStop(1, "#000000");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, width, height);
+
+  const glow = ctx.createRadialGradient(width * 0.68, 240, 40, width * 0.68, 240, 640);
+  glow.addColorStop(0, "rgba(171,255,30,0.30)");
+  glow.addColorStop(0.42, "rgba(83,255,34,0.10)");
+  glow.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.globalAlpha = 0.22;
+  ctx.strokeStyle = "rgba(174,255,32,0.12)";
+  ctx.lineWidth = 1;
+  for (let x = 0; x < width; x += 72) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, height);
+    ctx.stroke();
+  }
+  for (let y = 0; y < height; y += 72) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(width, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+
+  drawCardText(ctx, "Your wallet", 72, 76, {
+    size: 82,
+    weight: 950,
+    color: "#f4ffe8",
+  });
+  drawCardText(ctx, "is not broken.", 72, 158, {
+    size: 82,
+    weight: 950,
+    color: "#f4ffe8",
+  });
+  drawCardText(ctx, "It is leaking.", 72, 240, {
+    size: 82,
+    weight: 950,
+    color: "#aaff18",
+  });
+
+  const frog = await loadCanvasImage(A.homeMascot);
+  if (frog) {
+    ctx.save();
+    roundRectPath(ctx, 710, 74, 276, 276, 48);
+    ctx.clip();
+    ctx.drawImage(frog, 710, 74, 276, 276);
+    ctx.restore();
+
+    ctx.strokeStyle = "rgba(174,255,32,0.28)";
+    ctx.lineWidth = 4;
+    roundRectPath(ctx, 710, 74, 276, 276, 48);
+    ctx.stroke();
+  }
+
+  drawRoundedRect(ctx, 72, 420, 936, 520, 44, "rgba(9, 23, 9, 0.86)", "rgba(174,255,32,0.22)");
+
+  const walletIcon = await loadCanvasImage(A.walletHp);
+  if (walletIcon) {
+    ctx.drawImage(walletIcon, 108, 456, 86, 86);
+  }
+
+  drawCardText(ctx, "$BROKE RESULT", 216, 456, {
+    size: 28,
+    weight: 950,
+    color: "#aaff18",
+  });
+  drawCardText(ctx, "Public share card", 216, 494, {
+    size: 25,
+    weight: 750,
+    color: "rgba(243,255,233,0.70)",
+  });
+
+  const statCards = [
+    {
+      label: "Wallet HP",
+      value: `${walletHp}/100`,
+      x: 108,
+      y: 585,
+    },
+    {
+      label: "Leaks",
+      value: money(totalLeaks, settings.currency),
+      x: 552,
+      y: 585,
+    },
+    {
+      label: "$BROKE Score",
+      value: `${shareStats.xp.toLocaleString("en-US")} XP`,
+      x: 108,
+      y: 735,
+    },
+    {
+      label: "Top",
+      value: shareStats.rankLabel,
+      x: 552,
+      y: 735,
+    },
+  ];
+
+  statCards.forEach((card) => {
+    drawRoundedRect(ctx, card.x, card.y, 396, 118, 26, "rgba(174,255,32,0.08)", "rgba(174,255,32,0.16)");
+    drawCardText(ctx, card.label, card.x + 28, card.y + 22, {
+      size: 24,
+      weight: 800,
+      color: "rgba(243,255,233,0.62)",
+    });
+    drawCardText(ctx, card.value, card.x + 28, card.y + 57, {
+      size: card.value.length > 12 ? 31 : 42,
+      weight: 950,
+      color: "#aaff18",
+      maxWidth: 330,
+    });
+  });
+
+  drawCardText(ctx, `Streak: ${shareStats.currentStreak} days`, 108, 888, {
+    size: 29,
+    weight: 850,
+    color: "#f4ffe8",
+  });
+  drawCardText(ctx, `Badges: ${shareStats.badgeCount}/45`, 432, 888, {
+    size: 29,
+    weight: 850,
+    color: "#f4ffe8",
+  });
+
+  drawRoundedRect(ctx, 72, 984, 936, 162, 36, "rgba(174,255,32,0.08)", "rgba(174,255,32,0.18)");
+  drawCardText(ctx, "Potential yearly savings", 108, 1020, {
+    size: 27,
+    weight: 850,
+    color: "rgba(243,255,233,0.72)",
+  });
+  drawCardText(ctx, money(potentialYearlySavings, settings.currency), 108, 1062, {
+    size: 62,
+    weight: 950,
+    color: "#aaff18",
+  });
+  drawCardText(ctx, "Income and real balance stay hidden.", 108, 1132, {
+    size: 23,
+    weight: 750,
+    color: "rgba(243,255,233,0.58)",
+  });
+
+  drawCardText(ctx, "$BROKE Life Tracker", 72, 1240, {
+    size: 32,
+    weight: 950,
+    color: "#f4ffe8",
+  });
+  drawCardText(ctx, "Track your leaks. Fix your life.", 72, 1284, {
+    size: 24,
+    weight: 800,
+    color: "#aaff18",
+  });
+  drawCardText(ctx, "t.me/BrokeLifeTrackerBot", 1008, 1284, {
+    size: 23,
+    weight: 850,
+    color: "rgba(243,255,233,0.62)",
+    align: "right",
+  });
+
+  return await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("Could not create image"));
+        return;
+      }
+
+      resolve(blob);
+    }, "image/png", 0.95);
+  });
+}
+
 function ShareResultCard({
   settings,
   walletHp,
@@ -3181,6 +3455,8 @@ function ShareResultCard({
   leaderboard: LeaderboardState | null;
 }) {
   const [copied, setCopied] = useState(false);
+  const [imageStatus, setImageStatus] = useState<"idle" | "creating" | "ready" | "error">("idle");
+  const [imageUrl, setImageUrl] = useState("");
   const shareStats = getShareLeaderboardStats(leaderboard);
 
   const shareText = buildShareText({
@@ -3233,6 +3509,77 @@ function ShareResultCard({
     }
   }
 
+  async function createImageBlob() {
+    return await createShareCardBlob({
+      settings,
+      walletHp,
+      totalLeaks,
+      potentialYearlySavings,
+      shareStats,
+    });
+  }
+
+  async function createShareImage() {
+    try {
+      setImageStatus("creating");
+      const blob = await createImageBlob();
+      const url = URL.createObjectURL(blob);
+
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+
+      setImageUrl(url);
+      setImageStatus("ready");
+      triggerHaptic("success");
+    } catch {
+      setImageStatus("error");
+      triggerHaptic("error");
+    }
+  }
+
+  async function shareImage() {
+    try {
+      setImageStatus("creating");
+      const blob = await createImageBlob();
+      const file = new File([blob], "broke-life-tracker-result.png", {
+        type: "image/png",
+      });
+
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.canShare?.({ files: [file] }) &&
+        navigator.share
+      ) {
+        await navigator.share({
+          title: "$BROKE Life Tracker",
+          text: shareText,
+          files: [file],
+        });
+        setImageStatus("ready");
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "broke-life-tracker-result.png";
+      link.click();
+      URL.revokeObjectURL(url);
+      setImageStatus("ready");
+    } catch {
+      setImageStatus("error");
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (imageUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
+  }, [imageUrl]);
+
   return (
     <section className="share-card">
       <div className="section-title">
@@ -3263,6 +3610,12 @@ function ShareResultCard({
         <span>Public share hides income and real balance.</span>
       </div>
 
+      {imageUrl && (
+        <div className="share-image-preview">
+          <img src={imageUrl} alt="$BROKE Life Tracker share card" />
+        </div>
+      )}
+
       <div className="share-buttons">
         <button type="button" onClick={openXShare}>
           Share on X
@@ -3274,6 +3627,19 @@ function ShareResultCard({
           Share
         </button>
       </div>
+
+      <div className="share-image-actions">
+        <button type="button" onClick={createShareImage} disabled={imageStatus === "creating"}>
+          {imageStatus === "creating" ? "Creating..." : imageStatus === "ready" ? "Refresh card" : "Create share card"}
+        </button>
+        <button type="button" onClick={shareImage} disabled={imageStatus === "creating"}>
+          Share image
+        </button>
+      </div>
+
+      {imageStatus === "error" && (
+        <p className="share-image-error">Could not create image. Try again.</p>
+      )}
 
       <button type="button" className="copy-share-btn" onClick={copyShareText}>
         {copied ? "Copied" : "Copy share text"}
