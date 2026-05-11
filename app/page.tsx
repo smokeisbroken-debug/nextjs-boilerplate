@@ -3260,7 +3260,7 @@ function ShareResultCard({
 }) {
   const [copied, setCopied] = useState(false);
   const [imageSharing, setImageSharing] = useState(false);
-  const shareCardRef = useRef<HTMLElement | null>(null);
+  const shareCardRef = useRef<HTMLDivElement | null>(null);
   const shareStats = getShareLeaderboardStats(leaderboard);
 
   const shareText = buildShareText({
@@ -3343,29 +3343,58 @@ function ShareResultCard({
   }
 
   return (
-    <section className="share-card" ref={shareCardRef}>
+    <section className="share-card">
       <div className="section-title">
         <span>Share Result</span>
         <small>Telegram / X ready</small>
       </div>
 
-      <div className="share-preview share-preview-social">
-        <div>
-          <span>Wallet HP</span>
-          <strong>{walletHp}/100</strong>
+      <div className="public-share-image-card" ref={shareCardRef}>
+        <div className="public-share-top">
+          <div>
+            <span>$BROKE RESULT</span>
+            <strong>Public share card</strong>
+          </div>
+          <img src={A.walletMascot} alt="" />
         </div>
-        <div>
-          <span>Leaks</span>
-          <strong>{money(totalLeaks, settings.currency)}</strong>
+
+        <div className="share-preview share-preview-social">
+          <div>
+            <span>Wallet HP</span>
+            <strong>{walletHp}/100</strong>
+          </div>
+          <div>
+            <span>Leaks</span>
+            <strong>{money(totalLeaks, settings.currency)}</strong>
+          </div>
+          <div>
+            <span>$BROKE Score</span>
+            <strong>{shareStats.xp.toLocaleString("en-US")} XP</strong>
+          </div>
+          <div>
+            <span>Top</span>
+            <strong>{shareStats.rankLabel}</strong>
+          </div>
         </div>
-        <div>
-          <span>XP</span>
-          <strong>{shareStats.xp.toLocaleString("en-US")}</strong>
+
+        <div className="public-share-meta">
+          <strong>Streak: {shareStats.currentStreak} days</strong>
+          <strong>Badges: {shareStats.badgeCount}/45</strong>
         </div>
-        <div>
-          <span>Top</span>
-          <strong>{shareStats.rankLabel}</strong>
+
+        <div className="public-share-savings">
+          <span>Potential yearly savings</span>
+          <strong>{money(potentialYearlySavings, settings.currency)}</strong>
+          <small>Income and real balance stay hidden.</small>
         </div>
+
+        <footer className="public-share-footer">
+          <div>
+            <strong>$BROKE Life Tracker</strong>
+            <span>Track your leaks. Fix your life.</span>
+          </div>
+          <b>t.me/BrokeLifeTrackerBot</b>
+        </footer>
       </div>
 
       <div className="share-privacy-note">
@@ -3389,7 +3418,7 @@ function ShareResultCard({
       </button>
 
       <button type="button" className="copy-share-btn share-image-only-btn" onClick={shareImageOnly}>
-        {imageSharing ? "Preparing image..." : "Send image to TG"}
+        {imageSharing ? "Preparing image..." : "Send clean image to TG"}
       </button>
     </section>
   );
