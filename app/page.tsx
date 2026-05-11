@@ -185,6 +185,12 @@ type WebAuthState = {
   user: TelegramUser | null;
 };
 
+type LinkCodeState = {
+  code: string;
+  token: string;
+  expiresAt: string;
+};
+
 type CloudStatus = "local" | "syncing" | "cloud" | "error";
 
 type BrokeApiResponse = {
@@ -2739,7 +2745,9 @@ function WebTelegramSyncCard({
   telegram: TelegramState;
   webAuth: WebAuthState;
 }) {
-  const widgetRef = useRef<HTMLDivElement | null>(null);
+  const [linkCode, setLinkCode] = useState<LinkCodeState | null>(null);
+  const [linkStatus, setLinkStatus] = useState<"idle" | "creating" | "waiting" | "linked" | "error">("idle");
+  const [linkError, setLinkError] = useState("");
   const [isFramed, setIsFramed] = useState(false);
   const [fullAppUrl, setFullAppUrl] = useState("");
 
@@ -2755,29 +2763,92 @@ function WebTelegramSyncCard({
   }, []);
 
   useEffect(() => {
-    if (telegram.isTelegram || webAuth.authenticated || webAuth.loading || isFramed) return;
-    if (!widgetRef.current) return;
+    if (!linkCode || webAuth.authenticated) return;
 
-    widgetRef.current.innerHTML = "";
+    let cancelled = false;
 
-    const script = document.createElement("script");
-    script.src = TELEGRAM_LOGIN_SCRIPT;
-    script.async = true;
-    script.setAttribute("data-telegram-login", TELEGRAM_BOT_USERNAME);
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-radius", "12");
-    script.setAttribute("data-userpic", "false");
-    script.setAttribute("data-request-access", "write");
-    script.setAttribute("data-auth-url", "/api/auth/telegram");
+    async function pollLinkStatus() {
+      try {
+        const response = await fetch("/api/auth/link-code", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            action: "status",
+            token: linkCode.token,
+          }),
+        });
 
-    widgetRef.current.appendChild(script);
+        const data = await response.json();
+
+        if (cancelled) return;
+
+        if (!response.ok || !data.ok) {
+          throw new Error(data.error || "Link check failed");
+        }
+
+        if (data.linked) {
+          setLinkStatus("linked");
+          window.setTimeout(() => window.location.reload(), 700);
+        }
+      } catch (error) {
+        if (cancelled) return;
+
+        setLinkStatus("error");
+        setLinkError(error instanceof Error ? error.message : "Link check failed");
+      }
+    }
+
+    pollLinkStatus();
+    const interval = window.setInterval(pollLinkStatus, 2500);
 
     return () => {
-      script.remove();
+      cancelled = true;
+      window.clearInterval(interval);
     };
-  }, [telegram.isTelegram, webAuth.authenticated, webAuth.loading, isFramed]);
+  }, [linkCode, webAuth.authenticated]);
+
+  async function createLinkCode() {
+    try {
+      setLinkStatus("creating");
+      setLinkError("");
+
+      const response = await fetch("/api/auth/link-code", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          action: "create",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Could not create link code");
+      }
+
+      setLinkCode({
+        code: data.code,
+        token: data.token,
+        expiresAt: data.expiresAt,
+      });
+      setLinkStatus("waiting");
+    } catch (error) {
+      setLinkStatus("error");
+      setLinkError(error instanceof Error ? error.message : "Could not create link code");
+    }
+  }
 
   if (telegram.isTelegram) return null;
+
+  const botLink = linkCode
+    ? `https://t.me/${TELEGRAM_BOT_USERNAME}?start=link_${linkCode.code}`
+    : `https://t.me/${TELEGRAM_BOT_USERNAME}`;
 
   return (
     <section className={`web-sync-card ${webAuth.authenticated ? "connected" : ""}`}>
@@ -2787,16 +2858,29 @@ function WebTelegramSyncCard({
           {webAuth.authenticated
             ? `Synced with ${webAuth.user?.username ? `@${webAuth.user.username}` : webAuth.user?.first_name || "Telegram"}`
             : isFramed
-              ? "Open full app to sync your Telegram account"
-              : "Use one account on website and Telegram"}
+              ? "Open full app to link your Telegram account"
+              : linkCode
+                ? `Send code ${linkCode.code} to the bot`
+                : "Use one account on website and Telegram"}
         </strong>
         <p>
           {webAuth.authenticated
             ? "Website progress now uses the same Supabase profile as your Telegram Mini App."
             : isFramed
-              ? "Telegram Login does not work reliably inside the embedded website frame. Open the full app, login once, then your account can sync."
-              : "Login with Telegram to sync expenses, streaks, badges, challenges and leaderboard across website and Telegram."}
+              ? "Open the full app first. Embedded mode is read-only for account linking."
+              : linkCode
+                ? "Open the bot and send the code. This page will connect automatically after confirmation."
+                : "No Telegram SMS needed. Generate a code, open the bot, and link the website to your Telegram account."}
         </p>
+
+        {linkCode && !webAuth.authenticated && (
+          <div className="manual-link-code">
+            <b>{linkCode.code}</b>
+            <span>expires soon</span>
+          </div>
+        )}
+
+        {linkError && <small className="web-sync-error">{linkError}</small>}
       </div>
 
       {webAuth.authenticated ? (
@@ -2807,10 +2891,14 @@ function WebTelegramSyncCard({
         <a className="web-sync-logout" href={fullAppUrl || "/"} target="_blank" rel="noreferrer">
           Open full app
         </a>
+      ) : linkCode ? (
+        <a className="web-sync-logout" href={botLink} target="_blank" rel="noreferrer">
+          Open bot
+        </a>
       ) : (
-        <div className="telegram-login-widget" ref={widgetRef}>
-          {webAuth.loading ? "Checking..." : "Loading Telegram login..."}
-        </div>
+        <button className="web-sync-button" type="button" onClick={createLinkCode} disabled={linkStatus === "creating"}>
+          {linkStatus === "creating" ? "Creating..." : "Link Telegram"}
+        </button>
       )}
     </section>
   );
