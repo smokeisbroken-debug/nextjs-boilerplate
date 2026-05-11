@@ -394,6 +394,13 @@ const categories = [
   { name: "Custom", icon: A.custom },
 ];
 
+const firstLeakPresets = [
+  { category: "Coffee", amount: 2, icon: A.coffee, label: "Coffee leak" },
+  { category: "Smoking", amount: 5, icon: A.smoking, label: "Smoking leak" },
+  { category: "Takeouts", amount: 15, icon: A.takeouts, label: "Takeout leak" },
+  { category: "Shopping", amount: 20, icon: A.shopping, label: "Random buy" },
+];
+
 const defaultChallengeTemplates: ChallengeTemplate[] = [
   {
     id: "no_takeout_3",
@@ -1831,7 +1838,7 @@ export default function Home() {
     setAmount("");
     setNote("");
     setExpenseType("Needed");
-    setActiveTab("home");
+    setActiveTab("add");
 
     if (cloudAuthReady) {
       try {
@@ -1852,6 +1859,49 @@ export default function Home() {
       } catch (error) {
         setCloudStatus("error");
         setCloudError(error instanceof Error ? error.message : "Expense cloud save failed");
+      }
+    }
+  }
+
+  async function addQuickExpense(category: string, value: number, needType: NeedType = "Not needed") {
+    if (value <= 0) return;
+
+    const expense: Expense = {
+      id: uid(),
+      amount: value,
+      category,
+      needType,
+      note: "First leak",
+      createdAt: new Date().toISOString(),
+    };
+
+    triggerHaptic("success");
+    setExpenses((prev) => [expense, ...prev]);
+    setAmount("");
+    setNote("");
+    setSelectedCategory(category);
+    setExpenseType(needType);
+    setActiveTab("home");
+
+    if (cloudAuthReady) {
+      try {
+        const data = await callBrokeApi(cloudInitData, "addExpense", {
+          expense,
+        });
+
+        if (data.expense) {
+          setExpenses((prev) =>
+            prev.map((item) => (item.id === expense.id ? data.expense! : item))
+          );
+          if (data.streak) setStreak(data.streak);
+          if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
+          if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
+          applyApiFeedback(data, "First leak tracked");
+          setCloudStatus("cloud");
+        }
+      } catch (error) {
+        setCloudStatus("error");
+        setCloudError(error instanceof Error ? error.message : "First leak cloud save failed");
       }
     }
   }
@@ -2059,6 +2109,8 @@ export default function Home() {
             leaderboard={leaderboard}
             expenses={currentMonthExpenses.slice(0, 6)}
             onDeleteExpense={deleteExpense}
+            onQuickLeak={addQuickExpense}
+            onOpenAdd={() => setActiveTab("add")}
             telegram={telegram}
             webAuth={webAuth}
             cloudStatus={cloudStatus}
@@ -2336,7 +2388,7 @@ function OnboardingScreen({
         <img src={A.appFrog} alt="$BROKE" />
         <div>
           <span>Step {step + 1} / 4</span>
-          <strong>$BROKE Setup</strong>
+          <strong>First Leak Setup</strong>
         </div>
       </div>
 
@@ -2349,8 +2401,8 @@ function OnboardingScreen({
           <img src={A.walletMascot} alt="" />
           <h1>Welcome, {firstName}.</h1>
           <p>
-            This tracker is not about being rich. It is about seeing where your
-            money leaks before the month disappears.
+            This tracker is not about being rich. It is about catching the first
+            small leak before it becomes your monthly rhythm.
           </p>
 
           <div className="onboarding-points">
@@ -2475,8 +2527,8 @@ function OnboardingScreen({
           </div>
 
           <p>
-            Start with small daily expenses. Coffee, taxis, takeouts, smoking,
-            subscriptions. That is where the leaks become visible.
+            Next step: add one real leak. Coffee, smoking, takeout, taxi,
+            shopping, or anything that quietly drains the wallet.
           </p>
         </section>
       )}
@@ -2502,7 +2554,7 @@ function OnboardingScreen({
             className="primary-btn onboarding-next"
             onClick={() => onComplete(draft)}
           >
-            Start Tracking
+            Add first leak
           </button>
         )}
       </div>
@@ -2577,6 +2629,8 @@ function DashboardScreen({
   leaderboard,
   expenses,
   onDeleteExpense,
+  onQuickLeak,
+  onOpenAdd,
   telegram,
   webAuth,
   cloudStatus,
@@ -2600,6 +2654,8 @@ function DashboardScreen({
   leaderboard: LeaderboardState | null;
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
+  onQuickLeak: (category: string, value: number, needType?: NeedType) => void;
+  onOpenAdd: () => void;
   telegram: TelegramState;
   webAuth: WebAuthState;
   cloudStatus: CloudStatus;
@@ -2691,6 +2747,14 @@ function DashboardScreen({
 
       <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
 
+      {expenses.length === 0 && (
+        <FirstLeakOnboardingCard
+          settings={settings}
+          onQuickLeak={onQuickLeak}
+          onOpenAdd={onOpenAdd}
+        />
+      )}
+
       <ShareResultCard
         settings={settings}
         walletHp={summary.walletHp}
@@ -2736,6 +2800,66 @@ function DashboardScreen({
 
 
 
+
+
+function FirstLeakOnboardingCard({
+  settings,
+  onQuickLeak,
+  onOpenAdd,
+}: {
+  settings: Settings;
+  onQuickLeak: (category: string, value: number, needType?: NeedType) => void;
+  onOpenAdd: () => void;
+}) {
+  return (
+    <section className="first-leak-card">
+      <div className="first-leak-hero">
+        <img src={A.walletMascot} alt="" />
+        <div>
+          <span>First Leak Mission</span>
+          <strong>Catch one leak in under 10 seconds.</strong>
+          <p>
+            Start with a small real expense. The app will calculate Wallet HP,
+            unlock your first progress, and show the leak pattern.
+          </p>
+        </div>
+      </div>
+
+      <div className="first-leak-steps">
+        <div>
+          <b>1</b>
+          <span>Pick a leak</span>
+        </div>
+        <div>
+          <b>2</b>
+          <span>Get insight</span>
+        </div>
+        <div>
+          <b>3</b>
+          <span>Share result</span>
+        </div>
+      </div>
+
+      <div className="first-leak-presets">
+        {firstLeakPresets.map((preset) => (
+          <button
+            type="button"
+            key={preset.category}
+            onClick={() => onQuickLeak(preset.category, preset.amount, "Not needed")}
+          >
+            <img src={preset.icon} alt="" />
+            <span>{preset.label}</span>
+            <strong>{money(preset.amount, settings.currency)}</strong>
+          </button>
+        ))}
+      </div>
+
+      <button type="button" className="first-leak-custom" onClick={onOpenAdd}>
+        Add custom first leak
+      </button>
+    </section>
+  );
+}
 
 function WebTelegramSyncCard({
   telegram,
