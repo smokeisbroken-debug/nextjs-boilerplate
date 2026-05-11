@@ -6208,3 +6208,9 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
 .share-image-only-btn:disabled {
   opacity: 0.55;
 }
+
+
+/* ===== V39.3 SHARE IMAGE VIA BOT FALLBACK ===== */
+.share-image-only-btn {
+  margin-top: 10px !important;
+}
