@@ -3538,6 +3538,33 @@ function ShareResultCard({
     }
   }
 
+  function downloadBlob(blob: Blob) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "broke-life-tracker-result.png";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.setTimeout(() => URL.revokeObjectURL(url), 500);
+  }
+
+  async function downloadImage() {
+    try {
+      setImageStatus("creating");
+      const blob = await createImageBlob();
+
+      downloadBlob(blob);
+      setImageStatus("ready");
+      triggerHaptic("success");
+    } catch {
+      setImageStatus("error");
+      triggerHaptic("error");
+    }
+  }
+
   async function shareImage() {
     try {
       setImageStatus("creating");
@@ -3548,27 +3575,25 @@ function ShareResultCard({
 
       if (
         typeof navigator !== "undefined" &&
-        navigator.canShare?.({ files: [file] }) &&
-        navigator.share
+        navigator.share &&
+        navigator.canShare?.({ files: [file] })
       ) {
+        // Important: do not pass text here.
+        // Some mobile webviews ignore files and share only the text if text is present.
         await navigator.share({
           title: "$BROKE Life Tracker",
-          text: shareText,
           files: [file],
         });
         setImageStatus("ready");
         return;
       }
 
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "broke-life-tracker-result.png";
-      link.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob);
       setImageStatus("ready");
+      triggerHaptic("success");
     } catch {
       setImageStatus("error");
+      triggerHaptic("error");
     }
   }
 
@@ -3628,12 +3653,15 @@ function ShareResultCard({
         </button>
       </div>
 
-      <div className="share-image-actions">
+      <div className="share-image-actions share-image-actions-three">
         <button type="button" onClick={createShareImage} disabled={imageStatus === "creating"}>
-          {imageStatus === "creating" ? "Creating..." : imageStatus === "ready" ? "Refresh card" : "Create share card"}
+          {imageStatus === "creating" ? "Creating..." : imageStatus === "ready" ? "Refresh card" : "Create card"}
         </button>
         <button type="button" onClick={shareImage} disabled={imageStatus === "creating"}>
           Share image
+        </button>
+        <button type="button" onClick={downloadImage} disabled={imageStatus === "creating"}>
+          Download PNG
         </button>
       </div>
 
