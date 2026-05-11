@@ -5698,3 +5698,59 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
     place-items: start;
   }
 }
+
+
+/* ===== V39 MANUAL TELEGRAM LINK CODE ===== */
+/* Paste after previous v38 CSS if using manual install. */
+
+.web-sync-button {
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  color: #071006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  font-size: 11px;
+  font-weight: 950;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.web-sync-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.manual-link-code {
+  width: fit-content;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: rgba(183, 255, 25, 0.08);
+  border: 1px solid rgba(183, 255, 25, 0.18);
+}
+
+.manual-link-code b {
+  color: var(--green);
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
+.manual-link-code span {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.web-sync-error {
+  display: block;
+  margin-top: 6px;
+  color: #ff7f7f;
+  font-size: 10px;
+  line-height: 1.25;
+}
