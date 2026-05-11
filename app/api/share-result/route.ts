@@ -137,16 +137,7 @@ function getAuthenticatedUser(request: NextRequest, initData: string) {
 }
 
 function shortCaption(caption: string, user: TelegramUser) {
-  const name = user.username ? `@${user.username}` : user.first_name || "A $BROKE user";
-  const cleaned = caption
-    .replace(/\r/g, "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 10)
-    .join("\n");
-
-  return [`${name} shared a $BROKE result`, "", cleaned].join("\n").slice(0, 900);
+  return "";
 }
 
 async function sendPhotoToTelegram(chatId: number | string, image: File, caption: string) {
@@ -158,7 +149,9 @@ async function sendPhotoToTelegram(chatId: number | string, image: File, caption
 
   const formData = new FormData();
   formData.append("chat_id", String(chatId));
-  formData.append("caption", caption);
+  if (caption.trim()) {
+    formData.append("caption", caption.trim());
+  }
   formData.append("photo", blob, image.name || "broke-result.png");
 
   const response = await fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
