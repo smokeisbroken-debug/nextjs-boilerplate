@@ -6662,3 +6662,521 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
     font-size: 31px !important;
   }
 }
+
+
+/* ===== V39.3 SHARE IMAGE VIA BOT FALLBACK ===== */
+.share-image-only-btn {
+  margin-top: 10px !important;
+}
+
+
+/* ===== V39.4 CLEAN SHARE CARD IMAGE ===== */
+.public-share-image-card {
+  width: 100%;
+  padding: 18px;
+  margin: 0 0 14px;
+  border-radius: 22px;
+  overflow: hidden;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 82% 0%, rgba(183, 255, 25, 0.14), transparent 35%),
+    linear-gradient(180deg, rgba(8, 18, 8, 0.98), rgba(2, 4, 2, 0.98));
+  border: 1px solid rgba(183, 255, 25, 0.22);
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 255, 25, 0.04),
+    0 18px 50px rgba(0, 0, 0, 0.34);
+}
+
+.public-share-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.public-share-top span {
+  display: block;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.public-share-top strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.public-share-top img {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  object-fit: cover;
+  box-shadow: 0 0 22px rgba(183, 255, 25, 0.22);
+}
+
+.public-share-image-card .share-preview-social {
+  margin: 0 !important;
+}
+
+.public-share-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0 14px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.public-share-savings {
+  display: grid;
+  gap: 3px;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 17px;
+  background: rgba(183, 255, 25, 0.075);
+  border: 1px solid rgba(183, 255, 25, 0.15);
+}
+
+.public-share-savings span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.public-share-savings strong {
+  color: var(--green);
+  font-size: 34px;
+  line-height: 1;
+}
+
+.public-share-savings small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.public-share-footer {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.public-share-footer strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.public-share-footer span {
+  display: block;
+  margin-top: 3px;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.public-share-footer b {
+  color: var(--text);
+  font-size: 10px;
+  opacity: 0.82;
+}
+
+@media (max-width: 430px) {
+  .public-share-image-card {
+    padding: 14px;
+  }
+
+  .public-share-meta {
+    font-size: 12px;
+  }
+
+  .public-share-savings strong {
+    font-size: 30px;
+  }
+
+  .public-share-footer {
+    align-items: start;
+    flex-direction: column;
+  }
+}
+
+
+/* ===== V39.5 SHARE CARD VISUAL FIX ===== */
+/* Fixes exported PNG proportions, cropped text and over-wide Telegram preview. */
+
+.public-share-image-card {
+  width: min(360px, 100%) !important;
+  max-width: 360px !important;
+  margin: 0 auto 14px !important;
+  padding: 18px 16px 16px !important;
+  box-sizing: border-box !important;
+  border-radius: 24px !important;
+  overflow: hidden !important;
+}
+
+.public-share-top {
+  margin-bottom: 13px !important;
+}
+
+.public-share-top span {
+  font-size: 11px !important;
+  line-height: 1.05 !important;
+}
+
+.public-share-top strong {
+  font-size: 14px !important;
+  line-height: 1.1 !important;
+}
+
+.public-share-top img {
+  width: 40px !important;
+  height: 40px !important;
+  flex: 0 0 auto !important;
+}
+
+.public-share-image-card .share-preview-social {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin: 0 !important;
+  width: 100% !important;
+}
+
+.public-share-image-card .share-preview-social > div {
+  min-width: 0 !important;
+  min-height: 92px !important;
+  padding: 13px 11px !important;
+  box-sizing: border-box !important;
+  border-radius: 17px !important;
+  overflow: hidden !important;
+}
+
+.public-share-image-card .share-preview-social span {
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+}
+
+.public-share-image-card .share-preview-social strong {
+  display: block !important;
+  max-width: 100% !important;
+  margin-top: 10px !important;
+  color: var(--green) !important;
+  font-size: 24px !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.8px !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.public-share-image-card .share-preview-social > div:nth-child(3) strong {
+  font-size: 22px !important;
+}
+
+.public-share-image-card .share-preview-social > div:nth-child(4) strong {
+  font-size: 22px !important;
+  letter-spacing: -0.9px !important;
+}
+
+.public-share-meta {
+  margin: 12px 0 13px !important;
+  font-size: 12px !important;
+  line-height: 1.2 !important;
+  align-items: center !important;
+}
+
+.public-share-savings {
+  margin-top: 11px !important;
+  padding: 13px !important;
+  border-radius: 17px !important;
+}
+
+.public-share-savings span {
+  font-size: 11px !important;
+  line-height: 1.1 !important;
+}
+
+.public-share-savings strong {
+  margin-top: 2px !important;
+  font-size: 34px !important;
+  line-height: 1 !important;
+  letter-spacing: -1px !important;
+}
+
+.public-share-savings small {
+  font-size: 10px !important;
+  line-height: 1.15 !important;
+}
+
+.public-share-footer {
+  margin-top: 16px !important;
+  padding-bottom: 2px !important;
+  align-items: flex-end !important;
+}
+
+.public-share-footer strong {
+  font-size: 15px !important;
+  line-height: 1.1 !important;
+}
+
+.public-share-footer span {
+  font-size: 11px !important;
+  line-height: 1.15 !important;
+}
+
+.public-share-footer b {
+  font-size: 9px !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+}
+
+/* Hide visual-only note from the PNG if it causes crowding on smaller screens. */
+@media (max-width: 380px) {
+  .public-share-image-card {
+    width: min(340px, 100%) !important;
+    max-width: 340px !important;
+    padding: 16px 14px 15px !important;
+  }
+
+  .public-share-image-card .share-preview-social > div {
+    min-height: 86px !important;
+    padding: 12px 10px !important;
+  }
+
+  .public-share-image-card .share-preview-social strong {
+    font-size: 22px !important;
+  }
+
+  .public-share-image-card .share-preview-social > div:nth-child(3) strong,
+  .public-share-image-card .share-preview-social > div:nth-child(4) strong {
+    font-size: 20px !important;
+  }
+
+  .public-share-savings strong {
+    font-size: 31px !important;
+  }
+}
+
+
+/* ===== V40 FIRST LEAK ONBOARDING ===== */
+.first-leak-card {
+  margin: 14px 0;
+  padding: 16px;
+  border-radius: 24px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 88% 0%, rgba(183, 255, 25, 0.14), transparent 40%),
+    linear-gradient(180deg, rgba(183, 255, 25, 0.065), rgba(255, 255, 255, 0.018));
+  border: 1px solid rgba(183, 255, 25, 0.18);
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 255, 25, 0.035),
+    0 18px 45px rgba(0, 0, 0, 0.28);
+}
+
+.first-leak-hero {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.first-leak-hero img {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  object-fit: cover;
+  box-shadow: 0 0 28px rgba(183, 255, 25, 0.18);
+}
+
+.first-leak-hero span {
+  display: block;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.first-leak-hero strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 20px;
+  line-height: 1.05;
+}
+
+.first-leak-hero p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.first-leak-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.first-leak-steps div {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 7px;
+  align-items: center;
+  padding: 9px;
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(183, 255, 25, 0.10);
+}
+
+.first-leak-steps b {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #071006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.first-leak-steps span {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1.15;
+}
+
+.first-leak-presets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.first-leak-presets button {
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 17px;
+  border: 1px solid rgba(183, 255, 25, 0.14);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text);
+  text-align: left;
+}
+
+.first-leak-presets img {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+.first-leak-presets span {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1.15;
+}
+
+.first-leak-presets strong {
+  color: var(--green);
+  font-size: 15px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.first-leak-custom {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 17px;
+  color: #071006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  font-weight: 950;
+  font-size: 15px;
+}
+
+@media (min-width: 900px) {
+  .first-leak-card {
+    padding: 12px;
+    border-radius: 18px;
+    margin: 8px 0;
+  }
+
+  .first-leak-hero {
+    grid-template-columns: 46px 1fr;
+  }
+
+  .first-leak-hero img {
+    width: 46px;
+    height: 46px;
+  }
+
+  .first-leak-hero strong {
+    font-size: 16px;
+  }
+
+  .first-leak-hero p {
+    font-size: 10.5px;
+  }
+
+  .first-leak-steps {
+    margin: 10px 0;
+  }
+
+  .first-leak-presets {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .first-leak-presets button {
+    min-height: 58px;
+    grid-template-columns: 30px 1fr;
+    grid-template-rows: auto auto;
+    gap: 4px 7px;
+    padding: 8px;
+  }
+
+  .first-leak-presets img {
+    width: 30px;
+    height: 30px;
+    grid-row: span 2;
+  }
+
+  .first-leak-presets span {
+    font-size: 10.5px;
+  }
+
+  .first-leak-presets strong {
+    font-size: 13px;
+  }
+
+  .first-leak-custom {
+    min-height: 40px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 430px) {
+  .first-leak-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .first-leak-presets {
+    grid-template-columns: 1fr;
+  }
+}
