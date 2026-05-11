@@ -2740,9 +2740,22 @@ function WebTelegramSyncCard({
   webAuth: WebAuthState;
 }) {
   const widgetRef = useRef<HTMLDivElement | null>(null);
+  const [isFramed, setIsFramed] = useState(false);
+  const [fullAppUrl, setFullAppUrl] = useState("");
 
   useEffect(() => {
-    if (telegram.isTelegram || webAuth.authenticated || webAuth.loading) return;
+    try {
+      const framed = window.self !== window.top;
+      setIsFramed(framed);
+      setFullAppUrl(window.location.origin + window.location.pathname);
+    } catch {
+      setIsFramed(true);
+      setFullAppUrl("/");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (telegram.isTelegram || webAuth.authenticated || webAuth.loading || isFramed) return;
     if (!widgetRef.current) return;
 
     widgetRef.current.innerHTML = "";
@@ -2762,7 +2775,7 @@ function WebTelegramSyncCard({
     return () => {
       script.remove();
     };
-  }, [telegram.isTelegram, webAuth.authenticated, webAuth.loading]);
+  }, [telegram.isTelegram, webAuth.authenticated, webAuth.loading, isFramed]);
 
   if (telegram.isTelegram) return null;
 
@@ -2773,18 +2786,26 @@ function WebTelegramSyncCard({
         <strong>
           {webAuth.authenticated
             ? `Synced with ${webAuth.user?.username ? `@${webAuth.user.username}` : webAuth.user?.first_name || "Telegram"}`
-            : "Use one account on website and Telegram"}
+            : isFramed
+              ? "Open full app to sync your Telegram account"
+              : "Use one account on website and Telegram"}
         </strong>
         <p>
           {webAuth.authenticated
             ? "Website progress now uses the same Supabase profile as your Telegram Mini App."
-            : "Login with Telegram to sync expenses, streaks, badges, challenges and leaderboard across website and Telegram."}
+            : isFramed
+              ? "Telegram Login does not work reliably inside the embedded website frame. Open the full app, login once, then your account can sync."
+              : "Login with Telegram to sync expenses, streaks, badges, challenges and leaderboard across website and Telegram."}
         </p>
       </div>
 
       {webAuth.authenticated ? (
         <a className="web-sync-logout" href="/api/auth/telegram/logout">
           Log out
+        </a>
+      ) : isFramed ? (
+        <a className="web-sync-logout" href={fullAppUrl || "/"} target="_blank" rel="noreferrer">
+          Open full app
         </a>
       ) : (
         <div className="telegram-login-widget" ref={widgetRef}>
