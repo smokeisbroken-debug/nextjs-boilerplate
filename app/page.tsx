@@ -3165,278 +3165,56 @@ function buildShareText({
   ].join("\n");
 }
 
+async function createShareImageFileFromElement(element: HTMLElement) {
+  const html2canvasModule = await import("html2canvas");
+  const html2canvas = html2canvasModule.default;
 
-function loadCanvasImage(src: string) {
-  return new Promise<HTMLImageElement | null>((resolve) => {
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = () => resolve(null);
-    image.src = src;
+  const canvas = await html2canvas(element, {
+    backgroundColor: "#020402",
+    scale: Math.min(window.devicePixelRatio || 2, 3),
+    useCORS: true,
+  });
+
+  const blob = await new Promise<Blob | null>((resolve) => {
+    canvas.toBlob((result) => resolve(result), "image/png", 0.96);
+  });
+
+  if (!blob) {
+    throw new Error("Could not create share image.");
+  }
+
+  return new File([blob], "broke-life-tracker-result.png", {
+    type: "image/png",
   });
 }
 
-function roundRectPath(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number
-) {
-  const r = Math.min(radius, width / 2, height / 2);
+async function shareImageOnlyFromElement(element: HTMLElement) {
+  const imageFile = await createShareImageFileFromElement(element);
 
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + width, y, x + width, y + height, r);
-  ctx.arcTo(x + width, y + height, x, y + height, r);
-  ctx.arcTo(x, y + height, x, y, r);
-  ctx.arcTo(x, y, x + width, y, r);
-  ctx.closePath();
-}
-
-function drawRoundedRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-  fill: string,
-  stroke?: string
-) {
-  roundRectPath(ctx, x, y, width, height, radius);
-  ctx.fillStyle = fill;
-  ctx.fill();
-
-  if (stroke) {
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 3;
-    ctx.stroke();
-  }
-}
-
-function drawCardText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  options: {
-    size: number;
-    weight?: number;
-    color?: string;
-    align?: CanvasTextAlign;
-    maxWidth?: number;
-  }
-) {
-  ctx.font = `${options.weight ?? 800} ${options.size}px Arial, Helvetica, sans-serif`;
-  ctx.fillStyle = options.color ?? "#f3ffe9";
-  ctx.textAlign = options.align ?? "left";
-  ctx.textBaseline = "top";
-  ctx.fillText(text, x, y, options.maxWidth);
-}
-
-async function createShareCardBlob({
-  settings,
-  walletHp,
-  totalLeaks,
-  potentialYearlySavings,
-  shareStats,
-}: {
-  settings: Settings;
-  walletHp: number;
-  totalLeaks: number;
-  potentialYearlySavings: number;
-  shareStats: ReturnType<typeof getShareLeaderboardStats>;
-}) {
-  const width = 1080;
-  const height = 1350;
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-
-  const ctx = canvas.getContext("2d");
-
-  if (!ctx) {
-    throw new Error("Canvas is not supported");
-  }
-
-  const bg = ctx.createLinearGradient(0, 0, 0, height);
-  bg.addColorStop(0, "#051204");
-  bg.addColorStop(0.48, "#020602");
-  bg.addColorStop(1, "#000000");
-  ctx.fillStyle = bg;
-  ctx.fillRect(0, 0, width, height);
-
-  const glow = ctx.createRadialGradient(width * 0.68, 240, 40, width * 0.68, 240, 640);
-  glow.addColorStop(0, "rgba(171,255,30,0.30)");
-  glow.addColorStop(0.42, "rgba(83,255,34,0.10)");
-  glow.addColorStop(1, "rgba(0,0,0,0)");
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, width, height);
-
-  ctx.globalAlpha = 0.22;
-  ctx.strokeStyle = "rgba(174,255,32,0.12)";
-  ctx.lineWidth = 1;
-  for (let x = 0; x < width; x += 72) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, height);
-    ctx.stroke();
-  }
-  for (let y = 0; y < height; y += 72) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(width, y);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-
-  drawCardText(ctx, "Your wallet", 72, 76, {
-    size: 82,
-    weight: 950,
-    color: "#f4ffe8",
-  });
-  drawCardText(ctx, "is not broken.", 72, 158, {
-    size: 82,
-    weight: 950,
-    color: "#f4ffe8",
-  });
-  drawCardText(ctx, "It is leaking.", 72, 240, {
-    size: 82,
-    weight: 950,
-    color: "#aaff18",
-  });
-
-  const frog = await loadCanvasImage(A.homeMascot);
-  if (frog) {
-    ctx.save();
-    roundRectPath(ctx, 710, 74, 276, 276, 48);
-    ctx.clip();
-    ctx.drawImage(frog, 710, 74, 276, 276);
-    ctx.restore();
-
-    ctx.strokeStyle = "rgba(174,255,32,0.28)";
-    ctx.lineWidth = 4;
-    roundRectPath(ctx, 710, 74, 276, 276, 48);
-    ctx.stroke();
-  }
-
-  drawRoundedRect(ctx, 72, 420, 936, 520, 44, "rgba(9, 23, 9, 0.86)", "rgba(174,255,32,0.22)");
-
-  const walletIcon = await loadCanvasImage(A.walletHp);
-  if (walletIcon) {
-    ctx.drawImage(walletIcon, 108, 456, 86, 86);
-  }
-
-  drawCardText(ctx, "$BROKE RESULT", 216, 456, {
-    size: 28,
-    weight: 950,
-    color: "#aaff18",
-  });
-  drawCardText(ctx, "Public share card", 216, 494, {
-    size: 25,
-    weight: 750,
-    color: "rgba(243,255,233,0.70)",
-  });
-
-  const statCards = [
-    {
-      label: "Wallet HP",
-      value: `${walletHp}/100`,
-      x: 108,
-      y: 585,
-    },
-    {
-      label: "Leaks",
-      value: money(totalLeaks, settings.currency),
-      x: 552,
-      y: 585,
-    },
-    {
-      label: "$BROKE Score",
-      value: `${shareStats.xp.toLocaleString("en-US")} XP`,
-      x: 108,
-      y: 735,
-    },
-    {
-      label: "Top",
-      value: shareStats.rankLabel,
-      x: 552,
-      y: 735,
-    },
-  ];
-
-  statCards.forEach((card) => {
-    drawRoundedRect(ctx, card.x, card.y, 396, 118, 26, "rgba(174,255,32,0.08)", "rgba(174,255,32,0.16)");
-    drawCardText(ctx, card.label, card.x + 28, card.y + 22, {
-      size: 24,
-      weight: 800,
-      color: "rgba(243,255,233,0.62)",
+  if (
+    typeof navigator !== "undefined" &&
+    typeof navigator.canShare === "function" &&
+    navigator.canShare({ files: [imageFile] }) &&
+    typeof navigator.share === "function"
+  ) {
+    await navigator.share({
+      files: [imageFile],
     });
-    drawCardText(ctx, card.value, card.x + 28, card.y + 57, {
-      size: card.value.length > 12 ? 31 : 42,
-      weight: 950,
-      color: "#aaff18",
-      maxWidth: 330,
-    });
-  });
 
-  drawCardText(ctx, `Streak: ${shareStats.currentStreak} days`, 108, 888, {
-    size: 29,
-    weight: 850,
-    color: "#f4ffe8",
-  });
-  drawCardText(ctx, `Badges: ${shareStats.badgeCount}/45`, 432, 888, {
-    size: 29,
-    weight: 850,
-    color: "#f4ffe8",
-  });
+    return "shared";
+  }
 
-  drawRoundedRect(ctx, 72, 984, 936, 162, 36, "rgba(174,255,32,0.08)", "rgba(174,255,32,0.18)");
-  drawCardText(ctx, "Potential yearly savings", 108, 1020, {
-    size: 27,
-    weight: 850,
-    color: "rgba(243,255,233,0.72)",
-  });
-  drawCardText(ctx, money(potentialYearlySavings, settings.currency), 108, 1062, {
-    size: 62,
-    weight: 950,
-    color: "#aaff18",
-  });
-  drawCardText(ctx, "Income and real balance stay hidden.", 108, 1132, {
-    size: 23,
-    weight: 750,
-    color: "rgba(243,255,233,0.58)",
-  });
+  const url = URL.createObjectURL(imageFile);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = imageFile.name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 
-  drawCardText(ctx, "$BROKE Life Tracker", 72, 1240, {
-    size: 32,
-    weight: 950,
-    color: "#f4ffe8",
-  });
-  drawCardText(ctx, "Track your leaks. Fix your life.", 72, 1284, {
-    size: 24,
-    weight: 800,
-    color: "#aaff18",
-  });
-  drawCardText(ctx, "t.me/BrokeLifeTrackerBot", 1008, 1284, {
-    size: 23,
-    weight: 850,
-    color: "rgba(243,255,233,0.62)",
-    align: "right",
-  });
+  window.setTimeout(() => URL.revokeObjectURL(url), 2000);
 
-  return await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (!blob) {
-        reject(new Error("Could not create image"));
-        return;
-      }
-
-      resolve(blob);
-    }, "image/png", 0.95);
-  });
+  return "downloaded";
 }
 
 function ShareResultCard({
@@ -3455,8 +3233,8 @@ function ShareResultCard({
   leaderboard: LeaderboardState | null;
 }) {
   const [copied, setCopied] = useState(false);
-  const [imageStatus, setImageStatus] = useState<"idle" | "creating" | "ready" | "error">("idle");
-  const [imageUrl, setImageUrl] = useState("");
+  const [imageSharing, setImageSharing] = useState(false);
+  const shareCardRef = useRef<HTMLElement | null>(null);
   const shareStats = getShareLeaderboardStats(leaderboard);
 
   const shareText = buildShareText({
@@ -3509,104 +3287,27 @@ function ShareResultCard({
     }
   }
 
-  async function createImageBlob() {
-    return await createShareCardBlob({
-      settings,
-      walletHp,
-      totalLeaks,
-      potentialYearlySavings,
-      shareStats,
-    });
-  }
+  async function shareImageOnly() {
+    if (!shareCardRef.current || imageSharing) return;
 
-  async function createShareImage() {
     try {
-      setImageStatus("creating");
-      const blob = await createImageBlob();
-      const url = URL.createObjectURL(blob);
+      triggerHaptic("light");
+      setImageSharing(true);
 
-      if (imageUrl) {
-        URL.revokeObjectURL(imageUrl);
+      const result = await shareImageOnlyFromElement(shareCardRef.current);
+
+      if (result === "downloaded") {
+        window.alert("Image was created. Your browser cannot share image files directly, so the PNG was downloaded instead.");
       }
-
-      setImageUrl(url);
-      setImageStatus("ready");
-      triggerHaptic("success");
     } catch {
-      setImageStatus("error");
-      triggerHaptic("error");
+      window.alert("Image sharing was cancelled or is not supported by this browser.");
+    } finally {
+      setImageSharing(false);
     }
   }
-
-  function downloadBlob(blob: Blob) {
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = "broke-life-tracker-result.png";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    window.setTimeout(() => URL.revokeObjectURL(url), 500);
-  }
-
-  async function downloadImage() {
-    try {
-      setImageStatus("creating");
-      const blob = await createImageBlob();
-
-      downloadBlob(blob);
-      setImageStatus("ready");
-      triggerHaptic("success");
-    } catch {
-      setImageStatus("error");
-      triggerHaptic("error");
-    }
-  }
-
-  async function shareImage() {
-    try {
-      setImageStatus("creating");
-      const blob = await createImageBlob();
-      const file = new File([blob], "broke-life-tracker-result.png", {
-        type: "image/png",
-      });
-
-      if (
-        typeof navigator !== "undefined" &&
-        navigator.share &&
-        navigator.canShare?.({ files: [file] })
-      ) {
-        // Important: do not pass text here.
-        // Some mobile webviews ignore files and share only the text if text is present.
-        await navigator.share({
-          title: "$BROKE Life Tracker",
-          files: [file],
-        });
-        setImageStatus("ready");
-        return;
-      }
-
-      downloadBlob(blob);
-      setImageStatus("ready");
-      triggerHaptic("success");
-    } catch {
-      setImageStatus("error");
-      triggerHaptic("error");
-    }
-  }
-
-  useEffect(() => {
-    return () => {
-      if (imageUrl) {
-        URL.revokeObjectURL(imageUrl);
-      }
-    };
-  }, [imageUrl]);
 
   return (
-    <section className="share-card">
+    <section className="share-card" ref={shareCardRef}>
       <div className="section-title">
         <span>Share Result</span>
         <small>Telegram / X ready</small>
@@ -3635,12 +3336,6 @@ function ShareResultCard({
         <span>Public share hides income and real balance.</span>
       </div>
 
-      {imageUrl && (
-        <div className="share-image-preview">
-          <img src={imageUrl} alt="$BROKE Life Tracker share card" />
-        </div>
-      )}
-
       <div className="share-buttons">
         <button type="button" onClick={openXShare}>
           Share on X
@@ -3653,24 +3348,12 @@ function ShareResultCard({
         </button>
       </div>
 
-      <div className="share-image-actions share-image-actions-three">
-        <button type="button" onClick={createShareImage} disabled={imageStatus === "creating"}>
-          {imageStatus === "creating" ? "Creating..." : imageStatus === "ready" ? "Refresh card" : "Create card"}
-        </button>
-        <button type="button" onClick={shareImage} disabled={imageStatus === "creating"}>
-          Share image
-        </button>
-        <button type="button" onClick={downloadImage} disabled={imageStatus === "creating"}>
-          Download PNG
-        </button>
-      </div>
-
-      {imageStatus === "error" && (
-        <p className="share-image-error">Could not create image. Try again.</p>
-      )}
-
       <button type="button" className="copy-share-btn" onClick={copyShareText}>
         {copied ? "Copied" : "Copy share text"}
+      </button>
+
+      <button type="button" className="copy-share-btn share-image-only-btn" onClick={shareImageOnly}>
+        {imageSharing ? "Preparing image..." : "Share image only"}
       </button>
     </section>
   );
@@ -4687,6 +4370,7 @@ function SettingsScreen({
         <summary>Technical status</summary>
         <TelegramMiniStatus
           telegram={telegram}
+          webAuth={webAuth}
           cloudStatus={cloudStatus}
           cloudError={cloudError}
         />
