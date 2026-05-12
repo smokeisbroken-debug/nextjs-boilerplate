@@ -145,6 +145,20 @@ type WalletInsight = {
   tone: "green" | "orange" | "red" | "gold";
 };
 
+type V2IdentityStats = {
+  weeklySurvivalScore: number;
+  biggestLeakCategory: string;
+  biggestLeakAmount: number;
+  weeklyLeaks: number;
+  monthlyLeaks: number;
+  lifeHoursLost: number;
+  status: string;
+  statusDetail: string;
+  doomAlertTitle: string;
+  doomAlertBody: string;
+  selfRoast: string;
+};
+
 type DailyRoutineActionKey =
   | "openedApp"
   | "checkedChart"
@@ -1402,6 +1416,110 @@ function buildWalletInsights(expenses: Expense[], settings: Settings): WalletIns
   return insights.slice(0, 6);
 }
 
+
+function buildV2IdentityStats(
+  expenses: Expense[],
+  settings: Settings,
+  walletHp: number
+): V2IdentityStats {
+  const weekExpenses = getLastSevenDaysExpenses(expenses);
+  const monthExpenses = getCurrentMonthExpenses(expenses);
+  const weekLeakExpenses = weekExpenses.filter((expense) => expense.needType !== "Needed");
+  const monthLeakExpenses = monthExpenses.filter((expense) => expense.needType !== "Needed");
+
+  const weeklyLeaks = sum(
+    weekLeakExpenses.map((expense) =>
+      expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount
+    )
+  );
+
+  const monthlyLeaks = sum(
+    monthLeakExpenses.map((expense) =>
+      expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount
+    )
+  );
+
+  const weeklyAvailable = Math.max((getTotalIncome(settings) - getFixedCosts(settings)) / 4.35, 1);
+  const weeklySurvivalScore = clamp(
+    100 - Math.round((weeklyLeaks / weeklyAvailable) * 100),
+    0,
+    100
+  );
+
+  const hourlyValue = Math.max(getTotalIncome(settings) / 160, 1);
+  const lifeHoursLost = weeklyLeaks > 0 ? Math.round((weeklyLeaks / hourlyValue) * 10) / 10 : 0;
+
+  const biggestLeak = getCategorySummaries(weekLeakExpenses)
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount)[0];
+
+  const biggestLeakCategory = biggestLeak?.category ?? "No leak";
+  const biggestLeakAmount = biggestLeak?.amount ?? 0;
+
+  const status =
+    weeklySurvivalScore >= 90
+      ? "Leak Survivor"
+      : weeklySurvivalScore >= 75
+        ? "Stable Wallet"
+        : weeklySurvivalScore >= 55
+          ? "Leak Pressure"
+          : weeklySurvivalScore >= 35
+            ? "Doomspending Alert"
+            : "Full $BROKE Mode";
+
+  const statusDetail =
+    weeklySurvivalScore >= 90
+      ? "You kept the wallet clean this week."
+      : weeklySurvivalScore >= 75
+        ? "Small leaks exist, but the wallet is holding."
+        : weeklySurvivalScore >= 55
+          ? "The leaks are visible now. Fix the pattern."
+          : weeklySurvivalScore >= 35
+            ? "Random spending is starting to become a lifestyle."
+            : "The wallet is under pressure. Stop the bleeding.";
+
+  const doomAlertTitle =
+    weeklyLeaks <= 0
+      ? "No doomspending detected"
+      : weeklySurvivalScore < 55
+        ? "Doomspending Alert"
+        : "Leak detected";
+
+  const doomAlertBody =
+    weeklyLeaks <= 0
+      ? "No Not needed / Maybe spending was marked this week."
+      : biggestLeakAmount > 0
+        ? `${categoryLabel(biggestLeakCategory)} drained ${money(
+            biggestLeakAmount,
+            settings.currency
+          )} this week.`
+        : `${money(weeklyLeaks, settings.currency)} in weekly leaks detected.`;
+
+  const selfRoast =
+    weeklyLeaks <= 0
+      ? "Your wallet is quiet. Keep it that way."
+      : lifeHoursLost >= 8
+        ? `You traded about ${lifeHoursLost} hours of life for leaks this week. That is not a small habit.`
+        : biggestLeakAmount > 0
+          ? `${categoryLabel(biggestLeakCategory)} is trying to become your lifestyle.`
+          : "The leak was already there. Now it is visible.";
+
+  return {
+    weeklySurvivalScore,
+    biggestLeakCategory,
+    biggestLeakAmount,
+    weeklyLeaks,
+    monthlyLeaks,
+    lifeHoursLost,
+    status,
+    statusDetail,
+    doomAlertTitle,
+    doomAlertBody,
+    selfRoast,
+  };
+}
+
+
 function buildChartData(
   range: ChartRange,
   expenses: Expense[],
@@ -2268,6 +2386,7 @@ export default function Home() {
             leaderboard={leaderboard}
             expenses={currentMonthExpenses.slice(0, 6)}
             routineExpenses={currentMonthExpenses}
+            allExpenses={expenses}
             onDeleteExpense={deleteExpense}
             onQuickLeak={addQuickExpense}
             onOpenAdd={() => setActiveTab("add")}
@@ -2791,6 +2910,7 @@ function DashboardScreen({
   leaderboard,
   expenses,
   routineExpenses,
+  allExpenses,
   onDeleteExpense,
   onQuickLeak,
   onOpenAdd,
@@ -2819,6 +2939,7 @@ function DashboardScreen({
   leaderboard: LeaderboardState | null;
   expenses: Expense[];
   routineExpenses: Expense[];
+  allExpenses: Expense[];
   onDeleteExpense: (id: string) => void;
   onQuickLeak: (category: string, value: number, needType?: NeedType) => void;
   onOpenAdd: () => void;
@@ -2860,6 +2981,10 @@ function DashboardScreen({
       tone: "green",
     },
   ];
+
+  const identityStats = useMemo(() => {
+    return buildV2IdentityStats(allExpenses, settings, summary.walletHp);
+  }, [allExpenses, settings, summary.walletHp]);
 
   return (
     <div className="screen">
@@ -2913,6 +3038,8 @@ function DashboardScreen({
 
       <WalletInsightsPanel insights={walletInsights} />
 
+      <V2IdentityPanel settings={settings} identityStats={identityStats} />
+
       <DailyRoutinePanel
         settings={settings}
         summary={summary}
@@ -2938,6 +3065,7 @@ function DashboardScreen({
         realBalance={summary.realBalance}
         potentialYearlySavings={summary.totalLeaks * 12}
         leaderboard={leaderboard}
+        identityStats={identityStats}
         shareInitData={telegram.isTelegram ? telegram.initData : ""}
       />
 
@@ -2978,6 +3106,102 @@ function DashboardScreen({
 
 
 
+
+
+function V2IdentityPanel({
+  settings,
+  identityStats,
+}: {
+  settings: Settings;
+  identityStats: V2IdentityStats;
+}) {
+  const survivalTone =
+    identityStats.weeklySurvivalScore >= 75
+      ? "green"
+      : identityStats.weeklySurvivalScore >= 55
+        ? "orange"
+        : "red";
+
+  const tiles = [
+    {
+      label: "Weekly Survival Score",
+      value: `${identityStats.weeklySurvivalScore}/100`,
+      detail: "How well your wallet survived the week.",
+      icon: A.challengeTrophy,
+    },
+    {
+      label: "Biggest Leak",
+      value:
+        identityStats.biggestLeakAmount > 0
+          ? categoryLabel(identityStats.biggestLeakCategory)
+          : "None",
+      detail:
+        identityStats.biggestLeakAmount > 0
+          ? `${money(identityStats.biggestLeakAmount, settings.currency)} this week`
+          : "No visible leak this week.",
+      icon: getCategoryIcon(identityStats.biggestLeakCategory),
+    },
+    {
+      label: "Life Hours Lost",
+      value: `${identityStats.lifeHoursLost}h`,
+      detail: "Estimated work time traded for weekly leaks.",
+      icon: A.calendar,
+    },
+    {
+      label: "$BROKE Status",
+      value: identityStats.status,
+      detail: identityStats.statusDetail,
+      icon: A.walletMascot,
+    },
+  ];
+
+  return (
+    <section className={`v2-identity-card ${survivalTone}`}>
+      <div className="section-title">
+        <span>V2 Identity Mode</span>
+        <small>Anti-doomspending</small>
+      </div>
+
+      <div className="v2-identity-hero">
+        <div>
+          <strong>Find the leak before it becomes your lifestyle.</strong>
+          <p>
+            $BROKE is not a notebook. It is a wallet-leak survival system.
+          </p>
+        </div>
+
+        <div className="v2-score-orb">
+          <span>{identityStats.weeklySurvivalScore}</span>
+          <small>survival</small>
+        </div>
+      </div>
+
+      <div className="v2-identity-grid">
+        {tiles.map((tile) => (
+          <div key={tile.label} className="v2-identity-tile">
+            <img src={tile.icon} alt="" />
+            <span>{tile.label}</span>
+            <strong>{tile.value}</strong>
+            <small>{tile.detail}</small>
+          </div>
+        ))}
+      </div>
+
+      <div className="v2-doom-alert">
+        <img src={identityStats.weeklySurvivalScore < 55 ? A.badgePressureMode : A.help} alt="" />
+        <div>
+          <strong>{identityStats.doomAlertTitle}</strong>
+          <span>{identityStats.doomAlertBody}</span>
+        </div>
+      </div>
+
+      <div className="v2-self-roast">
+        <span>Self-roast insight</span>
+        <strong>{identityStats.selfRoast}</strong>
+      </div>
+    </section>
+  );
+}
 
 function DailyRoutinePanel({
   settings,
@@ -3641,12 +3865,14 @@ function buildShareText({
   totalLeaks,
   potentialYearlySavings,
   leaderboard,
+  identityStats,
 }: {
   settings: Settings;
   walletHp: number;
   totalLeaks: number;
   potentialYearlySavings: number;
   leaderboard: LeaderboardState | null;
+  identityStats: V2IdentityStats;
 }) {
   const shareStats = getShareLeaderboardStats(leaderboard);
   const rankLine =
@@ -3658,16 +3884,24 @@ function buildShareText({
     "My wallet is not broken.",
     "It is leaking.",
     "",
+    `$BROKE Status: ${identityStats.status}`,
+    `Weekly Survival Score: ${identityStats.weeklySurvivalScore}/100`,
     `Wallet HP: ${walletHp}/100`,
-    `Leaks found: ${money(totalLeaks, settings.currency)}`,
+    `Biggest leak: ${
+      identityStats.biggestLeakAmount > 0
+        ? `${categoryLabel(identityStats.biggestLeakCategory)} (${money(
+            identityStats.biggestLeakAmount,
+            settings.currency
+          )})`
+        : "none"
+    }`,
+    `Life hours lost: ${identityStats.lifeHoursLost}h`,
     `$BROKE Score: ${shareStats.xp.toLocaleString("en-US")} XP`,
     rankLine,
-    `Streak: ${shareStats.currentStreak} days`,
-    `Badges: ${shareStats.badgeCount}/45`,
     "",
     `Potential yearly savings: ${money(potentialYearlySavings, settings.currency)}`,
     "",
-    "$BROKE Life Tracker made the leaks visible.",
+    "Find the leak before it becomes your lifestyle.",
   ].join("\n");
 }
 
@@ -3752,6 +3986,7 @@ function ShareResultCard({
   realBalance,
   potentialYearlySavings,
   leaderboard,
+  identityStats,
   shareInitData,
 }: {
   settings: Settings;
@@ -3760,6 +3995,7 @@ function ShareResultCard({
   realBalance: number;
   potentialYearlySavings: number;
   leaderboard: LeaderboardState | null;
+  identityStats: V2IdentityStats;
   shareInitData: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -3773,6 +4009,7 @@ function ShareResultCard({
     totalLeaks,
     potentialYearlySavings,
     leaderboard,
+    identityStats,
   });
 
   function openXShare() {
@@ -3869,16 +4106,16 @@ function ShareResultCard({
 
         <div className="share-preview share-preview-social">
           <div>
+            <span>$BROKE Status</span>
+            <strong>{identityStats.status}</strong>
+          </div>
+          <div>
+            <span>Survival Score</span>
+            <strong>{identityStats.weeklySurvivalScore}/100</strong>
+          </div>
+          <div>
             <span>Wallet HP</span>
             <strong>{walletHp}/100</strong>
-          </div>
-          <div>
-            <span>Leaks</span>
-            <strong>{money(totalLeaks, settings.currency)}</strong>
-          </div>
-          <div>
-            <span>$BROKE Score</span>
-            <strong>{shareStats.xp.toLocaleString("en-US")} XP</strong>
           </div>
           <div>
             <span>Top</span>
@@ -3887,20 +4124,25 @@ function ShareResultCard({
         </div>
 
         <div className="public-share-meta">
-          <strong>Streak: {shareStats.currentStreak} days</strong>
-          <strong>Badges: {shareStats.badgeCount}/45</strong>
+          <strong>
+            Leak:{" "}
+            {identityStats.biggestLeakAmount > 0
+              ? categoryLabel(identityStats.biggestLeakCategory)
+              : "none"}
+          </strong>
+          <strong>Hours lost: {identityStats.lifeHoursLost}h</strong>
         </div>
 
         <div className="public-share-savings">
           <span>Potential yearly savings</span>
           <strong>{money(potentialYearlySavings, settings.currency)}</strong>
-          <small>Income and real balance stay hidden.</small>
+          <small>Find the leak before it becomes your lifestyle.</small>
         </div>
 
         <footer className="public-share-footer">
           <div>
             <strong>$BROKE Life Tracker</strong>
-            <span>Track your leaks. Fix your life.</span>
+            <span>Anti-doomspending identity app.</span>
           </div>
           <b>t.me/BrokeLifeTrackerBot</b>
         </footer>
