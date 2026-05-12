@@ -5,6 +5,7 @@ import type { Dispatch, SetStateAction } from "react";
 
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
 type NeedType = "Needed" | "Not needed" | "Maybe";
+type Language = "en" | "ru";
 type Currency =
   | "USD"
   | "EUR"
@@ -90,6 +91,7 @@ type Expense = {
 
 type Settings = {
   currency: Currency;
+  language: Language;
   dailyReminder: boolean;
   onboardingCompleted?: boolean;
   profile: {
@@ -478,6 +480,7 @@ const A = {
 
 const defaultSettings: Settings = {
   currency: "USD",
+  language: "en",
   dailyReminder: true,
   onboardingCompleted: false,
   profile: {
@@ -764,6 +767,184 @@ const currencyOptions: {
   { value: "GEL", label: "GEL (₾)" },
   { value: "KZT", label: "KZT (₸)" },
 ];
+
+const languageOptions: {
+  value: Language;
+  label: string;
+}[] = [
+  { value: "en", label: "English" },
+  { value: "ru", label: "Русский" },
+];
+
+const translations = {
+  en: {
+    appTitle: "$BROKE Life Tracker",
+    yourWallet: "Your wallet",
+    isNotBroken: "is not broken.",
+    itIsLeaking: "It is leaking.",
+    income: "Income",
+    lifeCost: "Life Cost",
+    moneyLeaks: "Money Leaks",
+    realBalance: "Real Balance",
+    thisMonth: "This month",
+    leftToStack: "Left to stack",
+    walletHp: "Wallet HP",
+    stableWallet: "Stable Wallet",
+    smallLeak: "Small Leak",
+    hpLine: "Hold the line, fix the leaks.",
+    brokeChart: "$BROKE Chart",
+    sevenDayPreview: "7D Preview",
+    todayDamage: "Today's Damage",
+    trackedToday: "tracked today",
+    addExpenseTitle: "Add Expense",
+    amount: "Amount",
+    category: "Category",
+    wasNeeded: "Was it needed?",
+    needed: "Needed",
+    maybe: "Maybe",
+    notNeeded: "Not needed",
+    notePlaceholder: "Add a quick note...",
+    addExpenseButton: "Add Expense",
+    addExpenseHint: "Track daily leaks. Small leaks sink big wallets.",
+    saveTitle: "Save",
+    settingsTitle: "Settings",
+    language: "Language",
+    lifeProfile: "Life Profile",
+    lifeProfileDesc: "Make the tracker fit your country, currency, and lifestyle.",
+    countryPreset: "Country preset",
+    yourCountry: "Your country",
+    countryPlaceholder: "Type your country",
+    currency: "Currency",
+    lifeMode: "Life mode",
+    incomeStyle: "Income style",
+    rentApplies: "Rent applies",
+    workHours: "Work / study hours per month",
+    yes: "Yes",
+    no: "No",
+    guide: "Guide",
+    howToUse: "How to use $BROKE",
+    guideIntro:
+      "$BROKE is not a normal expense tracker. It helps you find wallet leaks, build discipline, and share safe progress.",
+    guide1Title: "1. Set your Life Profile",
+    guide1Body:
+      "Choose your country or type your own, set currency, life mode, income style, rent mode and work/study hours. This makes the app fit your real life.",
+    guide2Title: "2. Add real expenses",
+    guide2Body:
+      "Go to Add, enter the amount, choose a category, and mark if it was Needed, Maybe, or Not needed.",
+    guide3Title: "3. Mark leaks honestly",
+    guide3Body:
+      "Needed does not count as a leak. Maybe counts as half. Not needed counts as a full wallet leak.",
+    guide4Title: "4. Use Daily Routine",
+    guide4Body:
+      "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check chart, check Save, and share public proof.",
+    guide5Title: "5. Read Wallet Survival",
+    guide5Body:
+      "Survival Score, Biggest Leak, Hours Lost, Status and Doomspending Alert show what is draining your wallet this week.",
+    guide6Title: "6. Check the $BROKE Chart",
+    guide6Body:
+      "The chart shows how your balance moves like a trading chart. Green days are controlled. Red days show damage.",
+    guide7Title: "7. Share safely",
+    guide7Body:
+      "Share cards hide income and real balance. They only show safe public progress like Wallet HP, status, score, rank, streak and badges.",
+    simpleRule: "Simple rule:",
+    simpleRuleBody: "Track honestly. Fix one leak at a time. Protect Wallet HP.",
+    gotIt: "Got it",
+    walletSurvival: "Wallet Survival",
+    thisWeek: "This week",
+    findLeak: "Find the leak before it becomes your lifestyle.",
+    survivalDesc: "See what drains you, how much it costs, and what to fix next.",
+  },
+  ru: {
+    appTitle: "$BROKE Life Tracker",
+    yourWallet: "Твой кошелёк",
+    isNotBroken: "не сломан.",
+    itIsLeaking: "Он протекает.",
+    income: "Доход",
+    lifeCost: "Расходы жизни",
+    moneyLeaks: "Утечки денег",
+    realBalance: "Реальный баланс",
+    thisMonth: "За месяц",
+    leftToStack: "Осталось накопить",
+    walletHp: "Wallet HP",
+    stableWallet: "Стабильный кошелёк",
+    smallLeak: "Малая утечка",
+    hpLine: "Держи линию. Закрывай утечки.",
+    brokeChart: "$BROKE Chart",
+    sevenDayPreview: "7 дней",
+    todayDamage: "Урон сегодня",
+    trackedToday: "записано сегодня",
+    addExpenseTitle: "Добавить расход",
+    amount: "Сумма",
+    category: "Категория",
+    wasNeeded: "Это было нужно?",
+    needed: "Нужно",
+    maybe: "Возможно",
+    notNeeded: "Не нужно",
+    notePlaceholder: "Добавь короткую заметку...",
+    addExpenseButton: "Добавить расход",
+    addExpenseHint: "Записывай утечки каждый день. Малые утечки топят большие кошельки.",
+    saveTitle: "Экономия",
+    settingsTitle: "Настройки",
+    language: "Язык",
+    lifeProfile: "Профиль жизни",
+    lifeProfileDesc: "Настрой приложение под страну, валюту и свой образ жизни.",
+    countryPreset: "Страна из списка",
+    yourCountry: "Твоя страна",
+    countryPlaceholder: "Напиши свою страну",
+    currency: "Валюта",
+    lifeMode: "Тип жизни",
+    incomeStyle: "Тип дохода",
+    rentApplies: "Есть аренда",
+    workHours: "Рабочие / учебные часы в месяц",
+    yes: "Да",
+    no: "Нет",
+    guide: "Гайд",
+    howToUse: "Как пользоваться $BROKE",
+    guideIntro:
+      "$BROKE — не обычный трекер расходов. Он помогает видеть утечки денег, строить дисциплину и делиться безопасным прогрессом.",
+    guide1Title: "1. Настрой Life Profile",
+    guide1Body:
+      "Выбери страну или напиши свою, задай валюту, тип жизни, тип дохода, аренду и часы работы/учёбы. Так приложение подстроится под твою реальность.",
+    guide2Title: "2. Добавляй реальные расходы",
+    guide2Body:
+      "Открой Add, введи сумму, выбери категорию и отметь: Нужно, Возможно или Не нужно.",
+    guide3Title: "3. Отмечай утечки честно",
+    guide3Body:
+      "Нужно не считается утечкой. Возможно считается наполовину. Не нужно считается полной утечкой.",
+    guide4Title: "4. Используй Daily Routine",
+    guide4Body:
+      "Выполняй 7 реальных действий в день: открыть app, записать расход, отметить утечку, добавить контекст, проверить chart, Save и поделиться безопасным прогрессом.",
+    guide5Title: "5. Смотри Wallet Survival",
+    guide5Body:
+      "Survival Score, Biggest Leak, Hours Lost, Status и Doomspending Alert показывают, что тянет деньги на этой неделе.",
+    guide6Title: "6. Проверяй $BROKE Chart",
+    guide6Body:
+      "Chart показывает движение баланса как торговый график. Зелёные дни — контроль. Красные — урон.",
+    guide7Title: "7. Делись безопасно",
+    guide7Body:
+      "Share cards скрывают доход и реальный баланс. Они показывают только безопасный публичный прогресс: Wallet HP, статус, score, rank, streak и badges.",
+    simpleRule: "Простое правило:",
+    simpleRuleBody: "Записывай честно. Чини одну утечку за раз. Защищай Wallet HP.",
+    gotIt: "Понятно",
+    walletSurvival: "Выживание кошелька",
+    thisWeek: "Эта неделя",
+    findLeak: "Найди утечку, пока она не стала стилем жизни.",
+    survivalDesc: "Смотри, что тебя сливает, сколько это стоит и что исправить дальше.",
+  },
+} as const;
+
+type TranslationKey = keyof typeof translations.en;
+
+function t(language: Language | undefined, key: TranslationKey) {
+  const lang = language || "en";
+  return translations[lang]?.[key] ?? translations.en[key];
+}
+
+function needLabel(type: NeedType, language: Language | undefined) {
+  if (type === "Needed") return t(language, "needed");
+  if (type === "Maybe") return t(language, "maybe");
+  return t(language, "notNeeded");
+}
 
 function normalizeSettings(input?: Partial<Settings> | null): Settings {
   return {
@@ -2961,7 +3142,12 @@ export default function Home() {
           <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
         )}
 
-        {helpOpen && <HelpGuideModal onClose={() => setHelpOpen(false)} />}
+        {helpOpen && (
+          <HelpGuideModal
+            language={settings.language}
+            onClose={() => setHelpOpen(false)}
+          />
+        )}
 
         {toast && <AppToastView toast={toast} />}
       </section>
@@ -2975,48 +3161,47 @@ export default function Home() {
 
 
 
-function HelpGuideModal({ onClose }: { onClose: () => void }) {
+function HelpGuideModal({
+  language,
+  onClose,
+}: {
+  language: Language;
+  onClose: () => void;
+}) {
   const sections = [
     {
-      title: "1. Set your Life Profile",
-      body:
-        "Choose your country or type your own, set currency, life mode, income style, rent mode and work/study hours. This makes the app fit your real life.",
+      title: t(language, "guide1Title"),
+      body: t(language, "guide1Body"),
       icon: A.walletMascot,
     },
     {
-      title: "2. Add real expenses",
-      body:
-        "Go to Add, enter the amount, choose a category, and mark if it was Needed, Maybe, or Not needed.",
+      title: t(language, "guide2Title"),
+      body: t(language, "guide2Body"),
       icon: A.addFrog,
     },
     {
-      title: "3. Mark leaks honestly",
-      body:
-        "Needed does not count as a leak. Maybe counts as half. Not needed counts as a full wallet leak.",
+      title: t(language, "guide3Title"),
+      body: t(language, "guide3Body"),
       icon: A.leaks,
     },
     {
-      title: "4. Use Daily Routine",
-      body:
-        "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check chart, check Save, and share public proof.",
+      title: t(language, "guide4Title"),
+      body: t(language, "guide4Body"),
       icon: A.dailyCheck,
     },
     {
-      title: "5. Read Wallet Survival",
-      body:
-        "Survival Score, Biggest Leak, Hours Lost, Status and Doomspending Alert show what is draining your wallet this week.",
+      title: t(language, "guide5Title"),
+      body: t(language, "guide5Body"),
       icon: A.challengeTrophy,
     },
     {
-      title: "6. Check the $BROKE Chart",
-      body:
-        "The chart shows how your balance moves like a trading chart. Green days are controlled. Red days show damage.",
+      title: t(language, "guide6Title"),
+      body: t(language, "guide6Body"),
       icon: A.navChart,
     },
     {
-      title: "7. Share safely",
-      body:
-        "Share cards hide income and real balance. They only show safe public progress like Wallet HP, status, score, rank, streak and badges.",
+      title: t(language, "guide7Title"),
+      body: t(language, "guide7Body"),
       icon: A.export,
     },
   ];
@@ -3031,8 +3216,8 @@ function HelpGuideModal({ onClose }: { onClose: () => void }) {
       <div className="help-modal">
         <div className="help-modal-head">
           <div>
-            <span>Guide</span>
-            <strong>How to use $BROKE</strong>
+            <span>{t(language, "guide")}</span>
+            <strong>{t(language, "howToUse")}</strong>
           </div>
 
           <button type="button" onClick={onClose} aria-label="Close guide">
@@ -3040,10 +3225,7 @@ function HelpGuideModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <p className="help-modal-intro">
-          $BROKE is not a normal expense tracker. It helps you find wallet leaks,
-          build discipline, and share safe progress.
-        </p>
+        <p className="help-modal-intro">{t(language, "guideIntro")}</p>
 
         <div className="help-modal-list">
           {sections.map((section) => (
@@ -3058,12 +3240,12 @@ function HelpGuideModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="help-modal-footer">
-          <strong>Simple rule:</strong>
-          <span>Track honestly. Fix one leak at a time. Protect Wallet HP.</span>
+          <strong>{t(language, "simpleRule")}</strong>
+          <span>{t(language, "simpleRuleBody")}</span>
         </div>
 
         <button type="button" className="help-modal-close" onClick={onClose}>
-          Got it
+          {t(language, "gotIt")}
         </button>
       </div>
     </div>
@@ -3549,32 +3731,34 @@ function DashboardScreen({
   onRoutineComplete: () => Promise<boolean>;
   onBellClick: () => void;
 }) {
+  const lang = settings.language;
+
   const stats = [
     {
-      title: "Income",
+      title: t(lang, "income"),
       value: money(summary.totalIncome, settings.currency),
-      subtitle: "This month",
+      subtitle: t(lang, "thisMonth"),
       icon: A.income,
       tone: "green",
     },
     {
-      title: "Life Cost",
+      title: t(lang, "lifeCost"),
       value: money(summary.fixedCosts, settings.currency),
-      subtitle: "This month",
+      subtitle: t(lang, "thisMonth"),
       icon: A.lifeCost,
       tone: "red",
     },
     {
-      title: "Money Leaks",
+      title: t(lang, "moneyLeaks"),
       value: money(summary.totalLeaks, settings.currency),
-      subtitle: "This month",
+      subtitle: t(lang, "thisMonth"),
       icon: A.leaks,
       tone: "orange",
     },
     {
-      title: "Real Balance",
+      title: t(lang, "realBalance"),
       value: money(summary.realBalance, settings.currency),
-      subtitle: "Left to stack",
+      subtitle: t(lang, "leftToStack"),
       icon: A.balance,
       tone: "green",
     },
@@ -3586,15 +3770,15 @@ function DashboardScreen({
 
   return (
     <div className="screen">
-      <Header title="$BROKE Life Tracker" rightIcon={A.help} onRight={onBellClick} />
+      <Header title={t(lang, "appTitle")} rightIcon={A.help} onRight={onBellClick} />
 
       <section className="hero">
         <div>
           <h1>
-            Your wallet
+            {t(lang, "yourWallet")}
             <br />
-            is not broken.
-            <span>It is leaking.</span>
+            {t(lang, "isNotBroken")}
+            <span>{t(lang, "itIsLeaking")}</span>
           </h1>
         </div>
 
@@ -3621,8 +3805,8 @@ function DashboardScreen({
 
       <section className="hp-card">
         <div className="section-title">
-          <span>Wallet HP</span>
-          <b>{summary.walletHp >= 80 ? "Stable Wallet" : "Small Leak"}</b>
+          <span>{t(lang, "walletHp")}</span>
+          <b>{summary.walletHp >= 80 ? t(lang, "stableWallet") : t(lang, "smallLeak")}</b>
         </div>
 
         <div className="hp-row">
@@ -3633,7 +3817,7 @@ function DashboardScreen({
           <strong>{summary.walletHp} / 100</strong>
         </div>
 
-        <p>Hold the line, fix the leaks.</p>
+        <p>{t(lang, "hpLine")}</p>
       </section>
 
       <WalletInsightsPanel insights={walletInsights} />
@@ -3671,21 +3855,21 @@ function DashboardScreen({
 
       <section className="chart-preview">
         <div className="section-title">
-          <span>$BROKE Chart</span>
-          <small>7D Preview</small>
+          <span>{t(lang, "brokeChart")}</span>
+          <small>{t(lang, "sevenDayPreview")}</small>
         </div>
 
         <MiniChart chartDays={chartDays} />
 
         <div className="damage-card">
           <div>
-            <small>Today's Damage</small>
+            <small>{t(lang, "todayDamage")}</small>
             <strong>
               {summary.todaySpent > 0
                 ? `-${money(summary.todaySpent, settings.currency)}`
                 : money(0, settings.currency)}
             </strong>
-            <span>tracked today</span>
+            <span>{t(lang, "trackedToday")}</span>
           </div>
           <img src={A.chartFrog} alt="Chart frog" />
         </div>
@@ -3731,6 +3915,8 @@ function LifeProfileEditor({
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
 }) {
+  const lang = settings.language;
+
   function updateProfile<K extends keyof Settings["profile"]>(
     key: K,
     value: Settings["profile"][K]
@@ -3753,11 +3939,31 @@ function LifeProfileEditor({
 
   return (
     <section className="settings-group life-profile-card">
-      <h3>Life Profile</h3>
-      <p>Make the tracker fit your country, currency, and lifestyle.</p>
+      <h3>{t(lang, "lifeProfile")}</h3>
+      <p>{t(lang, "lifeProfileDesc")}</p>
 
       <div className="profile-field">
-        <span>Country preset</span>
+        <span>{t(lang, "language")}</span>
+        <select
+          className="settings-select profile-select"
+          value={settings.language}
+          onChange={(event) =>
+            setSettings((prev) => ({
+              ...prev,
+              language: event.target.value as Language,
+            }))
+          }
+        >
+          {languageOptions.map((language) => (
+            <option key={language.value} value={language.value}>
+              {language.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="profile-field">
+        <span>{t(lang, "countryPreset")}</span>
         <select
           className="settings-select profile-select"
           value={settings.profile.region}
@@ -3775,11 +3981,11 @@ function LifeProfileEditor({
       </div>
 
       <div className="profile-field">
-        <span>Your country</span>
+        <span>{t(lang, "yourCountry")}</span>
         <input
           className="profile-country-input"
           value={settings.profile.country}
-          placeholder="Type your country"
+          placeholder={t(lang, "countryPlaceholder")}
           onChange={(event) =>
             setSettings((prev) => ({
               ...prev,
@@ -3794,7 +4000,7 @@ function LifeProfileEditor({
       </div>
 
       <div className="profile-field">
-        <span>Currency</span>
+        <span>{t(lang, "currency")}</span>
         <select
           className="settings-select profile-select"
           value={settings.currency}
@@ -3814,7 +4020,7 @@ function LifeProfileEditor({
       </div>
 
       <div className="profile-block">
-        <span>Life mode</span>
+        <span>{t(lang, "lifeMode")}</span>
         <div className="profile-chip-grid">
           {lifeModeOptions.map((mode) => (
             <button
@@ -3830,7 +4036,7 @@ function LifeProfileEditor({
       </div>
 
       <div className="profile-block">
-        <span>Income style</span>
+        <span>{t(lang, "incomeStyle")}</span>
         <div className="profile-chip-grid compact">
           {incomeStyleOptions.map((style) => (
             <button
@@ -3850,12 +4056,12 @@ function LifeProfileEditor({
         className="profile-toggle-line"
         onClick={() => updateProfile("hasRent", !settings.profile.hasRent)}
       >
-        <span>Rent applies</span>
-        <strong>{settings.profile.hasRent ? "Yes" : "No"}</strong>
+        <span>{t(lang, "rentApplies")}</span>
+        <strong>{settings.profile.hasRent ? t(lang, "yes") : t(lang, "no")}</strong>
       </button>
 
       <EditableMoneyLine
-        label="Work / study hours per month"
+        label={t(lang, "workHours")}
         value={settings.profile.workHoursPerMonth}
         currency={settings.currency}
         plainNumber
@@ -3872,6 +4078,7 @@ function V2IdentityPanel({
   settings: Settings;
   identityStats: V2IdentityStats;
 }) {
+  const lang = settings.language;
   const survivalTone =
     identityStats.weeklySurvivalScore >= 75
       ? "green"
@@ -3915,16 +4122,14 @@ function V2IdentityPanel({
   return (
     <section className={`v2-identity-card ${survivalTone}`}>
       <div className="section-title">
-        <span>Wallet Survival</span>
-        <small>This week</small>
+        <span>{t(lang, "walletSurvival")}</span>
+        <small>{t(lang, "thisWeek")}</small>
       </div>
 
       <div className="v2-identity-hero">
         <div>
-          <strong>Find the leak before it becomes your lifestyle.</strong>
-          <p>
-            See what drains you, how much it costs, and what to fix next.
-          </p>
+          <strong>{t(lang, "findLeak")}</strong>
+          <p>{t(lang, "survivalDesc")}</p>
         </div>
 
         <div className="v2-score-orb">
@@ -5040,6 +5245,8 @@ function AddExpenseScreen({
   onBack: () => void;
   onHelp: () => void;
 }) {
+  const lang = settings.language;
+
   return (
     <form
       className="screen"
@@ -5048,10 +5255,10 @@ function AddExpenseScreen({
         onAdd();
       }}
     >
-      <Header title="Add Expense" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
+      <Header title={t(lang, "addExpenseTitle")} showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
       <section className="amount-box">
-        <label>Amount</label>
+        <label>{t(lang, "amount")}</label>
         <div className="amount-input">
           <span>{currencySymbol(settings.currency)}</span>
           <input
@@ -5068,7 +5275,7 @@ function AddExpenseScreen({
       </section>
 
       <section>
-        <label className="field-label">Category</label>
+        <label className="field-label">{t(lang, "category")}</label>
         <div className="category-grid">
           {categories.map((cat) => (
             <button
@@ -5085,7 +5292,7 @@ function AddExpenseScreen({
       </section>
 
       <section>
-        <label className="field-label">Was it needed?</label>
+        <label className="field-label">{t(lang, "wasNeeded")}</label>
         <div className="choice-row">
           {(["Needed", "Not needed", "Maybe"] as NeedType[]).map((type) => (
             <button
@@ -5094,7 +5301,7 @@ function AddExpenseScreen({
               onClick={() => setExpenseType(type)}
               className={expenseType === type ? "choice active" : "choice"}
             >
-              {type}
+              {needLabel(type, lang)}
             </button>
           ))}
         </div>
@@ -5103,7 +5310,7 @@ function AddExpenseScreen({
       <section className="note-box">
         <input
           value={note}
-          placeholder="Add a quick note..."
+          placeholder={t(lang, "notePlaceholder")}
           onChange={(event) => setNote(event.target.value)}
         />
         <img src={A.pencil} alt="" />
@@ -5111,12 +5318,12 @@ function AddExpenseScreen({
 
       <button className="primary-btn" type="submit">
         <span>+</span>
-        Add Expense
+        {t(lang, "addExpenseButton")}
       </button>
 
       <div className="tiny-note">
         <img src={A.addFrog} alt="" />
-        <span>Track daily leaks. Small leaks sink big wallets.</span>
+        <span>{t(lang, "addExpenseHint")}</span>
       </div>
     </form>
   );
@@ -5759,7 +5966,7 @@ function SettingsScreen({
 
   return (
     <div className="screen">
-      <Header title="Settings" showBack onBack={onBack} />
+      <Header title={t(settings.language, "settingsTitle")} showBack onBack={onBack} />
 
       <LifeProfileEditor settings={settings} setSettings={setSettings} />
 
