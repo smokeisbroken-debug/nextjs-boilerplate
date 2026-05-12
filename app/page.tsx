@@ -3124,9 +3124,9 @@ function V2IdentityPanel({
 
   const tiles = [
     {
-      label: "Weekly Survival Score",
+      label: "Survival Score",
       value: `${identityStats.weeklySurvivalScore}/100`,
-      detail: "How well your wallet survived the week.",
+      detail: "Your weekly wallet score.",
       icon: A.challengeTrophy,
     },
     {
@@ -3142,13 +3142,13 @@ function V2IdentityPanel({
       icon: getCategoryIcon(identityStats.biggestLeakCategory),
     },
     {
-      label: "Life Hours Lost",
+      label: "Hours Lost",
       value: `${identityStats.lifeHoursLost}h`,
-      detail: "Estimated work time traded for weekly leaks.",
+      detail: "Time traded for leaks.",
       icon: A.calendar,
     },
     {
-      label: "$BROKE Status",
+      label: "Status",
       value: identityStats.status,
       detail: identityStats.statusDetail,
       icon: A.walletMascot,
@@ -3158,15 +3158,15 @@ function V2IdentityPanel({
   return (
     <section className={`v2-identity-card ${survivalTone}`}>
       <div className="section-title">
-        <span>V2 Identity Mode</span>
-        <small>Anti-doomspending</small>
+        <span>Wallet Survival</span>
+        <small>This week</small>
       </div>
 
       <div className="v2-identity-hero">
         <div>
           <strong>Find the leak before it becomes your lifestyle.</strong>
           <p>
-            $BROKE is not a notebook. It is a wallet-leak survival system.
+            See what drains you, how much it costs, and what to fix next.
           </p>
         </div>
 
