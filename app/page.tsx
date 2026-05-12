@@ -2189,6 +2189,7 @@ export default function Home() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardState | null>(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [toast, setToast] = useState<AppToast | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   const openAppTrackedRef = useRef(false);
@@ -2695,13 +2696,13 @@ export default function Home() {
   }
 
   function openHelp() {
-    window.alert(
-      "$BROKE Life Tracker\n\nAdd expenses, mark them as Needed / Not needed / Maybe, then check your Wallet HP, chart, and savings scenarios."
-    );
+    triggerHaptic("light");
+    setHelpOpen(true);
   }
 
   function openExportHelp() {
-    window.alert("Share and export options are available on the Home dashboard.");
+    triggerHaptic("light");
+    setHelpOpen(true);
   }
 
   function completeOnboarding(nextSettings: Settings) {
@@ -2887,7 +2888,7 @@ export default function Home() {
             cloudError={cloudError}
             cloudAuthReady={cloudAuthReady}
             onRoutineComplete={claimDailyRoutineReward}
-            onBellClick={openProjectTelegram}
+            onBellClick={openHelp}
           />
         )}
 
@@ -2960,6 +2961,8 @@ export default function Home() {
           <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
         )}
 
+        {helpOpen && <HelpGuideModal onClose={() => setHelpOpen(false)} />}
+
         {toast && <AppToastView toast={toast} />}
       </section>
 
@@ -2970,6 +2973,102 @@ export default function Home() {
 
 
 
+
+
+function HelpGuideModal({ onClose }: { onClose: () => void }) {
+  const sections = [
+    {
+      title: "1. Set your Life Profile",
+      body:
+        "Choose your country or type your own, set currency, life mode, income style, rent mode and work/study hours. This makes the app fit your real life.",
+      icon: A.walletMascot,
+    },
+    {
+      title: "2. Add real expenses",
+      body:
+        "Go to Add, enter the amount, choose a category, and mark if it was Needed, Maybe, or Not needed.",
+      icon: A.addFrog,
+    },
+    {
+      title: "3. Mark leaks honestly",
+      body:
+        "Needed does not count as a leak. Maybe counts as half. Not needed counts as a full wallet leak.",
+      icon: A.leaks,
+    },
+    {
+      title: "4. Use Daily Routine",
+      body:
+        "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check chart, check Save, and share public proof.",
+      icon: A.dailyCheck,
+    },
+    {
+      title: "5. Read Wallet Survival",
+      body:
+        "Survival Score, Biggest Leak, Hours Lost, Status and Doomspending Alert show what is draining your wallet this week.",
+      icon: A.challengeTrophy,
+    },
+    {
+      title: "6. Check the $BROKE Chart",
+      body:
+        "The chart shows how your balance moves like a trading chart. Green days are controlled. Red days show damage.",
+      icon: A.navChart,
+    },
+    {
+      title: "7. Share safely",
+      body:
+        "Share cards hide income and real balance. They only show safe public progress like Wallet HP, status, score, rank, streak and badges.",
+      icon: A.export,
+    },
+  ];
+
+  return (
+    <div
+      className="help-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label="$BROKE Life Tracker guide"
+    >
+      <div className="help-modal">
+        <div className="help-modal-head">
+          <div>
+            <span>Guide</span>
+            <strong>How to use $BROKE</strong>
+          </div>
+
+          <button type="button" onClick={onClose} aria-label="Close guide">
+            ×
+          </button>
+        </div>
+
+        <p className="help-modal-intro">
+          $BROKE is not a normal expense tracker. It helps you find wallet leaks,
+          build discipline, and share safe progress.
+        </p>
+
+        <div className="help-modal-list">
+          {sections.map((section) => (
+            <article key={section.title}>
+              <img src={section.icon} alt="" />
+              <div>
+                <strong>{section.title}</strong>
+                <span>{section.body}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="help-modal-footer">
+          <strong>Simple rule:</strong>
+          <span>Track honestly. Fix one leak at a time. Protect Wallet HP.</span>
+        </div>
+
+        <button type="button" className="help-modal-close" onClick={onClose}>
+          Got it
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function CommunityLiveSidebar() {
   const [messages, setMessages] = useState<CommunityMessage[]>([]);
@@ -3487,7 +3586,7 @@ function DashboardScreen({
 
   return (
     <div className="screen">
-      <Header title="$BROKE Life Tracker" onRight={onBellClick} />
+      <Header title="$BROKE Life Tracker" rightIcon={A.help} onRight={onBellClick} />
 
       <section className="hero">
         <div>
