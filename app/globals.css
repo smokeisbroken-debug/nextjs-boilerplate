@@ -7528,3 +7528,70 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
     font-size: 15px;
   }
 }
+
+
+/* ===== V42 DAILY ROUTINE XP REWARDS ===== */
+.routine-reward {
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+  margin: 0 0 11px;
+  padding: 11px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.032);
+  border: 1px solid rgba(255, 255, 255, 0.065);
+}
+
+.routine-reward.unlocked {
+  background:
+    radial-gradient(circle at top right, rgba(183, 255, 25, 0.12), transparent 42%),
+    rgba(183, 255, 25, 0.078);
+  border-color: rgba(183, 255, 25, 0.24);
+  box-shadow: 0 0 20px rgba(183, 255, 25, 0.08);
+}
+
+.routine-reward img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(183, 255, 25, 0.17));
+}
+
+.routine-reward strong {
+  display: block;
+  color: var(--green);
+  font-size: 14px;
+  line-height: 1.12;
+  font-weight: 950;
+}
+
+.routine-reward span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.28;
+}
+
+@media (min-width: 900px) {
+  .routine-reward {
+    min-height: 62px;
+    grid-template-columns: 38px minmax(0, 1fr);
+    padding: 10px;
+  }
+
+  .routine-reward img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .routine-reward strong {
+    font-size: 13px;
+  }
+
+  .routine-reward span {
+    font-size: 10.5px;
+  }
+}
