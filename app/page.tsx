@@ -2275,6 +2275,8 @@ export default function Home() {
             webAuth={webAuth}
             cloudStatus={cloudStatus}
             cloudError={cloudError}
+            cloudAuthReady={cloudAuthReady}
+            onRoutineComplete={claimDailyRoutineReward}
             onBellClick={openProjectTelegram}
           />
         )}
@@ -2796,6 +2798,8 @@ function DashboardScreen({
   webAuth,
   cloudStatus,
   cloudError,
+  cloudAuthReady,
+  onRoutineComplete,
   onBellClick,
 }: {
   settings: Settings;
@@ -2822,6 +2826,8 @@ function DashboardScreen({
   webAuth: WebAuthState;
   cloudStatus: CloudStatus;
   cloudError: string;
+  cloudAuthReady: boolean;
+  onRoutineComplete: () => Promise<boolean>;
   onBellClick: () => void;
 }) {
   const stats = [
@@ -2912,7 +2918,7 @@ function DashboardScreen({
         summary={summary}
         expenses={routineExpenses}
         cloudReady={cloudAuthReady}
-        onRoutineComplete={claimDailyRoutineReward}
+        onRoutineComplete={onRoutineComplete}
       />
 
       <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
