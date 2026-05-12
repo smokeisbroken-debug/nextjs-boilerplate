@@ -7398,3 +7398,133 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
     margin-top: 0;
   }
 }
+
+
+/* ===== V41.2 REAL DAILY TASKS ===== */
+.routine-hero strong {
+  font-size: 21px;
+}
+
+.routine-list {
+  display: grid;
+  gap: 9px;
+}
+
+.routine-task {
+  width: 100%;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 42px;
+  gap: 11px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 17px;
+  color: var(--text);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.032);
+  border: 1px solid rgba(255, 255, 255, 0.065);
+}
+
+.routine-task.done {
+  background: rgba(183, 255, 25, 0.078);
+  border-color: rgba(183, 255, 25, 0.22);
+  box-shadow: 0 0 18px rgba(183, 255, 25, 0.055);
+}
+
+.routine-task img {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(183, 255, 25, 0.12));
+}
+
+.routine-task strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.12;
+}
+
+.routine-task span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.28;
+}
+
+.routine-task b {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--green);
+  text-align: center;
+  font-size: 17px;
+  font-weight: 950;
+  background: rgba(183, 255, 25, 0.08);
+  border: 1px solid rgba(183, 255, 25, 0.16);
+}
+
+.routine-task:not(.done) b {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+.routine-rule {
+  margin-top: 11px;
+  padding: 11px 12px;
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(183, 255, 25, 0.11);
+}
+
+.routine-rule strong {
+  display: block;
+  color: var(--green);
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.routine-rule span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.32;
+}
+
+/* Hide the old manual-complete button style if cached markup exists. */
+.routine-complete-btn {
+  display: none !important;
+}
+
+@media (min-width: 900px) {
+  .routine-task {
+    min-height: 66px;
+    grid-template-columns: 38px minmax(0, 1fr) 34px;
+    padding: 10px;
+  }
+
+  .routine-task img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .routine-task strong {
+    font-size: 13px;
+  }
+
+  .routine-task span {
+    font-size: 10.5px;
+  }
+
+  .routine-task b {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+  }
+}
