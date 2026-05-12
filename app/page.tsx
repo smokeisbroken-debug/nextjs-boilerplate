@@ -144,12 +144,18 @@ type WalletInsight = {
   tone: "green" | "orange" | "red" | "gold";
 };
 
-type DailyRoutineState = {
+type DailyRoutineActionKey =
+  | "openedApp"
+  | "checkedChart"
+  | "checkedSave"
+  | "sharedProgress";
+
+type DailyRoutineActions = {
   date: string;
-  morningGoal: boolean;
-  leakCheck: boolean;
-  eveningReview: boolean;
-  publicProof: boolean;
+  openedApp: boolean;
+  checkedChart: boolean;
+  checkedSave: boolean;
+  sharedProgress: boolean;
 };
 
 type CommunityMessage = {
@@ -865,6 +871,66 @@ function dayKey(date: Date) {
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
+
+
+const DAILY_ROUTINE_ACTIONS_KEY = "broke-daily-routine-actions-v1";
+
+function getDefaultDailyRoutineActions(date: string): DailyRoutineActions {
+  return {
+    date,
+    openedApp: false,
+    checkedChart: false,
+    checkedSave: false,
+    sharedProgress: false,
+  };
+}
+
+function readDailyRoutineActions(date = dayKey(new Date())): DailyRoutineActions {
+  if (typeof window === "undefined") {
+    return getDefaultDailyRoutineActions(date);
+  }
+
+  try {
+    const raw = window.localStorage.getItem(DAILY_ROUTINE_ACTIONS_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Partial<DailyRoutineActions>) : null;
+
+    if (parsed?.date !== date) {
+      return getDefaultDailyRoutineActions(date);
+    }
+
+    return {
+      ...getDefaultDailyRoutineActions(date),
+      ...parsed,
+      date,
+    };
+  } catch {
+    return getDefaultDailyRoutineActions(date);
+  }
+}
+
+function writeDailyRoutineActions(actions: DailyRoutineActions) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(DAILY_ROUTINE_ACTIONS_KEY, JSON.stringify(actions));
+  } catch {
+    // Daily routine is optional. Ignore storage errors.
+  }
+}
+
+function markDailyRoutineAction(action: DailyRoutineActionKey) {
+  const date = dayKey(new Date());
+  const actions = readDailyRoutineActions(date);
+
+  if (actions[action]) return;
+
+  writeDailyRoutineActions({
+    ...actions,
+    date,
+    [action]: true,
+  });
+}
+
 
 function currencySymbol(currency: Currency) {
   if (currency === "EUR") return "€";
@@ -2116,6 +2182,7 @@ export default function Home() {
             chartDays={chartDays}
             leaderboard={leaderboard}
             expenses={currentMonthExpenses.slice(0, 6)}
+            routineExpenses={currentMonthExpenses}
             onDeleteExpense={deleteExpense}
             onQuickLeak={addQuickExpense}
             onOpenAdd={() => setActiveTab("add")}
@@ -2636,6 +2703,7 @@ function DashboardScreen({
   chartDays,
   leaderboard,
   expenses,
+  routineExpenses,
   onDeleteExpense,
   onQuickLeak,
   onOpenAdd,
@@ -2661,6 +2729,7 @@ function DashboardScreen({
   chartDays: ChartPoint[];
   leaderboard: LeaderboardState | null;
   expenses: Expense[];
+  routineExpenses: Expense[];
   onDeleteExpense: (id: string) => void;
   onQuickLeak: (category: string, value: number, needType?: NeedType) => void;
   onOpenAdd: () => void;
@@ -2753,7 +2822,11 @@ function DashboardScreen({
 
       <WalletInsightsPanel insights={walletInsights} />
 
-      <DailyRoutinePanel settings={settings} summary={summary} />
+      <DailyRoutinePanel
+        settings={settings}
+        summary={summary}
+        expenses={routineExpenses}
+      />
 
       <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
 
@@ -2816,6 +2889,7 @@ function DashboardScreen({
 function DailyRoutinePanel({
   settings,
   summary,
+  expenses,
 }: {
   settings: Settings;
   summary: {
@@ -2828,123 +2902,94 @@ function DailyRoutinePanel({
     todaySpent: number;
     streak: Streak;
   };
+  expenses: Expense[];
 }) {
   const today = dayKey(new Date());
-  const storageKey = "broke-daily-routine-v1";
-
-  const defaultRoutine: DailyRoutineState = {
-    date: today,
-    morningGoal: false,
-    leakCheck: summary.todaySpent > 0,
-    eveningReview: false,
-    publicProof: false,
-  };
-
-  const [routine, setRoutine] = useState<DailyRoutineState>(defaultRoutine);
+  const [actions, setActions] = useState<DailyRoutineActions>(() =>
+    readDailyRoutineActions(today)
+  );
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(storageKey);
-      const parsed = raw ? (JSON.parse(raw) as Partial<DailyRoutineState>) : null;
+    markDailyRoutineAction("openedApp");
+    setActions(readDailyRoutineActions(today));
 
-      if (parsed?.date === today) {
-        setRoutine({
-          ...defaultRoutine,
-          ...parsed,
-          leakCheck: Boolean(parsed.leakCheck || summary.todaySpent > 0),
-        });
-      } else {
-        setRoutine(defaultRoutine);
-      }
-    } catch {
-      setRoutine(defaultRoutine);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const interval = window.setInterval(() => {
+      setActions(readDailyRoutineActions(today));
+    }, 800);
+
+    return () => window.clearInterval(interval);
   }, [today]);
 
-  useEffect(() => {
-    setRoutine((current) => {
-      if (current.leakCheck || summary.todaySpent <= 0) return current;
+  const todayExpenses = useMemo(() => {
+    return expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === today);
+  }, [expenses, today]);
 
-      return {
-        ...current,
-        leakCheck: true,
-      };
-    });
-  }, [summary.todaySpent]);
+  const leakMarked = todayExpenses.some((expense) => expense.needType !== "Needed");
+  const noteAdded = todayExpenses.some((expense) => expense.note.trim().length > 0);
 
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(routine));
-    } catch {
-      // Local routine is optional. Ignore storage errors.
-    }
-  }, [routine, storageKey]);
-
-  const leakMood =
-    summary.todaySpent <= 0
-      ? "No leak tracked yet"
-      : `${money(summary.todaySpent, settings.currency)} tracked today`;
-
-  const routineItems: {
-    id: keyof Omit<DailyRoutineState, "date">;
-    title: string;
-    body: string;
-    icon: string;
-  }[] = [
+  const routineItems = [
     {
-      id: "morningGoal",
-      title: "Morning goal",
-      body: "Pick one leak to avoid before the day starts.",
-      icon: A.streakFire,
+      id: "openedApp",
+      title: "Open the app",
+      body: "Start the day with a wallet check.",
+      icon: A.appFrog,
+      done: actions.openedApp,
     },
     {
-      id: "leakCheck",
-      title: "Leak check",
-      body: leakMood,
+      id: "trackExpense",
+      title: "Track 1 expense",
+      body:
+        todayExpenses.length > 0
+          ? `${todayExpenses.length} record${todayExpenses.length === 1 ? "" : "s"} tracked today.`
+          : "Add at least one real expense today.",
+      icon: A.addFrog,
+      done: todayExpenses.length > 0,
+    },
+    {
+      id: "markLeak",
+      title: "Mark a real leak",
+      body: "Add one expense as Not needed or Maybe.",
       icon: A.leaks,
+      done: leakMarked,
     },
     {
-      id: "eveningReview",
-      title: "Evening review",
-      body: "Look at what drained your wallet before sleep.",
-      icon: A.badgeDailyTracker,
+      id: "addContext",
+      title: "Add context",
+      body: "Add a note to one expense so the habit is visible.",
+      icon: A.pencil,
+      done: noteAdded,
+    },
+    {
+      id: "checkChart",
+      title: "Check $BROKE Chart",
+      body: "Open the Chart tab and look at today’s damage.",
+      icon: A.navChart,
+      done: actions.checkedChart,
+    },
+    {
+      id: "checkSave",
+      title: "Check Save plan",
+      body: "Open Save and review one What If scenario.",
+      icon: A.navWhatIf,
+      done: actions.checkedSave,
     },
     {
       id: "publicProof",
-      title: "Public proof",
-      body: "Share only safe progress: HP, XP, streak, badges.",
+      title: "Share public proof",
+      body: "Share or copy a safe progress card. No private money data.",
       icon: A.export,
+      done: actions.sharedProgress,
     },
   ];
 
-  const completedCount = routineItems.filter((item) => routine[item.id]).length;
+  const completedCount = routineItems.filter((item) => item.done).length;
   const routineScore = Math.round((completedCount / routineItems.length) * 100);
-
   const routineStatus =
-    routineScore === 100 ? "Disciplined" : routineScore >= 50 ? "On track" : "Needs check";
-
-  function toggleRoutineItem(id: keyof Omit<DailyRoutineState, "date">) {
-    triggerHaptic("light");
-
-    setRoutine((current) => ({
-      ...current,
-      date: today,
-      [id]: !current[id],
-    }));
-  }
-
-  function completeRoutine() {
-    triggerHaptic("success");
-
-    setRoutine({
-      date: today,
-      morningGoal: true,
-      leakCheck: true,
-      eveningReview: true,
-      publicProof: true,
-    });
-  }
+    routineScore === 100
+      ? "7/7 complete"
+      : routineScore >= 50
+        ? `${completedCount}/7 done`
+        : `${completedCount}/7 done`;
 
   return (
     <section className="daily-routine-card">
@@ -2955,16 +3000,16 @@ function DailyRoutinePanel({
 
       <div className="routine-hero">
         <div>
-          <strong>Live with discipline.</strong>
+          <strong>7 real tasks per day.</strong>
           <p>
-            Morning goal, leak check, evening review. A simple daily loop against
-            doomspending.
+            No fake checkmarks. Tasks complete only when the app sees the real
+            action.
           </p>
         </div>
 
         <div className="routine-score">
-          <span>{routineScore}</span>
-          <small>/100</small>
+          <span>{completedCount}</span>
+          <small>/7</small>
         </div>
       </div>
 
@@ -2974,12 +3019,7 @@ function DailyRoutinePanel({
 
       <div className="routine-list">
         {routineItems.map((item) => (
-          <button
-            type="button"
-            key={item.id}
-            className={routine[item.id] ? "done" : ""}
-            onClick={() => toggleRoutineItem(item.id)}
-          >
+          <article key={item.id} className={`routine-task ${item.done ? "done" : ""}`}>
             <img src={item.icon} alt="" />
 
             <div>
@@ -2987,14 +3027,15 @@ function DailyRoutinePanel({
               <span>{item.body}</span>
             </div>
 
-            <b>{routine[item.id] ? "Done" : "Tap"}</b>
-          </button>
+            <b>{item.done ? "✓" : "—"}</b>
+          </article>
         ))}
       </div>
 
-      <button type="button" className="routine-complete-btn" onClick={completeRoutine}>
-        Mark today disciplined
-      </button>
+      <div className="routine-rule">
+        <strong>Discipline rule:</strong>
+        <span>you cannot tap tasks complete. Complete the action, then the checkmark appears.</span>
+      </div>
     </section>
   );
 }
@@ -3594,12 +3635,14 @@ function ShareResultCard({
 
   function openXShare() {
     triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`;
     openExternalUrl(url);
   }
 
   function openTelegramShare() {
     triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
     const url = `https://t.me/share/url?url=${encodeURIComponent(
       PROJECT_TG_URL
     )}&text=${encodeURIComponent(shareText)}`;
@@ -3609,6 +3652,7 @@ function ShareResultCard({
   async function nativeShare() {
     try {
       triggerHaptic("light");
+      markDailyRoutineAction("sharedProgress");
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({
           title: "$BROKE Life Tracker",
@@ -3626,6 +3670,7 @@ function ShareResultCard({
   async function copyShareText() {
     try {
       await navigator.clipboard.writeText(shareText);
+      markDailyRoutineAction("sharedProgress");
       triggerHaptic("success");
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
@@ -3639,6 +3684,7 @@ function ShareResultCard({
 
     try {
       triggerHaptic("light");
+      markDailyRoutineAction("sharedProgress");
       setImageSharing(true);
 
       const imageFile = await createShareImageFileFromElement(shareCardRef.current);
@@ -4964,6 +5010,8 @@ function BottomNav({
           key={item.id}
           onClick={() => {
             triggerHaptic("light");
+            if (item.id === "chart") markDailyRoutineAction("checkedChart");
+            if (item.id === "whatif") markDailyRoutineAction("checkedSave");
             setActiveTab(item.id);
           }}
           className={activeTab === item.id ? "active" : ""}
