@@ -8408,3 +8408,36 @@ html[lang="ru"] .profile-field span,
 html[lang="ru"] .routine-task span {
   line-height: 1.34;
 }
+
+
+/* ===== V46 FULL MULTILANGUAGE RUNTIME ===== */
+html[dir="rtl"] body,
+html[dir="rtl"] .phone,
+html[dir="rtl"] .screen,
+html[dir="rtl"] .help-modal {
+  direction: rtl;
+}
+
+html[dir="rtl"] .bottom-nav,
+html[dir="rtl"] .share-buttons,
+html[dir="rtl"] .stats-grid,
+html[dir="rtl"] .category-grid,
+html[dir="rtl"] .choice-row {
+  direction: rtl;
+}
+
+html[dir="rtl"] input {
+  text-align: right;
+}
+
+html[dir="rtl"] .header-side {
+  justify-content: flex-end;
+}
+
+html[dir="rtl"] .header-side.right {
+  justify-content: flex-start;
+}
+
+.profile-field:first-of-type .profile-select {
+  border-color: rgba(183, 255, 25, 0.28) !important;
+}
