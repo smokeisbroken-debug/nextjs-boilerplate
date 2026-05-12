@@ -144,6 +144,14 @@ type WalletInsight = {
   tone: "green" | "orange" | "red" | "gold";
 };
 
+type DailyRoutineState = {
+  date: string;
+  morningGoal: boolean;
+  leakCheck: boolean;
+  eveningReview: boolean;
+  publicProof: boolean;
+};
+
 type CommunityMessage = {
   id: string;
   senderName: string;
@@ -2745,6 +2753,8 @@ function DashboardScreen({
 
       <WalletInsightsPanel insights={walletInsights} />
 
+      <DailyRoutinePanel settings={settings} summary={summary} />
+
       <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
 
       {expenses.length === 0 && (
@@ -2801,6 +2811,193 @@ function DashboardScreen({
 
 
 
+
+
+function DailyRoutinePanel({
+  settings,
+  summary,
+}: {
+  settings: Settings;
+  summary: {
+    totalIncome: number;
+    fixedCosts: number;
+    spentThisMonth: number;
+    totalLeaks: number;
+    realBalance: number;
+    walletHp: number;
+    todaySpent: number;
+    streak: Streak;
+  };
+}) {
+  const today = dayKey(new Date());
+  const storageKey = "broke-daily-routine-v1";
+
+  const defaultRoutine: DailyRoutineState = {
+    date: today,
+    morningGoal: false,
+    leakCheck: summary.todaySpent > 0,
+    eveningReview: false,
+    publicProof: false,
+  };
+
+  const [routine, setRoutine] = useState<DailyRoutineState>(defaultRoutine);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      const parsed = raw ? (JSON.parse(raw) as Partial<DailyRoutineState>) : null;
+
+      if (parsed?.date === today) {
+        setRoutine({
+          ...defaultRoutine,
+          ...parsed,
+          leakCheck: Boolean(parsed.leakCheck || summary.todaySpent > 0),
+        });
+      } else {
+        setRoutine(defaultRoutine);
+      }
+    } catch {
+      setRoutine(defaultRoutine);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [today]);
+
+  useEffect(() => {
+    setRoutine((current) => {
+      if (current.leakCheck || summary.todaySpent <= 0) return current;
+
+      return {
+        ...current,
+        leakCheck: true,
+      };
+    });
+  }, [summary.todaySpent]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(routine));
+    } catch {
+      // Local routine is optional. Ignore storage errors.
+    }
+  }, [routine, storageKey]);
+
+  const leakMood =
+    summary.todaySpent <= 0
+      ? "No leak tracked yet"
+      : `${money(summary.todaySpent, settings.currency)} tracked today`;
+
+  const routineItems: {
+    id: keyof Omit<DailyRoutineState, "date">;
+    title: string;
+    body: string;
+    icon: string;
+  }[] = [
+    {
+      id: "morningGoal",
+      title: "Morning goal",
+      body: "Pick one leak to avoid before the day starts.",
+      icon: A.streakFire,
+    },
+    {
+      id: "leakCheck",
+      title: "Leak check",
+      body: leakMood,
+      icon: A.leaks,
+    },
+    {
+      id: "eveningReview",
+      title: "Evening review",
+      body: "Look at what drained your wallet before sleep.",
+      icon: A.badgeDailyTracker,
+    },
+    {
+      id: "publicProof",
+      title: "Public proof",
+      body: "Share only safe progress: HP, XP, streak, badges.",
+      icon: A.export,
+    },
+  ];
+
+  const completedCount = routineItems.filter((item) => routine[item.id]).length;
+  const routineScore = Math.round((completedCount / routineItems.length) * 100);
+
+  const routineStatus =
+    routineScore === 100 ? "Disciplined" : routineScore >= 50 ? "On track" : "Needs check";
+
+  function toggleRoutineItem(id: keyof Omit<DailyRoutineState, "date">) {
+    triggerHaptic("light");
+
+    setRoutine((current) => ({
+      ...current,
+      date: today,
+      [id]: !current[id],
+    }));
+  }
+
+  function completeRoutine() {
+    triggerHaptic("success");
+
+    setRoutine({
+      date: today,
+      morningGoal: true,
+      leakCheck: true,
+      eveningReview: true,
+      publicProof: true,
+    });
+  }
+
+  return (
+    <section className="daily-routine-card">
+      <div className="section-title">
+        <span>Daily Routine</span>
+        <small>{routineStatus}</small>
+      </div>
+
+      <div className="routine-hero">
+        <div>
+          <strong>Live with discipline.</strong>
+          <p>
+            Morning goal, leak check, evening review. A simple daily loop against
+            doomspending.
+          </p>
+        </div>
+
+        <div className="routine-score">
+          <span>{routineScore}</span>
+          <small>/100</small>
+        </div>
+      </div>
+
+      <div className="routine-progress">
+        <div style={{ width: `${routineScore}%` }} />
+      </div>
+
+      <div className="routine-list">
+        {routineItems.map((item) => (
+          <button
+            type="button"
+            key={item.id}
+            className={routine[item.id] ? "done" : ""}
+            onClick={() => toggleRoutineItem(item.id)}
+          >
+            <img src={item.icon} alt="" />
+
+            <div>
+              <strong>{item.title}</strong>
+              <span>{item.body}</span>
+            </div>
+
+            <b>{routine[item.id] ? "Done" : "Tap"}</b>
+          </button>
+        ))}
+      </div>
+
+      <button type="button" className="routine-complete-btn" onClick={completeRoutine}>
+        Mark today disciplined
+      </button>
+    </section>
+  );
+}
 
 function FirstLeakOnboardingCard({
   settings,
