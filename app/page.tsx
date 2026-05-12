@@ -5,9 +5,77 @@ import type { Dispatch, SetStateAction } from "react";
 
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
 type NeedType = "Needed" | "Not needed" | "Maybe";
-type Currency = "USD" | "EUR" | "MDL" | "NGN" | "PKR" | "GBP" | "INR";
+type Currency =
+  | "USD"
+  | "EUR"
+  | "MDL"
+  | "NGN"
+  | "PKR"
+  | "GBP"
+  | "INR"
+  | "CAD"
+  | "AUD"
+  | "NZD"
+  | "ZAR"
+  | "GHS"
+  | "KES"
+  | "UGX"
+  | "TZS"
+  | "XAF"
+  | "XOF"
+  | "EGP"
+  | "MAD"
+  | "TRY"
+  | "AED"
+  | "SAR"
+  | "PHP"
+  | "IDR"
+  | "VND"
+  | "THB"
+  | "MYR"
+  | "SGD"
+  | "BDT"
+  | "LKR"
+  | "NPR"
+  | "BRL"
+  | "MXN"
+  | "UAH"
+  | "PLN"
+  | "RON"
+  | "GEL"
+  | "KZT";
 type ChartRange = "day" | "week" | "month";
-type RegionPreset = "Global" | "Nigeria" | "Pakistan" | "Moldova" | "Europe" | "United States";
+type RegionPreset =
+  | "Global"
+  | "Custom"
+  | "Nigeria"
+  | "Ghana"
+  | "Kenya"
+  | "South Africa"
+  | "Pakistan"
+  | "India"
+  | "Bangladesh"
+  | "Philippines"
+  | "Indonesia"
+  | "Vietnam"
+  | "Thailand"
+  | "Malaysia"
+  | "Brazil"
+  | "Mexico"
+  | "Turkey"
+  | "Egypt"
+  | "Morocco"
+  | "UAE"
+  | "Saudi Arabia"
+  | "United Kingdom"
+  | "Canada"
+  | "Australia"
+  | "Moldova"
+  | "Romania"
+  | "Ukraine"
+  | "Poland"
+  | "Europe"
+  | "United States";
 type LifeMode = "Student" | "Worker" | "Freelancer" | "Living with family" | "No stable income";
 type IncomeStyle = "Monthly" | "Weekly" | "Daily" | "Allowance" | "Irregular";
 
@@ -436,6 +504,16 @@ const defaultSettings: Settings = {
   },
 };
 
+const emptyCosts: Settings["fixedCosts"] = {
+  rent: 0,
+  utilities: 0,
+  food: 0,
+  transport: 0,
+  phone: 0,
+  data: 0,
+  education: 0,
+};
+
 const regionPresets: Record<
   RegionPreset,
   {
@@ -449,37 +527,181 @@ const regionPresets: Record<
     country: "Global",
     currency: "USD",
     workHoursPerMonth: 160,
-    fixedCosts: { rent: 0, utilities: 0, food: 0, transport: 0, phone: 0, data: 0, education: 0 },
+    fixedCosts: emptyCosts,
+  },
+  Custom: {
+    country: "",
+    currency: "USD",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
   },
   Nigeria: {
     country: "Nigeria",
     currency: "NGN",
     workHoursPerMonth: 120,
-    fixedCosts: { rent: 0, utilities: 0, food: 25000, transport: 12000, phone: 0, data: 7000, education: 0 },
+    fixedCosts: { ...emptyCosts, food: 25000, transport: 12000, data: 7000 },
+  },
+  Ghana: {
+    country: "Ghana",
+    currency: "GHS",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
+  },
+  Kenya: {
+    country: "Kenya",
+    currency: "KES",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
+  },
+  "South Africa": {
+    country: "South Africa",
+    currency: "ZAR",
+    workHoursPerMonth: 140,
+    fixedCosts: emptyCosts,
   },
   Pakistan: {
     country: "Pakistan",
     currency: "PKR",
     workHoursPerMonth: 120,
-    fixedCosts: { rent: 0, utilities: 0, food: 18000, transport: 7000, phone: 0, data: 2500, education: 0 },
+    fixedCosts: { ...emptyCosts, food: 18000, transport: 7000, data: 2500 },
+  },
+  India: {
+    country: "India",
+    currency: "INR",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
+  },
+  Bangladesh: {
+    country: "Bangladesh",
+    currency: "BDT",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
+  },
+  Philippines: {
+    country: "Philippines",
+    currency: "PHP",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
+  },
+  Indonesia: {
+    country: "Indonesia",
+    currency: "IDR",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
+  },
+  Vietnam: {
+    country: "Vietnam",
+    currency: "VND",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
+  },
+  Thailand: {
+    country: "Thailand",
+    currency: "THB",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
+  },
+  Malaysia: {
+    country: "Malaysia",
+    currency: "MYR",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
+  },
+  Brazil: {
+    country: "Brazil",
+    currency: "BRL",
+    workHoursPerMonth: 140,
+    fixedCosts: emptyCosts,
+  },
+  Mexico: {
+    country: "Mexico",
+    currency: "MXN",
+    workHoursPerMonth: 140,
+    fixedCosts: emptyCosts,
+  },
+  Turkey: {
+    country: "Turkey",
+    currency: "TRY",
+    workHoursPerMonth: 140,
+    fixedCosts: emptyCosts,
+  },
+  Egypt: {
+    country: "Egypt",
+    currency: "EGP",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
+  },
+  Morocco: {
+    country: "Morocco",
+    currency: "MAD",
+    workHoursPerMonth: 120,
+    fixedCosts: emptyCosts,
+  },
+  UAE: {
+    country: "United Arab Emirates",
+    currency: "AED",
+    workHoursPerMonth: 160,
+    fixedCosts: emptyCosts,
+  },
+  "Saudi Arabia": {
+    country: "Saudi Arabia",
+    currency: "SAR",
+    workHoursPerMonth: 160,
+    fixedCosts: emptyCosts,
+  },
+  "United Kingdom": {
+    country: "United Kingdom",
+    currency: "GBP",
+    workHoursPerMonth: 160,
+    fixedCosts: emptyCosts,
+  },
+  Canada: {
+    country: "Canada",
+    currency: "CAD",
+    workHoursPerMonth: 160,
+    fixedCosts: emptyCosts,
+  },
+  Australia: {
+    country: "Australia",
+    currency: "AUD",
+    workHoursPerMonth: 160,
+    fixedCosts: emptyCosts,
   },
   Moldova: {
     country: "Moldova",
     currency: "MDL",
     workHoursPerMonth: 160,
-    fixedCosts: { rent: 5000, utilities: 1500, food: 3500, transport: 800, phone: 250, data: 0, education: 0 },
+    fixedCosts: { ...emptyCosts, rent: 5000, utilities: 1500, food: 3500, transport: 800, phone: 250 },
+  },
+  Romania: {
+    country: "Romania",
+    currency: "RON",
+    workHoursPerMonth: 160,
+    fixedCosts: emptyCosts,
+  },
+  Ukraine: {
+    country: "Ukraine",
+    currency: "UAH",
+    workHoursPerMonth: 160,
+    fixedCosts: emptyCosts,
+  },
+  Poland: {
+    country: "Poland",
+    currency: "PLN",
+    workHoursPerMonth: 160,
+    fixedCosts: emptyCosts,
   },
   Europe: {
     country: "Europe",
     currency: "EUR",
     workHoursPerMonth: 160,
-    fixedCosts: { rent: 700, utilities: 160, food: 280, transport: 80, phone: 35, data: 0, education: 0 },
+    fixedCosts: { ...emptyCosts, rent: 700, utilities: 160, food: 280, transport: 80, phone: 35 },
   },
   "United States": {
     country: "United States",
     currency: "USD",
     workHoursPerMonth: 160,
-    fixedCosts: { rent: 1200, utilities: 200, food: 350, transport: 150, phone: 80, data: 0, education: 0 },
+    fixedCosts: { ...emptyCosts, rent: 1200, utilities: 200, food: 350, transport: 150, phone: 80 },
   },
 };
 
@@ -497,6 +719,50 @@ const incomeStyleOptions: IncomeStyle[] = [
   "Daily",
   "Allowance",
   "Irregular",
+];
+
+const currencyOptions: {
+  value: Currency;
+  label: string;
+}[] = [
+  { value: "USD", label: "USD ($)" },
+  { value: "EUR", label: "EUR (€)" },
+  { value: "MDL", label: "MDL (L)" },
+  { value: "NGN", label: "NGN (₦)" },
+  { value: "PKR", label: "PKR (Rs)" },
+  { value: "GBP", label: "GBP (£)" },
+  { value: "INR", label: "INR (₹)" },
+  { value: "CAD", label: "CAD (C$)" },
+  { value: "AUD", label: "AUD (A$)" },
+  { value: "NZD", label: "NZD (NZ$)" },
+  { value: "ZAR", label: "ZAR (R)" },
+  { value: "GHS", label: "GHS (₵)" },
+  { value: "KES", label: "KES (KSh)" },
+  { value: "UGX", label: "UGX (USh)" },
+  { value: "TZS", label: "TZS (TSh)" },
+  { value: "XAF", label: "XAF (FCFA)" },
+  { value: "XOF", label: "XOF (CFA)" },
+  { value: "EGP", label: "EGP (£)" },
+  { value: "MAD", label: "MAD" },
+  { value: "TRY", label: "TRY (₺)" },
+  { value: "AED", label: "AED" },
+  { value: "SAR", label: "SAR" },
+  { value: "PHP", label: "PHP (₱)" },
+  { value: "IDR", label: "IDR (Rp)" },
+  { value: "VND", label: "VND (₫)" },
+  { value: "THB", label: "THB (฿)" },
+  { value: "MYR", label: "MYR (RM)" },
+  { value: "SGD", label: "SGD (S$)" },
+  { value: "BDT", label: "BDT (৳)" },
+  { value: "LKR", label: "LKR (Rs)" },
+  { value: "NPR", label: "NPR (Rs)" },
+  { value: "BRL", label: "BRL (R$)" },
+  { value: "MXN", label: "MXN ($)" },
+  { value: "UAH", label: "UAH (₴)" },
+  { value: "PLN", label: "PLN (zł)" },
+  { value: "RON", label: "RON" },
+  { value: "GEL", label: "GEL (₾)" },
+  { value: "KZT", label: "KZT (₸)" },
 ];
 
 function normalizeSettings(input?: Partial<Settings> | null): Settings {
@@ -520,6 +786,21 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
 
 function applyRegionPreset(settings: Settings, region: RegionPreset): Settings {
   const preset = regionPresets[region];
+
+  if (region === "Custom") {
+    return {
+      ...settings,
+      profile: {
+        ...settings.profile,
+        region,
+        country:
+          settings.profile.country && settings.profile.country !== "Global"
+            ? settings.profile.country
+            : "",
+      },
+    };
+  }
+
   const hasRent = settings.profile.hasRent && preset.fixedCosts.rent > 0;
 
   return {
@@ -1155,13 +1436,48 @@ function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true) {
 
 
 function currencySymbol(currency: Currency) {
-  if (currency === "EUR") return "€";
-  if (currency === "MDL") return "L";
-  if (currency === "NGN") return "₦";
-  if (currency === "PKR") return "Rs";
-  if (currency === "GBP") return "£";
-  if (currency === "INR") return "₹";
-  return "$";
+  const symbols: Record<Currency, string> = {
+    USD: "$",
+    EUR: "€",
+    MDL: "L",
+    NGN: "₦",
+    PKR: "Rs",
+    GBP: "£",
+    INR: "₹",
+    CAD: "C$",
+    AUD: "A$",
+    NZD: "NZ$",
+    ZAR: "R",
+    GHS: "₵",
+    KES: "KSh",
+    UGX: "USh",
+    TZS: "TSh",
+    XAF: "FCFA",
+    XOF: "CFA",
+    EGP: "E£",
+    MAD: "MAD",
+    TRY: "₺",
+    AED: "AED",
+    SAR: "SAR",
+    PHP: "₱",
+    IDR: "Rp",
+    VND: "₫",
+    THB: "฿",
+    MYR: "RM",
+    SGD: "S$",
+    BDT: "৳",
+    LKR: "Rs",
+    NPR: "Rs",
+    BRL: "R$",
+    MXN: "$",
+    UAH: "₴",
+    PLN: "zł",
+    RON: "RON",
+    GEL: "₾",
+    KZT: "₸",
+  };
+
+  return symbols[currency] || currency;
 }
 
 function money(value: number, currency: Currency) {
@@ -3342,7 +3658,7 @@ function LifeProfileEditor({
       <p>Make the tracker fit your country, currency, and lifestyle.</p>
 
       <div className="profile-field">
-        <span>Region / country</span>
+        <span>Country preset</span>
         <select
           className="settings-select profile-select"
           value={settings.profile.region}
@@ -3360,6 +3676,25 @@ function LifeProfileEditor({
       </div>
 
       <div className="profile-field">
+        <span>Your country</span>
+        <input
+          className="profile-country-input"
+          value={settings.profile.country}
+          placeholder="Type your country"
+          onChange={(event) =>
+            setSettings((prev) => ({
+              ...prev,
+              profile: {
+                ...prev.profile,
+                region: "Custom",
+                country: event.target.value,
+              },
+            }))
+          }
+        />
+      </div>
+
+      <div className="profile-field">
         <span>Currency</span>
         <select
           className="settings-select profile-select"
@@ -3371,13 +3706,11 @@ function LifeProfileEditor({
             }))
           }
         >
-          <option value="USD">USD ($)</option>
-          <option value="EUR">EUR (€)</option>
-          <option value="MDL">MDL (L)</option>
-          <option value="NGN">NGN (₦)</option>
-          <option value="PKR">PKR (Rs)</option>
-          <option value="GBP">GBP (£)</option>
-          <option value="INR">INR (₹)</option>
+          {currencyOptions.map((currency) => (
+            <option key={currency.value} value={currency.value}>
+              {currency.label}
+            </option>
+          ))}
         </select>
       </div>
 
