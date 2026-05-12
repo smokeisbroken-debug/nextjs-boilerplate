@@ -8200,3 +8200,35 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
     justify-self: start;
   }
 }
+
+
+/* ===== V44.1 CUSTOM COUNTRY + MORE REGIONS ===== */
+.profile-country-input {
+  width: 100%;
+  height: 38px;
+  min-width: 0;
+  padding: 0 10px;
+  border-radius: 12px;
+  outline: 0;
+  color: var(--green) !important;
+  background: rgba(183, 255, 25, 0.075) !important;
+  border: 1px solid rgba(183, 255, 25, 0.16) !important;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.profile-country-input::placeholder {
+  color: rgba(244, 247, 240, 0.42);
+}
+
+@media (max-width: 430px) {
+  .profile-field {
+    grid-template-columns: 1fr;
+    gap: 7px;
+  }
+
+  .profile-select,
+  .profile-country-input {
+    width: 100%;
+  }
+}
