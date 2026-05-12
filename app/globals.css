@@ -7180,3 +7180,221 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== V41.1 DAILY ROUTINE / DISCIPLINE LOOP ===== */
+.daily-routine-card {
+  margin-top: 14px;
+  padding: 15px;
+  border-radius: 20px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 82% 0%, rgba(183, 255, 25, 0.14), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.044), rgba(255, 255, 255, 0.014));
+  border: 1px solid rgba(183, 255, 25, 0.16);
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 255, 25, 0.03),
+    0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+.routine-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.routine-hero strong {
+  display: block;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.08;
+  font-weight: 950;
+  letter-spacing: -0.6px;
+}
+
+.routine-hero p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.routine-score {
+  width: 74px;
+  height: 74px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: rgba(183, 255, 25, 0.09);
+  border: 1px solid rgba(183, 255, 25, 0.18);
+  box-shadow: 0 0 24px rgba(183, 255, 25, 0.11);
+}
+
+.routine-score span {
+  color: var(--green);
+  font-size: 30px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.routine-score small {
+  margin-top: -18px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.routine-progress {
+  height: 10px;
+  margin: 15px 0 13px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.routine-progress div {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  box-shadow: 0 0 18px rgba(183, 255, 25, 0.33);
+  transition: width 0.22s ease;
+}
+
+.routine-list {
+  display: grid;
+  gap: 9px;
+}
+
+.routine-list button {
+  width: 100%;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 17px;
+  color: var(--text);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.065);
+}
+
+.routine-list button.done {
+  background: rgba(183, 255, 25, 0.075);
+  border-color: rgba(183, 255, 25, 0.20);
+}
+
+.routine-list img {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(183, 255, 25, 0.12));
+}
+
+.routine-list strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.12;
+}
+
+.routine-list span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.28;
+}
+
+.routine-list b {
+  min-width: 52px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: var(--green);
+  text-align: center;
+  font-size: 10px;
+  font-weight: 950;
+  background: rgba(183, 255, 25, 0.08);
+  border: 1px solid rgba(183, 255, 25, 0.16);
+}
+
+.routine-complete-btn {
+  width: 100%;
+  min-height: 47px;
+  margin-top: 11px;
+  border: 0;
+  border-radius: 17px;
+  color: #061006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  font-size: 14px;
+  font-weight: 950;
+  box-shadow: 0 14px 32px rgba(118, 255, 36, 0.18);
+}
+
+@media (min-width: 900px) {
+  .daily-routine-card {
+    margin-top: 8px;
+    padding: 14px;
+  }
+
+  .routine-hero strong {
+    font-size: 18px;
+  }
+
+  .routine-hero p {
+    font-size: 11px;
+  }
+
+  .routine-score {
+    width: 62px;
+    height: 62px;
+    border-radius: 18px;
+  }
+
+  .routine-score span {
+    font-size: 24px;
+  }
+
+  .routine-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .routine-list button {
+    min-height: 66px;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    padding: 10px;
+  }
+
+  .routine-list img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .routine-list strong {
+    font-size: 13px;
+  }
+
+  .routine-list span {
+    font-size: 10.5px;
+  }
+}
+
+@media (max-width: 430px) {
+  .routine-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .routine-score {
+    width: 100%;
+    height: 56px;
+    grid-template-columns: auto auto;
+    gap: 4px;
+  }
+
+  .routine-score small {
+    margin-top: 0;
+  }
+}
