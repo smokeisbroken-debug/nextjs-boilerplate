@@ -8392,3 +8392,19 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
     max-height: 82vh;
   }
 }
+
+
+/* ===== V45 LANGUAGE SUPPORT ===== */
+.profile-field:first-of-type .profile-select {
+  font-weight: 950;
+}
+
+html[lang="ru"] .hero h1 {
+  font-size: clamp(31px, 9.3vw, 44px);
+}
+
+html[lang="ru"] .help-modal-list span,
+html[lang="ru"] .profile-field span,
+html[lang="ru"] .routine-task span {
+  line-height: 1.34;
+}
