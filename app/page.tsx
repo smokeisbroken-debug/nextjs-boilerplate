@@ -3999,6 +3999,16 @@ function ShareResultCard({
   shareInitData: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const shareStatusLabel =
+    identityStats.status === "Leak Survivor"
+      ? "Survivor"
+      : identityStats.status === "Stable Wallet"
+        ? "Stable"
+        : identityStats.status === "Leak Pressure"
+          ? "Pressure"
+          : identityStats.status === "Doomspending Alert"
+            ? "Alert"
+            : identityStats.status;
   const [imageSharing, setImageSharing] = useState(false);
   const shareCardRef = useRef<HTMLDivElement | null>(null);
   const shareStats = getShareLeaderboardStats(leaderboard);
@@ -4106,11 +4116,11 @@ function ShareResultCard({
 
         <div className="share-preview share-preview-social">
           <div>
-            <span>$BROKE Status</span>
-            <strong>{identityStats.status}</strong>
+            <span>Status</span>
+            <strong>{shareStatusLabel}</strong>
           </div>
           <div>
-            <span>Survival Score</span>
+            <span>Survival</span>
             <strong>{identityStats.weeklySurvivalScore}/100</strong>
           </div>
           <div>
@@ -4136,7 +4146,7 @@ function ShareResultCard({
         <div className="public-share-savings">
           <span>Potential yearly savings</span>
           <strong>{money(potentialYearlySavings, settings.currency)}</strong>
-          <small>Find the leak before it becomes your lifestyle.</small>
+          <small>Find the leak before it becomes lifestyle.</small>
         </div>
 
         <footer className="public-share-footer">
