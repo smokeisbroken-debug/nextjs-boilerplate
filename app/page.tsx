@@ -108,7 +108,8 @@ type XpAction =
   | "add_note"
   | "mark_need_type"
   | "open_chart"
-  | "check_challenge";
+  | "check_challenge"
+  | "daily_streak";
 
 type LeaderboardProfile = {
   telegramId: number;
@@ -929,6 +930,57 @@ function markDailyRoutineAction(action: DailyRoutineActionKey) {
     date,
     [action]: true,
   });
+}
+
+const DAILY_ROUTINE_REWARD_KEY = "broke-daily-routine-reward-v1";
+
+function readDailyRoutineReward(date = dayKey(new Date())) {
+  if (typeof window === "undefined") {
+    return {
+      date,
+      claimed: false,
+    };
+  }
+
+  try {
+    const raw = window.localStorage.getItem(DAILY_ROUTINE_REWARD_KEY);
+    const parsed = raw
+      ? (JSON.parse(raw) as { date?: string; claimed?: boolean })
+      : null;
+
+    if (parsed?.date !== date) {
+      return {
+        date,
+        claimed: false,
+      };
+    }
+
+    return {
+      date,
+      claimed: Boolean(parsed.claimed),
+    };
+  } catch {
+    return {
+      date,
+      claimed: false,
+    };
+  }
+}
+
+function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      DAILY_ROUTINE_REWARD_KEY,
+      JSON.stringify({
+        date,
+        claimed,
+      })
+    );
+  } catch {
+    // XP reward marker is optional. Ignore storage errors.
+  }
 }
 
 
@@ -2092,18 +2144,51 @@ export default function Home() {
     }
   }
 
-  async function trackXpAction(xpAction: XpAction) {
-    if (!cloudAuthReady) return;
+  async function trackXpAction(
+    xpAction: XpAction,
+    context = "$BROKE Score updated"
+  ) {
+    if (!cloudAuthReady) return null;
 
     try {
       const data = await callBrokeApi(cloudInitData, "trackXp", {
         xpAction,
       });
 
-      applyApiFeedback(data);
+      applyApiFeedback(data, context);
+      return data;
     } catch {
       // XP tracking must never block the app.
+      return null;
     }
+  }
+
+  async function claimDailyRoutineReward() {
+    const today = dayKey(new Date());
+    const reward = readDailyRoutineReward(today);
+
+    if (reward.claimed) {
+      return true;
+    }
+
+    if (!cloudAuthReady) {
+      showToast("Daily routine complete", "Connect Telegram to claim XP.", "info");
+      return false;
+    }
+
+    const data = await trackXpAction("daily_streak", "Daily routine complete");
+
+    if (data?.ok) {
+      writeDailyRoutineReward(today, true);
+
+      if (!data.xpAwarded || data.xpAwarded <= 0) {
+        showToast("Daily routine complete", "XP already claimed or daily cap reached.", "info");
+      }
+
+      return true;
+    }
+
+    return false;
   }
 
   async function toggleLeaderboardPublic(nextValue: boolean) {
@@ -2826,6 +2911,8 @@ function DashboardScreen({
         settings={settings}
         summary={summary}
         expenses={routineExpenses}
+        cloudReady={cloudAuthReady}
+        onRoutineComplete={claimDailyRoutineReward}
       />
 
       <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
@@ -2890,6 +2977,8 @@ function DailyRoutinePanel({
   settings,
   summary,
   expenses,
+  cloudReady,
+  onRoutineComplete,
 }: {
   settings: Settings;
   summary: {
@@ -2903,18 +2992,26 @@ function DailyRoutinePanel({
     streak: Streak;
   };
   expenses: Expense[];
+  cloudReady: boolean;
+  onRoutineComplete: () => Promise<boolean>;
 }) {
   const today = dayKey(new Date());
+  const rewardRequestRef = useRef(false);
   const [actions, setActions] = useState<DailyRoutineActions>(() =>
     readDailyRoutineActions(today)
+  );
+  const [rewardClaimed, setRewardClaimed] = useState(() =>
+    readDailyRoutineReward(today).claimed
   );
 
   useEffect(() => {
     markDailyRoutineAction("openedApp");
     setActions(readDailyRoutineActions(today));
+    setRewardClaimed(readDailyRoutineReward(today).claimed);
 
     const interval = window.setInterval(() => {
       setActions(readDailyRoutineActions(today));
+      setRewardClaimed(readDailyRoutineReward(today).claimed);
     }, 800);
 
     return () => window.clearInterval(interval);
@@ -2984,12 +3081,30 @@ function DailyRoutinePanel({
 
   const completedCount = routineItems.filter((item) => item.done).length;
   const routineScore = Math.round((completedCount / routineItems.length) * 100);
+  const routineComplete = completedCount === routineItems.length;
   const routineStatus =
-    routineScore === 100
-      ? "7/7 complete"
-      : routineScore >= 50
-        ? `${completedCount}/7 done`
-        : `${completedCount}/7 done`;
+    routineComplete
+      ? rewardClaimed
+        ? "XP claimed"
+        : "7/7 complete"
+      : `${completedCount}/7 done`;
+
+  useEffect(() => {
+    if (!routineComplete || rewardClaimed || rewardRequestRef.current) return;
+
+    rewardRequestRef.current = true;
+
+    onRoutineComplete()
+      .then((claimed) => {
+        if (claimed) {
+          setRewardClaimed(true);
+        }
+      })
+      .finally(() => {
+        rewardRequestRef.current = false;
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routineComplete, rewardClaimed, today]);
 
   return (
     <section className="daily-routine-card">
@@ -3002,8 +3117,8 @@ function DailyRoutinePanel({
         <div>
           <strong>7 real tasks per day.</strong>
           <p>
-            No fake checkmarks. Tasks complete only when the app sees the real
-            action.
+            Complete the routine through real actions. Finish 7/7 to unlock the
+            daily XP reward.
           </p>
         </div>
 
@@ -3015,6 +3130,27 @@ function DailyRoutinePanel({
 
       <div className="routine-progress">
         <div style={{ width: `${routineScore}%` }} />
+      </div>
+
+      <div className={`routine-reward ${routineComplete ? "unlocked" : ""}`}>
+        <img src={A.challengeTrophy} alt="" />
+
+        <div>
+          <strong>
+            {routineComplete
+              ? rewardClaimed
+                ? "+50 XP claimed"
+                : "Daily XP unlocked"
+              : `Complete ${routineItems.length - completedCount} more task${
+                  routineItems.length - completedCount === 1 ? "" : "s"
+                }`}
+          </strong>
+          <span>
+            {cloudReady
+              ? "7/7 real tasks can reward daily XP once per day."
+              : "Connect Telegram to claim routine XP."}
+          </span>
+        </div>
       </div>
 
       <div className="routine-list">
