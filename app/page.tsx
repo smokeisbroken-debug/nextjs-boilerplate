@@ -945,7 +945,7 @@ type TranslationKey = keyof typeof translations.en;
 
 function t(language: Language | undefined, key: TranslationKey) {
   const lang = language || "en";
-  const map = translations as Record<string, typeof translations.en>;
+  const map = translations as unknown as Record<string, Record<TranslationKey, string>>;
 
   return map[lang]?.[key] ?? translations.en[key];
 }
