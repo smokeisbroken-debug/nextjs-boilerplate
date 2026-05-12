@@ -5,8 +5,11 @@ import type { Dispatch, SetStateAction } from "react";
 
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
 type NeedType = "Needed" | "Not needed" | "Maybe";
-type Currency = "USD" | "EUR" | "MDL";
+type Currency = "USD" | "EUR" | "MDL" | "NGN" | "PKR" | "GBP" | "INR";
 type ChartRange = "day" | "week" | "month";
+type RegionPreset = "Global" | "Nigeria" | "Pakistan" | "Moldova" | "Europe" | "United States";
+type LifeMode = "Student" | "Worker" | "Freelancer" | "Living with family" | "No stable income";
+type IncomeStyle = "Monthly" | "Weekly" | "Daily" | "Allowance" | "Irregular";
 
 type Expense = {
   id: string;
@@ -21,6 +24,14 @@ type Settings = {
   currency: Currency;
   dailyReminder: boolean;
   onboardingCompleted?: boolean;
+  profile: {
+    region: RegionPreset;
+    country: string;
+    lifeMode: LifeMode;
+    incomeStyle: IncomeStyle;
+    hasRent: boolean;
+    workHoursPerMonth: number;
+  };
   income: {
     salary: number;
     side: number;
@@ -32,6 +43,8 @@ type Settings = {
     food: number;
     transport: number;
     phone: number;
+    data: number;
+    education: number;
   };
 };
 
@@ -399,6 +412,14 @@ const defaultSettings: Settings = {
   currency: "USD",
   dailyReminder: true,
   onboardingCompleted: false,
+  profile: {
+    region: "Global",
+    country: "Global",
+    lifeMode: "Worker",
+    incomeStyle: "Monthly",
+    hasRent: true,
+    workHoursPerMonth: 160,
+  },
   income: {
     salary: 2800,
     side: 600,
@@ -410,8 +431,138 @@ const defaultSettings: Settings = {
     food: 350,
     transport: 150,
     phone: 80,
+    data: 0,
+    education: 0,
   },
 };
+
+const regionPresets: Record<
+  RegionPreset,
+  {
+    country: string;
+    currency: Currency;
+    workHoursPerMonth: number;
+    fixedCosts: Settings["fixedCosts"];
+  }
+> = {
+  Global: {
+    country: "Global",
+    currency: "USD",
+    workHoursPerMonth: 160,
+    fixedCosts: { rent: 0, utilities: 0, food: 0, transport: 0, phone: 0, data: 0, education: 0 },
+  },
+  Nigeria: {
+    country: "Nigeria",
+    currency: "NGN",
+    workHoursPerMonth: 120,
+    fixedCosts: { rent: 0, utilities: 0, food: 25000, transport: 12000, phone: 0, data: 7000, education: 0 },
+  },
+  Pakistan: {
+    country: "Pakistan",
+    currency: "PKR",
+    workHoursPerMonth: 120,
+    fixedCosts: { rent: 0, utilities: 0, food: 18000, transport: 7000, phone: 0, data: 2500, education: 0 },
+  },
+  Moldova: {
+    country: "Moldova",
+    currency: "MDL",
+    workHoursPerMonth: 160,
+    fixedCosts: { rent: 5000, utilities: 1500, food: 3500, transport: 800, phone: 250, data: 0, education: 0 },
+  },
+  Europe: {
+    country: "Europe",
+    currency: "EUR",
+    workHoursPerMonth: 160,
+    fixedCosts: { rent: 700, utilities: 160, food: 280, transport: 80, phone: 35, data: 0, education: 0 },
+  },
+  "United States": {
+    country: "United States",
+    currency: "USD",
+    workHoursPerMonth: 160,
+    fixedCosts: { rent: 1200, utilities: 200, food: 350, transport: 150, phone: 80, data: 0, education: 0 },
+  },
+};
+
+const regionOptions = Object.keys(regionPresets) as RegionPreset[];
+const lifeModeOptions: LifeMode[] = [
+  "Student",
+  "Worker",
+  "Freelancer",
+  "Living with family",
+  "No stable income",
+];
+const incomeStyleOptions: IncomeStyle[] = [
+  "Monthly",
+  "Weekly",
+  "Daily",
+  "Allowance",
+  "Irregular",
+];
+
+function normalizeSettings(input?: Partial<Settings> | null): Settings {
+  return {
+    ...defaultSettings,
+    ...(input || {}),
+    profile: {
+      ...defaultSettings.profile,
+      ...(input?.profile || {}),
+    },
+    income: {
+      ...defaultSettings.income,
+      ...(input?.income || {}),
+    },
+    fixedCosts: {
+      ...defaultSettings.fixedCosts,
+      ...(input?.fixedCosts || {}),
+    },
+  };
+}
+
+function applyRegionPreset(settings: Settings, region: RegionPreset): Settings {
+  const preset = regionPresets[region];
+  const hasRent = settings.profile.hasRent && preset.fixedCosts.rent > 0;
+
+  return {
+    ...settings,
+    currency: preset.currency,
+    profile: {
+      ...settings.profile,
+      region,
+      country: preset.country,
+      hasRent,
+      workHoursPerMonth: preset.workHoursPerMonth,
+    },
+    fixedCosts: {
+      ...preset.fixedCosts,
+      rent: hasRent ? preset.fixedCosts.rent : 0,
+    },
+  };
+}
+
+function applyLifeMode(settings: Settings, lifeMode: LifeMode): Settings {
+  const studentLike = lifeMode === "Student" || lifeMode === "Living with family" || lifeMode === "No stable income";
+  const nextIncomeStyle: IncomeStyle =
+    lifeMode === "Student"
+      ? "Allowance"
+      : lifeMode === "Freelancer" || lifeMode === "No stable income"
+        ? "Irregular"
+        : settings.profile.incomeStyle;
+
+  return {
+    ...settings,
+    profile: {
+      ...settings.profile,
+      lifeMode,
+      incomeStyle: nextIncomeStyle,
+      hasRent: studentLike ? false : settings.profile.hasRent,
+      workHoursPerMonth: lifeMode === "Student" ? 80 : settings.profile.workHoursPerMonth,
+    },
+    fixedCosts: {
+      ...settings.fixedCosts,
+      rent: studentLike ? 0 : settings.fixedCosts.rent,
+    },
+  };
+}
 
 const categories = [
   { name: "Coffee", icon: A.coffee },
@@ -420,6 +571,11 @@ const categories = [
   { name: "Shopping", icon: A.shopping },
   { name: "Subscriptions", icon: A.subscriptions },
   { name: "Taxi", icon: A.taxi },
+  { name: "Data", icon: A.reminder },
+  { name: "School", icon: A.calendar },
+  { name: "Snacks", icon: A.takeouts },
+  { name: "Gaming", icon: A.challengeTrophy },
+  { name: "Family", icon: A.walletMascot },
   { name: "Custom", icon: A.custom },
 ];
 
@@ -1001,6 +1157,10 @@ function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true) {
 function currencySymbol(currency: Currency) {
   if (currency === "EUR") return "€";
   if (currency === "MDL") return "L";
+  if (currency === "NGN") return "₦";
+  if (currency === "PKR") return "Rs";
+  if (currency === "GBP") return "£";
+  if (currency === "INR") return "₹";
   return "$";
 }
 
@@ -1019,21 +1179,44 @@ function sum(values: number[]) {
   return values.reduce((acc, value) => acc + value, 0);
 }
 
+function getIncomeMultiplier(settings: Settings) {
+  if (settings.profile.incomeStyle === "Weekly") return 4.35;
+  if (settings.profile.incomeStyle === "Daily") return 30;
+  return 1;
+}
+
+function getIncomePeriodLabel(settings: Settings) {
+  if (settings.profile.incomeStyle === "Allowance") return "Allowance";
+  if (settings.profile.incomeStyle === "Irregular") return "Estimated monthly";
+  return `${settings.profile.incomeStyle} income`;
+}
+
+function getPrimaryIncomeLabel(settings: Settings) {
+  if (settings.profile.lifeMode === "Student") return "Allowance / support";
+  if (settings.profile.lifeMode === "Freelancer") return "Freelance income";
+  if (settings.profile.lifeMode === "No stable income") return "Expected income";
+  return "Salary";
+}
+
 function getTotalIncome(settings: Settings) {
-  return sum([
+  const baseIncome = sum([
     settings.income.salary,
     settings.income.side,
     settings.income.other,
   ]);
+
+  return Math.round(baseIncome * getIncomeMultiplier(settings));
 }
 
 function getFixedCosts(settings: Settings) {
   return sum([
-    settings.fixedCosts.rent,
+    settings.profile.hasRent ? settings.fixedCosts.rent : 0,
     settings.fixedCosts.utilities,
     settings.fixedCosts.food,
     settings.fixedCosts.transport,
     settings.fixedCosts.phone,
+    settings.fixedCosts.data,
+    settings.fixedCosts.education,
   ]);
 }
 
@@ -1446,7 +1629,10 @@ function buildV2IdentityStats(
     100
   );
 
-  const hourlyValue = Math.max(getTotalIncome(settings) / 160, 1);
+  const hourlyValue = Math.max(
+    getTotalIncome(settings) / Math.max(settings.profile.workHoursPerMonth, 1),
+    1
+  );
   const lifeHoursLost = weeklyLeaks > 0 ? Math.round((weeklyLeaks / hourlyValue) * 10) / 10 : 0;
 
   const biggestLeak = getCategorySummaries(weekLeakExpenses)
@@ -1818,18 +2004,7 @@ export default function Home() {
         };
 
         if (parsed.settings) {
-          setSettings({
-            ...defaultSettings,
-            ...parsed.settings,
-            income: {
-              ...defaultSettings.income,
-              ...parsed.settings.income,
-            },
-            fixedCosts: {
-              ...defaultSettings.fixedCosts,
-              ...parsed.settings.fixedCosts,
-            },
-          });
+          setSettings(normalizeSettings(parsed.settings));
         }
 
         if (Array.isArray(parsed.expenses)) {
@@ -1910,7 +2085,7 @@ export default function Home() {
 
         if (cancelled) return;
 
-        if (data.settings) setSettings(data.settings);
+        if (data.settings) setSettings(normalizeSettings(data.settings));
         if (data.expenses) setExpenses(data.expenses);
         if (data.streak) setStreak(data.streak);
         if (data.challengeTemplates) setChallengeTemplates(data.challengeTemplates);
@@ -2626,8 +2801,9 @@ function OnboardingScreen({
   onComplete: (settings: Settings) => void;
 }) {
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<Settings>(settings);
+  const [draft, setDraft] = useState<Settings>(() => normalizeSettings(settings));
 
+  const totalSteps = 5;
   const firstName = telegram.user?.first_name || "there";
   const totalIncome = getTotalIncome(draft);
   const totalFixedCosts = getFixedCosts(draft);
@@ -2655,7 +2831,7 @@ function OnboardingScreen({
 
   function next() {
     triggerHaptic("light");
-    setStep((prev) => Math.min(prev + 1, 3));
+    setStep((prev) => Math.min(prev + 1, totalSteps - 1));
   }
 
   function back() {
@@ -2668,13 +2844,13 @@ function OnboardingScreen({
       <div className="onboarding-top">
         <img src={A.appFrog} alt="$BROKE" />
         <div>
-          <span>Step {step + 1} / 4</span>
-          <strong>First Leak Setup</strong>
+          <span>Step {step + 1} / {totalSteps}</span>
+          <strong>Life Setup</strong>
         </div>
       </div>
 
       <div className="onboarding-progress">
-        <i style={{ width: `${((step + 1) / 4) * 100}%` }} />
+        <i style={{ width: `${((step + 1) / totalSteps) * 100}%` }} />
       </div>
 
       {step === 0 && (
@@ -2682,49 +2858,53 @@ function OnboardingScreen({
           <img src={A.walletMascot} alt="" />
           <h1>Welcome, {firstName}.</h1>
           <p>
-            This tracker is not about being rich. It is about catching the first
-            small leak before it becomes your monthly rhythm.
+            $BROKE adapts to your real life: student, worker, freelancer, local
+            currency, rent or no rent. No one-size-fits-all finance notebook.
           </p>
 
           <div className="onboarding-points">
             <div>
               <b>01</b>
-              <span>Track expenses</span>
+              <span>Choose region</span>
             </div>
             <div>
               <b>02</b>
-              <span>Find money leaks</span>
+              <span>Set life mode</span>
             </div>
             <div>
               <b>03</b>
-              <span>Build Wallet HP</span>
+              <span>Find local leaks</span>
             </div>
           </div>
         </section>
       )}
 
       {step === 1 && (
+        <LifeProfileEditor settings={draft} setSettings={setDraft} />
+      )}
+
+      {step === 2 && (
         <section className="onboarding-card">
-          <h2>Monthly income</h2>
-          <p>Enter realistic numbers. You can edit them later in Settings.</p>
+          <h2>{getIncomePeriodLabel(draft)}</h2>
+          <p>Use the way money actually comes to you: salary, allowance, daily, weekly, or irregular.</p>
 
           <div className="onboarding-fields">
             <EditableMoneyLine
-              label="Salary"
+              label={getPrimaryIncomeLabel(draft)}
               value={draft.income.salary}
               currency={draft.currency}
               onChange={(value) => updateIncome("salary", value)}
             />
 
             <EditableMoneyLine
-              label="Side income"
+              label="Side hustle / extra"
               value={draft.income.side}
               currency={draft.currency}
               onChange={(value) => updateIncome("side", value)}
             />
 
             <EditableMoneyLine
-              label="Other income"
+              label="Other / support"
               value={draft.income.other}
               currency={draft.currency}
               onChange={(value) => updateIncome("other", value)}
@@ -2732,31 +2912,26 @@ function OnboardingScreen({
           </div>
 
           <div className="onboarding-total">
-            <span>Total income</span>
+            <span>Estimated monthly income</span>
             <strong>{money(totalIncome, draft.currency)}</strong>
           </div>
         </section>
       )}
 
-      {step === 2 && (
+      {step === 3 && (
         <section className="onboarding-card">
           <h2>Fixed life costs</h2>
-          <p>These are the costs you expect every month before random spending.</p>
+          <p>Only add what applies. If you live with family or you are a student, rent can stay off.</p>
 
           <div className="onboarding-fields">
-            <EditableMoneyLine
-              label="Rent"
-              value={draft.fixedCosts.rent}
-              currency={draft.currency}
-              onChange={(value) => updateFixedCost("rent", value)}
-            />
-
-            <EditableMoneyLine
-              label="Utilities"
-              value={draft.fixedCosts.utilities}
-              currency={draft.currency}
-              onChange={(value) => updateFixedCost("utilities", value)}
-            />
+            {draft.profile.hasRent && (
+              <EditableMoneyLine
+                label="Rent"
+                value={draft.fixedCosts.rent}
+                currency={draft.currency}
+                onChange={(value) => updateFixedCost("rent", value)}
+              />
+            )}
 
             <EditableMoneyLine
               label="Food basics"
@@ -2773,10 +2948,17 @@ function OnboardingScreen({
             />
 
             <EditableMoneyLine
-              label="Phone / Internet"
-              value={draft.fixedCosts.phone}
+              label="Data / Internet"
+              value={draft.fixedCosts.data}
               currency={draft.currency}
-              onChange={(value) => updateFixedCost("phone", value)}
+              onChange={(value) => updateFixedCost("data", value)}
+            />
+
+            <EditableMoneyLine
+              label="School / study"
+              value={draft.fixedCosts.education}
+              currency={draft.currency}
+              onChange={(value) => updateFixedCost("education", value)}
             />
           </div>
 
@@ -2787,19 +2969,19 @@ function OnboardingScreen({
         </section>
       )}
 
-      {step === 3 && (
+      {step === 4 && (
         <section className="onboarding-card final">
           <img src={A.homeMascot} alt="" />
-          <h2>Your tracker is ready.</h2>
+          <h2>Your tracker fits your life.</h2>
 
           <div className="onboarding-summary">
             <div>
-              <span>Income</span>
-              <strong>{money(totalIncome, draft.currency)}</strong>
+              <span>Profile</span>
+              <strong>{draft.profile.lifeMode}</strong>
             </div>
             <div>
-              <span>Life cost</span>
-              <strong>{money(totalFixedCosts, draft.currency)}</strong>
+              <span>Region</span>
+              <strong>{draft.profile.country}</strong>
             </div>
             <div>
               <span>Real balance</span>
@@ -2808,8 +2990,8 @@ function OnboardingScreen({
           </div>
 
           <p>
-            Next step: add one real leak. Coffee, smoking, takeout, taxi,
-            shopping, or anything that quietly drains the wallet.
+            Next step: add one real local leak. Data, transport, snacks, smoking,
+            takeout, gaming, or anything that quietly drains the wallet.
           </p>
         </section>
       )}
@@ -2825,7 +3007,7 @@ function OnboardingScreen({
           </button>
         )}
 
-        {step < 3 ? (
+        {step < totalSteps - 1 ? (
           <button type="button" className="primary-btn onboarding-next" onClick={next}>
             Continue
           </button>
@@ -2842,6 +3024,7 @@ function OnboardingScreen({
     </div>
   );
 }
+
 
 function Header({
   title,
@@ -3016,6 +3199,8 @@ function DashboardScreen({
         ))}
       </section>
 
+      <LifeProfileSummaryCard settings={settings} />
+
       <StreakCard streak={summary.streak} />
       <BadgeMiniStrip badges={badges} />
 
@@ -3107,6 +3292,146 @@ function DashboardScreen({
 
 
 
+
+function LifeProfileSummaryCard({ settings }: { settings: Settings }) {
+  return (
+    <section className="life-profile-summary">
+      <div>
+        <span>Life Profile</span>
+        <strong>{settings.profile.lifeMode}</strong>
+        <small>
+          {settings.profile.country} · {settings.currency} · {settings.profile.incomeStyle}
+        </small>
+      </div>
+
+      <b>{settings.profile.hasRent ? "Rent mode" : "No-rent mode"}</b>
+    </section>
+  );
+}
+
+function LifeProfileEditor({
+  settings,
+  setSettings,
+}: {
+  settings: Settings;
+  setSettings: Dispatch<SetStateAction<Settings>>;
+}) {
+  function updateProfile<K extends keyof Settings["profile"]>(
+    key: K,
+    value: Settings["profile"][K]
+  ) {
+    setSettings((prev) => ({
+      ...prev,
+      profile: {
+        ...prev.profile,
+        [key]: value,
+      },
+      fixedCosts:
+        key === "hasRent" && value === false
+          ? {
+              ...prev.fixedCosts,
+              rent: 0,
+            }
+          : prev.fixedCosts,
+    }));
+  }
+
+  return (
+    <section className="settings-group life-profile-card">
+      <h3>Life Profile</h3>
+      <p>Make the tracker fit your country, currency, and lifestyle.</p>
+
+      <div className="profile-field">
+        <span>Region / country</span>
+        <select
+          className="settings-select profile-select"
+          value={settings.profile.region}
+          onChange={(event) => {
+            const region = event.target.value as RegionPreset;
+            setSettings((prev) => applyRegionPreset(prev, region));
+          }}
+        >
+          {regionOptions.map((region) => (
+            <option key={region} value={region}>
+              {region}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="profile-field">
+        <span>Currency</span>
+        <select
+          className="settings-select profile-select"
+          value={settings.currency}
+          onChange={(event) =>
+            setSettings((prev) => ({
+              ...prev,
+              currency: event.target.value as Currency,
+            }))
+          }
+        >
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="MDL">MDL (L)</option>
+          <option value="NGN">NGN (₦)</option>
+          <option value="PKR">PKR (Rs)</option>
+          <option value="GBP">GBP (£)</option>
+          <option value="INR">INR (₹)</option>
+        </select>
+      </div>
+
+      <div className="profile-block">
+        <span>Life mode</span>
+        <div className="profile-chip-grid">
+          {lifeModeOptions.map((mode) => (
+            <button
+              type="button"
+              key={mode}
+              className={settings.profile.lifeMode === mode ? "active" : ""}
+              onClick={() => setSettings((prev) => applyLifeMode(prev, mode))}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="profile-block">
+        <span>Income style</span>
+        <div className="profile-chip-grid compact">
+          {incomeStyleOptions.map((style) => (
+            <button
+              type="button"
+              key={style}
+              className={settings.profile.incomeStyle === style ? "active" : ""}
+              onClick={() => updateProfile("incomeStyle", style)}
+            >
+              {style}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        className="profile-toggle-line"
+        onClick={() => updateProfile("hasRent", !settings.profile.hasRent)}
+      >
+        <span>Rent applies</span>
+        <strong>{settings.profile.hasRent ? "Yes" : "No"}</strong>
+      </button>
+
+      <EditableMoneyLine
+        label="Work / study hours per month"
+        value={settings.profile.workHoursPerMonth}
+        currency={settings.currency}
+        plainNumber
+        onChange={(value) => updateProfile("workHoursPerMonth", Math.max(safeNumber(value), 1))}
+      />
+    </section>
+  );
+}
 
 function V2IdentityPanel({
   settings,
@@ -5004,32 +5329,34 @@ function SettingsScreen({
     <div className="screen">
       <Header title="Settings" showBack onBack={onBack} />
 
+      <LifeProfileEditor settings={settings} setSettings={setSettings} />
+
       <section className="settings-group">
-        <h3>Income (Monthly)</h3>
+        <h3>{getIncomePeriodLabel(settings)}</h3>
 
         <EditableMoneyLine
-          label="Salary"
+          label={getPrimaryIncomeLabel(settings)}
           value={settings.income.salary}
           currency={settings.currency}
           onChange={(value) => updateIncome("salary", value)}
         />
 
         <EditableMoneyLine
-          label="Side income"
+          label="Side hustle / extra"
           value={settings.income.side}
           currency={settings.currency}
           onChange={(value) => updateIncome("side", value)}
         />
 
         <EditableMoneyLine
-          label="Other income"
+          label="Other / support"
           value={settings.income.other}
           currency={settings.currency}
           onChange={(value) => updateIncome("other", value)}
         />
 
         <SettingLine
-          label="Total Income"
+          label="Estimated monthly income"
           value={money(totalIncome, settings.currency)}
           strong
           good
@@ -5037,14 +5364,16 @@ function SettingsScreen({
       </section>
 
       <section className="settings-group">
-        <h3>Fixed Life Costs (Monthly)</h3>
+        <h3>Fixed Life Costs</h3>
 
-        <EditableMoneyLine
-          label="Rent"
-          value={settings.fixedCosts.rent}
-          currency={settings.currency}
-          onChange={(value) => updateFixedCost("rent", value)}
-        />
+        {settings.profile.hasRent && (
+          <EditableMoneyLine
+            label="Rent"
+            value={settings.fixedCosts.rent}
+            currency={settings.currency}
+            onChange={(value) => updateFixedCost("rent", value)}
+          />
+        )}
 
         <EditableMoneyLine
           label="Utilities"
@@ -5068,10 +5397,24 @@ function SettingsScreen({
         />
 
         <EditableMoneyLine
-          label="Phone / Internet"
+          label="Phone"
           value={settings.fixedCosts.phone}
           currency={settings.currency}
           onChange={(value) => updateFixedCost("phone", value)}
+        />
+
+        <EditableMoneyLine
+          label="Data / Internet"
+          value={settings.fixedCosts.data}
+          currency={settings.currency}
+          onChange={(value) => updateFixedCost("data", value)}
+        />
+
+        <EditableMoneyLine
+          label="School / study"
+          value={settings.fixedCosts.education}
+          currency={settings.currency}
+          onChange={(value) => updateFixedCost("education", value)}
         />
 
         <SettingLine
@@ -5100,6 +5443,10 @@ function SettingsScreen({
               <option value="USD">USD ($)</option>
               <option value="EUR">EUR (€)</option>
               <option value="MDL">MDL (L)</option>
+              <option value="NGN">NGN (₦)</option>
+              <option value="PKR">PKR (Rs)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="INR">INR (₹)</option>
             </select>
           </div>
           <b>›</b>
@@ -5195,7 +5542,7 @@ function SettingsScreen({
       </section>
 
       <details className="tech-details">
-        <summary>Technical status</summary>
+        <summary>Connection details</summary>
         <TelegramMiniStatus
           telegram={telegram}
           webAuth={webAuth}
@@ -5279,11 +5626,13 @@ function EditableMoneyLine({
   value,
   currency,
   onChange,
+  plainNumber = false,
 }: {
   label: string;
   value: number;
   currency: Currency;
   onChange: (value: string) => void;
+  plainNumber?: boolean;
 }) {
   const [draftValue, setDraftValue] = useState(String(value));
   const [focused, setFocused] = useState(false);
@@ -5298,7 +5647,7 @@ function EditableMoneyLine({
     <div className="setting-input-line">
       <span>{label}</span>
       <div>
-        <small>{currencySymbol(currency)}</small>
+        <small>{plainNumber ? "#" : currencySymbol(currency)}</small>
         <input
           type="number"
           inputMode="decimal"
