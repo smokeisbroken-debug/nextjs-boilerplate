@@ -1,11 +1,10 @@
 "use client";
 
-import { Children, cloneElement, isValidElement, useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, ReactNode, SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
 type NeedType = "Needed" | "Not needed" | "Maybe";
-type Language = "en" | "ru" | "es" | "pt" | "fr" | "tr" | "ar" | "hi" | "id" | "vi";
 type Currency =
   | "USD"
   | "EUR"
@@ -91,7 +90,6 @@ type Expense = {
 
 type Settings = {
   currency: Currency;
-  language: Language;
   dailyReminder: boolean;
   onboardingCompleted?: boolean;
   profile: {
@@ -480,7 +478,6 @@ const A = {
 
 const defaultSettings: Settings = {
   currency: "USD",
-  language: "en",
   dailyReminder: true,
   onboardingCompleted: false,
   profile: {
@@ -767,1300 +764,6 @@ const currencyOptions: {
   { value: "GEL", label: "GEL (₾)" },
   { value: "KZT", label: "KZT (₸)" },
 ];
-
-const languageOptions: {
-  value: Language;
-  label: string;
-}[] = [
-  { value: "en", label: "English" },
-  { value: "ru", label: "Русский" },
-  { value: "es", label: "Español" },
-  { value: "pt", label: "Português" },
-  { value: "fr", label: "Français" },
-  { value: "tr", label: "Türkçe" },
-  { value: "ar", label: "العربية" },
-  { value: "hi", label: "हिन्दी" },
-  { value: "id", label: "Bahasa Indonesia" },
-  { value: "vi", label: "Tiếng Việt" },
-];
-
-const translations = {
-  en: {
-    appTitle: "$BROKE Life Tracker",
-    yourWallet: "Your wallet",
-    isNotBroken: "is not broken.",
-    itIsLeaking: "It is leaking.",
-    income: "Income",
-    lifeCost: "Life Cost",
-    moneyLeaks: "Money Leaks",
-    realBalance: "Real Balance",
-    thisMonth: "This month",
-    leftToStack: "Left to stack",
-    walletHp: "Wallet HP",
-    stableWallet: "Stable Wallet",
-    smallLeak: "Small Leak",
-    hpLine: "Hold the line, fix the leaks.",
-    brokeChart: "$BROKE Chart",
-    sevenDayPreview: "7D Preview",
-    todayDamage: "Today's Damage",
-    trackedToday: "tracked today",
-    addExpenseTitle: "Add Expense",
-    amount: "Amount",
-    category: "Category",
-    wasNeeded: "Was it needed?",
-    needed: "Needed",
-    maybe: "Maybe",
-    notNeeded: "Not needed",
-    notePlaceholder: "Add a quick note...",
-    addExpenseButton: "Add Expense",
-    addExpenseHint: "Track daily leaks. Small leaks sink big wallets.",
-    saveTitle: "Save",
-    settingsTitle: "Settings",
-    language: "Language",
-    lifeProfile: "Life Profile",
-    lifeProfileDesc: "Make the tracker fit your country, currency, and lifestyle.",
-    countryPreset: "Country preset",
-    yourCountry: "Your country",
-    countryPlaceholder: "Type your country",
-    currency: "Currency",
-    lifeMode: "Life mode",
-    incomeStyle: "Income style",
-    rentApplies: "Rent applies",
-    workHours: "Work / study hours per month",
-    yes: "Yes",
-    no: "No",
-    guide: "Guide",
-    howToUse: "How to use $BROKE",
-    guideIntro:
-      "$BROKE is not a normal expense tracker. It helps you find wallet leaks, build discipline, and share safe progress.",
-    guide1Title: "1. Set your Life Profile",
-    guide1Body:
-      "Choose your country or type your own, set currency, life mode, income style, rent mode and work/study hours. This makes the app fit your real life.",
-    guide2Title: "2. Add real expenses",
-    guide2Body:
-      "Go to Add, enter the amount, choose a category, and mark if it was Needed, Maybe, or Not needed.",
-    guide3Title: "3. Mark leaks honestly",
-    guide3Body:
-      "Needed does not count as a leak. Maybe counts as half. Not needed counts as a full wallet leak.",
-    guide4Title: "4. Use Daily Routine",
-    guide4Body:
-      "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check chart, check Save, and share public proof.",
-    guide5Title: "5. Read Wallet Survival",
-    guide5Body:
-      "Survival Score, Biggest Leak, Hours Lost, Status and Doomspending Alert show what is draining your wallet this week.",
-    guide6Title: "6. Check the $BROKE Chart",
-    guide6Body:
-      "The chart shows how your balance moves like a trading chart. Green days are controlled. Red days show damage.",
-    guide7Title: "7. Share safely",
-    guide7Body:
-      "Share cards hide income and real balance. They only show safe public progress like Wallet HP, status, score, rank, streak and badges.",
-    simpleRule: "Simple rule:",
-    simpleRuleBody: "Track honestly. Fix one leak at a time. Protect Wallet HP.",
-    gotIt: "Got it",
-    walletSurvival: "Wallet Survival",
-    thisWeek: "This week",
-    findLeak: "Find the leak before it becomes your lifestyle.",
-    survivalDesc: "See what drains you, how much it costs, and what to fix next.",
-  },
-  ru: {
-    appTitle: "$BROKE Life Tracker",
-    yourWallet: "Твой кошелёк",
-    isNotBroken: "не сломан.",
-    itIsLeaking: "Он протекает.",
-    income: "Доход",
-    lifeCost: "Расходы жизни",
-    moneyLeaks: "Утечки денег",
-    realBalance: "Реальный баланс",
-    thisMonth: "За месяц",
-    leftToStack: "Осталось накопить",
-    walletHp: "Wallet HP",
-    stableWallet: "Стабильный кошелёк",
-    smallLeak: "Малая утечка",
-    hpLine: "Держи линию. Закрывай утечки.",
-    brokeChart: "$BROKE Chart",
-    sevenDayPreview: "7 дней",
-    todayDamage: "Урон сегодня",
-    trackedToday: "записано сегодня",
-    addExpenseTitle: "Добавить расход",
-    amount: "Сумма",
-    category: "Категория",
-    wasNeeded: "Это было нужно?",
-    needed: "Нужно",
-    maybe: "Возможно",
-    notNeeded: "Не нужно",
-    notePlaceholder: "Добавь короткую заметку...",
-    addExpenseButton: "Добавить расход",
-    addExpenseHint: "Записывай утечки каждый день. Малые утечки топят большие кошельки.",
-    saveTitle: "Экономия",
-    settingsTitle: "Настройки",
-    language: "Язык",
-    lifeProfile: "Профиль жизни",
-    lifeProfileDesc: "Настрой приложение под страну, валюту и свой образ жизни.",
-    countryPreset: "Страна из списка",
-    yourCountry: "Твоя страна",
-    countryPlaceholder: "Напиши свою страну",
-    currency: "Валюта",
-    lifeMode: "Тип жизни",
-    incomeStyle: "Тип дохода",
-    rentApplies: "Есть аренда",
-    workHours: "Рабочие / учебные часы в месяц",
-    yes: "Да",
-    no: "Нет",
-    guide: "Гайд",
-    howToUse: "Как пользоваться $BROKE",
-    guideIntro:
-      "$BROKE — не обычный трекер расходов. Он помогает видеть утечки денег, строить дисциплину и делиться безопасным прогрессом.",
-    guide1Title: "1. Настрой Life Profile",
-    guide1Body:
-      "Выбери страну или напиши свою, задай валюту, тип жизни, тип дохода, аренду и часы работы/учёбы. Так приложение подстроится под твою реальность.",
-    guide2Title: "2. Добавляй реальные расходы",
-    guide2Body:
-      "Открой Add, введи сумму, выбери категорию и отметь: Нужно, Возможно или Не нужно.",
-    guide3Title: "3. Отмечай утечки честно",
-    guide3Body:
-      "Нужно не считается утечкой. Возможно считается наполовину. Не нужно считается полной утечкой.",
-    guide4Title: "4. Используй Daily Routine",
-    guide4Body:
-      "Выполняй 7 реальных действий в день: открыть app, записать расход, отметить утечку, добавить контекст, проверить chart, Save и поделиться безопасным прогрессом.",
-    guide5Title: "5. Смотри Wallet Survival",
-    guide5Body:
-      "Survival Score, Biggest Leak, Hours Lost, Status и Doomspending Alert показывают, что тянет деньги на этой неделе.",
-    guide6Title: "6. Проверяй $BROKE Chart",
-    guide6Body:
-      "Chart показывает движение баланса как торговый график. Зелёные дни — контроль. Красные — урон.",
-    guide7Title: "7. Делись безопасно",
-    guide7Body:
-      "Share cards скрывают доход и реальный баланс. Они показывают только безопасный публичный прогресс: Wallet HP, статус, score, rank, streak и badges.",
-    simpleRule: "Простое правило:",
-    simpleRuleBody: "Записывай честно. Чини одну утечку за раз. Защищай Wallet HP.",
-    gotIt: "Понятно",
-    walletSurvival: "Выживание кошелька",
-    thisWeek: "Эта неделя",
-    findLeak: "Найди утечку, пока она не стала стилем жизни.",
-    survivalDesc: "Смотри, что тебя сливает, сколько это стоит и что исправить дальше.",
-  },
-} as const;
-
-type TranslationKey = keyof typeof translations.en;
-
-function t(language: Language | undefined, key: TranslationKey): string {
-  const lang = language || "en";
-  const map = translations as unknown as Record<
-    string,
-    Record<TranslationKey, string>
-  >;
-
-  return map[lang]?.[key] ?? translations.en[key];
-}
-
-function needLabel(type: NeedType, language: Language | undefined) {
-  if (type === "Needed") return t(language, "needed");
-  if (type === "Maybe") return t(language, "maybe");
-  return t(language, "notNeeded");
-}
-
-const runtimeTextTranslations: Partial<Record<Language, Record<string, string>>> = {
-  "ru": {
-    "$BROKE Life Tracker": "$BROKE Life Tracker",
-    "$BROKE Chart": "$BROKE Chart",
-    "Home": "Главная",
-    "Add": "Добавить",
-    "Chart": "График",
-    "Save": "Экономия",
-    "Settings": "Настройки",
-    "Income": "Доход",
-    "Life Cost": "Расходы жизни",
-    "Money Leaks": "Утечки денег",
-    "Real Balance": "Реальный баланс",
-    "This month": "За месяц",
-    "Left to stack": "Осталось накопить",
-    "Wallet HP": "Wallet HP",
-    "Stable Wallet": "Стабильный кошелёк",
-    "Small Leak": "Малая утечка",
-    "Hold the line, fix the leaks.": "Держи линию. Закрывай утечки.",
-    "Your wallet": "Твой кошелёк",
-    "is not broken.": "не сломан.",
-    "It is leaking.": "Он протекает.",
-    "Wallet Survival": "Выживание кошелька",
-    "This week": "Эта неделя",
-    "Find the leak before it becomes your lifestyle.": "Найди утечку, пока она не стала стилем жизни.",
-    "See what drains you, how much it costs, and what to fix next.": "Смотри, что тебя сливает, сколько это стоит и что исправить дальше.",
-    "Survival Score": "Оценка выживания",
-    "Your weekly wallet score.": "Недельная оценка кошелька.",
-    "Biggest Leak": "Главная утечка",
-    "No visible leak this week.": "На этой неделе явной утечки нет.",
-    "Hours Lost": "Часы потеряны",
-    "Time traded for leaks.": "Время, обменянное на утечки.",
-    "Status": "Статус",
-    "Doomspending Alert": "Тревога: импульсивные траты",
-    "Leak detected": "Утечка найдена",
-    "No doomspending detected": "Импульсивные траты не найдены",
-    "Self-roast insight": "Самоироничный инсайт",
-    "Daily Routine": "Ежедневная рутина",
-    "7 real tasks per day.": "7 реальных заданий в день.",
-    "Complete the routine through real actions. Finish 7/7 to unlock the daily XP reward.": "Выполняй рутину реальными действиями. Закрой 7/7, чтобы получить дневной XP.",
-    "Open the app": "Открыть приложение",
-    "Start the day with a wallet check.": "Начни день с проверки кошелька.",
-    "Track 1 expense": "Записать 1 расход",
-    "Add at least one real expense today.": "Добавь хотя бы один реальный расход сегодня.",
-    "Mark a real leak": "Отметить реальную утечку",
-    "Add one expense as Not needed or Maybe.": "Отметь один расход как Не нужно или Возможно.",
-    "Add context": "Добавить контекст",
-    "Add a note to one expense so the habit is visible.": "Добавь заметку к одному расходу, чтобы привычка стала видимой.",
-    "Check $BROKE Chart": "Проверить $BROKE Chart",
-    "Open the Chart tab and look at today’s damage.": "Открой Chart и посмотри сегодняшний урон.",
-    "Check Save plan": "Проверить план экономии",
-    "Open Save and review one What If scenario.": "Открой Save и проверь один сценарий What If.",
-    "Share public proof": "Поделиться публичным прогрессом",
-    "Share or copy a safe progress card. No private money data.": "Поделись или скопируй безопасную карточку прогресса. Без личных финансовых данных.",
-    "Daily XP unlocked": "Дневной XP открыт",
-    "+50 XP claimed": "+50 XP получено",
-    "Complete 1 more task": "Выполни ещё 1 задание",
-    "Discipline rule:": "Правило дисциплины:",
-    "you cannot tap tasks complete. Complete the action, then the checkmark appears.": "нельзя просто нажать и закрыть задание. Сделай действие — тогда появится галочка.",
-    "Account sync": "Синхронизация аккаунта",
-    "Cloud synced": "Облако синхронизировано",
-    "Local only": "Только локально",
-    "Local demo": "Локальный демо-режим",
-    "Connection details": "Детали подключения",
-    "Platform": "Платформа",
-    "Profile": "Профиль",
-    "Loading tracker...": "Загрузка трекера...",
-    "Checking your wallet leaks.": "Проверяем утечки кошелька.",
-    "Syncing cloud progress...": "Синхронизация прогресса...",
-    "Checking your Telegram profile before setup.": "Проверяем Telegram-профиль перед настройкой.",
-    "Add Expense": "Добавить расход",
-    "Amount": "Сумма",
-    "Category": "Категория",
-    "Was it needed?": "Это было нужно?",
-    "Needed": "Нужно",
-    "Maybe": "Возможно",
-    "Not needed": "Не нужно",
-    "Add a quick note...": "Добавь короткую заметку...",
-    "Track daily leaks. Small leaks sink big wallets.": "Записывай утечки каждый день. Малые утечки топят большие кошельки.",
-    "Coffee": "Кофе",
-    "Smoking": "Курение",
-    "Takeouts": "Еда на заказ",
-    "Shopping": "Покупки",
-    "Subscriptions": "Подписки",
-    "Taxi": "Такси",
-    "Data": "Интернет",
-    "School": "Учёба",
-    "Snacks": "Перекусы",
-    "Gaming": "Игры",
-    "Family": "Семья",
-    "Custom": "Другое",
-    "Latest Records": "Последние записи",
-    "No records yet.": "Записей пока нет.",
-    "No leaks tracked yet. Add your first expense.": "Утечек пока нет. Добавь первый расход.",
-    "Today&apos;s Damage": "Урон сегодня",
-    "Today's Damage": "Урон сегодня",
-    "tracked today": "записано сегодня",
-    "Recent Records": "Последние записи",
-    "Life Profile": "Профиль жизни",
-    "Make the tracker fit your country, currency, and lifestyle.": "Настрой приложение под страну, валюту и образ жизни.",
-    "Language": "Язык",
-    "Country preset": "Страна из списка",
-    "Your country": "Твоя страна",
-    "Type your country": "Напиши свою страну",
-    "Currency": "Валюта",
-    "Life mode": "Тип жизни",
-    "Student": "Студент",
-    "Worker": "Работник",
-    "Freelancer": "Фрилансер",
-    "Living with family": "Живу с семьёй",
-    "No stable income": "Нет стабильного дохода",
-    "Income style": "Тип дохода",
-    "Monthly": "Ежемесячно",
-    "Weekly": "Еженедельно",
-    "Daily": "Ежедневно",
-    "Allowance": "Карманные / поддержка",
-    "Irregular": "Нерегулярно",
-    "Rent applies": "Есть аренда",
-    "Yes": "Да",
-    "No": "Нет",
-    "Work / study hours per month": "Рабочие / учебные часы в месяц",
-    "Fixed Life Costs": "Постоянные расходы",
-    "Fixed life costs": "Постоянные расходы",
-    "Food basics": "Базовая еда",
-    "Transport": "Транспорт",
-    "Data / Internet": "Интернет / связь",
-    "Phone": "Телефон",
-    "Education / school": "Образование / школа",
-    "Estimated monthly income": "Примерный месячный доход",
-    "Allowance / support": "Карманные / поддержка",
-    "Freelance income": "Доход фриланса",
-    "Expected income": "Ожидаемый доход",
-    "Salary": "Зарплата",
-    "Side hustle / extra": "Подработка / дополнительно",
-    "Other / support": "Другое / поддержка",
-    "Guide": "Гайд",
-    "How to use $BROKE": "Как пользоваться $BROKE",
-    "$BROKE is not a normal expense tracker. It helps you find wallet leaks, build discipline, and share safe progress.": "$BROKE — не обычный трекер расходов. Он помогает видеть утечки денег, строить дисциплину и делиться безопасным прогрессом.",
-    "1. Set your Life Profile": "1. Настрой профиль жизни",
-    "2. Add real expenses": "2. Добавляй реальные расходы",
-    "3. Mark leaks honestly": "3. Отмечай утечки честно",
-    "4. Use Daily Routine": "4. Используй ежедневную рутину",
-    "5. Read Wallet Survival": "5. Смотри выживание кошелька",
-    "6. Check the $BROKE Chart": "6. Проверяй $BROKE Chart",
-    "7. Share safely": "7. Делись безопасно",
-    "Simple rule:": "Простое правило:",
-    "Track honestly. Fix one leak at a time. Protect Wallet HP.": "Записывай честно. Закрывай одну утечку за раз. Защищай Wallet HP.",
-    "Got it": "Понятно",
-    "Small changes.": "Маленькие изменения.",
-    "Big wins.": "Большая разница.",
-    "Potential savings": "Потенциальная экономия",
-    "Based on your tracked expenses this month.": "На основе твоих расходов за месяц.",
-    "Demo mode. Add expenses to get real scenarios.": "Демо-режим. Добавь расходы, чтобы увидеть реальные сценарии.",
-    "Leak Challenges": "Челленджи против утечек",
-    "Active Challenge": "Активный челлендж",
-    "Start": "Начать",
-    "Completed": "Выполнено",
-    "Failed": "Провалено",
-    "Locked": "Закрыто",
-    "Public Leaderboard": "Публичный рейтинг",
-    "Daily Top 10": "Топ-10 дня",
-    "Weekly Top 10": "Топ-10 недели",
-    "All Time": "За всё время",
-    "Private mode": "Приватный режим",
-    "Public progress": "Публичный прогресс",
-    "Show": "Показать",
-    "Hide": "Скрыть",
-    "Badge Vault": "Хранилище бейджей",
-    "Achievements are hidden": "Достижения скрыты",
-    "Daily Reminder": "Ежедневное напоминание",
-    "Delete My Data": "Удалить мои данные",
-    "Delete all $BROKE Life Tracker data?": "Удалить все данные $BROKE Life Tracker?",
-    "Copy share text": "Скопировать текст",
-    "Copied": "Скопировано",
-    "Share on X": "Поделиться в X",
-    "Share in TG": "Поделиться в TG",
-    "Share": "Поделиться",
-    "Send clean image to TG": "Отправить чистую картинку в TG",
-    "Preparing image...": "Готовим картинку...",
-    "Public share hides income and real balance.": "Публичная карточка скрывает доход и реальный баланс.",
-    "Public share card": "Публичная карточка",
-    "Potential yearly savings": "Потенциальная экономия за год",
-    "Find the leak before it becomes lifestyle.": "Найди утечку, пока она не стала образом жизни.",
-    "Anti-doomspending identity app.": "Анти-думспендинг identity app.",
-    "Streak": "Серия",
-    "Current streak": "Текущая серия",
-    "Best streak": "Лучшая серия",
-    "Alive today": "Сегодня активна",
-    "Start today": "Начни сегодня",
-    "Keep going": "Продолжай",
-    "Add one expense today to keep the streak alive.": "Добавь один расход сегодня, чтобы сохранить серию.",
-    "First Leak Mission": "Миссия первой утечки",
-    "Catch one leak in under 10 seconds.": "Поймай одну утечку меньше чем за 10 секунд.",
-    "First leak": "Первая утечка",
-    "Pick a leak": "Выбери утечку",
-    "Coffee leak": "Утечка на кофе",
-    "Smoking leak": "Утечка на курение",
-    "Takeout leak": "Утечка на еду",
-    "Random buy": "Случайная покупка",
-    "Get insight": "Получить инсайт",
-    "Leak Insight": "Инсайт утечки",
-    "No clear leak yet": "Явной утечки пока нет",
-    "No tracked expenses this month.": "В этом месяце расходов пока нет.",
-    "Marked leaks": "Отмеченные утечки",
-    "Month spent": "Расходы за месяц",
-    "Monthly projection": "Прогноз на месяц",
-    "Hidden bill": "Скрытый счёт",
-    "It looks small until you compare it to a real bill.": "Кажется мелочью, пока не сравнишь с настоящим счётом.",
-    "One time is a purchase. Repeating is a habit.": "Один раз — покупка. Повторяется — привычка.",
-    "Good. Now keep the leaks from turning into a monthly bill.": "Хорошо. Теперь не дай утечкам стать ежемесячным счётом.",
-    "Current point": "Текущая точка",
-    "spent": "потрачено",
-    "Day": "День",
-    "Week": "Неделя",
-    "Month": "Месяц",
-    "Last 7 days": "Последние 7 дней",
-    "Last 7 дней": "Последние 7 дней",
-    "Spending Volume — Last 7 days": "Объём расходов — последние 7 дней",
-    "Spending Volume — Last 7 дней": "Объём расходов — последние 7 дней",
-    "You watch crypto charts every day.": "Ты каждый день смотришь crypto-чарты.",
-    "You watch crypto charts every день.": "Ты каждый день смотришь crypto-чарты.",
-    "But do you watch your own $BROKE Chart?": "Но смотришь ли ты свой $BROKE Chart?",
-    "But do you watch your own $BROKE График?": "Но смотришь ли ты свой $BROKE Chart?",
-    "Today&apos;s Leak": "Сегодняшняя утечка",
-    "Today's Leak": "Сегодняшняя утечка",
-    "Marked Leaks": "Отмеченные утечки",
-    "Monthly Projection": "Прогноз на месяц",
-    "Wallet still holding": "Кошелёк ещё держится",
-    "You spent": "Ты потратил",
-    "on custom today.": "на другое сегодня.",
-    "That becomes": "Это станет",
-    "if this rhythm repeats.": "если такой ритм повторится.",
-    "was marked as": "отмечено как",
-    "in the last 7 days.": "за последние 7 дней.",
-    "in the last 7 дней.": "за последние 7 дней.",
-    "At this pace, leaks could reach": "В таком темпе утечки могут достичь",
-    "per month.": "в месяц.",
-    "Wallet HP is": "Wallet HP",
-    "and real balance is still positive.": "и реальный баланс всё ещё положительный.",
-    "and реальный баланс is still positive.": "и реальный баланс всё ещё положительный.",
-    "custom": "другое",
-    "takeout": "еда на заказ",
-    "score": "счёт",
-    "Your score": "Твой счёт",
-    "Твой score": "Твой счёт",
-    "Trust L1": "Доверие L1",
-    "Cut Taxi": "Сократить такси",
-    "Cut Такси": "Сократить такси",
-    "Reduce Smoking": "Сократить курение",
-    "Reduce Курение": "Сократить курение",
-    "Cut Coffee": "Сократить кофе",
-    "Cut Кофе": "Сократить кофе",
-    "1 tracked": "1 запись",
-    "reduction": "сокращение",
-    "Total Potential Savings": "Общая потенциальная экономия",
-    "Potential Saved": "Потенциальная экономия",
-    "Simulate a 30-day save": "Симуляция экономии на 30 дней",
-    "Daily Save": "Экономия в день",
-    "Start Saving": "Начать экономить",
-    "Emergency Fund": "Резервный фонд",
-    "New Gadget": "Новый гаджет",
-    "Trip": "Поездка",
-    "Financial Freedom": "Финансовая свобода"
-  },
-  "es": {
-    "Home": "Inicio",
-    "Add": "Añadir",
-    "Chart": "Gráfico",
-    "Save": "Ahorro",
-    "Settings": "Ajustes",
-    "Income": "Ingresos",
-    "Life Cost": "Costo de vida",
-    "Money Leaks": "Fugas de dinero",
-    "Real Balance": "Balance real",
-    "This month": "Este mes",
-    "Left to stack": "Queda para ahorrar",
-    "Your wallet": "Tu billetera",
-    "is not broken.": "no está rota.",
-    "It is leaking.": "Está perdiendo dinero.",
-    "Wallet HP": "Wallet HP",
-    "Stable Wallet": "Billetera estable",
-    "Small Leak": "Fuga pequeña",
-    "Hold the line, fix the leaks.": "Mantén el control y arregla las fugas.",
-    "Wallet Survival": "Supervivencia de billetera",
-    "This week": "Esta semana",
-    "Find the leak before it becomes your lifestyle.": "Encuentra la fuga antes de que se vuelva tu estilo de vida.",
-    "Survival Score": "Puntuación de supervivencia",
-    "Biggest Leak": "Mayor fuga",
-    "Hours Lost": "Horas perdidas",
-    "Status": "Estado",
-    "Doomspending Alert": "Alerta de gasto impulsivo",
-    "Daily Routine": "Rutina diaria",
-    "7 real tasks per day.": "7 tareas reales al día.",
-    "Open the app": "Abrir la app",
-    "Track 1 expense": "Registrar 1 gasto",
-    "Mark a real leak": "Marcar una fuga real",
-    "Add context": "Añadir contexto",
-    "Check $BROKE Chart": "Revisar $BROKE Chart",
-    "Check Save plan": "Revisar plan de ahorro",
-    "Share public proof": "Compartir prueba pública",
-    "Discipline rule:": "Regla de disciplina:",
-    "Add Expense": "Añadir gasto",
-    "Amount": "Cantidad",
-    "Category": "Categoría",
-    "Was it needed?": "¿Era necesario?",
-    "Needed": "Necesario",
-    "Maybe": "Tal vez",
-    "Not needed": "No necesario",
-    "Add a quick note...": "Añade una nota rápida...",
-    "Coffee": "Café",
-    "Smoking": "Fumar",
-    "Takeouts": "Comida para llevar",
-    "Shopping": "Compras",
-    "Subscriptions": "Suscripciones",
-    "Taxi": "Taxi",
-    "Data": "Datos",
-    "School": "Escuela",
-    "Snacks": "Snacks",
-    "Gaming": "Juegos",
-    "Family": "Familia",
-    "Custom": "Otro",
-    "Life Profile": "Perfil de vida",
-    "Language": "Idioma",
-    "Country preset": "País predefinido",
-    "Your country": "Tu país",
-    "Currency": "Moneda",
-    "Life mode": "Modo de vida",
-    "Student": "Estudiante",
-    "Worker": "Trabajador",
-    "Freelancer": "Freelancer",
-    "Living with family": "Vivo con familia",
-    "No stable income": "Sin ingreso estable",
-    "Income style": "Tipo de ingreso",
-    "Monthly": "Mensual",
-    "Weekly": "Semanal",
-    "Daily": "Diario",
-    "Allowance": "Ayuda / mesada",
-    "Irregular": "Irregular",
-    "Rent applies": "Paga alquiler",
-    "Yes": "Sí",
-    "No": "No",
-    "Guide": "Guía",
-    "How to use $BROKE": "Cómo usar $BROKE",
-    "Got it": "Entendido",
-    "Potential savings": "Ahorro potencial",
-    "Share": "Compartir",
-    "Copy share text": "Copiar texto",
-    "Copied": "Copiado",
-    "Public share hides income and real balance.": "La tarjeta pública oculta ingresos y balance real."
-  },
-  "pt": {
-    "Home": "Início",
-    "Add": "Adicionar",
-    "Chart": "Gráfico",
-    "Save": "Economia",
-    "Settings": "Configurações",
-    "Income": "Renda",
-    "Life Cost": "Custo de vida",
-    "Money Leaks": "Vazamentos de dinheiro",
-    "Real Balance": "Saldo real",
-    "This month": "Este mês",
-    "Left to stack": "Sobra para guardar",
-    "Your wallet": "Sua carteira",
-    "is not broken.": "não está quebrada.",
-    "It is leaking.": "Ela está vazando.",
-    "Wallet HP": "Wallet HP",
-    "Stable Wallet": "Carteira estável",
-    "Small Leak": "Pequeno vazamento",
-    "Hold the line, fix the leaks.": "Mantenha o controle e corrija os vazamentos.",
-    "Wallet Survival": "Sobrevivência da carteira",
-    "This week": "Esta semana",
-    "Find the leak before it becomes your lifestyle.": "Encontre o vazamento antes que vire estilo de vida.",
-    "Survival Score": "Pontuação de sobrevivência",
-    "Biggest Leak": "Maior vazamento",
-    "Hours Lost": "Horas perdidas",
-    "Status": "Status",
-    "Doomspending Alert": "Alerta de gasto impulsivo",
-    "Daily Routine": "Rotina diária",
-    "7 real tasks per day.": "7 tarefas reais por dia.",
-    "Open the app": "Abrir o app",
-    "Track 1 expense": "Registrar 1 gasto",
-    "Mark a real leak": "Marcar um vazamento real",
-    "Add context": "Adicionar contexto",
-    "Check $BROKE Chart": "Ver $BROKE Chart",
-    "Check Save plan": "Ver plano de economia",
-    "Share public proof": "Compartilhar prova pública",
-    "Discipline rule:": "Regra de disciplina:",
-    "Add Expense": "Adicionar gasto",
-    "Amount": "Valor",
-    "Category": "Categoria",
-    "Was it needed?": "Era necessário?",
-    "Needed": "Necessário",
-    "Maybe": "Talvez",
-    "Not needed": "Não necessário",
-    "Add a quick note...": "Adicione uma nota rápida...",
-    "Coffee": "Café",
-    "Smoking": "Fumar",
-    "Takeouts": "Delivery",
-    "Shopping": "Compras",
-    "Subscriptions": "Assinaturas",
-    "Taxi": "Táxi",
-    "Data": "Internet",
-    "School": "Escola",
-    "Snacks": "Lanches",
-    "Gaming": "Jogos",
-    "Family": "Família",
-    "Custom": "Outro",
-    "Life Profile": "Perfil de vida",
-    "Language": "Idioma",
-    "Country preset": "País predefinido",
-    "Your country": "Seu país",
-    "Currency": "Moeda",
-    "Life mode": "Modo de vida",
-    "Student": "Estudante",
-    "Worker": "Trabalhador",
-    "Freelancer": "Freelancer",
-    "Living with family": "Moro com família",
-    "No stable income": "Sem renda estável",
-    "Income style": "Tipo de renda",
-    "Monthly": "Mensal",
-    "Weekly": "Semanal",
-    "Daily": "Diária",
-    "Allowance": "Mesada / apoio",
-    "Irregular": "Irregular",
-    "Rent applies": "Paga aluguel",
-    "Yes": "Sim",
-    "No": "Não",
-    "Guide": "Guia",
-    "How to use $BROKE": "Como usar $BROKE",
-    "Got it": "Entendi",
-    "Potential savings": "Economia potencial",
-    "Share": "Compartilhar",
-    "Copy share text": "Copiar texto",
-    "Copied": "Copiado",
-    "Public share hides income and real balance.": "O compartilhamento público oculta renda e saldo real."
-  },
-  "fr": {
-    "Home": "Accueil",
-    "Add": "Ajouter",
-    "Chart": "Graphique",
-    "Save": "Économies",
-    "Settings": "Réglages",
-    "Income": "Revenus",
-    "Life Cost": "Coût de vie",
-    "Money Leaks": "Fuites d’argent",
-    "Real Balance": "Solde réel",
-    "This month": "Ce mois-ci",
-    "Left to stack": "Reste à épargner",
-    "Your wallet": "Ton portefeuille",
-    "is not broken.": "n’est pas cassé.",
-    "It is leaking.": "Il fuit.",
-    "Wallet HP": "Wallet HP",
-    "Stable Wallet": "Portefeuille stable",
-    "Small Leak": "Petite fuite",
-    "Hold the line, fix the leaks.": "Garde le contrôle et répare les fuites.",
-    "Wallet Survival": "Survie du portefeuille",
-    "This week": "Cette semaine",
-    "Find the leak before it becomes your lifestyle.": "Trouve la fuite avant qu’elle devienne ton mode de vie.",
-    "Survival Score": "Score de survie",
-    "Biggest Leak": "Plus grosse fuite",
-    "Hours Lost": "Heures perdues",
-    "Status": "Statut",
-    "Doomspending Alert": "Alerte dépense impulsive",
-    "Daily Routine": "Routine quotidienne",
-    "7 real tasks per day.": "7 vraies tâches par jour.",
-    "Open the app": "Ouvrir l’app",
-    "Track 1 expense": "Enregistrer 1 dépense",
-    "Mark a real leak": "Marquer une vraie fuite",
-    "Add context": "Ajouter du contexte",
-    "Check $BROKE Chart": "Voir $BROKE Chart",
-    "Check Save plan": "Voir le plan d’économie",
-    "Share public proof": "Partager une preuve publique",
-    "Discipline rule:": "Règle de discipline :",
-    "Add Expense": "Ajouter une dépense",
-    "Amount": "Montant",
-    "Category": "Catégorie",
-    "Was it needed?": "Était-ce nécessaire ?",
-    "Needed": "Nécessaire",
-    "Maybe": "Peut-être",
-    "Not needed": "Pas nécessaire",
-    "Add a quick note...": "Ajoute une note rapide...",
-    "Coffee": "Café",
-    "Smoking": "Tabac",
-    "Takeouts": "Plats à emporter",
-    "Shopping": "Achats",
-    "Subscriptions": "Abonnements",
-    "Taxi": "Taxi",
-    "Data": "Internet",
-    "School": "École",
-    "Snacks": "Snacks",
-    "Gaming": "Jeux",
-    "Family": "Famille",
-    "Custom": "Autre",
-    "Life Profile": "Profil de vie",
-    "Language": "Langue",
-    "Country preset": "Pays prédéfini",
-    "Your country": "Ton pays",
-    "Currency": "Devise",
-    "Life mode": "Mode de vie",
-    "Student": "Étudiant",
-    "Worker": "Travailleur",
-    "Freelancer": "Freelance",
-    "Living with family": "Vit en famille",
-    "No stable income": "Pas de revenu stable",
-    "Income style": "Type de revenu",
-    "Monthly": "Mensuel",
-    "Weekly": "Hebdomadaire",
-    "Daily": "Quotidien",
-    "Allowance": "Argent de poche / aide",
-    "Irregular": "Irrégulier",
-    "Rent applies": "Loyer applicable",
-    "Yes": "Oui",
-    "No": "Non",
-    "Guide": "Guide",
-    "How to use $BROKE": "Comment utiliser $BROKE",
-    "Got it": "Compris",
-    "Potential savings": "Économies potentielles",
-    "Share": "Partager",
-    "Copy share text": "Copier le texte",
-    "Copied": "Copié",
-    "Public share hides income and real balance.": "Le partage public cache le revenu et le solde réel."
-  },
-  "tr": {
-    "Home": "Ana sayfa",
-    "Add": "Ekle",
-    "Chart": "Grafik",
-    "Save": "Tasarruf",
-    "Settings": "Ayarlar",
-    "Income": "Gelir",
-    "Life Cost": "Yaşam gideri",
-    "Money Leaks": "Para sızıntıları",
-    "Real Balance": "Gerçek bakiye",
-    "This month": "Bu ay",
-    "Left to stack": "Biriktirmek için kalan",
-    "Your wallet": "Cüzdanın",
-    "is not broken.": "bozuk değil.",
-    "It is leaking.": "Sızdırıyor.",
-    "Wallet HP": "Wallet HP",
-    "Stable Wallet": "Stabil cüzdan",
-    "Small Leak": "Küçük sızıntı",
-    "Hold the line, fix the leaks.": "Kontrolü koru, sızıntıları kapat.",
-    "Wallet Survival": "Cüzdan hayatta kalma",
-    "This week": "Bu hafta",
-    "Find the leak before it becomes your lifestyle.": "Sızıntıyı yaşam tarzına dönüşmeden bul.",
-    "Survival Score": "Hayatta kalma puanı",
-    "Biggest Leak": "En büyük sızıntı",
-    "Hours Lost": "Kaybedilen saat",
-    "Status": "Durum",
-    "Doomspending Alert": "Dürtüsel harcama uyarısı",
-    "Daily Routine": "Günlük rutin",
-    "7 real tasks per day.": "Günde 7 gerçek görev.",
-    "Open the app": "Uygulamayı aç",
-    "Track 1 expense": "1 harcama kaydet",
-    "Mark a real leak": "Gerçek sızıntı işaretle",
-    "Add context": "Bağlam ekle",
-    "Check $BROKE Chart": "$BROKE Chart kontrol et",
-    "Check Save plan": "Tasarruf planını kontrol et",
-    "Share public proof": "Herkese açık kanıt paylaş",
-    "Discipline rule:": "Disiplin kuralı:",
-    "Add Expense": "Harcama ekle",
-    "Amount": "Tutar",
-    "Category": "Kategori",
-    "Was it needed?": "Gerekli miydi?",
-    "Needed": "Gerekli",
-    "Maybe": "Belki",
-    "Not needed": "Gereksiz",
-    "Add a quick note...": "Kısa not ekle...",
-    "Coffee": "Kahve",
-    "Smoking": "Sigara",
-    "Takeouts": "Paket yemek",
-    "Shopping": "Alışveriş",
-    "Subscriptions": "Abonelikler",
-    "Taxi": "Taksi",
-    "Data": "İnternet",
-    "School": "Okul",
-    "Snacks": "Atıştırmalık",
-    "Gaming": "Oyun",
-    "Family": "Aile",
-    "Custom": "Diğer",
-    "Life Profile": "Yaşam profili",
-    "Language": "Dil",
-    "Country preset": "Ülke seçimi",
-    "Your country": "Ülken",
-    "Currency": "Para birimi",
-    "Life mode": "Yaşam modu",
-    "Student": "Öğrenci",
-    "Worker": "Çalışan",
-    "Freelancer": "Freelancer",
-    "Living with family": "Aileyle yaşıyor",
-    "No stable income": "Sabit gelir yok",
-    "Income style": "Gelir türü",
-    "Monthly": "Aylık",
-    "Weekly": "Haftalık",
-    "Daily": "Günlük",
-    "Allowance": "Harçlık / destek",
-    "Irregular": "Düzensiz",
-    "Rent applies": "Kira var",
-    "Yes": "Evet",
-    "No": "Hayır",
-    "Guide": "Rehber",
-    "How to use $BROKE": "$BROKE nasıl kullanılır",
-    "Got it": "Anladım",
-    "Potential savings": "Olası tasarruf",
-    "Share": "Paylaş",
-    "Copy share text": "Metni kopyala",
-    "Copied": "Kopyalandı",
-    "Public share hides income and real balance.": "Herkese açık paylaşım gelir ve gerçek bakiyeyi gizler."
-  },
-  "ar": {
-    "Home": "الرئيسية",
-    "Add": "إضافة",
-    "Chart": "الرسم البياني",
-    "Save": "التوفير",
-    "Settings": "الإعدادات",
-    "Income": "الدخل",
-    "Life Cost": "تكلفة الحياة",
-    "Money Leaks": "تسريبات المال",
-    "Real Balance": "الرصيد الحقيقي",
-    "This month": "هذا الشهر",
-    "Left to stack": "المتبقي للادخار",
-    "Your wallet": "محفظتك",
-    "is not broken.": "ليست مكسورة.",
-    "It is leaking.": "إنها تسرّب المال.",
-    "Wallet HP": "Wallet HP",
-    "Stable Wallet": "محفظة مستقرة",
-    "Small Leak": "تسريب صغير",
-    "Hold the line, fix the leaks.": "حافظ على السيطرة وأصلح التسريبات.",
-    "Wallet Survival": "نجاة المحفظة",
-    "This week": "هذا الأسبوع",
-    "Find the leak before it becomes your lifestyle.": "اكتشف التسريب قبل أن يصبح أسلوب حياة.",
-    "Survival Score": "درجة النجاة",
-    "Biggest Leak": "أكبر تسريب",
-    "Hours Lost": "الساعات المفقودة",
-    "Status": "الحالة",
-    "Doomspending Alert": "تنبيه إنفاق اندفاعي",
-    "Daily Routine": "الروتين اليومي",
-    "7 real tasks per day.": "7 مهام حقيقية يومياً.",
-    "Open the app": "افتح التطبيق",
-    "Track 1 expense": "سجّل مصروفاً واحداً",
-    "Mark a real leak": "علّم تسريباً حقيقياً",
-    "Add context": "أضف سياقاً",
-    "Check $BROKE Chart": "افحص $BROKE Chart",
-    "Check Save plan": "افحص خطة التوفير",
-    "Share public proof": "شارك إثباتاً عاماً",
-    "Discipline rule:": "قاعدة الانضباط:",
-    "Add Expense": "إضافة مصروف",
-    "Amount": "المبلغ",
-    "Category": "الفئة",
-    "Was it needed?": "هل كان ضرورياً؟",
-    "Needed": "ضروري",
-    "Maybe": "ربما",
-    "Not needed": "غير ضروري",
-    "Add a quick note...": "أضف ملاحظة سريعة...",
-    "Coffee": "قهوة",
-    "Smoking": "تدخين",
-    "Takeouts": "طلبات طعام",
-    "Shopping": "تسوق",
-    "Subscriptions": "اشتراكات",
-    "Taxi": "تاكسي",
-    "Data": "إنترنت",
-    "School": "دراسة",
-    "Snacks": "وجبات خفيفة",
-    "Gaming": "ألعاب",
-    "Family": "عائلة",
-    "Custom": "أخرى",
-    "Life Profile": "ملف الحياة",
-    "Language": "اللغة",
-    "Country preset": "الدولة من القائمة",
-    "Your country": "دولتك",
-    "Currency": "العملة",
-    "Life mode": "نمط الحياة",
-    "Student": "طالب",
-    "Worker": "عامل",
-    "Freelancer": "مستقل",
-    "Living with family": "أعيش مع العائلة",
-    "No stable income": "لا دخل ثابت",
-    "Income style": "نوع الدخل",
-    "Monthly": "شهري",
-    "Weekly": "أسبوعي",
-    "Daily": "يومي",
-    "Allowance": "مصروف / دعم",
-    "Irregular": "غير منتظم",
-    "Rent applies": "يوجد إيجار",
-    "Yes": "نعم",
-    "No": "لا",
-    "Guide": "الدليل",
-    "How to use $BROKE": "كيفية استخدام $BROKE",
-    "Got it": "فهمت",
-    "Potential savings": "توفير محتمل",
-    "Share": "مشاركة",
-    "Copy share text": "نسخ النص",
-    "Copied": "تم النسخ",
-    "Public share hides income and real balance.": "المشاركة العامة تخفي الدخل والرصيد الحقيقي."
-  },
-  "hi": {
-    "Home": "होम",
-    "Add": "जोड़ें",
-    "Chart": "चार्ट",
-    "Save": "बचत",
-    "Settings": "सेटिंग्स",
-    "Income": "आय",
-    "Life Cost": "जीवन खर्च",
-    "Money Leaks": "पैसे की लीकेज",
-    "Real Balance": "वास्तविक बैलेंस",
-    "This month": "इस महीने",
-    "Left to stack": "बचाने के लिए बचा",
-    "Your wallet": "आपका वॉलेट",
-    "is not broken.": "टूटा नहीं है।",
-    "It is leaking.": "इससे पैसा लीक हो रहा है।",
-    "Wallet HP": "Wallet HP",
-    "Stable Wallet": "स्थिर वॉलेट",
-    "Small Leak": "छोटी लीकेज",
-    "Hold the line, fix the leaks.": "कंट्रोल रखें और लीकेज ठीक करें।",
-    "Wallet Survival": "वॉलेट सर्वाइवल",
-    "This week": "इस सप्ताह",
-    "Find the leak before it becomes your lifestyle.": "लीकेज को लाइफस्टाइल बनने से पहले खोजो।",
-    "Survival Score": "सर्वाइवल स्कोर",
-    "Biggest Leak": "सबसे बड़ी लीकेज",
-    "Hours Lost": "खोए हुए घंटे",
-    "Status": "स्थिति",
-    "Doomspending Alert": "फालतू खर्च अलर्ट",
-    "Daily Routine": "दैनिक रूटीन",
-    "7 real tasks per day.": "रोज़ 7 असली टास्क।",
-    "Open the app": "ऐप खोलें",
-    "Track 1 expense": "1 खर्च दर्ज करें",
-    "Mark a real leak": "असली लीकेज मार्क करें",
-    "Add context": "संदर्भ जोड़ें",
-    "Check $BROKE Chart": "$BROKE Chart देखें",
-    "Check Save plan": "बचत योजना देखें",
-    "Share public proof": "पब्लिक प्रूफ शेयर करें",
-    "Discipline rule:": "अनुशासन नियम:",
-    "Add Expense": "खर्च जोड़ें",
-    "Amount": "राशि",
-    "Category": "कैटेगरी",
-    "Was it needed?": "क्या यह ज़रूरी था?",
-    "Needed": "ज़रूरी",
-    "Maybe": "शायद",
-    "Not needed": "ज़रूरी नहीं",
-    "Add a quick note...": "छोटा नोट जोड़ें...",
-    "Coffee": "कॉफी",
-    "Smoking": "स्मोकिंग",
-    "Takeouts": "बाहर का खाना",
-    "Shopping": "शॉपिंग",
-    "Subscriptions": "सब्सक्रिप्शन",
-    "Taxi": "टैक्सी",
-    "Data": "डेटा",
-    "School": "स्कूल",
-    "Snacks": "स्नैक्स",
-    "Gaming": "गेमिंग",
-    "Family": "परिवार",
-    "Custom": "अन्य",
-    "Life Profile": "लाइफ प्रोफाइल",
-    "Language": "भाषा",
-    "Country preset": "देश सूची",
-    "Your country": "आपका देश",
-    "Currency": "करेंसी",
-    "Life mode": "लाइफ मोड",
-    "Student": "स्टूडेंट",
-    "Worker": "वर्कर",
-    "Freelancer": "फ्रीलांसर",
-    "Living with family": "परिवार के साथ",
-    "No stable income": "स्थिर आय नहीं",
-    "Income style": "आय का प्रकार",
-    "Monthly": "मासिक",
-    "Weekly": "साप्ताहिक",
-    "Daily": "दैनिक",
-    "Allowance": "भत्ता / सहायता",
-    "Irregular": "अनियमित",
-    "Rent applies": "किराया है",
-    "Yes": "हाँ",
-    "No": "नहीं",
-    "Guide": "गाइड",
-    "How to use $BROKE": "$BROKE कैसे इस्तेमाल करें",
-    "Got it": "समझ गया",
-    "Potential savings": "संभावित बचत",
-    "Share": "शेयर",
-    "Copy share text": "टेक्स्ट कॉपी करें",
-    "Copied": "कॉपी हो गया",
-    "Public share hides income and real balance.": "पब्लिक शेयर आय और वास्तविक बैलेंस छुपाता है।"
-  },
-  "id": {
-    "Home": "Beranda",
-    "Add": "Tambah",
-    "Chart": "Grafik",
-    "Save": "Hemat",
-    "Settings": "Pengaturan",
-    "Income": "Penghasilan",
-    "Life Cost": "Biaya hidup",
-    "Money Leaks": "Kebocoran uang",
-    "Real Balance": "Saldo nyata",
-    "This month": "Bulan ini",
-    "Left to stack": "Sisa untuk ditabung",
-    "Your wallet": "Dompetmu",
-    "is not broken.": "tidak rusak.",
-    "It is leaking.": "Sedang bocor.",
-    "Wallet HP": "Wallet HP",
-    "Stable Wallet": "Dompet stabil",
-    "Small Leak": "Bocor kecil",
-    "Hold the line, fix the leaks.": "Jaga kendali, perbaiki kebocoran.",
-    "Wallet Survival": "Survival dompet",
-    "This week": "Minggu ini",
-    "Find the leak before it becomes your lifestyle.": "Temukan kebocoran sebelum jadi gaya hidup.",
-    "Survival Score": "Skor survival",
-    "Biggest Leak": "Kebocoran terbesar",
-    "Hours Lost": "Jam hilang",
-    "Status": "Status",
-    "Doomspending Alert": "Peringatan belanja impulsif",
-    "Daily Routine": "Rutinitas harian",
-    "7 real tasks per day.": "7 tugas nyata per hari.",
-    "Open the app": "Buka app",
-    "Track 1 expense": "Catat 1 pengeluaran",
-    "Mark a real leak": "Tandai kebocoran nyata",
-    "Add context": "Tambah konteks",
-    "Check $BROKE Chart": "Cek $BROKE Chart",
-    "Check Save plan": "Cek rencana hemat",
-    "Share public proof": "Bagikan bukti publik",
-    "Discipline rule:": "Aturan disiplin:",
-    "Add Expense": "Tambah pengeluaran",
-    "Amount": "Jumlah",
-    "Category": "Kategori",
-    "Was it needed?": "Apakah perlu?",
-    "Needed": "Perlu",
-    "Maybe": "Mungkin",
-    "Not needed": "Tidak perlu",
-    "Add a quick note...": "Tambah catatan singkat...",
-    "Coffee": "Kopi",
-    "Smoking": "Merokok",
-    "Takeouts": "Makanan pesan",
-    "Shopping": "Belanja",
-    "Subscriptions": "Langganan",
-    "Taxi": "Taksi",
-    "Data": "Data",
-    "School": "Sekolah",
-    "Snacks": "Camilan",
-    "Gaming": "Gaming",
-    "Family": "Keluarga",
-    "Custom": "Lainnya",
-    "Life Profile": "Profil hidup",
-    "Language": "Bahasa",
-    "Country preset": "Negara preset",
-    "Your country": "Negaramu",
-    "Currency": "Mata uang",
-    "Life mode": "Mode hidup",
-    "Student": "Pelajar",
-    "Worker": "Pekerja",
-    "Freelancer": "Freelancer",
-    "Living with family": "Tinggal dengan keluarga",
-    "No stable income": "Tidak ada penghasilan tetap",
-    "Income style": "Jenis penghasilan",
-    "Monthly": "Bulanan",
-    "Weekly": "Mingguan",
-    "Daily": "Harian",
-    "Allowance": "Uang saku / dukungan",
-    "Irregular": "Tidak tetap",
-    "Rent applies": "Ada sewa",
-    "Yes": "Ya",
-    "No": "Tidak",
-    "Guide": "Panduan",
-    "How to use $BROKE": "Cara menggunakan $BROKE",
-    "Got it": "Mengerti",
-    "Potential savings": "Potensi hemat",
-    "Share": "Bagikan",
-    "Copy share text": "Salin teks",
-    "Copied": "Tersalin",
-    "Public share hides income and real balance.": "Share publik menyembunyikan penghasilan dan saldo nyata."
-  },
-  "vi": {
-    "Home": "Trang chủ",
-    "Add": "Thêm",
-    "Chart": "Biểu đồ",
-    "Save": "Tiết kiệm",
-    "Settings": "Cài đặt",
-    "Income": "Thu nhập",
-    "Life Cost": "Chi phí sống",
-    "Money Leaks": "Rò rỉ tiền",
-    "Real Balance": "Số dư thật",
-    "This month": "Tháng này",
-    "Left to stack": "Còn lại để tiết kiệm",
-    "Your wallet": "Ví của bạn",
-    "is not broken.": "không hỏng.",
-    "It is leaking.": "Nó đang bị rò tiền.",
-    "Wallet HP": "Wallet HP",
-    "Stable Wallet": "Ví ổn định",
-    "Small Leak": "Rò rỉ nhỏ",
-    "Hold the line, fix the leaks.": "Giữ kỷ luật, sửa các rò rỉ.",
-    "Wallet Survival": "Sinh tồn ví",
-    "This week": "Tuần này",
-    "Find the leak before it becomes your lifestyle.": "Tìm rò rỉ trước khi nó thành lối sống.",
-    "Survival Score": "Điểm sinh tồn",
-    "Biggest Leak": "Rò rỉ lớn nhất",
-    "Hours Lost": "Giờ đã mất",
-    "Status": "Trạng thái",
-    "Doomspending Alert": "Cảnh báo chi tiêu bốc đồng",
-    "Daily Routine": "Thói quen hằng ngày",
-    "7 real tasks per day.": "7 nhiệm vụ thật mỗi ngày.",
-    "Open the app": "Mở ứng dụng",
-    "Track 1 expense": "Ghi 1 khoản chi",
-    "Mark a real leak": "Đánh dấu rò rỉ thật",
-    "Add context": "Thêm ngữ cảnh",
-    "Check $BROKE Chart": "Xem $BROKE Chart",
-    "Check Save plan": "Xem kế hoạch tiết kiệm",
-    "Share public proof": "Chia sẻ bằng chứng công khai",
-    "Discipline rule:": "Quy tắc kỷ luật:",
-    "Add Expense": "Thêm chi tiêu",
-    "Amount": "Số tiền",
-    "Category": "Danh mục",
-    "Was it needed?": "Có cần thiết không?",
-    "Needed": "Cần thiết",
-    "Maybe": "Có thể",
-    "Not needed": "Không cần",
-    "Add a quick note...": "Thêm ghi chú nhanh...",
-    "Coffee": "Cà phê",
-    "Smoking": "Hút thuốc",
-    "Takeouts": "Đồ ăn mang đi",
-    "Shopping": "Mua sắm",
-    "Subscriptions": "Đăng ký",
-    "Taxi": "Taxi",
-    "Data": "Dữ liệu",
-    "School": "Trường học",
-    "Snacks": "Đồ ăn vặt",
-    "Gaming": "Game",
-    "Family": "Gia đình",
-    "Custom": "Khác",
-    "Life Profile": "Hồ sơ cuộc sống",
-    "Language": "Ngôn ngữ",
-    "Country preset": "Quốc gia có sẵn",
-    "Your country": "Quốc gia của bạn",
-    "Currency": "Tiền tệ",
-    "Life mode": "Chế độ sống",
-    "Student": "Sinh viên",
-    "Worker": "Người đi làm",
-    "Freelancer": "Freelancer",
-    "Living with family": "Sống với gia đình",
-    "No stable income": "Không có thu nhập ổn định",
-    "Income style": "Kiểu thu nhập",
-    "Monthly": "Hằng tháng",
-    "Weekly": "Hằng tuần",
-    "Daily": "Hằng ngày",
-    "Allowance": "Trợ cấp / hỗ trợ",
-    "Irregular": "Không đều",
-    "Rent applies": "Có tiền thuê",
-    "Yes": "Có",
-    "No": "Không",
-    "Guide": "Hướng dẫn",
-    "How to use $BROKE": "Cách dùng $BROKE",
-    "Got it": "Đã hiểu",
-    "Potential savings": "Tiết kiệm tiềm năng",
-    "Share": "Chia sẻ",
-    "Copy share text": "Sao chép văn bản",
-    "Copied": "Đã sao chép",
-    "Public share hides income and real balance.": "Chia sẻ công khai ẩn thu nhập và số dư thật."
-  }
-} as const;
-
-const runtimeReverseTranslations: Record<string, string> = Object.values(runtimeTextTranslations).reduce(
-  (acc, dictionary) => {
-    if (!dictionary) return acc;
-
-    Object.entries(dictionary).forEach(([english, translated]) => {
-      acc[translated] = english;
-    });
-
-    return acc;
-  },
-  {} as Record<string, string>
-);
-
-function applyRuntimeLanguageRules(value: string, language: Language) {
-  if (language !== "ru") return value;
-
-  let next = value;
-
-  const weekdayMap: Record<string, string> = {
-    Mon: "Пн",
-    Tue: "Вт",
-    Wed: "Ср",
-    Thu: "Чт",
-    Fri: "Пт",
-    Sat: "Сб",
-    Sun: "Вс",
-  };
-
-  Object.entries(weekdayMap).forEach(([en, ru]) => {
-    next = next.replace(new RegExp(`\\b${en}\\b`, "g"), ru);
-  });
-
-  next = next
-    .replace(/Current point:/g, "Текущая точка:")
-    .replace(/\\bspent\\b/g, "потрачено")
-    .replace(/Spending Volume — Last 7 (days|дней)/g, "Объём расходов — последние 7 дней")
-    .replace(/Last 7 (days|дней)/g, "Последние 7 дней")
-    .replace(/You watch crypto charts every (day|день)\\./g, "Ты каждый день смотришь crypto-чарты.")
-    .replace(/But do you watch your own \\$BROKE (Chart|График)\\?/g, "Но смотришь ли ты свой $BROKE Chart?")
-    .replace(/You spent (\\$[\\d,.]+) on custom (today|сегодня)\\./g, "Сегодня ты потратил $1 на другое.")
-    .replace(/That becomes (\$[\d,.]+)\/мес if this rhythm repeats\./g, "Если так продолжится, это станет $1/мес.")
-    .replace(/That becomes (\$[\d,.]+)\/mo if this rhythm repeats\./g, "Если так продолжится, это станет $1/мес.")
-    .replace(/(\$[\d,.]+) was marked as (Не нужно|Not needed) \/ (Возможно|Maybe) in the last 7 (days|дней)\./g, "$1 отмечено как Не нужно / Возможно за последние 7 дней.")
-    .replace(/At this pace, leaks could reach (\$[\d,.]+) за месяц\./g, "В таком темпе утечки могут достичь $1 в месяц.")
-    .replace(/At this pace, leaks could reach (\$[\d,.]+) per month\./g, "В таком темпе утечки могут достичь $1 в месяц.")
-    .replace(/Wallet HP is (\d+\/100) and (реальный баланс|real balance) is still positive\./g, "Wallet HP $1, и реальный баланс всё ещё положительный.")
-    .replace(/(\d+) дня без takeout/g, "$1 дня без еды на заказ")
-    .replace(/Держи расходы на takeout ниже лимита (\d+) дня\./g, "Держи расходы на еду на заказ ниже лимита $1 дня.")
-    .replace(/Cut Такси/g, "Сократить такси")
-    .replace(/Reduce Курение/g, "Сократить курение")
-    .replace(/Cut Кофе/g, "Сократить кофе")
-    .replace(/(\d+) tracked · (\d+)% reduction/g, "$1 запись · сокращение $2%")
-    .replace(/Total Potential Savings/g, "Общая потенциальная экономия")
-    .replace(/Твой score/g, "Твой счёт")
-    .replace(/\bcustom\b/g, "другое")
-    .replace(/\btakeout\b/g, "еда на заказ");
-
-  return next;
-}
-
-function translateRuntimeValue(value: string, language: Language) {
-  const trimmed = value.trim();
-
-  if (!trimmed) return value;
-
-  const original = runtimeReverseTranslations[trimmed] || trimmed;
-  const translated =
-    language === "en"
-      ? original
-      : runtimeTextTranslations[language]?.[original] || original;
-
-  const direct = translated === trimmed ? value : value.replace(trimmed, translated);
-
-  return applyRuntimeLanguageRules(direct, language);
-}
-
-function translateReactNode(node: ReactNode, language: Language): ReactNode {
-  if (typeof node === "string") {
-    return translateRuntimeValue(node, language);
-  }
-
-  if (
-    typeof node === "number" ||
-    typeof node === "boolean" ||
-    node === null ||
-    node === undefined
-  ) {
-    return node;
-  }
-
-  if (Array.isArray(node)) {
-    return node.map((child) => translateReactNode(child, language));
-  }
-
-  if (!isValidElement(node)) {
-    return node;
-  }
-
-  const nodeProps = node.props as {
-    children?: ReactNode;
-    placeholder?: string;
-    "aria-label"?: string;
-    title?: string;
-  };
-
-  const nextProps: {
-    children?: ReactNode;
-    placeholder?: string;
-    "aria-label"?: string;
-    title?: string;
-  } = {};
-
-  if (typeof nodeProps.placeholder === "string") {
-    nextProps.placeholder = translateRuntimeValue(nodeProps.placeholder, language);
-  }
-
-  if (typeof nodeProps["aria-label"] === "string") {
-    nextProps["aria-label"] = translateRuntimeValue(nodeProps["aria-label"], language);
-  }
-
-  if (typeof nodeProps.title === "string") {
-    nextProps.title = translateRuntimeValue(nodeProps.title, language);
-  }
-
-  if ("children" in nodeProps) {
-    nextProps.children = Children.map(nodeProps.children, (child) =>
-      translateReactNode(child, language)
-    );
-  }
-
-  return cloneElement(node, nextProps);
-}
-
-function Localize({
-  language,
-  children,
-}: {
-  language: Language;
-  children: ReactNode;
-}) {
-  useEffect(() => {
-    document.documentElement.lang = language;
-    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
-  }, [language]);
-
-  return <>{translateReactNode(children, language)}</>;
-}
-
 
 function normalizeSettings(input?: Partial<Settings> | null): Settings {
   return {
@@ -4135,8 +2838,6 @@ export default function Home() {
   return (
     <main className="app-shell app-shell-with-community">
       <section className="phone">
-        <Localize language={settings.language}>
-
         {!loaded && (
           <div className="screen loading-screen">
             <Header title="$BROKE Life Tracker" />
@@ -4257,18 +2958,12 @@ export default function Home() {
         )}
 
         {loaded && onboardingCompleted && (
-          <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} language={settings.language} />
+          <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
         )}
 
-        {helpOpen && (
-          <HelpGuideModal
-            language={settings.language}
-            onClose={() => setHelpOpen(false)}
-          />
-        )}
+        {helpOpen && <HelpGuideModal onClose={() => setHelpOpen(false)} />}
 
         {toast && <AppToastView toast={toast} />}
-        </Localize>
       </section>
 
       {loaded && onboardingCompleted && <CommunityLiveSidebar />}
@@ -4280,47 +2975,48 @@ export default function Home() {
 
 
 
-function HelpGuideModal({
-  language,
-  onClose,
-}: {
-  language: Language;
-  onClose: () => void;
-}) {
+function HelpGuideModal({ onClose }: { onClose: () => void }) {
   const sections = [
     {
-      title: t(language, "guide1Title"),
-      body: t(language, "guide1Body"),
+      title: "1. Set your Life Profile",
+      body:
+        "Choose your country or type your own, set currency, life mode, income style, rent mode and work/study hours. This makes the app fit your real life.",
       icon: A.walletMascot,
     },
     {
-      title: t(language, "guide2Title"),
-      body: t(language, "guide2Body"),
+      title: "2. Add real expenses",
+      body:
+        "Go to Add, enter the amount, choose a category, and mark if it was Needed, Maybe, or Not needed.",
       icon: A.addFrog,
     },
     {
-      title: t(language, "guide3Title"),
-      body: t(language, "guide3Body"),
+      title: "3. Mark leaks honestly",
+      body:
+        "Needed does not count as a leak. Maybe counts as half. Not needed counts as a full wallet leak.",
       icon: A.leaks,
     },
     {
-      title: t(language, "guide4Title"),
-      body: t(language, "guide4Body"),
+      title: "4. Use Daily Routine",
+      body:
+        "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check chart, check Save, and share public proof.",
       icon: A.dailyCheck,
     },
     {
-      title: t(language, "guide5Title"),
-      body: t(language, "guide5Body"),
+      title: "5. Read Wallet Survival",
+      body:
+        "Survival Score, Biggest Leak, Hours Lost, Status and Doomspending Alert show what is draining your wallet this week.",
       icon: A.challengeTrophy,
     },
     {
-      title: t(language, "guide6Title"),
-      body: t(language, "guide6Body"),
+      title: "6. Check the $BROKE Chart",
+      body:
+        "The chart shows how your balance moves like a trading chart. Green days are controlled. Red days show damage.",
       icon: A.navChart,
     },
     {
-      title: t(language, "guide7Title"),
-      body: t(language, "guide7Body"),
+      title: "7. Share safely",
+      body:
+        "Share cards hide income and real balance. They only show safe public progress like Wallet HP, status, score, rank, streak and badges.",
       icon: A.export,
     },
   ];
@@ -4335,8 +3031,8 @@ function HelpGuideModal({
       <div className="help-modal">
         <div className="help-modal-head">
           <div>
-            <span>{t(language, "guide")}</span>
-            <strong>{t(language, "howToUse")}</strong>
+            <span>Guide</span>
+            <strong>How to use $BROKE</strong>
           </div>
 
           <button type="button" onClick={onClose} aria-label="Close guide">
@@ -4344,7 +3040,10 @@ function HelpGuideModal({
           </button>
         </div>
 
-        <p className="help-modal-intro">{t(language, "guideIntro")}</p>
+        <p className="help-modal-intro">
+          $BROKE is not a normal expense tracker. It helps you find wallet leaks,
+          build discipline, and share safe progress.
+        </p>
 
         <div className="help-modal-list">
           {sections.map((section) => (
@@ -4359,12 +3058,12 @@ function HelpGuideModal({
         </div>
 
         <div className="help-modal-footer">
-          <strong>{t(language, "simpleRule")}</strong>
-          <span>{t(language, "simpleRuleBody")}</span>
+          <strong>Simple rule:</strong>
+          <span>Track honestly. Fix one leak at a time. Protect Wallet HP.</span>
         </div>
 
         <button type="button" className="help-modal-close" onClick={onClose}>
-          {t(language, "gotIt")}
+          Got it
         </button>
       </div>
     </div>
@@ -4850,34 +3549,32 @@ function DashboardScreen({
   onRoutineComplete: () => Promise<boolean>;
   onBellClick: () => void;
 }) {
-  const lang = settings.language;
-
   const stats = [
     {
-      title: t(lang, "income"),
+      title: "Income",
       value: money(summary.totalIncome, settings.currency),
-      subtitle: t(lang, "thisMonth"),
+      subtitle: "This month",
       icon: A.income,
       tone: "green",
     },
     {
-      title: t(lang, "lifeCost"),
+      title: "Life Cost",
       value: money(summary.fixedCosts, settings.currency),
-      subtitle: t(lang, "thisMonth"),
+      subtitle: "This month",
       icon: A.lifeCost,
       tone: "red",
     },
     {
-      title: t(lang, "moneyLeaks"),
+      title: "Money Leaks",
       value: money(summary.totalLeaks, settings.currency),
-      subtitle: t(lang, "thisMonth"),
+      subtitle: "This month",
       icon: A.leaks,
       tone: "orange",
     },
     {
-      title: t(lang, "realBalance"),
+      title: "Real Balance",
       value: money(summary.realBalance, settings.currency),
-      subtitle: t(lang, "leftToStack"),
+      subtitle: "Left to stack",
       icon: A.balance,
       tone: "green",
     },
@@ -4889,15 +3586,15 @@ function DashboardScreen({
 
   return (
     <div className="screen">
-      <Header title={t(lang, "appTitle")} rightIcon={A.help} onRight={onBellClick} />
+      <Header title="$BROKE Life Tracker" rightIcon={A.help} onRight={onBellClick} />
 
       <section className="hero">
         <div>
           <h1>
-            {t(lang, "yourWallet")}
+            Your wallet
             <br />
-            {t(lang, "isNotBroken")}
-            <span>{t(lang, "itIsLeaking")}</span>
+            is not broken.
+            <span>It is leaking.</span>
           </h1>
         </div>
 
@@ -4924,8 +3621,8 @@ function DashboardScreen({
 
       <section className="hp-card">
         <div className="section-title">
-          <span>{t(lang, "walletHp")}</span>
-          <b>{summary.walletHp >= 80 ? t(lang, "stableWallet") : t(lang, "smallLeak")}</b>
+          <span>Wallet HP</span>
+          <b>{summary.walletHp >= 80 ? "Stable Wallet" : "Small Leak"}</b>
         </div>
 
         <div className="hp-row">
@@ -4936,7 +3633,7 @@ function DashboardScreen({
           <strong>{summary.walletHp} / 100</strong>
         </div>
 
-        <p>{t(lang, "hpLine")}</p>
+        <p>Hold the line, fix the leaks.</p>
       </section>
 
       <WalletInsightsPanel insights={walletInsights} />
@@ -4974,21 +3671,21 @@ function DashboardScreen({
 
       <section className="chart-preview">
         <div className="section-title">
-          <span>{t(lang, "brokeChart")}</span>
-          <small>{t(lang, "sevenDayPreview")}</small>
+          <span>$BROKE Chart</span>
+          <small>7D Preview</small>
         </div>
 
         <MiniChart chartDays={chartDays} />
 
         <div className="damage-card">
           <div>
-            <small>{t(lang, "todayDamage")}</small>
+            <small>Today's Damage</small>
             <strong>
               {summary.todaySpent > 0
                 ? `-${money(summary.todaySpent, settings.currency)}`
                 : money(0, settings.currency)}
             </strong>
-            <span>{t(lang, "trackedToday")}</span>
+            <span>tracked today</span>
           </div>
           <img src={A.chartFrog} alt="Chart frog" />
         </div>
@@ -5034,8 +3731,6 @@ function LifeProfileEditor({
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
 }) {
-  const lang = settings.language;
-
   function updateProfile<K extends keyof Settings["profile"]>(
     key: K,
     value: Settings["profile"][K]
@@ -5058,31 +3753,11 @@ function LifeProfileEditor({
 
   return (
     <section className="settings-group life-profile-card">
-      <h3>{t(lang, "lifeProfile")}</h3>
-      <p>{t(lang, "lifeProfileDesc")}</p>
+      <h3>Life Profile</h3>
+      <p>Make the tracker fit your country, currency, and lifestyle.</p>
 
       <div className="profile-field">
-        <span>{t(lang, "language")}</span>
-        <select
-          className="settings-select profile-select"
-          value={settings.language}
-          onChange={(event) =>
-            setSettings((prev) => ({
-              ...prev,
-              language: event.target.value as Language,
-            }))
-          }
-        >
-          {languageOptions.map((language) => (
-            <option key={language.value} value={language.value}>
-              {language.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="profile-field">
-        <span>{t(lang, "countryPreset")}</span>
+        <span>Country preset</span>
         <select
           className="settings-select profile-select"
           value={settings.profile.region}
@@ -5100,11 +3775,11 @@ function LifeProfileEditor({
       </div>
 
       <div className="profile-field">
-        <span>{t(lang, "yourCountry")}</span>
+        <span>Your country</span>
         <input
           className="profile-country-input"
           value={settings.profile.country}
-          placeholder={t(lang, "countryPlaceholder")}
+          placeholder="Type your country"
           onChange={(event) =>
             setSettings((prev) => ({
               ...prev,
@@ -5119,7 +3794,7 @@ function LifeProfileEditor({
       </div>
 
       <div className="profile-field">
-        <span>{t(lang, "currency")}</span>
+        <span>Currency</span>
         <select
           className="settings-select profile-select"
           value={settings.currency}
@@ -5139,7 +3814,7 @@ function LifeProfileEditor({
       </div>
 
       <div className="profile-block">
-        <span>{t(lang, "lifeMode")}</span>
+        <span>Life mode</span>
         <div className="profile-chip-grid">
           {lifeModeOptions.map((mode) => (
             <button
@@ -5155,7 +3830,7 @@ function LifeProfileEditor({
       </div>
 
       <div className="profile-block">
-        <span>{t(lang, "incomeStyle")}</span>
+        <span>Income style</span>
         <div className="profile-chip-grid compact">
           {incomeStyleOptions.map((style) => (
             <button
@@ -5175,12 +3850,12 @@ function LifeProfileEditor({
         className="profile-toggle-line"
         onClick={() => updateProfile("hasRent", !settings.profile.hasRent)}
       >
-        <span>{t(lang, "rentApplies")}</span>
-        <strong>{settings.profile.hasRent ? t(lang, "yes") : t(lang, "no")}</strong>
+        <span>Rent applies</span>
+        <strong>{settings.profile.hasRent ? "Yes" : "No"}</strong>
       </button>
 
       <EditableMoneyLine
-        label={t(lang, "workHours")}
+        label="Work / study hours per month"
         value={settings.profile.workHoursPerMonth}
         currency={settings.currency}
         plainNumber
@@ -5197,7 +3872,6 @@ function V2IdentityPanel({
   settings: Settings;
   identityStats: V2IdentityStats;
 }) {
-  const lang = settings.language;
   const survivalTone =
     identityStats.weeklySurvivalScore >= 75
       ? "green"
@@ -5241,14 +3915,16 @@ function V2IdentityPanel({
   return (
     <section className={`v2-identity-card ${survivalTone}`}>
       <div className="section-title">
-        <span>{t(lang, "walletSurvival")}</span>
-        <small>{t(lang, "thisWeek")}</small>
+        <span>Wallet Survival</span>
+        <small>This week</small>
       </div>
 
       <div className="v2-identity-hero">
         <div>
-          <strong>{t(lang, "findLeak")}</strong>
-          <p>{t(lang, "survivalDesc")}</p>
+          <strong>Find the leak before it becomes your lifestyle.</strong>
+          <p>
+            See what drains you, how much it costs, and what to fix next.
+          </p>
         </div>
 
         <div className="v2-score-orb">
@@ -6364,8 +5040,6 @@ function AddExpenseScreen({
   onBack: () => void;
   onHelp: () => void;
 }) {
-  const lang = settings.language;
-
   return (
     <form
       className="screen"
@@ -6374,10 +5048,10 @@ function AddExpenseScreen({
         onAdd();
       }}
     >
-      <Header title={t(lang, "addExpenseTitle")} showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
+      <Header title="Add Expense" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
       <section className="amount-box">
-        <label>{t(lang, "amount")}</label>
+        <label>Amount</label>
         <div className="amount-input">
           <span>{currencySymbol(settings.currency)}</span>
           <input
@@ -6394,7 +5068,7 @@ function AddExpenseScreen({
       </section>
 
       <section>
-        <label className="field-label">{t(lang, "category")}</label>
+        <label className="field-label">Category</label>
         <div className="category-grid">
           {categories.map((cat) => (
             <button
@@ -6411,7 +5085,7 @@ function AddExpenseScreen({
       </section>
 
       <section>
-        <label className="field-label">{t(lang, "wasNeeded")}</label>
+        <label className="field-label">Was it needed?</label>
         <div className="choice-row">
           {(["Needed", "Not needed", "Maybe"] as NeedType[]).map((type) => (
             <button
@@ -6420,7 +5094,7 @@ function AddExpenseScreen({
               onClick={() => setExpenseType(type)}
               className={expenseType === type ? "choice active" : "choice"}
             >
-              {needLabel(type, lang)}
+              {type}
             </button>
           ))}
         </div>
@@ -6429,7 +5103,7 @@ function AddExpenseScreen({
       <section className="note-box">
         <input
           value={note}
-          placeholder={t(lang, "notePlaceholder")}
+          placeholder="Add a quick note..."
           onChange={(event) => setNote(event.target.value)}
         />
         <img src={A.pencil} alt="" />
@@ -6437,12 +5111,12 @@ function AddExpenseScreen({
 
       <button className="primary-btn" type="submit">
         <span>+</span>
-        {t(lang, "addExpenseButton")}
+        Add Expense
       </button>
 
       <div className="tiny-note">
         <img src={A.addFrog} alt="" />
-        <span>{t(lang, "addExpenseHint")}</span>
+        <span>Track daily leaks. Small leaks sink big wallets.</span>
       </div>
     </form>
   );
@@ -7085,7 +5759,7 @@ function SettingsScreen({
 
   return (
     <div className="screen">
-      <Header title={t(settings.language, "settingsTitle")} showBack onBack={onBack} />
+      <Header title="Settings" showBack onBack={onBack} />
 
       <LifeProfileEditor settings={settings} setSettings={setSettings} />
 
@@ -7500,11 +6174,9 @@ function MiniChart({ chartDays }: { chartDays: ChartPoint[] }) {
 function BottomNav({
   activeTab,
   setActiveTab,
-  language,
 }: {
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
-  language: Language;
 }) {
   return (
     <nav className="bottom-nav">
@@ -7520,7 +6192,7 @@ function BottomNav({
           className={activeTab === item.id ? "active" : ""}
         >
           <img src={item.icon} alt="" />
-          <span>{translateRuntimeValue(item.label, language)}</span>
+          <span>{item.label}</span>
         </button>
       ))}
     </nav>
