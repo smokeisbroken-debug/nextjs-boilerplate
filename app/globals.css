@@ -8392,3 +8392,30 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
     max-height: 82vh;
   }
 }
+
+
+/* ===== V49 CLEAN EN/RU I18N ===== */
+.profile-field:first-of-type .profile-select {
+  border-color: rgba(183, 255, 25, 0.28) !important;
+}
+
+html[lang="ru"] .hero h1 {
+  font-size: clamp(31px, 9.2vw, 44px);
+}
+
+html[lang="ru"] .wallet-insight-card p,
+html[lang="ru"] .wallet-insight-card span,
+html[lang="ru"] .scenario-card span,
+html[lang="ru"] .challenge-card span,
+html[lang="ru"] .chart-card span,
+html[lang="ru"] .help-modal-list span,
+html[lang="ru"] .routine-task span {
+  overflow-wrap: anywhere;
+  line-height: 1.34;
+}
+
+
+/* ===== V49.1 CLEAN EN/RU I18N BOUNDARY FIX ===== */
+
+
+/* ===== V49.2 VERIFIED EN/RU I18N ===== */
