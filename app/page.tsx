@@ -1408,6 +1408,27 @@ const ruText: Record<string, string> = {
   "#1 Daily": "#1 за день",
   "Cut Custom": "Сократить другое",
   "Cut custom": "Сократить другое",
+  "Today Mission": "Миссия на сегодня",
+  "Protect your Wallet HP today.": "Защити Wallet HP сегодня.",
+  "Track one real expense, avoid your biggest leak, and keep the routine alive.": "Запиши один реальный расход, избегай главной утечки и сохрани рутину.",
+  "Track one real expense": "Записать один реальный расход",
+  "Avoid biggest leak:": "Избегай главной утечки:",
+  "Keep daily discipline alive": "Сохрани ежедневную дисциплину",
+  "Yearly risk": "Риск за год",
+  "Track now": "Записать сейчас",
+  "active": "активно",
+  "Quick Add": "Быстрое добавление",
+  "amount stays editable": "сумму можно изменить",
+  "Latest impact": "Последний эффект",
+  "tracked.": "записано.",
+  "looks small once. Repeated daily, it becomes a real wallet leak.": "один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.",
+  "If repeated daily": "Если повторять ежедневно",
+  "Yearly damage": "Урон за год",
+  "Life hours traded": "Часы жизни обменяны",
+  "estimated": "примерно",
+  "/month": "/мес",
+  "/year": "/год",
+  "Takeout": "Еда на заказ",
 };
 
 function applyRussianDynamicRules(value: string) {
@@ -1482,6 +1503,12 @@ function applyRussianDynamicRules(value: string) {
     .replace(/Твой score/g, "Твой счёт")
     .replace(/\bcustom\b/g, "другое")
     .replace(/\btakeout\b/g, "еда на заказ");
+    // V52_MISSION_RULES
+    .replace(/Avoid biggest leak:\s*([A-Za-zА-Яа-яёЁ _/-]+)/g, "Избегай главной утечки: $1")
+    .replace(/(\d+)\/3 active/g, "$1/3 активно")
+    .replace(/(Coffee|Taxi|Smoking|Takeout|Custom) tracked\./g, "$1 записано.")
+    .replace(/C\$([\d,.]+) looks small once\. Repeated daily, it becomes a real wallet leak\./g, "C$$1 один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.")
+    .replace(/(\$[\d,.]+) looks small once\. Repeated daily, it becomes a real wallet leak\./g, "$1 один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.")
 
   return next;
 }
@@ -1714,6 +1741,14 @@ const firstLeakPresets = [
   { category: "Smoking", amount: 5, icon: A.smoking, label: "Smoking leak" },
   { category: "Takeouts", amount: 15, icon: A.takeouts, label: "Takeout leak" },
   { category: "Shopping", amount: 20, icon: A.shopping, label: "Random buy" },
+];
+
+const quickAddPresets = [
+  { category: "Coffee", amount: 2, icon: A.coffee, label: "Coffee" },
+  { category: "Taxi", amount: 10, icon: A.taxi, label: "Taxi" },
+  { category: "Smoking", amount: 5, icon: A.smoking, label: "Smoking" },
+  { category: "Takeouts", amount: 15, icon: A.takeouts, label: "Takeout" },
+  { category: "Custom", amount: 10, icon: A.custom, label: "Custom" },
 ];
 
 const defaultChallengeTemplates: ChallengeTemplate[] = [
@@ -3049,6 +3084,7 @@ export default function Home() {
   const [note, setNote] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Coffee");
   const [expenseType, setExpenseType] = useState<NeedType>("Needed");
+  const [lastTrackedExpense, setLastTrackedExpense] = useState<Expense | null>(null);
 
   const cloudInitData = telegram.isTelegram ? telegram.initData : "";
   const cloudAuthReady = Boolean(
@@ -3420,6 +3456,7 @@ export default function Home() {
 
     triggerHaptic("success");
     setExpenses((prev) => [expense, ...prev]);
+    setLastTrackedExpense(expense);
     setAmount("");
     setNote("");
     setExpenseType("Needed");
@@ -3462,6 +3499,7 @@ export default function Home() {
 
     triggerHaptic("success");
     setExpenses((prev) => [expense, ...prev]);
+    setLastTrackedExpense(expense);
     setAmount("");
     setNote("");
     setSelectedCategory(category);
@@ -3754,6 +3792,7 @@ export default function Home() {
             setSelectedCategory={setSelectedCategory}
             expenseType={expenseType}
             setExpenseType={setExpenseType}
+            lastTrackedExpense={lastTrackedExpense}
             onAdd={addExpense}
             onBack={goHome}
             onHelp={openHelp}
@@ -4465,6 +4504,13 @@ function DashboardScreen({
         ))}
       </section>
 
+      <TodayMissionPanel
+        settings={settings}
+        summary={summary}
+        identityStats={identityStats}
+        onOpenAdd={onOpenAdd}
+      />
+
       <LifeProfileSummaryCard settings={settings} />
 
       <StreakCard streak={summary.streak} />
@@ -5029,6 +5075,151 @@ function DailyRoutinePanel({
       <div className="routine-rule">
         <strong>Discipline rule:</strong>
         <span>you cannot tap tasks complete. Complete the action, then the checkmark appears.</span>
+      </div>
+    </section>
+  );
+}
+
+
+function TodayMissionPanel({
+  settings,
+  summary,
+  identityStats,
+  onOpenAdd,
+}: {
+  settings: Settings;
+  summary: {
+    totalIncome: number;
+    fixedCosts: number;
+    spentThisMonth: number;
+    totalLeaks: number;
+    realBalance: number;
+    walletHp: number;
+    todaySpent: number;
+    streak: Streak;
+  };
+  identityStats: V2IdentityStats;
+  onOpenAdd: () => void;
+}) {
+  const targetLeak =
+    identityStats.biggestLeakAmount > 0
+      ? categoryLabel(identityStats.biggestLeakCategory)
+      : "first leak";
+
+  const missionProgress = [
+    summary.todaySpent > 0,
+    identityStats.biggestLeakAmount > 0,
+    summary.streak.currentStreak > 0,
+  ].filter(Boolean).length;
+
+  const estimatedYearlyLeak = identityStats.weeklyLeaks > 0
+    ? identityStats.weeklyLeaks * 52
+    : summary.totalLeaks * 12;
+
+  return (
+    <section className="today-mission-card">
+      <div className="section-title">
+        <span>Today Mission</span>
+        <small>{missionProgress}/3 active</small>
+      </div>
+
+      <div className="mission-hero">
+        <img src={A.walletMascot} alt="" />
+
+        <div>
+          <strong>Protect your Wallet HP today.</strong>
+          <p>
+            Track one real expense, avoid your biggest leak, and keep the routine
+            alive.
+          </p>
+        </div>
+      </div>
+
+      <div className="mission-steps">
+        <div className={summary.todaySpent > 0 ? "done" : ""}>
+          <b>{summary.todaySpent > 0 ? "✓" : "1"}</b>
+          <span>Track one real expense</span>
+        </div>
+
+        <div className={identityStats.biggestLeakAmount > 0 ? "danger" : ""}>
+          <b>2</b>
+          <span>Avoid biggest leak: {targetLeak}</span>
+        </div>
+
+        <div className={summary.streak.currentStreak > 0 ? "done" : ""}>
+          <b>{summary.streak.currentStreak > 0 ? "✓" : "3"}</b>
+          <span>Keep daily discipline alive</span>
+        </div>
+      </div>
+
+      <div className="mission-bottom">
+        <div>
+          <span>Yearly risk</span>
+          <strong>{money(estimatedYearlyLeak, settings.currency)}</strong>
+        </div>
+
+        <button type="button" onClick={onOpenAdd}>
+          Track now
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function ExpenseImpactCard({
+  settings,
+  expense,
+}: {
+  settings: Settings;
+  expense: Expense | null;
+}) {
+  if (!expense) return null;
+
+  const monthlyImpact = expense.amount * 30;
+  const yearlyImpact = expense.amount * 365;
+  const hourlyValue = Math.max(
+    getTotalIncome(settings) / Math.max(settings.profile.workHoursPerMonth, 1),
+    1
+  );
+  const hoursLost = Math.round((yearlyImpact / hourlyValue) * 10) / 10;
+
+  return (
+    <section className="expense-impact-card">
+      <div className="section-title">
+        <span>Latest impact</span>
+        <small>{expense.needType}</small>
+      </div>
+
+      <div className="impact-hero">
+        <img src={getCategoryIcon(expense.category)} alt="" />
+
+        <div>
+          <strong>{expense.category} tracked.</strong>
+          <p>
+            {money(expense.amount, settings.currency)} looks small once. Repeated
+            daily, it becomes a real wallet leak.
+          </p>
+        </div>
+      </div>
+
+      <div className="impact-grid">
+        <div>
+          <span>If repeated daily</span>
+          <strong>{money(monthlyImpact, settings.currency)}</strong>
+          <small>/month</small>
+        </div>
+
+        <div>
+          <span>Yearly damage</span>
+          <strong>{money(yearlyImpact, settings.currency)}</strong>
+          <small>/year</small>
+        </div>
+
+        <div>
+          <span>Life hours traded</span>
+          <strong>{hoursLost}h</strong>
+          <small>estimated</small>
+        </div>
       </div>
     </section>
   );
@@ -5894,6 +6085,7 @@ function AddExpenseScreen({
   setSelectedCategory,
   expenseType,
   setExpenseType,
+  lastTrackedExpense,
   onAdd,
   onBack,
   onHelp,
@@ -5907,6 +6099,7 @@ function AddExpenseScreen({
   setSelectedCategory: (value: string) => void;
   expenseType: NeedType;
   setExpenseType: (value: NeedType) => void;
+  lastTrackedExpense: Expense | null;
   onAdd: () => void;
   onBack: () => void;
   onHelp: () => void;
@@ -5935,6 +6128,32 @@ function AddExpenseScreen({
             onChange={(event) => setAmount(event.target.value)}
           />
           <b>{settings.currency}</b>
+        </div>
+      </section>
+
+      <section className="quick-add-panel">
+        <div className="section-title">
+          <span>Quick Add</span>
+          <small>amount stays editable</small>
+        </div>
+
+        <div className="quick-add-grid">
+          {quickAddPresets.map((preset) => (
+            <button
+              type="button"
+              key={preset.category}
+              onClick={() => {
+                setSelectedCategory(preset.category);
+                setAmount(String(preset.amount));
+                setExpenseType("Not needed");
+                triggerHaptic("light");
+              }}
+            >
+              <img src={preset.icon} alt="" />
+              <span>{preset.label}</span>
+              <strong>{money(preset.amount, settings.currency)}</strong>
+            </button>
+          ))}
         </div>
       </section>
 
@@ -5984,6 +6203,8 @@ function AddExpenseScreen({
         <span>+</span>
         Add Expense
       </button>
+
+      <ExpenseImpactCard settings={settings} expense={lastTrackedExpense} />
 
       <div className="tiny-note">
         <img src={A.addFrog} alt="" />
