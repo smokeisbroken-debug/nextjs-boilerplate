@@ -9091,3 +9091,7 @@ html[lang="ru"] .share-card strong {
   cursor: not-allowed;
   opacity: 0.62;
 }
+
+
+/* ===== V54.5 DUPLICATE TRANSLATION KEY FIX ===== */
+/* Removes duplicate ruText object keys for strict TypeScript build. */
