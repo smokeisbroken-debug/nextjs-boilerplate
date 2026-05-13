@@ -1165,61 +1165,61 @@ const runtimeTextTranslations: Partial<Record<Language, Record<string, string>>>
     "Hidden bill": "Скрытый счёт",
     "It looks small until you compare it to a real bill.": "Кажется мелочью, пока не сравнишь с настоящим счётом.",
     "One time is a purchase. Repeating is a habit.": "Один раз — покупка. Повторяется — привычка.",
-    "Good. Now keep the leaks from turning into a monthly bill.": "Хорошо. Теперь не дай утечкам стать ежемесячным счётом."
+    "Good. Now keep the leaks from turning into a monthly bill.": "Хорошо. Теперь не дай утечкам стать ежемесячным счётом.",
+    "Current point": "Текущая точка",
+    "spent": "потрачено",
+    "Day": "День",
+    "Week": "Неделя",
+    "Month": "Месяц",
+    "Last 7 days": "Последние 7 дней",
+    "Last 7 дней": "Последние 7 дней",
+    "Spending Volume — Last 7 days": "Объём расходов — последние 7 дней",
+    "Spending Volume — Last 7 дней": "Объём расходов — последние 7 дней",
+    "You watch crypto charts every day.": "Ты каждый день смотришь crypto-чарты.",
+    "You watch crypto charts every день.": "Ты каждый день смотришь crypto-чарты.",
+    "But do you watch your own $BROKE Chart?": "Но смотришь ли ты свой $BROKE Chart?",
+    "But do you watch your own $BROKE График?": "Но смотришь ли ты свой $BROKE Chart?",
+    "Today&apos;s Leak": "Сегодняшняя утечка",
+    "Today's Leak": "Сегодняшняя утечка",
+    "Marked Leaks": "Отмеченные утечки",
+    "Monthly Projection": "Прогноз на месяц",
+    "Wallet still holding": "Кошелёк ещё держится",
+    "You spent": "Ты потратил",
+    "on custom today.": "на другое сегодня.",
+    "That becomes": "Это станет",
+    "if this rhythm repeats.": "если такой ритм повторится.",
+    "was marked as": "отмечено как",
+    "in the last 7 days.": "за последние 7 дней.",
+    "in the last 7 дней.": "за последние 7 дней.",
+    "At this pace, leaks could reach": "В таком темпе утечки могут достичь",
+    "per month.": "в месяц.",
+    "Wallet HP is": "Wallet HP",
+    "and real balance is still positive.": "и реальный баланс всё ещё положительный.",
+    "and реальный баланс is still positive.": "и реальный баланс всё ещё положительный.",
+    "custom": "другое",
+    "takeout": "еда на заказ",
+    "score": "счёт",
+    "Your score": "Твой счёт",
+    "Твой score": "Твой счёт",
+    "Trust L1": "Доверие L1",
+    "Cut Taxi": "Сократить такси",
+    "Cut Такси": "Сократить такси",
+    "Reduce Smoking": "Сократить курение",
+    "Reduce Курение": "Сократить курение",
+    "Cut Coffee": "Сократить кофе",
+    "Cut Кофе": "Сократить кофе",
+    "1 tracked": "1 запись",
+    "reduction": "сокращение",
+    "Total Potential Savings": "Общая потенциальная экономия",
+    "Potential Saved": "Потенциальная экономия",
+    "Simulate a 30-day save": "Симуляция экономии на 30 дней",
+    "Daily Save": "Экономия в день",
+    "Start Saving": "Начать экономить",
+    "Emergency Fund": "Резервный фонд",
+    "New Gadget": "Новый гаджет",
+    "Trip": "Поездка",
+    "Financial Freedom": "Финансовая свобода"
   },
-    ,"Current point": "Текущая точка"
-    ,"spent": "потрачено"
-    ,"Day": "День"
-    ,"Week": "Неделя"
-    ,"Month": "Месяц"
-    ,"Last 7 days": "Последние 7 дней"
-    ,"Last 7 дней": "Последние 7 дней"
-    ,"Spending Volume — Last 7 days": "Объём расходов — последние 7 дней"
-    ,"Spending Volume — Last 7 дней": "Объём расходов — последние 7 дней"
-    ,"You watch crypto charts every day.": "Ты каждый день смотришь crypto-чарты."
-    ,"You watch crypto charts every день.": "Ты каждый день смотришь crypto-чарты."
-    ,"But do you watch your own $BROKE Chart?": "Но смотришь ли ты свой $BROKE Chart?"
-    ,"But do you watch your own $BROKE График?": "Но смотришь ли ты свой $BROKE Chart?"
-    ,"Today&apos;s Leak": "Сегодняшняя утечка"
-    ,"Today's Leak": "Сегодняшняя утечка"
-    ,"Marked Leaks": "Отмеченные утечки"
-    ,"Monthly Projection": "Прогноз на месяц"
-    ,"Wallet still holding": "Кошелёк ещё держится"
-    ,"You spent": "Ты потратил"
-    ,"on custom today.": "на другое сегодня."
-    ,"That becomes": "Это станет"
-    ,"if this rhythm repeats.": "если такой ритм повторится."
-    ,"was marked as": "отмечено как"
-    ,"in the last 7 days.": "за последние 7 дней."
-    ,"in the last 7 дней.": "за последние 7 дней."
-    ,"At this pace, leaks could reach": "В таком темпе утечки могут достичь"
-    ,"per month.": "в месяц."
-    ,"Wallet HP is": "Wallet HP"
-    ,"and real balance is still positive.": "и реальный баланс всё ещё положительный."
-    ,"and реальный баланс is still positive.": "и реальный баланс всё ещё положительный."
-    ,"custom": "другое"
-    ,"takeout": "еда на заказ"
-    ,"score": "счёт"
-    ,"Your score": "Твой счёт"
-    ,"Твой score": "Твой счёт"
-    ,"Trust L1": "Доверие L1"
-    ,"Cut Taxi": "Сократить такси"
-    ,"Cut Такси": "Сократить такси"
-    ,"Reduce Smoking": "Сократить курение"
-    ,"Reduce Курение": "Сократить курение"
-    ,"Cut Coffee": "Сократить кофе"
-    ,"Cut Кофе": "Сократить кофе"
-    ,"1 tracked": "1 запись"
-    ,"reduction": "сокращение"
-    ,"Total Potential Savings": "Общая потенциальная экономия"
-    ,"Potential Saved": "Потенциальная экономия"
-    ,"Simulate a 30-day save": "Симуляция экономии на 30 дней"
-    ,"Daily Save": "Экономия в день"
-    ,"Start Saving": "Начать экономить"
-    ,"Emergency Fund": "Резервный фонд"
-    ,"New Gadget": "Новый гаджет"
-    ,"Trip": "Поездка"
-    ,"Financial Freedom": "Финансовая свобода"
   "es": {
     "Home": "Inicio",
     "Add": "Añadir",
