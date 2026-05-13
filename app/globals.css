@@ -8430,3 +8430,7 @@ html[lang="ru"] .scenario-card h3,
 html[lang="ru"] .share-card strong {
   line-height: 1.08;
 }
+
+
+/* ===== V51.1 RU LEFTOVERS BUILD FIX ===== */
+/* Fixes broken .replace chain syntax from v51. */
