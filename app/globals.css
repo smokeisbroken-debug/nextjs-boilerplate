@@ -9247,3 +9247,139 @@ html[lang="ru"] .share-card strong {
     linear-gradient(180deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.012));
   border: 1px solid rgba(183, 255, 25, 0.09);
 }
+
+
+/* ===== V55 CLEAN UI / LESS CLUTTER ===== */
+.clean-details {
+  margin-top: 12px;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.011));
+  border: 1px solid rgba(183, 255, 25, 0.105);
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 255, 25, 0.022),
+    0 12px 30px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.clean-details[open] {
+  border-color: rgba(183, 255, 25, 0.18);
+  background:
+    radial-gradient(circle at top right, rgba(183, 255, 25, 0.075), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.046), rgba(255, 255, 255, 0.012));
+}
+
+.clean-details > summary {
+  min-height: 58px;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.clean-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.clean-details > summary::after {
+  content: "›";
+  width: 28px;
+  height: 28px;
+  display: inline-grid;
+  place-items: center;
+  grid-column: 2;
+  grid-row: 1;
+  border-radius: 999px;
+  background: rgba(183, 255, 25, 0.09);
+  border: 1px solid rgba(183, 255, 25, 0.18);
+  color: var(--green);
+  font-size: 22px;
+  line-height: 1;
+  transform: rotate(90deg);
+  transition: transform 0.18s ease;
+}
+
+.clean-details[open] > summary::after {
+  transform: rotate(-90deg);
+}
+
+.clean-details > summary span {
+  min-width: 0;
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.08;
+  font-weight: 950;
+  letter-spacing: -0.35px;
+}
+
+.clean-details > summary b {
+  margin-right: 34px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(183, 255, 25, 0.095);
+  color: var(--green);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.clean-details > section,
+.clean-details > .share-card,
+.clean-details > .wallet-insights-panel,
+.clean-details > .v2-identity-card,
+.clean-details > .badges-strip,
+.clean-details > .daily-routine-card,
+.clean-details > .chart-preview,
+.clean-details > .recent-card,
+.clean-details > .tg-status,
+.clean-details > .settings-group,
+.clean-details > .tracked-panel,
+.clean-details > .badge-vault-details,
+.clean-details > .streak-settings-panel,
+.clean-details > .leaderboard-panel,
+.clean-details > .challenges-panel {
+  margin: 0 12px 12px;
+}
+
+.clean-details .daily-routine-card,
+.clean-details .v2-identity-card,
+.clean-details .wallet-insights-panel,
+.clean-details .share-card,
+.clean-details .chart-preview,
+.clean-details .recent-card,
+.clean-details .badges-strip,
+.clean-details .settings-group,
+.clean-details .tracked-panel,
+.clean-details .leaderboard-panel,
+.clean-details .challenges-panel {
+  border-radius: 17px;
+}
+
+.settings-clean-details {
+  margin-top: 10px;
+}
+
+.screen > .clean-details:first-of-type {
+  margin-top: 12px;
+}
+
+@media (max-width: 420px) {
+  .clean-details > summary {
+    padding: 13px 14px;
+  }
+
+  .clean-details > summary span {
+    font-size: 15px;
+  }
+
+  .clean-details > summary b {
+    max-width: 124px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
