@@ -8465,3 +8465,7 @@ html[lang="ru"] .scenario-card h3,
 html[lang="ru"] .challenge-card h3 {
   line-height: 1.12;
 }
+
+
+/* ===== V47.3 REGEX BUILD FIX ===== */
+/* Fixes TS parser error from escaped slash inside regex literals. */
