@@ -176,6 +176,16 @@ type ChallengeProgress = {
   percentUsed: number;
 };
 
+type LocalLeakMission = {
+  id: string;
+  category: string;
+  startedAt: string;
+  endsAt: string;
+  baselineWeekly: number;
+  targetSpend: number;
+  createdAt: string;
+};
+
 type BadgeItem = {
   id: string;
   title: string;
@@ -346,6 +356,7 @@ declare global {
 }
 
 const STORAGE_KEY = "broke-life-tracker-v1";
+const LEAK_MISSION_KEY = "broke-local-leak-mission-v1";
 const ONBOARDING_KEY = "broke-life-tracker-onboarding-completed-v1";
 const PROJECT_X_URL = "https://x.com/SmokeIsBroke";
 const PROJECT_TG_URL = "https://t.me/SmokeIsBrokeSol";
@@ -1429,6 +1440,20 @@ const ruText: Record<string, string> = {
   "/month": "/мес",
   "/year": "/год",
   "Takeout": "Еда на заказ",
+  "Biggest Leak Challenge": "Челлендж главной утечки",
+  "Suggested": "Предложено",
+  "Find your first leak": "Найди первую утечку",
+  "Start mission": "Начать миссию",
+  "Track first leak": "Записать первую утечку",
+  "Track mission expense": "Записать расход миссии",
+  "Spent": "Потрачено",
+  "Limit": "Лимит",
+  "Days left": "Дней осталось",
+  "3-day target": "Цель на 3 дня",
+  "Possible save": "Можно сохранить",
+  "Mission started": "Миссия началась",
+  "Track a leak first": "Сначала запиши утечку",
+  "Add one Not needed or Maybe expense.": "Добавь один расход Не нужно или Возможно.",
 };
 
 function applyRussianDynamicRules(value: string) {
@@ -1503,7 +1528,16 @@ function applyRussianDynamicRules(value: string) {
     .replace(/Avoid biggest leak:\s*([A-Za-zА-Яа-яёЁ _/-]+)/g, "Избегай главной утечки: $1")
     .replace(/(\d+)\/3 active/g, "$1/3 активно")
     .replace(/(Coffee|Taxi|Smoking|Takeout|Custom) tracked\./g, "$1 записано.")
-    .replace(/(\$[\d,.]+) looks small once\. Repeated daily, it becomes a real wallet leak\./g, "$1 один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.");
+    .replace(/(\$[\d,.]+) looks small once\. Repeated daily, it becomes a real wallet leak\./g, "$1 один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.")
+    .replace(/Anti-([A-Za-zА-Яа-яёЁ _/-]+) mission/g, "Анти-$1 миссия")
+    .replace(/Start anti-([A-Za-zА-Яа-яёЁ _/-]+) mission/g, "Начать анти-$1 миссию")
+    .replace(/Stay under (\$[\d,.]+|C\$[\d,.]+) for 3 days\./g, "Удержись ниже $1 за 3 дня.")
+    .replace(/(\$[\d,.]+|C\$[\d,.]+) drained this week\. Cut it before it becomes normal\./g, "$1 слилось на этой неделе. Сократи это, пока не стало нормой.")
+    .replace(/Track one Not needed or Maybe expense first\. Then the app will build a mission around it\./g, "Сначала добавь расход Не нужно или Возможно. Потом app построит миссию вокруг него.")
+    .replace(/(\d+)d left/g, "$1д осталось")
+    .replace(/(\$[\d,.]+|C\$[\d,.]+) max/g, "макс. $1")
+    .replace(/Possible save:\s*(\$[\d,.]+|C\$[\d,.]+)/g, "Можно сохранить: $1")
+    .replace(/3-day anti-([A-Za-zА-Яа-яёЁ _/-]+) challenge/g, "3-дневный анти-$1 челлендж");
 
   next = next
     .replace(/C\$([\d,.]+)\s+this week\b/g, (_match, amount) => `C$${amount} на этой неделе`)
@@ -2616,6 +2650,112 @@ function getTodayExpenses(expenses: Expense[]) {
   return expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === today);
 }
 
+function readLocalLeakMission(): LocalLeakMission | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(LEAK_MISSION_KEY);
+
+    if (!raw) return null;
+
+    const mission = JSON.parse(raw) as Partial<LocalLeakMission>;
+
+    if (
+      !mission.id ||
+      !mission.category ||
+      !mission.startedAt ||
+      !mission.endsAt ||
+      typeof mission.targetSpend !== "number"
+    ) {
+      return null;
+    }
+
+    return mission as LocalLeakMission;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalLeakMission(mission: LocalLeakMission | null) {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (!mission) {
+      window.localStorage.removeItem(LEAK_MISSION_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(LEAK_MISSION_KEY, JSON.stringify(mission));
+  } catch {
+    // Local mission is optional. Ignore storage errors.
+  }
+}
+
+function createLocalLeakMission(category: string, baselineWeekly: number): LocalLeakMission {
+  const started = new Date();
+  const ends = new Date(started);
+  ends.setDate(started.getDate() + 3);
+
+  const targetSpend = Math.max(1, Math.round((baselineWeekly / 7) * 3 * 0.5));
+
+  return {
+    id: uid(),
+    category,
+    startedAt: started.toISOString(),
+    endsAt: ends.toISOString(),
+    baselineWeekly,
+    targetSpend,
+    createdAt: started.toISOString(),
+  };
+}
+
+function getLocalLeakMissionProgress(mission: LocalLeakMission | null, expenses: Expense[]) {
+  if (!mission) {
+    return {
+      spent: 0,
+      percentUsed: 0,
+      daysLeft: 0,
+      completed: false,
+      failed: false,
+      active: false,
+    };
+  }
+
+  const start = new Date(mission.startedAt);
+  const end = new Date(mission.endsAt);
+  const now = new Date();
+
+  const spent = sum(
+    expenses
+      .filter((expense) => {
+        const created = new Date(expense.createdAt);
+        return (
+          created >= start &&
+          created <= end &&
+          expense.category === mission.category &&
+          expense.needType !== "Needed"
+        );
+      })
+      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
+  );
+
+  const percentUsed =
+    mission.targetSpend > 0 ? clamp(Math.round((spent / mission.targetSpend) * 100), 0, 150) : 0;
+  const daysLeft = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / 86400000));
+  const completed = now > end && spent <= mission.targetSpend;
+  const failed = spent > mission.targetSpend;
+  const active = !completed && !failed && now <= end;
+
+  return {
+    spent,
+    percentUsed,
+    daysLeft,
+    completed,
+    failed,
+    active,
+  };
+}
+
 function getDaysInCurrentMonth() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -3077,6 +3217,7 @@ export default function Home() {
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [toast, setToast] = useState<AppToast | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [leakMission, setLeakMission] = useState<LocalLeakMission | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   const openAppTrackedRef = useRef(false);
@@ -3224,6 +3365,8 @@ export default function Home() {
       if (localStorage.getItem(ONBOARDING_KEY) === "true") {
         setOnboardingCompleted(true);
       }
+
+      setLeakMission(readLocalLeakMission());
     } catch {
       localStorage.removeItem(STORAGE_KEY);
     } finally {
@@ -3644,6 +3787,20 @@ export default function Home() {
     }
   }
 
+  function startLocalLeakMission(category: string, baselineWeekly: number) {
+    if (!category || category === "No leak") {
+      showToast("Track a leak first", "Add one Not needed or Maybe expense.", "info");
+      setActiveTab("add");
+      return;
+    }
+
+    const mission = createLocalLeakMission(category, baselineWeekly);
+    writeLocalLeakMission(mission);
+    setLeakMission(mission);
+    triggerHaptic("success");
+    showToast("Mission started", `3-day anti-${categoryLabel(category)} challenge`, "xp");
+  }
+
   async function trackXpAction(
     xpAction: XpAction,
     context = "$BROKE Score updated"
@@ -3771,6 +3928,8 @@ export default function Home() {
             expenses={currentMonthExpenses.slice(0, 6)}
             routineExpenses={currentMonthExpenses}
             allExpenses={expenses}
+            leakMission={leakMission}
+            onStartLeakMission={startLocalLeakMission}
             onDeleteExpense={deleteExpense}
             onQuickLeak={addQuickExpense}
             onOpenAdd={() => setActiveTab("add")}
@@ -4402,6 +4561,8 @@ function DashboardScreen({
   expenses,
   routineExpenses,
   allExpenses,
+  leakMission,
+  onStartLeakMission,
   onDeleteExpense,
   onQuickLeak,
   onOpenAdd,
@@ -4431,6 +4592,8 @@ function DashboardScreen({
   expenses: Expense[];
   routineExpenses: Expense[];
   allExpenses: Expense[];
+  leakMission: LocalLeakMission | null;
+  onStartLeakMission: (category: string, baselineWeekly: number) => void;
   onDeleteExpense: (id: string) => void;
   onQuickLeak: (category: string, value: number, needType?: NeedType) => void;
   onOpenAdd: () => void;
@@ -4539,6 +4702,15 @@ function DashboardScreen({
       <WalletInsightsPanel insights={walletInsights} />
 
       <V2IdentityPanel settings={settings} identityStats={identityStats} />
+
+      <BiggestLeakChallengePanel
+        settings={settings}
+        identityStats={identityStats}
+        mission={leakMission}
+        expenses={allExpenses}
+        onStartMission={onStartLeakMission}
+        onOpenAdd={onOpenAdd}
+      />
 
       <DailyRoutinePanel
         settings={settings}
@@ -5083,6 +5255,120 @@ function DailyRoutinePanel({
   );
 }
 
+
+
+function BiggestLeakChallengePanel({
+  settings,
+  identityStats,
+  mission,
+  expenses,
+  onStartMission,
+  onOpenAdd,
+}: {
+  settings: Settings;
+  identityStats: V2IdentityStats;
+  mission: LocalLeakMission | null;
+  expenses: Expense[];
+  onStartMission: (category: string, baselineWeekly: number) => void;
+  onOpenAdd: () => void;
+}) {
+  const progress = getLocalLeakMissionProgress(mission, expenses);
+  const hasLeak = identityStats.biggestLeakAmount > 0;
+  const suggestedCategory = hasLeak ? identityStats.biggestLeakCategory : "No leak";
+  const missionCategory = mission?.category || suggestedCategory;
+  const missionLabel = hasLeak ? categoryLabel(suggestedCategory) : "your first leak";
+  const weeklyAmount = hasLeak ? identityStats.biggestLeakAmount : 0;
+  const targetSpend = mission?.targetSpend ?? Math.max(1, Math.round((weeklyAmount / 7) * 3 * 0.5));
+  const possibleSavings = Math.max(0, Math.round((weeklyAmount / 7) * 3 - targetSpend));
+
+  const statusLabel = mission
+    ? progress.completed
+      ? "Completed"
+      : progress.failed
+        ? "Failed"
+        : `${progress.daysLeft}d left`
+    : "Suggested";
+
+  return (
+    <section
+      className={`biggest-leak-challenge-card ${
+        mission ? (progress.failed ? "failed" : progress.completed ? "completed" : "active") : ""
+      }`}
+    >
+      <div className="section-title">
+        <span>Biggest Leak Challenge</span>
+        <small>{statusLabel}</small>
+      </div>
+
+      <div className="blc-hero">
+        <img src={getCategoryIcon(missionCategory)} alt="" />
+
+        <div>
+          <strong>
+            {mission
+              ? `Anti-${categoryLabel(mission.category)} mission`
+              : hasLeak
+                ? `Start anti-${missionLabel} mission`
+                : "Find your first leak"}
+          </strong>
+          <p>
+            {mission
+              ? `Stay under ${money(mission.targetSpend, settings.currency)} for 3 days.`
+              : hasLeak
+                ? `${money(weeklyAmount, settings.currency)} drained this week. Cut it before it becomes normal.`
+                : "Track one Not needed or Maybe expense first. Then the app will build a mission around it."}
+          </p>
+        </div>
+      </div>
+
+      {mission ? (
+        <>
+          <div className="blc-progress">
+            <div style={{ width: `${Math.min(progress.percentUsed, 100)}%` }} />
+          </div>
+
+          <div className="blc-stats">
+            <div>
+              <span>Spent</span>
+              <strong>{money(progress.spent, settings.currency)}</strong>
+            </div>
+
+            <div>
+              <span>Limit</span>
+              <strong>{money(mission.targetSpend, settings.currency)}</strong>
+            </div>
+
+            <div>
+              <span>Days left</span>
+              <strong>{progress.daysLeft}</strong>
+            </div>
+          </div>
+
+          <button type="button" className="blc-secondary-btn" onClick={onOpenAdd}>
+            Track mission expense
+          </button>
+        </>
+      ) : (
+        <div className="blc-start-row">
+          <div>
+            <span>3-day target</span>
+            <strong>{money(targetSpend, settings.currency)} max</strong>
+            <small>Possible save: {money(possibleSavings, settings.currency)}</small>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              hasLeak ? onStartMission(suggestedCategory, weeklyAmount) : onOpenAdd()
+            }
+          >
+            {hasLeak ? "Start mission" : "Track first leak"}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
 
 function TodayMissionPanel({
   settings,
