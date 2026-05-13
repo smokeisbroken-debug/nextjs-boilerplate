@@ -8469,3 +8469,7 @@ html[lang="ru"] .challenge-card h3 {
 
 /* ===== V47.3 REGEX BUILD FIX ===== */
 /* Fixes TS parser error from escaped slash inside regex literals. */
+
+
+/* ===== V47.4 TYPESCRIPT I18N CAST FIX ===== */
+/* Fixes strict TypeScript build error caused by literal translation value types. */
