@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import { Children, cloneElement, isValidElement, useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
 type NeedType = "Needed" | "Not needed" | "Maybe";
+type Language = "en" | "ru";
 type Currency =
   | "USD"
   | "EUR"
@@ -90,6 +91,7 @@ type Expense = {
 
 type Settings = {
   currency: Currency;
+  language: Language;
   dailyReminder: boolean;
   onboardingCompleted?: boolean;
   profile: {
@@ -478,6 +480,7 @@ const A = {
 
 const defaultSettings: Settings = {
   currency: "USD",
+  language: "en",
   dailyReminder: true,
   onboardingCompleted: false,
   profile: {
@@ -721,6 +724,747 @@ const incomeStyleOptions: IncomeStyle[] = [
   "Irregular",
 ];
 
+
+const languageOptions: { value: Language; label: string }[] = [
+  { value: "en", label: "English" },
+  { value: "ru", label: "Русский" },
+];
+
+const ruText: Record<string, string> = {
+  "$BROKE": "$BROKE",
+  "$BROKE Chart": "$BROKE Chart",
+  "$BROKE Chart?": "$BROKE Chart?",
+  "$BROKE Community": "$BROKE Community",
+  "$BROKE Life Tracker": "$BROKE Life Tracker",
+  "$BROKE Life Tracker guide": "Гайд $BROKE Life Tracker",
+  "$BROKE RESULT": "$BROKE RESULT",
+  "$BROKE Score": "$BROKE Score",
+  "$BROKE Score updated": "$BROKE Score обновлён",
+  "Home": "Главная",
+  "Add": "Добавить",
+  "Chart": "График",
+  "Save": "Экономия",
+  "Settings": "Настройки",
+  "Back": "Назад",
+  "Action": "Действие",
+  "Close": "Закрыть",
+  "Close guide": "Закрыть гайд",
+  "Guide": "Гайд",
+  "How to use $BROKE": "Как пользоваться $BROKE",
+  "Got it": "Понятно",
+  "Income": "Доход",
+  "Life Cost": "Расходы жизни",
+  "Money Leaks": "Утечки денег",
+  "Real Balance": "Реальный баланс",
+  "Real balance": "Реальный баланс",
+  "This month": "За месяц",
+  "Left to stack": "Осталось накопить",
+  "Wallet HP": "Wallet HP",
+  "Stable Wallet": "Стабильный кошелёк",
+  "Small Leak": "Малая утечка",
+  "Hold the line, fix the leaks.": "Держи линию. Закрывай утечки.",
+  "Your wallet": "Твой кошелёк",
+  "is not broken.": "не сломан.",
+  "It is leaking.": "Он протекает.",
+  "Your wallet is quiet. Keep it that way.": "Твой кошелёк спокоен. Держи так же.",
+  "Life Profile": "Профиль жизни",
+  "Make the tracker fit your country, currency, and lifestyle.": "Настрой приложение под страну, валюту и свой образ жизни.",
+  "Language": "Язык",
+  "Country preset": "Страна из списка",
+  "Your country": "Твоя страна",
+  "Type your country": "Напиши свою страну",
+  "Currency": "Валюта",
+  "Life mode": "Тип жизни",
+  "Income style": "Тип дохода",
+  "Rent applies": "Есть аренда",
+  "Work / study hours per month": "Рабочие / учебные часы в месяц",
+  "Rent mode": "Режим аренды",
+  "No-rent mode": "Без аренды",
+  "Region": "Регион",
+  "Profile": "Профиль",
+  "Mode": "Режим",
+  "Your tracker fits your life.": "Трекер подстроен под твою жизнь.",
+  "Student": "Студент",
+  "Worker": "Работник",
+  "Freelancer": "Фрилансер",
+  "Living with family": "Живу с семьёй",
+  "No stable income": "Нет стабильного дохода",
+  "Monthly": "Ежемесячно",
+  "Weekly": "Неделя",
+  "Daily": "День",
+  "Allowance": "Карманные / поддержка",
+  "Irregular": "Нерегулярно",
+  "Allowance / support": "Карманные / поддержка",
+  "Freelance income": "Доход фриланса",
+  "Expected income": "Ожидаемый доход",
+  "Salary": "Зарплата",
+  "Side hustle / extra": "Подработка / дополнительно",
+  "Other / support": "Другое / поддержка",
+  "Estimated monthly": "Примерно за месяц",
+  "Estimated monthly income": "Примерный месячный доход",
+  "Fixed Life Costs": "Постоянные расходы",
+  "Fixed life costs": "Постоянные расходы",
+  "Total fixed costs": "Всего постоянных расходов",
+  "Total Fixed Costs": "Всего постоянных расходов",
+  "Only add what applies. If you live with family or you are a student, rent can stay off.": "Добавляй только то, что относится к тебе. Если живёшь с семьёй или учишься, аренду можно отключить.",
+  "Use the way money actually comes to you: salary, allowance, daily, weekly, or irregular.": "Укажи, как деньги реально приходят к тебе: зарплата, поддержка, ежедневно, еженедельно или нерегулярно.",
+  "Yes": "Да",
+  "No": "Нет",
+  "On": "Вкл",
+  "Off": "Выкл",
+  "Visible": "Видимый",
+  "Hidden": "Скрыто",
+  "Hide": "Скрыть",
+  "Show": "Показать",
+  "Open": "Открыть",
+  "Join": "Войти",
+  "Private": "Приватно",
+  "Public progress": "Публичный прогресс",
+  "Public Leaderboard": "Публичный рейтинг",
+  "Private mode": "Приватный режим",
+  "Leaderboard: private": "Рейтинг: приватно",
+  "Amount": "Сумма",
+  "Category": "Категория",
+  "Was it needed?": "Это было нужно?",
+  "Needed": "Нужно",
+  "Maybe": "Возможно",
+  "Not needed": "Не нужно",
+  "Add Expense": "Добавить расход",
+  "Add a quick note...": "Добавь короткую заметку...",
+  "Track daily leaks. Small leaks sink big wallets.": "Записывай утечки каждый день. Малые утечки топят большие кошельки.",
+  "Expense tracked": "Расход записан",
+  "Expense cloud save failed": "Не удалось сохранить расход в облако",
+  "Expense cloud delete failed": "Не удалось удалить расход из облака",
+  "Delete expense": "Удалить расход",
+  "Coffee": "Кофе",
+  "Smoking": "Курение",
+  "Takeouts": "Еда на заказ",
+  "Shopping": "Покупки",
+  "Subscriptions": "Подписки",
+  "Taxi": "Такси",
+  "Data": "Интернет",
+  "School": "Учёба",
+  "Snacks": "Перекусы",
+  "Gaming": "Игры",
+  "Family": "Семья",
+  "Custom": "Другое",
+  "delivery / takeout": "доставка / еда на заказ",
+  "custom": "другое",
+  "takeout": "еда на заказ",
+  "Latest Records": "Последние записи",
+  "Recent Expenses": "Последние расходы",
+  "No records yet.": "Записей пока нет.",
+  "No records": "Записей нет",
+  "No leaks tracked yet. Add your first expense.": "Утечек пока нет. Добавь первый расход.",
+  "No tracked expenses this month.": "В этом месяце расходов пока нет.",
+  "Tracked Expenses": "Записанные расходы",
+  "Total records": "Всего записей",
+  "Month spent": "Расходы за месяц",
+  "Marked leaks": "Отмеченные утечки",
+  "No activity": "Нет активности",
+  "Wallet Survival": "Выживание кошелька",
+  "This week": "Эта неделя",
+  "Find the leak before it becomes your lifestyle.": "Найди утечку, пока она не стала стилем жизни.",
+  "Find the leak before it becomes lifestyle.": "Найди утечку, пока она не стала образом жизни.",
+  "See what drains you, how much it costs, and what to fix next.": "Смотри, что тебя сливает, сколько это стоит и что исправить дальше.",
+  "Survival Score": "Оценка выживания",
+  "Your weekly wallet score.": "Недельная оценка кошелька.",
+  "Biggest Leak": "Главная утечка",
+  "No visible leak this week.": "На этой неделе явной утечки нет.",
+  "Hours Lost": "Потерянные часы",
+  "Time traded for leaks.": "Время, обменянное на утечки.",
+  "Status": "Статус",
+  "Doomspending Alert": "Тревога импульсивных трат",
+  "Leak detected": "Утечка найдена",
+  "No doomspending detected": "Импульсивные траты не найдены",
+  "Self-roast insight": "Самоироничный инсайт",
+  "No leak": "Нет утечки",
+  "None": "Нет",
+  "No Not needed / Maybe spending was marked this week.": "На этой неделе не было расходов, отмеченных как Не нужно / Возможно.",
+  "Full $BROKE Mode": "Полный $BROKE Mode",
+  "Leak Survivor": "Выживший кошелёк",
+  "Leak Pressure": "Давление утечек",
+  "Pressure": "Давление",
+  "Alert": "Тревога",
+  "Survivor": "Выжил",
+  "Stable": "Стабильно",
+  "You kept the wallet clean this week.": "Ты держал кошелёк чистым на этой неделе.",
+  "Small leaks exist, but the wallet is holding.": "Мелкие утечки есть, но кошелёк держится.",
+  "The leaks are visible now. Fix the pattern.": "Утечки уже видны. Исправь паттерн.",
+  "Random spending is starting to become a lifestyle.": "Случайные траты начинают превращаться в стиль жизни.",
+  "The wallet is under pressure. Stop the bleeding.": "Кошелёк под давлением. Останови слив.",
+  "The leak was already there. Now it is visible.": "Утечка уже была. Теперь она видна.",
+  "Daily Routine": "Ежедневная рутина",
+  "7 real tasks per day.": "7 реальных заданий в день.",
+  "Complete the routine through real actions. Finish 7/7 to unlock the daily XP reward.": "Выполняй рутину реальными действиями. Закрой 7/7, чтобы получить дневной XP.",
+  "Open the app": "Открыть приложение",
+  "Start the day with a wallet check.": "Начни день с проверки кошелька.",
+  "Track 1 expense": "Записать 1 расход",
+  "Add at least one real expense today.": "Добавь хотя бы один реальный расход сегодня.",
+  "Mark a real leak": "Отметить реальную утечку",
+  "Add one expense as Not needed or Maybe.": "Отметь один расход как Не нужно или Возможно.",
+  "Add context": "Добавить контекст",
+  "Add a note to one expense so the habit is visible.": "Добавь заметку к одному расходу, чтобы привычка стала видимой.",
+  "Check $BROKE Chart": "Проверить $BROKE Chart",
+  "Open the Chart tab and look at today’s damage.": "Открой график и посмотри сегодняшний урон.",
+  "Check Save plan": "Проверить план экономии",
+  "Open Save and review one What If scenario.": "Открой Экономию и проверь один сценарий What If.",
+  "Share public proof": "Поделиться публичным прогрессом",
+  "Share or copy a safe progress card. No private money data.": "Поделись или скопируй безопасную карточку прогресса. Без личных финансовых данных.",
+  "Discipline rule:": "Правило дисциплины:",
+  "you cannot tap tasks complete. Complete the action, then the checkmark appears.": "нельзя просто нажать и закрыть задание. Сделай действие — тогда появится галочка.",
+  "Daily XP unlocked": "Дневной XP открыт",
+  "+50 XP claimed": "+50 XP получено",
+  "XP claimed": "XP получен",
+  "7/7 complete": "7/7 выполнено",
+  "7/7 real tasks can reward daily XP once per day.": "7/7 реальных заданий дают дневной XP один раз в день.",
+  "Connect Telegram to claim routine XP.": "Подключи Telegram, чтобы получить XP за рутину.",
+  "Daily routine complete": "Ежедневная рутина выполнена",
+  "XP already claimed or daily cap reached.": "XP уже получен или достигнут дневной лимит.",
+  "Share Result": "Поделиться результатом",
+  "Telegram / X ready": "Готово для Telegram / X",
+  "Public share card": "Публичная карточка",
+  "Public share hides income and real balance.": "Публичная карточка скрывает доход и реальный баланс.",
+  "Share cards hide income and real balance. They only show safe public progress like Wallet HP, status, score, rank, streak and badges.": "Share-карточки скрывают доход и реальный баланс. Они показывают только безопасный публичный прогресс: Wallet HP, статус, счёт, место, серию и бейджи.",
+  "Potential yearly savings": "Потенциальная экономия за год",
+  "Anti-doomspending identity app.": "Анти-думспендинг identity app.",
+  "Share on X": "Поделиться в X",
+  "Share in TG": "Поделиться в TG",
+  "Share": "Поделиться",
+  "Copy share text": "Скопировать текст",
+  "Copied": "Скопировано",
+  "Preparing image...": "Готовим картинку...",
+  "Send clean image to TG": "Отправить чистую картинку в TG",
+  "Image was sent to your Telegram bot chat. Open the bot chat and forward it anywhere.": "Картинка отправлена в чат с Telegram-ботом. Открой бота и перешли её куда нужно.",
+  "Telegram WebView cannot share image files directly. Bot delivery failed too, so the PNG was downloaded.": "Telegram WebView не может напрямую делиться файлами изображений. Отправка через бота тоже не прошла, поэтому PNG скачан.",
+  "Image sharing was cancelled or is not supported by this browser.": "Отправка изображения отменена или не поддерживается этим браузером.",
+  "Could not create share image.": "Не удалось создать картинку для share.",
+  "Leak": "Утечка",
+  "Top": "Топ",
+  "Hours lost": "Потерянные часы",
+  "Survival": "Выживание",
+  "Today": "Сегодня",
+  "Today's Damage": "Урон сегодня",
+  "Today’s leak": "Сегодняшняя утечка",
+  "Today&apos;s Leak": "Сегодняшняя утечка",
+  "Last 7 days": "Последние 7 дней",
+  "7D Preview": "7 дней",
+  "Day": "День",
+  "Week": "Неделя",
+  "Month": "Месяц",
+  "Current point": "Текущая точка",
+  "Spending Volume — Last 7 days": "Объём расходов — последние 7 дней",
+  "tracked today": "записано сегодня",
+  "Damage": "Урон",
+  "You watch crypto charts every day.": "Ты каждый день смотришь crypto-чарты.",
+  "But do you watch your own": "Но смотришь ли ты свой",
+  "But do you watch your own $BROKE Chart?": "Но смотришь ли ты свой $BROKE Chart?",
+  "Small changes.": "Маленькие изменения.",
+  "Big wins.": "Большая разница.",
+  "Potential savings": "Потенциальная экономия",
+  "Total Potential Savings": "Общая потенциальная экономия",
+  "Potential Saved": "Потенциальная экономия",
+  "Based on your tracked expenses this month.": "На основе твоих расходов за месяц.",
+  "Demo mode. Add expenses to get real scenarios.": "Демо-режим. Добавь расходы, чтобы увидеть реальные сценарии.",
+  "Simulate a 30-day save": "Симуляция экономии на 30 дней",
+  "Daily Save": "Экономия в день",
+  "Start Saving": "Начать экономить",
+  "Emergency Fund": "Резервный фонд",
+  "New Gadget": "Новый гаджет",
+  "Trip": "Поездка",
+  "Financial Freedom": "Финансовая свобода",
+  "Cut Taxi": "Сократить такси",
+  "Reduce Smoking": "Сократить курение",
+  "Cut Coffee": "Сократить кофе",
+  "reduction": "сокращение",
+  "Leak Challenges": "Челленджи против утечек",
+  "Active Challenge": "Активный челлендж",
+  "No Takeout 3 Days": "3 дня без еды на заказ",
+  "Coffee Control": "Контроль кофе",
+  "Smoking Cut 7 Days": "7 дней сокращения курения",
+  "Shopping Freeze": "Заморозка покупок",
+  "Subscription Killer": "Убийца подписок",
+  "Wallet HP Recovery": "Восстановление Wallet HP",
+  "First Challenge": "Первый челлендж",
+  "Challenge Complete": "Челлендж выполнен",
+  "Challenge Master": "Мастер челленджей",
+  "Complete your first challenge.": "Выполни первый челлендж.",
+  "Complete 3 challenges.": "Выполни 3 челленджа.",
+  "Complete 5 challenges.": "Выполни 5 челленджей.",
+  "Complete 10 challenges.": "Выполни 10 челленджей.",
+  "Keep takeout spending under the limit for 3 days.": "Держи расходы на еду на заказ ниже лимита 3 дня.",
+  "Keep coffee leaks under control for one week.": "Держи утечки на кофе под контролем одну неделю.",
+  "Reduce smoking spend for one week.": "Сократи расходы на курение на одну неделю.",
+  "Avoid random shopping leaks for 7 days.": "Избегай случайных покупок 7 дней.",
+  "Control subscriptions and recurring costs.": "Контролируй подписки и повторяющиеся расходы.",
+  "Keep total leaks low and rebuild Wallet HP.": "Держи утечки низкими и восстанови Wallet HP.",
+  "Start your first leak challenge.": "Начни первый челлендж против утечек.",
+  "Completed": "Выполнено",
+  "Failed": "Провалено",
+  "Locked": "Закрыто",
+  "Start": "Начать",
+  "Active now": "Активно",
+  "All leaks": "Все утечки",
+  "Leaderboard joined": "Рейтинг подключён",
+  "Leaderboard update failed": "Не удалось обновить рейтинг",
+  "How does this leaderboard work?": "Как работает этот рейтинг?",
+  "Daily Top 10": "Топ-10 дня",
+  "Weekly Top 10": "Топ-10 недели",
+  "All Time": "За всё время",
+  "You are hidden from public ranking.": "Ты скрыт из публичного рейтинга.",
+  "Your public progress is visible.": "Твой публичный прогресс виден.",
+  "Your score": "Твой счёт",
+  "Trust L1": "Доверие L1",
+  "Badge Vault": "Хранилище бейджей",
+  "Achievements are hidden": "Достижения скрыты",
+  "Unlocked badge": "Бейдж открыт",
+  "Badge unlocked": "Бейдж открыт",
+  "First Expense": "Первый расход",
+  "Daily Tracker": "Ежедневный трекер",
+  "Daily Streak": "Ежедневная серия",
+  "Streak Saver": "Сохранённая серия",
+  "Pressure Mode": "Режим давления",
+  "Good Month": "Хороший месяц",
+  "Heavy Leak": "Сильная утечка",
+  "Overspending": "Перерасход",
+  "Saving Mode": "Режим экономии",
+  "Recovery Mode": "Режим восстановления",
+  "100 XP": "100 XP",
+  "1000 XP": "1000 XP",
+  "10 Logs": "10 записей",
+  "50 Logs": "50 записей",
+  "100 Logs": "100 записей",
+  "3 Day Streak": "Серия 3 дня",
+  "7 Day Streak": "Серия 7 дней",
+  "14 Day Streak": "Серия 14 дней",
+  "30 Day Streak": "Серия 30 дней",
+  "3 Challenges": "3 челленджа",
+  "5 Challenges": "5 челленджей",
+  "Start tracking and the first badges will unlock here.": "Начни записывать расходы, и первые бейджи откроются здесь.",
+  "Premium Early Supporter": "Premium Early Supporter",
+  "Premium Founder": "Premium Founder",
+  "Premium OG Tracker": "Premium OG Tracker",
+  "Premium Wallet King": "Premium Wallet King",
+  "Premium Diamond Hands": "Premium Diamond Hands",
+  "Premium Leak Destroyer": "Premium Leak Destroyer",
+  "Premium Challenge Elite": "Premium Challenge Elite",
+  "Premium Streak Legend": "Premium Streak Legend",
+  "Premium Top 1 Daily": "Premium Top 1 Daily",
+  "Premium Top 1 Weekly": "Premium Top 1 Weekly",
+  "Premium Top 3 Daily": "Premium Top 3 Daily",
+  "Premium Top 3 Weekly": "Premium Top 3 Weekly",
+  "Premium 5000 XP": "Premium 5000 XP",
+  "Premium 10000 XP": "Premium 10000 XP",
+  "Premium Trust Legend": "Premium Trust Legend",
+  "Rare early premium badge for active public-test users.": "Редкий ранний premium-бейдж для активных участников публичного теста.",
+  "Streak": "Серия",
+  "Streak Progress": "Прогресс серии",
+  "Current streak": "Текущая серия",
+  "Best streak": "Лучшая серия",
+  "Best": "Лучшая",
+  "Last active": "Последняя активность",
+  "Alive today": "Сегодня активна",
+  "Start today": "Начни сегодня",
+  "Keep going": "Продолжай",
+  "Add one expense today to keep the streak alive.": "Добавь один расход сегодня, чтобы сохранить серию.",
+  "You already tracked a leak today.": "Ты уже записал утечку сегодня.",
+  "Keep a streak alive after building momentum.": "Сохрани серию после набора темпа.",
+  "Reach a 3-day tracking streak.": "Достигни серии 3 дня.",
+  "Reach a 7-day tracking streak.": "Достигни серии 7 дней.",
+  "Reach a 14-day tracking streak.": "Достигни серии 14 дней.",
+  "Reach a 30-day tracking streak.": "Достигни серии 30 дней.",
+  "Reach a 60-day tracking streak.": "Достигни серии 60 дней.",
+  "Account sync": "Синхронизация аккаунта",
+  "Cloud synced": "Облако синхронизировано",
+  "Cloud sync failed": "Синхронизация облака не удалась",
+  "Cloud reset failed": "Сброс облака не удался",
+  "Local only": "Только локально",
+  "Local demo": "Локальный демо-режим",
+  "Web Demo": "Web Demo",
+  "Web Synced": "Web синхронизирован",
+  "Web cloud": "Web cloud",
+  "Web demo mode. Login with Telegram to enable cloud sync.": "Web demo mode. Войди через Telegram, чтобы включить cloud sync.",
+  "Website is synced with your Telegram account.": "Сайт синхронизирован с твоим Telegram-аккаунтом.",
+  "Website progress now uses the same Supabase profile as your Telegram Mini App.": "Прогресс сайта теперь использует тот же Supabase-профиль, что и Telegram Mini App.",
+  "Use one account on website and Telegram": "Один аккаунт для сайта и Telegram",
+  "Login with Telegram to sync expenses, streaks, badges, challenges and leaderboard across website and Telegram.": "Войди через Telegram, чтобы синхронизировать расходы, серии, бейджи, челленджи и рейтинг между сайтом и Telegram.",
+  "Loading Telegram login...": "Загрузка Telegram login...",
+  "Telegram App": "Telegram App",
+  "Telegram WebView": "Telegram WebView",
+  "Telegram user": "Пользователь Telegram",
+  "BrokeLifeTrackerBot": "BrokeLifeTrackerBot",
+  "User": "Пользователь",
+  "User ID": "User ID",
+  "Start param": "Start param",
+  "Version": "Версия",
+  "Platform": "Платформа",
+  "Connection details": "Детали подключения",
+  "Syncing...": "Синхронизация...",
+  "Checking...": "Проверка...",
+  "Sync error": "Ошибка синхронизации",
+  "Settings synced": "Настройки синхронизированы",
+  "Settings cloud save failed": "Не удалось сохранить настройки в облако",
+  "Record updated": "Запись обновлена",
+  "Connect Telegram to claim XP.": "Подключи Telegram, чтобы получить XP.",
+  "Connect Telegram to use the public leaderboard.": "Подключи Telegram, чтобы использовать публичный рейтинг.",
+  "Connect Telegram to sync your account and start challenges.": "Подключи Telegram, чтобы синхронизировать аккаунт и начать челленджи.",
+  "Community Live will show recent Telegram group messages once the bot is connected.": "Community Live покажет последние сообщения Telegram-группы после подключения бота.",
+  "This sidebar is read-only. Open Telegram if you want to join the conversation.": "Эта панель только для чтения. Открой Telegram, чтобы участвовать в разговоре.",
+  "Newest messages stay at the bottom. To reply, open the Telegram group.": "Новые сообщения остаются снизу. Чтобы ответить, открой Telegram-группу.",
+  "Read only": "Только чтение",
+  "Live Telegram": "Live Telegram",
+  "Community feed unavailable": "Community feed недоступен",
+  "Loading tracker...": "Загрузка трекера...",
+  "Checking your wallet leaks.": "Проверяем утечки кошелька.",
+  "Syncing cloud progress...": "Синхронизация облачного прогресса...",
+  "Checking your Telegram profile before setup.": "Проверяем Telegram-профиль перед настройкой.",
+  "Life Setup": "Настройка жизни",
+  "Welcome,": "Привет,",
+  "Choose region": "Выбери регион",
+  "Set life mode": "Выбери тип жизни",
+  "Find local leaks": "Найди локальные утечки",
+  "Ready": "Готово",
+  "01": "01",
+  "02": "02",
+  "03": "03",
+  "Choose one": "Выбери",
+  "Track today": "Записать сегодня",
+  "First Leak Mission": "Миссия первой утечки",
+  "Catch one leak in under 10 seconds.": "Поймай одну утечку меньше чем за 10 секунд.",
+  "First leak": "Первая утечка",
+  "Pick a leak": "Выбери утечку",
+  "Coffee leak": "Утечка на кофе",
+  "Smoking leak": "Утечка на курение",
+  "Takeout leak": "Утечка на еду",
+  "Random buy": "Случайная покупка",
+  "Get insight": "Получить инсайт",
+  "First leak tracked": "Первая утечка записана",
+  "First leak cloud save failed": "Не удалось сохранить первую утечку в облако",
+  "Help": "Помощь",
+  "1. Set your Life Profile": "1. Настрой профиль жизни",
+  "2. Add real expenses": "2. Добавляй реальные расходы",
+  "3. Mark leaks honestly": "3. Отмечай утечки честно",
+  "4. Use Daily Routine": "4. Используй ежедневную рутину",
+  "5. Read Wallet Survival": "5. Смотри выживание кошелька",
+  "6. Check the $BROKE Chart": "6. Проверяй $BROKE Chart",
+  "7. Share safely": "7. Делись безопасно",
+  "$BROKE is not a normal expense tracker. It helps you find wallet leaks, build discipline, and share safe progress.": "$BROKE — не обычный трекер расходов. Он помогает видеть утечки денег, строить дисциплину и делиться безопасным прогрессом.",
+  "Choose your country or type your own, set currency, life mode, income style, rent mode and work/study hours. This makes the app fit your real life.": "Выбери страну или напиши свою, задай валюту, тип жизни, тип дохода, аренду и часы работы/учёбы. Так app подстроится под твою реальность.",
+  "Go to Add, enter the amount, choose a category, and mark if it was Needed, Maybe, or Not needed.": "Открой Добавить, введи сумму, выбери категорию и отметь: Нужно, Возможно или Не нужно.",
+  "Needed does not count as a leak. Maybe counts as half. Not needed counts as a full wallet leak.": "Нужно не считается утечкой. Возможно считается наполовину. Не нужно считается полной утечкой.",
+  "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check chart, check Save, and share public proof.": "Выполни 7 реальных действий в день: открыть app, записать расход, отметить утечку, добавить контекст, проверить график, проверить экономию и поделиться безопасным прогрессом.",
+  "Survival Score, Biggest Leak, Hours Lost, Status and Doomspending Alert show what is draining your wallet this week.": "Оценка выживания, главная утечка, потерянные часы, статус и тревога импульсивных трат показывают, что сливает кошелёк на этой неделе.",
+  "The chart shows how your balance moves like a trading chart. Green days are controlled. Red days show damage.": "График показывает движение баланса как торговый chart. Зелёные дни — контроль. Красные — урон.",
+  "Simple rule:": "Простое правило:",
+  "Track honestly. Fix one leak at a time. Protect Wallet HP.": "Записывай честно. Закрывай одну утечку за раз. Защищай Wallet HP.",
+  "No clear leak yet": "Явной утечки пока нет",
+  "Leak Insight": "Инсайт утечки",
+  "Rent comparison": "Сравнение с арендой",
+  "Hidden bill": "Скрытый счёт",
+  "Repeating pattern": "Повторяющийся паттерн",
+  "Monthly projection": "Прогноз на месяц",
+  "Wallet HP warning": "Предупреждение Wallet HP",
+  "Wallet still breathing": "Кошелёк ещё держится",
+  "Challenge signal": "Сигнал для челленджа",
+  "A large share of your free money is leaking away.": "Большая часть свободных денег утекает.",
+  "You spent more than your post-life-cost budget.": "Ты потратил больше, чем бюджет после обязательных расходов.",
+  "Real balance dropped to danger zone.": "Реальный баланс опустился в опасную зону.",
+  "A streak and better habits pushed the wallet back up.": "Серия и лучшие привычки подняли кошелёк обратно.",
+  "A strong month with healthy balance and discipline.": "Сильный месяц со здоровым балансом и дисциплиной.",
+  "No leak detected yet. Add expenses and mark Maybe / Not needed to find patterns.": "Утечка пока не найдена. Добавь расходы и отмечай Возможно / Не нужно, чтобы увидеть паттерны.",
+  "That is no longer a small purchase. That is a pattern.": "Это уже не мелкая покупка. Это паттерн.",
+  "It looks small until you compare it to a real bill.": "Кажется мелочью, пока не сравнишь с настоящим счётом.",
+  "This is where the wallet starts leaking quietly.": "Вот здесь кошелёк начинает тихо протекать.",
+  "Small leaks this week are already bigger than your phone bill.": "Мелкие утечки за неделю уже больше счёта за телефон.",
+  "One time is a purchase. Repeating is a habit.": "Один раз — покупка. Повторяется — привычка.",
+  "That is not one mistake. That is the monthly rhythm.": "Это не одна ошибка. Это месячный ритм.",
+  "The wallet is not broken. It is bleeding through repeated decisions.": "Кошелёк не сломан. Он кровоточит через повторяющиеся решения.",
+  "Good. Now keep the leaks from turning into a monthly bill.": "Хорошо. Теперь не дай утечкам стать ежемесячным счётом.",
+  "This is a good moment to start a": "Это хороший момент начать",
+  "control challenge": "челлендж контроля",
+  "Global": "Глобально",
+  "Nigeria": "Нигерия",
+  "Ghana": "Гана",
+  "Kenya": "Кения",
+  "South Africa": "ЮАР",
+  "Pakistan": "Пакистан",
+  "India": "Индия",
+  "Bangladesh": "Бангладеш",
+  "Philippines": "Филиппины",
+  "Indonesia": "Индонезия",
+  "Vietnam": "Вьетнам",
+  "Thailand": "Таиланд",
+  "Malaysia": "Малайзия",
+  "Brazil": "Бразилия",
+  "Mexico": "Мексика",
+  "Turkey": "Турция",
+  "Egypt": "Египет",
+  "Morocco": "Марокко",
+  "UAE": "ОАЭ",
+  "Saudi Arabia": "Саудовская Аравия",
+  "United Kingdom": "Великобритания",
+  "Canada": "Канада",
+  "Australia": "Австралия",
+  "Moldova": "Молдова",
+  "Romania": "Румыния",
+  "Ukraine": "Украина",
+  "Poland": "Польша",
+  "Europe": "Европа",
+  "United States": "США",
+  "United Arab Emirates": "ОАЭ",
+  "Utilities": "Коммунальные",
+  "Food basics": "Базовая еда",
+  "Transport": "Транспорт",
+  "Phone": "Телефон",
+  "Data / Internet": "Интернет / связь",
+  "School / study": "Школа / учёба",
+  "Rent": "Аренда",
+  "Tap for all": "Смотреть все",
+  "Unlocked": "Открыто",
+  "Top pending": "В ожидании",
+  "Permanent": "Постоянный",
+  "Notifications": "Уведомления",
+  "Daily Reminder": "Ежедневное напоминание",
+  "Delete My Data": "Удалить мои данные",
+  "Delete all $BROKE Life Tracker data?": "Удалить все данные $BROKE Life Tracker?",
+  "Menu": "Меню",
+  "Trust Level 3": "Доверие 3 уровня",
+  "Reach Trust Level 3.": "Достигни доверия 3 уровня.",
+  "Reach Trust Level 3 with strong total XP.": "Достигни доверия 3 уровня с высоким общим XP.",
+  "Earn your first 100 XP.": "Заработай первые 100 XP.",
+  "Earn 1000 total XP.": "Заработай 1000 XP всего.",
+  "Earn 5000 total XP.": "Заработай 5000 XP всего.",
+  "Earn 10000 total XP.": "Заработай 10000 XP всего.",
+  "Track your first expense.": "Запиши первый расход.",
+  "Track 10 expenses.": "Запиши 10 расходов.",
+  "Track 50 expenses.": "Запиши 50 расходов.",
+  "Track 100 expenses.": "Запиши 100 расходов.",
+  "Track a serious number of expenses over time.": "Запиши серьёзное количество расходов со временем.",
+  "Track a few expenses and $BROKE will show what your wallet is trying to tell you.": "Запиши несколько расходов, и $BROKE покажет, что кошелёк пытается сказать.",
+  "Track a month with only small leaks.": "Пройди месяц только с малыми утечками.",
+  "Keep Wallet HP high and leaks low.": "Держи Wallet HP высоким, а утечки низкими.",
+  "Keep Wallet HP elite while actively tracking.": "Держи Wallet HP на элитном уровне, активно записывая расходы.",
+  "Destroy leaks through completed challenges.": "Уничтожай утечки через выполненные челленджи.",
+  "Build trust, XP, and challenge activity early.": "Рано строй доверие, XP и активность в челленджах.",
+  "Hold long-term discipline without breaking momentum.": "Держи долгосрочную дисциплину без потери темпа.",
+  "Reach top 10 in Daily Movers.": "Попади в топ-10 Daily Movers.",
+  "Reach top 10 in Weekly Discipline.": "Попади в топ-10 Weekly Discipline.",
+  "Reach top 3 in Daily Movers.": "Попади в топ-3 Daily Movers.",
+  "Reach top 3 in Weekly Discipline.": "Попади в топ-3 Weekly Discipline.",
+  "Reach #1 in Daily Movers.": "Стань #1 в Daily Movers.",
+  "Reach #1 in Weekly Discipline.": "Стань #1 в Weekly Discipline.",
+  "English": "English",
+  "Russian": "Русский",
+  "Русский": "Русский",
+  "USD": "USD",
+  "EUR": "EUR",
+  "MDL": "MDL",
+  "NGN": "NGN",
+  "PKR": "PKR",
+  "GBP": "GBP",
+  "INR": "INR",
+  "CAD": "CAD",
+  "AUD": "AUD",
+  "NZD": "NZD",
+  "ZAR": "ZAR",
+  "GHS": "GHS",
+  "KES": "KES",
+  "UGX": "UGX",
+  "TZS": "TZS",
+  "XAF": "XAF",
+  "XOF": "XOF",
+  "EGP": "EGP",
+  "MAD": "MAD",
+  "TRY": "TRY",
+  "AED": "AED",
+  "SAR": "SAR",
+  "PHP": "PHP",
+  "IDR": "IDR",
+  "VND": "VND",
+  "THB": "THB",
+  "MYR": "MYR",
+  "SGD": "SGD",
+  "BDT": "BDT",
+  "LKR": "LKR",
+  "NPR": "NPR",
+  "BRL": "BRL",
+  "MXN": "MXN",
+  "UAH": "UAH",
+  "PLN": "PLN",
+  "RON": "RON",
+  "GEL": "GEL",
+  "KZT": "KZT",
+  "USD ($)": "USD ($)",
+  "EUR (€)": "EUR (€)",
+  "MDL (L)": "MDL (L)",
+  "NGN (₦)": "NGN (₦)",
+  "PKR (Rs)": "PKR (Rs)",
+  "GBP (£)": "GBP (£)",
+  "INR (₹)": "INR (₹)",
+  "CAD (C$)": "CAD (C$)",
+  "AUD (A$)": "AUD (A$)",
+  "NZD (NZ$)": "NZD (NZ$)",
+  "ZAR (R)": "ZAR (R)",
+  "GHS (₵)": "GHS (₵)",
+  "KES (KSh)": "KES (KSh)",
+  "UGX (USh)": "UGX (USh)",
+  "TZS (TSh)": "TZS (TSh)",
+  "XAF (FCFA)": "XAF (FCFA)",
+  "XOF (CFA)": "XOF (CFA)",
+  "EGP (£)": "EGP (£)",
+  "TRY (₺)": "TRY (₺)",
+  "PHP (₱)": "PHP (₱)",
+  "IDR (Rp)": "IDR (Rp)",
+  "VND (₫)": "VND (₫)",
+  "THB (฿)": "THB (฿)",
+  "MYR (RM)": "MYR (RM)",
+  "SGD (S$)": "SGD (S$)",
+  "BDT (৳)": "BDT (৳)",
+  "LKR (Rs)": "LKR (Rs)",
+  "NPR (Rs)": "NPR (Rs)",
+  "BRL (R$)": "BRL (R$)",
+  "MXN ($)": "MXN ($)",
+  "UAH (₴)": "UAH (₴)",
+  "PLN (zł)": "PLN (zł)",
+  "GEL (₾)": "GEL (₾)",
+  "KZT (₸)": "KZT (₸)"
+};
+
+function applyRussianDynamicRules(value: string) {
+  let next = value;
+
+  const weekdayMap: Record<string, string> = {
+    Mon: "Пн",
+    Tue: "Вт",
+    Wed: "Ср",
+    Thu: "Чт",
+    Fri: "Пт",
+    Sat: "Сб",
+    Sun: "Вс",
+  };
+
+  Object.entries(weekdayMap).forEach(([en, ru]) => {
+    next = next.replace(new RegExp(`\\b${en}\\b`, "g"), ru);
+  });
+
+  next = next
+    .replace(/Current point:/g, "Текущая точка:")
+    .replace(/\bspent\b/g, "потрачено")
+    .replace(/Spending Volume — Last 7 (days|дней)/g, "Объём расходов — последние 7 дней")
+    .replace(/Last 7 (days|дней)/g, "Последние 7 дней")
+    .replace(/You watch crypto charts every (day|день)\./g, "Ты каждый день смотришь crypto-чарты.")
+    .replace(/But do you watch your own \$BROKE (Chart|График)\?/g, "Но смотришь ли ты свой $BROKE Chart?")
+    .replace(/You spent ([^ ]+) on ([A-Za-zА-Яа-яёЁ /-]+) today\./g, "Сегодня ты потратил $1 на $2.")
+    .replace(/That becomes ([^ ]+)\/month if this rhythm repeats\./g, "Если так продолжится, это станет $1/мес.")
+    .replace(/That becomes ([^ ]+)\/мес if this rhythm repeats\./g, "Если так продолжится, это станет $1/мес.")
+    .replace(/([\d.,]+%?) of your rent in the last 7 (days|дней)\./g, "$1 от твоей аренды за последние 7 дней.")
+    .replace(/(.+) is already ([\d.,]+%) of your rent in the last 7 (days|дней)\./g, "$1 уже $2 от твоей аренды за последние 7 дней.")
+    .replace(/(.+) appeared (\d+) times in the last 7 (days|дней)\./g, "$1 появлялось $2 раз(а) за последние 7 дней.")
+    .replace(/(.+) is repeating this week\./g, "$1 повторяется на этой неделе.")
+    .replace(/This is a good moment to start a (.+) control challenge\./g, "Это хороший момент начать челлендж контроля: $1.")
+    .replace(/([^ ]+) was marked as (Не нужно|Not needed) \/ (Возможно|Maybe) in the last 7 (days|дней)\./g, "$1 отмечено как Не нужно / Возможно за последние 7 дней.")
+    .replace(/At this pace, leaks could reach ([^ ]+) this month\./g, "В таком темпе утечки могут достичь $1 в этом месяце.")
+    .replace(/Wallet HP is down to (\d+\/100)\./g, "Wallet HP упал до $1.")
+    .replace(/Wallet HP is (\d+\/100) and real balance is still positive\./g, "Wallet HP $1, и реальный баланс всё ещё положительный.")
+    .replace(/([^ ]+) in leaks vs ([^ ]+) phone cost\./g, "$1 утечек против $2 расходов на телефон.")
+    .replace(/(.+) drained ([^ ]+) this week\./g, "$1 слил(а) $2 на этой неделе.")
+    .replace(/([^ ]+) in weekly leaks detected\./g, "Обнаружено $1 недельных утечек.")
+    .replace(/You traded about ([\d.]+) hours of life for leaks this week\. That is not a small habit\./g, "На этой неделе ты обменял около $1 часов жизни на утечки. Это уже не мелкая привычка.")
+    .replace(/(.+) is trying to become your lifestyle\./g, "$1 пытается стать твоим стилем жизни.")
+    .replace(/Complete (\d+) more task(s)?/g, "Осталось заданий: $1")
+    .replace(/(\d+) record(s)? tracked today\./g, "Сегодня записей: $1.")
+    .replace(/(\d+) tracked · (\d+)% reduction/g, "$1 запись · сокращение $2%")
+    .replace(/\/month/g, "/мес")
+    .replace(/\/year/g, "/год")
+    .replace(/\bscore\b/g, "счёт")
+    .replace(/\bcustom\b/g, "другое")
+    .replace(/\btakeout\b/g, "еда на заказ")
+    .replace(/Cut Такси/g, "Сократить такси")
+    .replace(/Reduce Курение/g, "Сократить курение")
+    .replace(/Cut Кофе/g, "Сократить кофе")
+    .replace(/Твой score/g, "Твой счёт");
+
+  return next;
+}
+
+function translateTextValue(value: string, language: Language) {
+  if (language === "en") return value;
+
+  const trimmed = value.trim();
+
+  if (!trimmed) return value;
+
+  const exact = ruText[trimmed];
+  const translated = exact ?? applyRussianDynamicRules(trimmed);
+
+  if (translated === trimmed) return value;
+
+  return value.replace(trimmed, translated);
+}
+
+type LocalizableProps = {
+  children?: ReactNode;
+  placeholder?: string;
+  "aria-label"?: string;
+  title?: string;
+};
+
+function translateReactNode(node: ReactNode, language: Language): ReactNode {
+  if (typeof node === "string") return translateTextValue(node, language);
+
+  if (
+    typeof node === "number" ||
+    typeof node === "boolean" ||
+    node === null ||
+    node === undefined
+  ) {
+    return node;
+  }
+
+  if (Array.isArray(node)) {
+    return node.map((child) => translateReactNode(child, language));
+  }
+
+  if (!isValidElement<LocalizableProps>(node)) return node;
+
+  const props = node.props;
+  const nextProps: Partial<LocalizableProps> = {};
+
+  if (typeof props.placeholder === "string") {
+    nextProps.placeholder = translateTextValue(props.placeholder, language);
+  }
+
+  if (typeof props["aria-label"] === "string") {
+    nextProps["aria-label"] = translateTextValue(props["aria-label"], language);
+  }
+
+  if (typeof props.title === "string") {
+    nextProps.title = translateTextValue(props.title, language);
+  }
+
+  if ("children" in props) {
+    nextProps.children = Children.map(props.children, (child) =>
+      translateReactNode(child, language)
+    );
+  }
+
+  return cloneElement(node, nextProps);
+}
+
+function Localize({
+  language,
+  children,
+}: {
+  language: Language;
+  children: ReactNode;
+}) {
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.documentElement.dir = "ltr";
+  }, [language]);
+
+  return <>{translateReactNode(children, language)}</>;
+}
 const currencyOptions: {
   value: Currency;
   label: string;
@@ -2838,6 +3582,8 @@ export default function Home() {
   return (
     <main className="app-shell app-shell-with-community">
       <section className="phone">
+        <Localize language={settings.language}>
+
         {!loaded && (
           <div className="screen loading-screen">
             <Header title="$BROKE Life Tracker" />
@@ -2964,6 +3710,7 @@ export default function Home() {
         {helpOpen && <HelpGuideModal onClose={() => setHelpOpen(false)} />}
 
         {toast && <AppToastView toast={toast} />}
+        </Localize>
       </section>
 
       {loaded && onboardingCompleted && <CommunityLiveSidebar />}
@@ -3755,6 +4502,26 @@ function LifeProfileEditor({
     <section className="settings-group life-profile-card">
       <h3>Life Profile</h3>
       <p>Make the tracker fit your country, currency, and lifestyle.</p>
+
+      <div className="profile-field">
+        <span>Language</span>
+        <select
+          className="settings-select profile-select"
+          value={settings.language}
+          onChange={(event) =>
+            setSettings((prev) => ({
+              ...prev,
+              language: event.target.value as Language,
+            }))
+          }
+        >
+          {languageOptions.map((language) => (
+            <option key={language.value} value={language.value}>
+              {language.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="profile-field">
         <span>Country preset</span>
