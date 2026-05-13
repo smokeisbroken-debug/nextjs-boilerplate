@@ -8450,3 +8450,18 @@ html[dir="rtl"] .screen,
 html[dir="rtl"] .phone {
   text-align: right;
 }
+
+
+/* ===== V47.1 RU LEFTOVERS FIX ===== */
+html[lang="ru"] .wallet-insight-card p,
+html[lang="ru"] .wallet-insight-card span,
+html[lang="ru"] .scenario-card span,
+html[lang="ru"] .challenge-card span,
+html[lang="ru"] .chart-card span {
+  overflow-wrap: anywhere;
+}
+
+html[lang="ru"] .scenario-card h3,
+html[lang="ru"] .challenge-card h3 {
+  line-height: 1.12;
+}
