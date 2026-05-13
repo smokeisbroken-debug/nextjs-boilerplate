@@ -8831,3 +8831,126 @@ html[lang="ru"] .share-card strong {
 
 /* ===== V53.1 BIGGEST LEAK CHALLENGE BUILD FIX ===== */
 /* Fixes standalone .replace chain inserted in v53 translation rules. */
+
+
+/* ===== V54 MISSION RESULT CARD ===== */
+.mission-result-card {
+  margin-top: 13px;
+  padding: 12px;
+  border-radius: 18px;
+  color: var(--text);
+  background: rgba(183, 255, 25, 0.065);
+  border: 1px solid rgba(183, 255, 25, 0.16);
+}
+
+.mission-result-card.failed {
+  background: rgba(255, 79, 95, 0.065);
+  border-color: rgba(255, 79, 95, 0.18);
+}
+
+.mission-result-head {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.mission-result-head img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgba(183, 255, 25, 0.16));
+}
+
+.mission-result-head span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: 850;
+}
+
+.mission-result-head strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--green);
+  font-size: 18px;
+  line-height: 1.08;
+  font-weight: 950;
+}
+
+.mission-result-card.failed .mission-result-head strong {
+  color: var(--red);
+}
+
+.mission-result-head p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+.mission-result-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.mission-result-grid div {
+  min-height: 66px;
+  padding: 9px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.mission-result-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.mission-result-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.05;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.mission-result-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.mission-result-actions button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 15px;
+  color: #061006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.mission-result-actions button.secondary {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 430px) {
+  .mission-result-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ===== V54.1 MISSION RESULT BUILD SAFE ===== */
