@@ -1454,8 +1454,27 @@ const ruText: Record<string, string> = {
   "Mission started": "Миссия началась",
   "Track a leak first": "Сначала запиши утечку",
   "Add one Not needed or Maybe expense.": "Добавь один расход Не нужно или Возможно.",
+  "Mission active": "Миссия активна",
+  "Mission survived": "Миссия пройдена",
+  "Mission survived.": "Миссия пройдена.",
+  "Mission failed": "Миссия провалена",
+  "Mission failed.": "Миссия провалена.",
+  "Mission in progress.": "Миссия в процессе.",
+  "Mission Result": "Результат миссии",
+  "You stayed under the leak limit. Wallet HP protected.": "Ты удержался ниже лимита утечки. Wallet HP защищён.",
+  "The leak broke the limit. Reset and run it back.": "Утечка пробила лимит. Сбрось и попробуй снова.",
+  "Keep tracking. The result card unlocks when this mission ends.": "Продолжай записывать. Карточка результата откроется после завершения миссии.",
+  "Saved": "Сохранено",
+  "Over limit": "Сверх лимита",
+  "Protected": "Защищён",
+  "Share result": "Поделиться результатом",
+  "Start new mission": "Новая миссия",
+  "$BROKE Mission Result": "$BROKE Результат миссии",
+  "Copy mission result": "Скопируй результат миссии",
+  "Wallet HP protected.": "Wallet HP защищён.",
 };
 
+// V54.1: mission result translation rules are included inside applyRussianDynamicRules.
 function applyRussianDynamicRules(value: string) {
   let next = value;
 
@@ -1537,7 +1556,15 @@ function applyRussianDynamicRules(value: string) {
     .replace(/(\d+)d left/g, "$1д осталось")
     .replace(/(\$[\d,.]+|C\$[\d,.]+) max/g, "макс. $1")
     .replace(/Possible save:\s*(\$[\d,.]+|C\$[\d,.]+)/g, "Можно сохранить: $1")
-    .replace(/3-day anti-([A-Za-zА-Яа-яёЁ _/-]+) challenge/g, "3-дневный анти-$1 челлендж");
+    .replace(/3-day anti-([A-Za-zА-Яа-яёЁ _/-]+) challenge/g, "3-дневный анти-$1 челлендж")
+    .replace(/Leak: ([A-Za-zА-Яа-яёЁ _/-]+)/g, "Утечка: $1")
+    .replace(/Days: 3/g, "Дней: 3")
+    .replace(/Limit: (\$[\d,.]+|C\$[\d,.]+)/g, "Лимит: $1")
+    .replace(/Spent: (\$[\d,.]+|C\$[\d,.]+)/g, "Потрачено: $1")
+    .replace(/Saved: (\$[\d,.]+|C\$[\d,.]+)/g, "Сохранено: $1")
+    .replace(/Over limit: (\$[\d,.]+|C\$[\d,.]+)/g, "Сверх лимита: $1")
+    .replace(/Find the leak before it becomes your lifestyle\./g, "Найди утечку, пока она не стала образом жизни.")
+    .replace(/Smoke is broke\./g, "Smoke is broke.");
 
   next = next
     .replace(/C\$([\d,.]+)\s+this week\b/g, (_match, amount) => `C$${amount} на этой неделе`)
@@ -3801,6 +3828,13 @@ export default function Home() {
     showToast("Mission started", `3-day anti-${categoryLabel(category)} challenge`, "xp");
   }
 
+  function resetLocalLeakMission() {
+    writeLocalLeakMission(null);
+    setLeakMission(null);
+    triggerHaptic("light");
+    showToast("Mission cleared", "You can start a new anti-leak mission.", "info");
+  }
+
   async function trackXpAction(
     xpAction: XpAction,
     context = "$BROKE Score updated"
@@ -3930,6 +3964,7 @@ export default function Home() {
             allExpenses={expenses}
             leakMission={leakMission}
             onStartLeakMission={startLocalLeakMission}
+            onResetLeakMission={resetLocalLeakMission}
             onDeleteExpense={deleteExpense}
             onQuickLeak={addQuickExpense}
             onOpenAdd={() => setActiveTab("add")}
@@ -4563,6 +4598,7 @@ function DashboardScreen({
   allExpenses,
   leakMission,
   onStartLeakMission,
+  onResetLeakMission,
   onDeleteExpense,
   onQuickLeak,
   onOpenAdd,
@@ -4594,6 +4630,7 @@ function DashboardScreen({
   allExpenses: Expense[];
   leakMission: LocalLeakMission | null;
   onStartLeakMission: (category: string, baselineWeekly: number) => void;
+  onResetLeakMission: () => void;
   onDeleteExpense: (id: string) => void;
   onQuickLeak: (category: string, value: number, needType?: NeedType) => void;
   onOpenAdd: () => void;
@@ -4709,6 +4746,7 @@ function DashboardScreen({
         mission={leakMission}
         expenses={allExpenses}
         onStartMission={onStartLeakMission}
+        onResetMission={onResetLeakMission}
         onOpenAdd={onOpenAdd}
       />
 
@@ -5263,6 +5301,7 @@ function BiggestLeakChallengePanel({
   mission,
   expenses,
   onStartMission,
+  onResetMission,
   onOpenAdd,
 }: {
   settings: Settings;
@@ -5270,6 +5309,7 @@ function BiggestLeakChallengePanel({
   mission: LocalLeakMission | null;
   expenses: Expense[];
   onStartMission: (category: string, baselineWeekly: number) => void;
+  onResetMission: () => void;
   onOpenAdd: () => void;
 }) {
   const progress = getLocalLeakMissionProgress(mission, expenses);
@@ -5281,6 +5321,10 @@ function BiggestLeakChallengePanel({
   const targetSpend = mission?.targetSpend ?? Math.max(1, Math.round((weeklyAmount / 7) * 3 * 0.5));
   const possibleSavings = Math.max(0, Math.round((weeklyAmount / 7) * 3 - targetSpend));
 
+  const baselineForMission = mission ? Math.round((mission.baselineWeekly / 7) * 3) : 0;
+  const missionSaved = mission ? Math.max(0, Math.round(baselineForMission - progress.spent)) : 0;
+  const missionOver = mission ? Math.max(0, Math.round(progress.spent - mission.targetSpend)) : 0;
+
   const statusLabel = mission
     ? progress.completed
       ? "Completed"
@@ -5288,6 +5332,60 @@ function BiggestLeakChallengePanel({
         ? "Failed"
         : `${progress.daysLeft}d left`
     : "Suggested";
+
+  const resultTitle = progress.completed
+    ? "Mission survived"
+    : progress.failed
+      ? "Mission failed"
+      : "Mission active";
+
+  const resultBody = progress.completed
+    ? "You stayed under the leak limit. Wallet HP protected."
+    : progress.failed
+      ? "The leak broke the limit. Reset and run it back."
+      : "Keep tracking. The result card unlocks when this mission ends.";
+
+  const shareText = mission
+    ? [
+        progress.completed ? "Mission survived." : progress.failed ? "Mission failed." : "Mission in progress.",
+        "",
+        `Leak: ${categoryLabel(mission.category)}`,
+        `Days: 3`,
+        `Limit: ${money(mission.targetSpend, settings.currency)}`,
+        `Spent: ${money(progress.spent, settings.currency)}`,
+        `Saved: ${money(missionSaved, settings.currency)}`,
+        progress.failed ? `Over limit: ${money(missionOver, settings.currency)}` : "Wallet HP protected.",
+        "",
+        "Find the leak before it becomes your lifestyle.",
+        "Smoke is broke.",
+      ].join("\\n")
+    : "";
+
+  async function shareMissionResult() {
+    if (!mission) return;
+
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "$BROKE Mission Result",
+          text: shareText,
+        });
+        return;
+      }
+
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        return;
+      }
+    } catch {
+      // Sharing is optional. Fallback below.
+    }
+
+    window.prompt("Copy mission result", shareText);
+  }
 
   return (
     <section
@@ -5344,9 +5442,60 @@ function BiggestLeakChallengePanel({
             </div>
           </div>
 
-          <button type="button" className="blc-secondary-btn" onClick={onOpenAdd}>
-            Track mission expense
-          </button>
+          {(progress.completed || progress.failed) && (
+            <div className={`mission-result-card ${progress.completed ? "completed" : "failed"}`}>
+              <div className="mission-result-head">
+                <img
+                  src={progress.completed ? A.challengeCompleted : A.challengeFailed}
+                  alt=""
+                />
+
+                <div>
+                  <span>Mission Result</span>
+                  <strong>{resultTitle}</strong>
+                  <p>{resultBody}</p>
+                </div>
+              </div>
+
+              <div className="mission-result-grid">
+                <div>
+                  <span>Leak</span>
+                  <strong>{categoryLabel(mission.category)}</strong>
+                </div>
+
+                <div>
+                  <span>Spent</span>
+                  <strong>{money(progress.spent, settings.currency)}</strong>
+                </div>
+
+                <div>
+                  <span>Saved</span>
+                  <strong>{money(missionSaved, settings.currency)}</strong>
+                </div>
+
+                <div>
+                  <span>{progress.failed ? "Over limit" : "Wallet HP"}</span>
+                  <strong>{progress.failed ? money(missionOver, settings.currency) : "Protected"}</strong>
+                </div>
+              </div>
+
+              <div className="mission-result-actions">
+                <button type="button" onClick={shareMissionResult}>
+                  Share result
+                </button>
+
+                <button type="button" className="secondary" onClick={onResetMission}>
+                  Start new mission
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!progress.completed && !progress.failed && (
+            <button type="button" className="blc-secondary-btn" onClick={onOpenAdd}>
+              Track mission expense
+            </button>
+          )}
         </>
       ) : (
         <div className="blc-start-row">
