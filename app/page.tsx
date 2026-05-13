@@ -1481,7 +1481,6 @@ const ruText: Record<string, string> = {
   "Days": "Дни",
   "Result": "Результат",
   "Survived": "Выжил",
-  "Preparing image...": "Готовим картинку...",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -5309,6 +5308,7 @@ function DailyRoutinePanel({
 // V54.2: failed mission saved value is forced to zero, and share result has visible fallbacks.
 // V54.3: Mission share text uses real line breaks, not literal backslash-n.
 // V54.4: mission result shares a clean image card like the main Share Result card.
+// V54.5: duplicate ruText keys removed for strict TypeScript build.
 function BiggestLeakChallengePanel({
   settings,
   identityStats,
