@@ -8674,3 +8674,7 @@ html[lang="ru"] .share-card strong {
     width: 100%;
   }
 }
+
+
+/* ===== V52.1 MISSION RULES BUILD FIX ===== */
+/* Fixes broken standalone .replace chain from v52. */
