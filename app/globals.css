@@ -8958,3 +8958,7 @@ html[lang="ru"] .share-card strong {
 
 /* ===== V54.2 MISSION RESULT SAVED + SHARE FIX ===== */
 /* Failed local missions show Saved = 0. Share result has visible fallback. */
+
+
+/* ===== V54.3 SHARE LINE BREAK FIX ===== */
+/* Mission share text now uses real newline characters instead of literal \n. */
