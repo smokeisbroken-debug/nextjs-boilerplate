@@ -1512,7 +1512,28 @@ const ruText: Record<string, string> = {
   "ideas": "идей",
   "Income Setup": "Настройка дохода",
   "month": "месяц",
-  "Clean UI": "Чистый интерфейс",};
+  "Clean UI": "Чистый интерфейс",
+  "Next Best Action": "Следующее лучшее действие",
+  "Start with one honest record. The app gets smarter after real data.": "Начни с одной честной записи. Приложение становится умнее после реальных данных.",
+  "Avoid random spending today": "Избегай случайных трат сегодня",
+  "Avoid": "Избегай",
+  "Wallet HP is under pressure. Protect it by blocking the biggest leak for one day.": "Wallet HP под давлением. Защити его, заблокировав главную утечку на один день.",
+  "Control random spending": "Контролируй случайные траты",
+  "Control": "Контролируй",
+  "This is the loudest leak right now. Keep it under control before it becomes normal.": "Это самая громкая утечка сейчас. Держи её под контролем, пока она не стала нормой.",
+  "Track next move": "Записать следующий шаг",
+  "Keep the wallet clean": "Держи кошелёк чистым",
+  "No major leak detected. Keep tracking and protect the streak.": "Крупной утечки не видно. Продолжай записывать и защищай серию.",
+  "7 actions to keep your wallet alive today.": "7 действий, чтобы кошелёк сегодня выжил.",
+  "Your weekly score, status, and biggest leak.": "Твой недельный счёт, статус и главная утечка.",
+  "See what habit is draining you most.": "Смотри, какая привычка сливает больше всего.",
+  "Create a clean public progress card.": "Создай чистую публичную карточку прогресса.",
+  "Preview wallet movement and today’s damage.": "Предпросмотр движения кошелька и сегодняшнего урона.",
+  "Pick a leak-control mission when you are ready.": "Выбери миссию контроля утечки, когда будешь готов.",
+  "Only public progress. No income or balance exposed.": "Только публичный прогресс. Доход и баланс не раскрываются.",
+  "Test how much you could save by reducing leaks.": "Проверь, сколько можно сохранить, если сократить утечки.",
+  "Adjust income without exposing private data publicly.": "Настрой доход без публичного раскрытия личных данных.",
+  "Rent, food, transport, internet, and basics.": "Аренда, еда, транспорт, интернет и базовые расходы.",};
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
 function applyRussianDynamicRules(value: string) {
@@ -1607,7 +1628,9 @@ function applyRussianDynamicRules(value: string) {
     .replace(/Smoke is broke\./g, "Smoke is broke.")
     .replace(/(\$[\d,.]+|C\$[\d,.]+) tracked/g, "$1 записано")
     .replace(/(\d+) records · (\d+)% leak pressure/g, "$1 записей · $2% давление утечек")
-    .replace(/(\d+)% pressure/g, "$1% давление");
+    .replace(/(\d+)% pressure/g, "$1% давление")
+    .replace(/^Avoid ([A-Za-zА-Яа-яёЁ _/-]+) today$/g, "Избегай $1 сегодня")
+    .replace(/^Control ([A-Za-zА-Яа-яёЁ _/-]+)$/g, "Контролируй $1");
 
   next = next
     .replace(/C\$([\d,.]+)\s+this week\b/g, (_match, amount) => `C$${amount} на этой неделе`)
@@ -4630,6 +4653,7 @@ function Header({
 }
 
 // V55: Clean UI / Less Clutter uses collapsible detail sections.
+// V55.1: Polish adds Next Best Action and clearer collapsible section descriptions.
 function DashboardScreen({
   settings,
   summary,
@@ -4779,6 +4803,13 @@ function DashboardScreen({
         <p>Hold the line, fix the leaks.</p>
       </section>
 
+      <NextBestActionCard
+        summary={summary}
+        identityStats={identityStats}
+        expenses={allExpenses}
+        onOpenAdd={onOpenAdd}
+      />
+
       <BiggestLeakChallengePanel
         settings={settings}
         identityStats={identityStats}
@@ -4800,7 +4831,10 @@ function DashboardScreen({
 
       <details className="clean-details">
         <summary>
-          <span>Daily Routine</span>
+          <div>
+            <span>Daily Routine</span>
+            <small>7 actions to keep your wallet alive today.</small>
+          </div>
           <b>7 real tasks</b>
         </summary>
         <DailyRoutinePanel
@@ -4814,7 +4848,10 @@ function DashboardScreen({
 
       <details className="clean-details">
         <summary>
-          <span>Wallet Survival Report</span>
+          <div>
+            <span>Wallet Survival Report</span>
+            <small>Your weekly score, status, and biggest leak.</small>
+          </div>
           <b>{identityStats.weeklySurvivalScore}/100</b>
         </summary>
         <V2IdentityPanel settings={settings} identityStats={identityStats} />
@@ -4822,7 +4859,10 @@ function DashboardScreen({
 
       <details className="clean-details">
         <summary>
-          <span>Wallet Insights</span>
+          <div>
+            <span>Wallet Insights</span>
+            <small>See what habit is draining you most.</small>
+          </div>
           <b>View</b>
         </summary>
         <WalletInsightsPanel insights={walletInsights} />
@@ -4838,7 +4878,10 @@ function DashboardScreen({
 
       <details className="clean-details">
         <summary>
-          <span>Share Result</span>
+          <div>
+            <span>Share Result</span>
+            <small>Create a clean public progress card.</small>
+          </div>
           <b>Public card</b>
         </summary>
         <ShareResultCard
@@ -4855,7 +4898,10 @@ function DashboardScreen({
 
       <details className="clean-details">
         <summary>
-          <span>$BROKE Chart</span>
+          <div>
+            <span>$BROKE Chart</span>
+            <small>Preview wallet movement and today’s damage.</small>
+          </div>
           <b>7D Preview</b>
         </summary>
         <section className="chart-preview">
@@ -5180,6 +5226,79 @@ function V2IdentityPanel({
         <span>Self-roast insight</span>
         <strong>{identityStats.selfRoast}</strong>
       </div>
+    </section>
+  );
+}
+
+function NextBestActionCard({
+  summary,
+  identityStats,
+  expenses,
+  onOpenAdd,
+}: {
+  summary: {
+    totalIncome: number;
+    fixedCosts: number;
+    spentThisMonth: number;
+    totalLeaks: number;
+    realBalance: number;
+    walletHp: number;
+    todaySpent: number;
+    streak: Streak;
+  };
+  identityStats: V2IdentityStats;
+  expenses: Expense[];
+  onOpenAdd: () => void;
+}) {
+  const today = dayKey(new Date());
+  const todayExpenses = expenses.filter(
+    (expense) => dayKey(new Date(expense.createdAt)) === today
+  );
+  const hasTrackedToday = todayExpenses.length > 0;
+  const leakLabel =
+    identityStats.biggestLeakAmount > 0
+      ? categoryLabel(identityStats.biggestLeakCategory)
+      : "random spending";
+
+  const action = !hasTrackedToday
+    ? {
+        title: "Track one real expense",
+        body: "Start with one honest record. The app gets smarter after real data.",
+        button: "Track now",
+        tone: "green",
+      }
+    : summary.walletHp < 55
+      ? {
+          title: `Avoid ${leakLabel} today`,
+          body: "Wallet HP is under pressure. Protect it by blocking the biggest leak for one day.",
+          button: "Add context",
+          tone: "red",
+        }
+      : identityStats.biggestLeakAmount > 0
+        ? {
+            title: `Control ${leakLabel}`,
+            body: "This is the loudest leak right now. Keep it under control before it becomes normal.",
+            button: "Track next move",
+            tone: "orange",
+          }
+        : {
+            title: "Keep the wallet clean",
+            body: "No major leak detected. Keep tracking and protect the streak.",
+            button: "Track now",
+            tone: "green",
+          };
+
+  return (
+    <section className={`next-action-card ${action.tone}`}>
+      <div>
+        <span>Next Best Action</span>
+        <strong>{action.title}</strong>
+        <p>{action.body}</p>
+      </div>
+
+      <button type="button" onClick={onOpenAdd}>
+        {action.button}
+      </button>
     </section>
   );
 }
@@ -7413,7 +7532,10 @@ function WhatIfScreen({
 
       <details className="clean-details" open={Boolean(activeChallenge || challengeProgress)}>
         <summary>
-          <span>Challenges</span>
+          <div>
+            <span>Challenges</span>
+            <small>Pick a leak-control mission when you are ready.</small>
+          </div>
           <b>{activeChallenge ? "Active" : "Choose"}</b>
         </summary>
         <ChallengesPanel
@@ -7428,7 +7550,10 @@ function WhatIfScreen({
 
       <details className="clean-details">
         <summary>
-          <span>Public Leaderboard</span>
+          <div>
+            <span>Public Leaderboard</span>
+            <small>Only public progress. No income or balance exposed.</small>
+          </div>
           <b>Optional</b>
         </summary>
         <LeaderboardPanel
@@ -7440,7 +7565,10 @@ function WhatIfScreen({
 
       <details className="clean-details" open>
         <summary>
-          <span>What If Scenarios</span>
+          <div>
+            <span>What If Scenarios</span>
+            <small>Test how much you could save by reducing leaks.</small>
+          </div>
           <b>{cards.length} ideas</b>
         </summary>
         <section className="whatif-list">
@@ -7581,7 +7709,10 @@ function SettingsScreen({
 
       <details className="clean-details settings-clean-details">
         <summary>
-          <span>Income Setup</span>
+          <div>
+            <span>Income Setup</span>
+            <small>Adjust income without exposing private data publicly.</small>
+          </div>
           <b>{money(totalIncome, settings.currency)}</b>
         </summary>
         <section className="settings-group">
@@ -7619,7 +7750,10 @@ function SettingsScreen({
 
       <details className="clean-details settings-clean-details">
         <summary>
-          <span>Fixed Life Costs</span>
+          <div>
+            <span>Fixed Life Costs</span>
+            <small>Rent, food, transport, internet, and basics.</small>
+          </div>
           <b>{money(fixedCosts, settings.currency)}</b>
         </summary>
         <section className="settings-group">
