@@ -1558,7 +1558,11 @@ const ruText: Record<string, string> = {
   "Biggest leak": "Главная утечка",
   "Life hours lost": "Потерянные часы жизни",
   "No clear category movement yet today.": "Сегодня пока нет явного движения по категориям.",
-  "No major weekly leak is visible yet.": "Крупной недельной утечки пока не видно.",};
+  "No major weekly leak is visible yet.": "Крупной недельной утечки пока не видно.",
+  "$BROKE DAILY REPORT": "$BROKE ДНЕВНОЙ ОТЧЁТ",
+  "$BROKE WEEKLY REPORT": "$BROKE НЕДЕЛЬНЫЙ ОТЧЁТ",
+  "Report image was sent to your Telegram bot chat.": "Картинка отчёта отправлена в чат с Telegram-ботом.",
+  "Report image downloaded. You can post it in Telegram or X.": "Картинка отчёта скачана. Её можно опубликовать в Telegram или X.",};
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
 function applyRussianDynamicRules(value: string) {
@@ -4692,6 +4696,7 @@ function Header({
 // V55: Clean UI / Less Clutter uses collapsible detail sections.
 // V55.1: Polish adds Next Best Action and clearer collapsible section descriptions.
 // V56: Daily / Weekly Reports adds shareable report cards.
+// V56.1: Daily / Weekly Reports share clean image cards.
 function DashboardScreen({
   settings,
   summary,
@@ -4908,6 +4913,7 @@ function DashboardScreen({
           summary={summary}
           expenses={allExpenses}
           identityStats={identityStats}
+          shareInitData={telegram.isTelegram ? telegram.initData : ""}
         />
       </details>
 
@@ -5362,6 +5368,7 @@ function ReportsPanel({
   summary,
   expenses,
   identityStats,
+  shareInitData,
 }: {
   settings: Settings;
   summary: {
@@ -5376,7 +5383,11 @@ function ReportsPanel({
   };
   expenses: Expense[];
   identityStats: V2IdentityStats;
+  shareInitData: string;
 }) {
+  const [reportSharing, setReportSharing] = useState<"daily" | "weekly" | null>(null);
+  const dailyReportCardRef = useRef<HTMLDivElement | null>(null);
+  const weeklyReportCardRef = useRef<HTMLDivElement | null>(null);
   const todayExpenses = useMemo(() => getTodayExpenses(expenses), [expenses]);
   const weekExpenses = useMemo(() => getLastSevenDaysExpenses(expenses), [expenses]);
 
@@ -5442,23 +5453,7 @@ function ReportsPanel({
     "Smoke is broke.",
   ].join("\n");
 
-  async function shareReport(text: string, title: string) {
-    triggerHaptic("light");
-    markDailyRoutineAction("sharedProgress");
-
-    try {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({
-          title,
-          text,
-          url: PROJECT_TG_URL,
-        });
-        return;
-      }
-    } catch {
-      // Native share can be cancelled or blocked in Telegram WebView.
-    }
-
+  async function copyReportText(text: string) {
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
@@ -5470,6 +5465,50 @@ function ReportsPanel({
     }
 
     window.prompt("Copy report", text);
+  }
+
+  async function shareReport(
+    text: string,
+    title: string,
+    cardRef: React.RefObject<HTMLDivElement | null>,
+    reportType: "daily" | "weekly"
+  ) {
+    if (reportSharing) return;
+
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+    setReportSharing(reportType);
+
+    try {
+      if (cardRef.current) {
+        const imageFile = await createShareImageFileFromElement(cardRef.current);
+        const nativeShared = await tryNativeImageShare(imageFile);
+
+        if (nativeShared) {
+          return;
+        }
+
+        if (shareInitData) {
+          try {
+            await sendShareImageViaBot(imageFile, shareInitData, text);
+            window.alert("Report image was sent to your Telegram bot chat.");
+            return;
+          } catch {
+            // Continue to download fallback below.
+          }
+        }
+
+        downloadImageFile(imageFile);
+        window.alert("Report image downloaded. You can post it in Telegram or X.");
+        return;
+      }
+    } catch {
+      // Image generation can fail in some WebViews. Use text fallback.
+    } finally {
+      setReportSharing(null);
+    }
+
+    await copyReportText(text);
   }
 
   return (
@@ -5506,11 +5545,54 @@ function ReportsPanel({
               : "No clear category movement yet today."}
           </p>
 
+          <div className="report-public-share-card daily" ref={dailyReportCardRef}>
+            <div className="report-public-share-top">
+              <div>
+                <span>$BROKE DAILY REPORT</span>
+                <strong>{todayStatus}</strong>
+                <small>Wallet HP {summary.walletHp}/100</small>
+              </div>
+              <img src={todayTopCategory ? getCategoryIcon(todayTopCategory.category) : A.walletMascot} alt="" />
+            </div>
+
+            <div className="report-public-share-grid">
+              <div>
+                <span>Spent</span>
+                <strong>{money(summary.todaySpent, settings.currency)}</strong>
+              </div>
+              <div>
+                <span>Leaks</span>
+                <strong>{money(todayLeakAmount, settings.currency)}</strong>
+              </div>
+              <div>
+                <span>Score</span>
+                <strong>{dailyScore}/100</strong>
+              </div>
+              <div>
+                <span>Top category</span>
+                <strong>{todayTopCategory ? categoryLabel(todayTopCategory.category) : "None"}</strong>
+              </div>
+            </div>
+
+            <div className="report-public-share-footer">
+              <strong>Find the leak before it becomes your lifestyle.</strong>
+              <span>$BROKE Life Tracker · Smoke is broke.</span>
+            </div>
+          </div>
+
           <button
             type="button"
-            onClick={() => shareReport(dailyReportText, "$BROKE Daily Wallet Report")}
+            disabled={reportSharing === "daily"}
+            onClick={() =>
+              shareReport(
+                dailyReportText,
+                "$BROKE Daily Wallet Report",
+                dailyReportCardRef,
+                "daily"
+              )
+            }
           >
-            Share daily report
+            {reportSharing === "daily" ? "Preparing image..." : "Share daily report"}
           </button>
         </article>
 
@@ -5545,11 +5627,58 @@ function ReportsPanel({
               : "No major weekly leak is visible yet."}
           </p>
 
+          <div className="report-public-share-card weekly" ref={weeklyReportCardRef}>
+            <div className="report-public-share-top">
+              <div>
+                <span>$BROKE WEEKLY REPORT</span>
+                <strong>{weeklyStatus}</strong>
+                <small>Survival {identityStats.weeklySurvivalScore}/100</small>
+              </div>
+              <img src={identityStats.biggestLeakAmount > 0 ? getCategoryIcon(identityStats.biggestLeakCategory) : A.challengeTrophy} alt="" />
+            </div>
+
+            <div className="report-public-share-grid">
+              <div>
+                <span>Survival</span>
+                <strong>{identityStats.weeklySurvivalScore}/100</strong>
+              </div>
+              <div>
+                <span>Leaks</span>
+                <strong>{money(weeklyLeakAmount, settings.currency)}</strong>
+              </div>
+              <div>
+                <span>Hours lost</span>
+                <strong>{identityStats.lifeHoursLost}h</strong>
+              </div>
+              <div>
+                <span>Biggest leak</span>
+                <strong>
+                  {identityStats.biggestLeakAmount > 0
+                    ? categoryLabel(identityStats.biggestLeakCategory)
+                    : "None"}
+                </strong>
+              </div>
+            </div>
+
+            <div className="report-public-share-footer">
+              <strong>Find the leak before it becomes your lifestyle.</strong>
+              <span>$BROKE Life Tracker · Smoke is broke.</span>
+            </div>
+          </div>
+
           <button
             type="button"
-            onClick={() => shareReport(weeklyReportText, "$BROKE Weekly Wallet Report")}
+            disabled={reportSharing === "weekly"}
+            onClick={() =>
+              shareReport(
+                weeklyReportText,
+                "$BROKE Weekly Wallet Report",
+                weeklyReportCardRef,
+                "weekly"
+              )
+            }
           >
-            Share weekly report
+            {reportSharing === "weekly" ? "Preparing image..." : "Share weekly report"}
           </button>
         </article>
       </div>
