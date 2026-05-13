@@ -8954,3 +8954,7 @@ html[lang="ru"] .share-card strong {
 
 
 /* ===== V54.1 MISSION RESULT BUILD SAFE ===== */
+
+
+/* ===== V54.2 MISSION RESULT SAVED + SHARE FIX ===== */
+/* Failed local missions show Saved = 0. Share result has visible fallback. */
