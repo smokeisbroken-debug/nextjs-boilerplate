@@ -1474,12 +1474,9 @@ function applyRussianDynamicRules(value: string) {
     .replace(/#(\d+)\s+Daily\b/g, "#$1 за день")
     .replace(/Hours lost:\s*([\d.]+)h/g, "Потеряно часов: $1ч")
     .replace(/Leak:\s*([A-Za-zА-Яа-яёЁ _-]+)/g, "Утечка: $1")
-    .replace(/C\$([\d,.]+)\s+this week\b/g, "C$$1 на этой неделе")
     .replace(/(\$[\d,.]+)\s+this week\b/g, "$1 на этой неделе")
-    .replace(/C\$([\d,.]+)\/year\b/g, "C$$1/год")
-    .replace(/C\$([\d,.]+)\/год\b/g, "C$$1/год")
-    .replace(/C\$([\d,.]+)\/month\b/g, "C$$1/мес")
-    .replace(/C\$([\d,.]+)\/мес\b/g, "C$$1/мес")
+    .replace(/(\$[\d,.]+)\/year\b/g, "$1/год")
+    .replace(/(\$[\d,.]+)\/month\b/g, "$1/мес")
     .replace(/\bSpending Volume — Последние 7 дней\b/g, "Объём расходов — последние 7 дней")
     .replace(/\bSpending Volume — Last 7 days\b/g, "Объём расходов — последние 7 дней")
     .replace(/\bLast 7 days\b/g, "Последние 7 дней")
@@ -1502,13 +1499,19 @@ function applyRussianDynamicRules(value: string) {
     .replace(/Анти-думспендинг identity app\./g, "Приложение против утечек кошелька.")
     .replace(/Твой score/g, "Твой счёт")
     .replace(/\bcustom\b/g, "другое")
-    .replace(/\btakeout\b/g, "еда на заказ");
-    // V52_MISSION_RULES
+    .replace(/\btakeout\b/g, "еда на заказ")
     .replace(/Avoid biggest leak:\s*([A-Za-zА-Яа-яёЁ _/-]+)/g, "Избегай главной утечки: $1")
     .replace(/(\d+)\/3 active/g, "$1/3 активно")
     .replace(/(Coffee|Taxi|Smoking|Takeout|Custom) tracked\./g, "$1 записано.")
-    .replace(/C\$([\d,.]+) looks small once\. Repeated daily, it becomes a real wallet leak\./g, "C$$1 один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.")
-    .replace(/(\$[\d,.]+) looks small once\. Repeated daily, it becomes a real wallet leak\./g, "$1 один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.")
+    .replace(/(\$[\d,.]+) looks small once\. Repeated daily, it becomes a real wallet leak\./g, "$1 один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.");
+
+  next = next
+    .replace(/C\$([\d,.]+)\s+this week\b/g, (_match, amount) => `C$${amount} на этой неделе`)
+    .replace(/C\$([\d,.]+)\/year\b/g, (_match, amount) => `C$${amount}/год`)
+    .replace(/C\$([\d,.]+)\/год\b/g, (_match, amount) => `C$${amount}/год`)
+    .replace(/C\$([\d,.]+)\/month\b/g, (_match, amount) => `C$${amount}/мес`)
+    .replace(/C\$([\d,.]+)\/мес\b/g, (_match, amount) => `C$${amount}/мес`)
+    .replace(/C\$([\d,.]+) looks small once\. Repeated daily, it becomes a real wallet leak\./g, (_match, amount) => `C$${amount} один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.`);
 
   return next;
 }
