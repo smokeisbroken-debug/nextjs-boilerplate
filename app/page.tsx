@@ -1473,6 +1473,15 @@ const ruText: Record<string, string> = {
   "Copy mission result": "Скопируй результат миссии",
   "Wallet HP protected.": "Wallet HP защищён.",
   "Mission result copied. Paste it in Telegram, X, or anywhere you want.": "Результат миссии скопирован. Вставь его в Telegram, X или куда нужно.",
+  "Mission image was sent to your Telegram bot chat.": "Картинка миссии отправлена в чат с Telegram-ботом.",
+  "Mission image downloaded. You can post it in Telegram or X.": "Картинка миссии скачана. Её можно опубликовать в Telegram или X.",
+  "$BROKE MISSION": "$BROKE МИССИЯ",
+  "Limit broken": "Лимит пробит",
+  "Wallet HP protected": "Wallet HP защищён",
+  "Days": "Дни",
+  "Result": "Результат",
+  "Survived": "Выжил",
+  "Preparing image...": "Готовим картинку...",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -4746,6 +4755,7 @@ function DashboardScreen({
         identityStats={identityStats}
         mission={leakMission}
         expenses={allExpenses}
+        shareInitData={telegram.isTelegram ? telegram.initData : ""}
         onStartMission={onStartLeakMission}
         onResetMission={onResetLeakMission}
         onOpenAdd={onOpenAdd}
@@ -5298,11 +5308,13 @@ function DailyRoutinePanel({
 
 // V54.2: failed mission saved value is forced to zero, and share result has visible fallbacks.
 // V54.3: Mission share text uses real line breaks, not literal backslash-n.
+// V54.4: mission result shares a clean image card like the main Share Result card.
 function BiggestLeakChallengePanel({
   settings,
   identityStats,
   mission,
   expenses,
+  shareInitData,
   onStartMission,
   onResetMission,
   onOpenAdd,
@@ -5311,10 +5323,13 @@ function BiggestLeakChallengePanel({
   identityStats: V2IdentityStats;
   mission: LocalLeakMission | null;
   expenses: Expense[];
+  shareInitData: string;
   onStartMission: (category: string, baselineWeekly: number) => void;
   onResetMission: () => void;
   onOpenAdd: () => void;
 }) {
+  const [missionImageSharing, setMissionImageSharing] = useState(false);
+  const missionShareCardRef = useRef<HTMLDivElement | null>(null);
   const progress = getLocalLeakMissionProgress(mission, expenses);
   const hasLeak = identityStats.biggestLeakAmount > 0;
   const suggestedCategory = hasLeak ? identityStats.biggestLeakCategory : "No leak";
@@ -5365,30 +5380,7 @@ function BiggestLeakChallengePanel({
       ].join("\n")
     : "";
 
-  async function shareMissionResult() {
-    if (!mission || !shareText) return;
-
-    triggerHaptic("light");
-    markDailyRoutineAction("sharedProgress");
-
-    const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(
-      PROJECT_TG_URL
-    )}&text=${encodeURIComponent(shareText)}`;
-
-    try {
-      if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({
-          title: "$BROKE Mission Result",
-          text: shareText,
-          url: PROJECT_TG_URL,
-        });
-        return;
-      }
-    } catch {
-      // User may cancel native share, or Telegram WebView may block it.
-      // Continue to visible fallback below.
-    }
-
+  async function copyMissionResultText() {
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareText);
@@ -5396,17 +5388,49 @@ function BiggestLeakChallengePanel({
         return;
       }
     } catch {
-      // Clipboard may be blocked in Telegram WebView.
-    }
-
-    try {
-      openTelegramUrl(telegramShareUrl);
-      return;
-    } catch {
-      // Last fallback below.
+      // Clipboard can be blocked inside Telegram WebView.
     }
 
     window.prompt("Copy mission result", shareText);
+  }
+
+  async function shareMissionResult() {
+    if (!mission || !shareText || missionImageSharing) return;
+
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+    setMissionImageSharing(true);
+
+    try {
+      if (missionShareCardRef.current) {
+        const imageFile = await createShareImageFileFromElement(missionShareCardRef.current);
+        const nativeShared = await tryNativeImageShare(imageFile);
+
+        if (nativeShared) {
+          return;
+        }
+
+        if (shareInitData) {
+          try {
+            await sendShareImageViaBot(imageFile, shareInitData, shareText);
+            window.alert("Mission image was sent to your Telegram bot chat.");
+            return;
+          } catch {
+            // Continue to download fallback below.
+          }
+        }
+
+        downloadImageFile(imageFile);
+        window.alert("Mission image downloaded. You can post it in Telegram or X.");
+        return;
+      }
+    } catch {
+      // Image generation or file sharing failed. Use text fallback below.
+    } finally {
+      setMissionImageSharing(false);
+    }
+
+    await copyMissionResultText();
   }
 
   return (
@@ -5501,9 +5525,60 @@ function BiggestLeakChallengePanel({
                 </div>
               </div>
 
+              <div
+                className={`mission-public-share-card ${progress.failed ? "failed" : "completed"}`}
+                ref={missionShareCardRef}
+              >
+                <div className="mission-public-share-top">
+                  <div>
+                    <span>$BROKE MISSION</span>
+                    <strong>{resultTitle}</strong>
+                    <small>{progress.failed ? "Limit broken" : "Wallet HP protected"}</small>
+                  </div>
+                  <img src={progress.completed ? A.challengeCompleted : A.challengeFailed} alt="" />
+                </div>
+
+                <div className="mission-public-share-grid">
+                  <div>
+                    <span>Leak</span>
+                    <strong>{categoryLabel(mission.category)}</strong>
+                  </div>
+
+                  <div>
+                    <span>Days</span>
+                    <strong>3</strong>
+                  </div>
+
+                  <div>
+                    <span>Limit</span>
+                    <strong>{money(mission.targetSpend, settings.currency)}</strong>
+                  </div>
+
+                  <div>
+                    <span>Spent</span>
+                    <strong>{money(progress.spent, settings.currency)}</strong>
+                  </div>
+
+                  <div>
+                    <span>Saved</span>
+                    <strong>{money(missionSaved, settings.currency)}</strong>
+                  </div>
+
+                  <div>
+                    <span>{progress.failed ? "Over limit" : "Result"}</span>
+                    <strong>{progress.failed ? money(missionOver, settings.currency) : "Survived"}</strong>
+                  </div>
+                </div>
+
+                <div className="mission-public-share-footer">
+                  <strong>Find the leak before it becomes your lifestyle.</strong>
+                  <span>$BROKE Life Tracker · t.me/BrokeLifeTrackerBot</span>
+                </div>
+              </div>
+
               <div className="mission-result-actions">
-                <button type="button" onClick={shareMissionResult}>
-                  Share result
+                <button type="button" onClick={shareMissionResult} disabled={missionImageSharing}>
+                  {missionImageSharing ? "Preparing image..." : "Share result"}
                 </button>
 
                 <button type="button" className="secondary" onClick={onResetMission}>
