@@ -5297,6 +5297,7 @@ function DailyRoutinePanel({
 
 
 // V54.2: failed mission saved value is forced to zero, and share result has visible fallbacks.
+// V54.3: Mission share text uses real line breaks, not literal backslash-n.
 function BiggestLeakChallengePanel({
   settings,
   identityStats,
@@ -5361,7 +5362,7 @@ function BiggestLeakChallengePanel({
         "",
         "Find the leak before it becomes your lifestyle.",
         "Smoke is broke.",
-      ].join("\\n")
+      ].join("\n")
     : "";
 
   async function shareMissionResult() {
