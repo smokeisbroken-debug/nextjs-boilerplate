@@ -1,7 +1,7 @@
 "use client";
 
-import { Children, cloneElement, isValidElement, useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, ReactNode, SetStateAction } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
 
 type Tab = "home" | "add" | "chart" | "whatif" | "settings";
 type NeedType = "Needed" | "Not needed" | "Maybe";
@@ -724,8 +724,55 @@ const incomeStyleOptions: IncomeStyle[] = [
   "Irregular",
 ];
 
+const currencyOptions: {
+  value: Currency;
+  label: string;
+}[] = [
+  { value: "USD", label: "USD ($)" },
+  { value: "EUR", label: "EUR (€)" },
+  { value: "MDL", label: "MDL (L)" },
+  { value: "NGN", label: "NGN (₦)" },
+  { value: "PKR", label: "PKR (Rs)" },
+  { value: "GBP", label: "GBP (£)" },
+  { value: "INR", label: "INR (₹)" },
+  { value: "CAD", label: "CAD (C$)" },
+  { value: "AUD", label: "AUD (A$)" },
+  { value: "NZD", label: "NZD (NZ$)" },
+  { value: "ZAR", label: "ZAR (R)" },
+  { value: "GHS", label: "GHS (₵)" },
+  { value: "KES", label: "KES (KSh)" },
+  { value: "UGX", label: "UGX (USh)" },
+  { value: "TZS", label: "TZS (TSh)" },
+  { value: "XAF", label: "XAF (FCFA)" },
+  { value: "XOF", label: "XOF (CFA)" },
+  { value: "EGP", label: "EGP (£)" },
+  { value: "MAD", label: "MAD" },
+  { value: "TRY", label: "TRY (₺)" },
+  { value: "AED", label: "AED" },
+  { value: "SAR", label: "SAR" },
+  { value: "PHP", label: "PHP (₱)" },
+  { value: "IDR", label: "IDR (Rp)" },
+  { value: "VND", label: "VND (₫)" },
+  { value: "THB", label: "THB (฿)" },
+  { value: "MYR", label: "MYR (RM)" },
+  { value: "SGD", label: "SGD (S$)" },
+  { value: "BDT", label: "BDT (৳)" },
+  { value: "LKR", label: "LKR (Rs)" },
+  { value: "NPR", label: "NPR (Rs)" },
+  { value: "BRL", label: "BRL (R$)" },
+  { value: "MXN", label: "MXN ($)" },
+  { value: "UAH", label: "UAH (₴)" },
+  { value: "PLN", label: "PLN (zł)" },
+  { value: "RON", label: "RON" },
+  { value: "GEL", label: "GEL (₾)" },
+  { value: "KZT", label: "KZT (₸)" },
+];
 
-const languageOptions: { value: Language; label: string }[] = [
+
+const languageOptions: {
+  value: Language;
+  label: string;
+}[] = [
   { value: "en", label: "English" },
   { value: "ru", label: "Русский" },
 ];
@@ -1402,112 +1449,118 @@ function translateTextValue(value: string, language: Language) {
   return value.replace(trimmed, translated);
 }
 
-type LocalizableProps = {
-  children?: ReactNode;
-  placeholder?: string;
-  "aria-label"?: string;
-  title?: string;
-};
+const ruReverseText: Record<string, string> = Object.entries(ruText).reduce(
+  (acc, [en, ru]) => {
+    acc[ru] = en;
+    return acc;
+  },
+  {} as Record<string, string>
+);
 
-function translateReactNode(node: ReactNode, language: Language): ReactNode {
-  if (typeof node === "string") return translateTextValue(node, language);
+function translateDomTextValue(value: string, language: Language) {
+  const trimmed = value.trim();
 
-  if (
-    typeof node === "number" ||
-    typeof node === "boolean" ||
-    node === null ||
-    node === undefined
-  ) {
-    return node;
+  if (!trimmed) return value;
+
+  if (language === "en") {
+    const original = ruReverseText[trimmed];
+
+    if (!original) return value;
+
+    return value.replace(trimmed, original);
   }
 
-  if (Array.isArray(node)) {
-    return node.map((child) => translateReactNode(child, language));
-  }
-
-  if (!isValidElement<LocalizableProps>(node)) return node;
-
-  const props = node.props;
-  const nextProps: Partial<LocalizableProps> = {};
-
-  if (typeof props.placeholder === "string") {
-    nextProps.placeholder = translateTextValue(props.placeholder, language);
-  }
-
-  if (typeof props["aria-label"] === "string") {
-    nextProps["aria-label"] = translateTextValue(props["aria-label"], language);
-  }
-
-  if (typeof props.title === "string") {
-    nextProps.title = translateTextValue(props.title, language);
-  }
-
-  if ("children" in props) {
-    nextProps.children = Children.map(props.children, (child) =>
-      translateReactNode(child, language)
-    );
-  }
-
-  return cloneElement(node, nextProps);
+  return translateTextValue(value, language);
 }
 
-function Localize({
-  language,
-  children,
-}: {
-  language: Language;
-  children: ReactNode;
-}) {
+function translateDomTree(language: Language) {
+  if (typeof document === "undefined") return;
+
+  document.documentElement.lang = language;
+  document.documentElement.dir = "ltr";
+
+  const root = document.querySelector(".phone") || document.body;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes: Text[] = [];
+
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    const parent = node.parentElement;
+
+    if (!parent) continue;
+
+    const tag = parent.tagName.toLowerCase();
+
+    if (["script", "style", "textarea", "code", "pre"].includes(tag)) continue;
+
+    nodes.push(node);
+  }
+
+  nodes.forEach((node) => {
+    const current = node.nodeValue || "";
+    const next = translateDomTextValue(current, language);
+
+    if (next !== current) {
+      node.nodeValue = next;
+    }
+  });
+
+  root
+    .querySelectorAll<HTMLElement>("[placeholder], [aria-label], [title]")
+    .forEach((element) => {
+      ["placeholder", "aria-label", "title"].forEach((attribute) => {
+        const current = element.getAttribute(attribute);
+
+        if (!current) return;
+
+        const next = translateDomTextValue(current, language);
+
+        if (next !== current) {
+          element.setAttribute(attribute, next);
+        }
+      });
+    });
+}
+
+function LanguageRuntime({ language }: { language: Language }) {
   useEffect(() => {
-    document.documentElement.lang = language;
-    document.documentElement.dir = "ltr";
+    if (typeof document === "undefined") return;
+
+    let frame = 0;
+
+    const apply = () => {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => translateDomTree(language));
+    };
+
+    apply();
+
+    const timers = [
+      window.setTimeout(apply, 80),
+      window.setTimeout(apply, 250),
+      window.setTimeout(apply, 700),
+    ];
+
+    const observer = new MutationObserver(apply);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ["placeholder", "aria-label", "title"],
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      timers.forEach((timer) => window.clearTimeout(timer));
+      observer.disconnect();
+    };
   }, [language]);
 
-  return <>{translateReactNode(children, language)}</>;
+  return null;
 }
-const currencyOptions: {
-  value: Currency;
-  label: string;
-}[] = [
-  { value: "USD", label: "USD ($)" },
-  { value: "EUR", label: "EUR (€)" },
-  { value: "MDL", label: "MDL (L)" },
-  { value: "NGN", label: "NGN (₦)" },
-  { value: "PKR", label: "PKR (Rs)" },
-  { value: "GBP", label: "GBP (£)" },
-  { value: "INR", label: "INR (₹)" },
-  { value: "CAD", label: "CAD (C$)" },
-  { value: "AUD", label: "AUD (A$)" },
-  { value: "NZD", label: "NZD (NZ$)" },
-  { value: "ZAR", label: "ZAR (R)" },
-  { value: "GHS", label: "GHS (₵)" },
-  { value: "KES", label: "KES (KSh)" },
-  { value: "UGX", label: "UGX (USh)" },
-  { value: "TZS", label: "TZS (TSh)" },
-  { value: "XAF", label: "XAF (FCFA)" },
-  { value: "XOF", label: "XOF (CFA)" },
-  { value: "EGP", label: "EGP (£)" },
-  { value: "MAD", label: "MAD" },
-  { value: "TRY", label: "TRY (₺)" },
-  { value: "AED", label: "AED" },
-  { value: "SAR", label: "SAR" },
-  { value: "PHP", label: "PHP (₱)" },
-  { value: "IDR", label: "IDR (Rp)" },
-  { value: "VND", label: "VND (₫)" },
-  { value: "THB", label: "THB (฿)" },
-  { value: "MYR", label: "MYR (RM)" },
-  { value: "SGD", label: "SGD (S$)" },
-  { value: "BDT", label: "BDT (৳)" },
-  { value: "LKR", label: "LKR (Rs)" },
-  { value: "NPR", label: "NPR (Rs)" },
-  { value: "BRL", label: "BRL (R$)" },
-  { value: "MXN", label: "MXN ($)" },
-  { value: "UAH", label: "UAH (₴)" },
-  { value: "PLN", label: "PLN (zł)" },
-  { value: "RON", label: "RON" },
-  { value: "GEL", label: "GEL (₾)" },
-  { value: "KZT", label: "KZT (₸)" },
-];
+
+
 
 function normalizeSettings(input?: Partial<Settings> | null): Settings {
   return {
@@ -3582,7 +3635,7 @@ export default function Home() {
   return (
     <main className="app-shell app-shell-with-community">
       <section className="phone">
-        <Localize language={settings.language}>
+        <LanguageRuntime language={settings.language} />
 
         {!loaded && (
           <div className="screen loading-screen">
@@ -3710,7 +3763,6 @@ export default function Home() {
         {helpOpen && <HelpGuideModal onClose={() => setHelpOpen(false)} />}
 
         {toast && <AppToastView toast={toast} />}
-        </Localize>
       </section>
 
       {loaded && onboardingCompleted && <CommunityLiveSidebar />}
