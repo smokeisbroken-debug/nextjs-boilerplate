@@ -1374,7 +1374,40 @@ const ruText: Record<string, string> = {
   "UAH (₴)": "UAH (₴)",
   "PLN (zł)": "PLN (zł)",
   "GEL (₾)": "GEL (₾)",
-  "KZT (₸)": "KZT (₸)"
+  "KZT (₸)": "KZT (₸)",
+  "days": "дней",
+  "day": "день",
+  "done": "выполнено",
+  "unlocked": "открыто",
+  "this week": "на этой неделе",
+  "today": "сегодня",
+  "latest": "последних",
+  "All": "Все",
+  "survival": "выживание",
+  "Leak:": "Утечка:",
+  "Ready for Telegram / X": "Готово для Telegram / X",
+  "X ready": "Готово для X",
+  "14/45 unlocked": "14/45 открыто",
+  "Spending Volume": "Объём расходов",
+  "Spending Volume — Последние 7 дней": "Объём расходов — последние 7 дней",
+  "Last 7 дней": "Последние 7 дней",
+  "Latest Expenses": "Последние расходы",
+  "Challenge": "Челлендж",
+  "Could go alone": "Можно было без этого",
+  "crypto charts": "крипто-графики",
+  "crypto-chartы": "крипто-графики",
+  "You watch crypto-chartы every день.": "Ты каждый день смотришь крипто-графики.",
+  "Trust": "Доверие",
+  "streak": "серия",
+  "badges": "бейджей",
+  "badge": "бейдж",
+  "challenges": "челленджей",
+  "challenge": "челлендж",
+  "How does this ranking work?": "Как работает этот рейтинг?",
+  "Hours lost:": "Потеряно часов:",
+  "#1 Daily": "#1 за день",
+  "Cut Custom": "Сократить другое",
+  "Cut custom": "Сократить другое",
 };
 
 function applyRussianDynamicRules(value: string) {
@@ -1430,6 +1463,43 @@ function applyRussianDynamicRules(value: string) {
     .replace(/Reduce Курение/g, "Сократить курение")
     .replace(/Cut Кофе/g, "Сократить кофе")
     .replace(/Твой score/g, "Твой счёт");
+    // V51_RU_LEFTOVERS_RULES
+
+    .replace(/(\d+)\s+days\b/g, "$1 дня")
+    .replace(/(\d+)\/(\d+)\s+done\b/g, "$1/$2 выполнено")
+    .replace(/(\d+)\/(\d+)\s+unlocked\b/g, "$1/$2 открыто")
+    .replace(/(\d+)\s+latest\b/g, "$1 последних")
+    .replace(/#(\d+)\s+Daily\b/g, "#$1 за день")
+    .replace(/Hours lost:\s*([\d.]+)h/g, "Потеряно часов: $1ч")
+    .replace(/Leak:\s*([A-Za-zА-Яа-яёЁ _-]+)/g, "Утечка: $1")
+    .replace(/C\$([\d,.]+)\s+this week\b/g, "C$$1 на этой неделе")
+    .replace(/(\$[\d,.]+)\s+this week\b/g, "$1 на этой неделе")
+    .replace(/C\$([\d,.]+)\/year\b/g, "C$$1/год")
+    .replace(/C\$([\d,.]+)\/год\b/g, "C$$1/год")
+    .replace(/C\$([\d,.]+)\/month\b/g, "C$$1/мес")
+    .replace(/C\$([\d,.]+)\/мес\b/g, "C$$1/мес")
+    .replace(/\bSpending Volume — Последние 7 дней\b/g, "Объём расходов — последние 7 дней")
+    .replace(/\bSpending Volume — Last 7 days\b/g, "Объём расходов — последние 7 дней")
+    .replace(/\bLast 7 days\b/g, "Последние 7 дней")
+    .replace(/\b4 latest\b/g, "4 последних")
+    .replace(/\bcrypto-chartы\b/g, "крипто-графики")
+    .replace(/Ты каждый день смотришь crypto-chartы\./g, "Ты каждый день смотришь крипто-графики.")
+    .replace(/You watch crypto charts every день\./g, "Ты каждый день смотришь крипто-графики.")
+    .replace(/Но смотришь ли ты свой \$BROKE Chart\?/g, "Но следишь ли ты за своим $BROKE Chart?")
+    .replace(/Trust L(\d+)\s*·\s*(\d+)d streak\s*·\s*(\d+) badges/g, "Доверие L$1 · серия $2д · $3 бейджей")
+    .replace(/L(\d+)\s*·\s*(\d+)d streak\s*·\s*(\d+) badges\s*·\s*(\d+) challenges/g, "L$1 · серия $2д · $3 бейджей · $4 челленджей")
+    .replace(/(\d+)d streak/g, "серия $1д")
+    .replace(/(\d+) badges/g, "$1 бейджей")
+    .replace(/(\d+) challenges/g, "$1 челленджей")
+    .replace(/\bAll\b/g, "Все")
+    .replace(/\bsurvival\b/g, "выживание")
+    .replace(/\bChallenge\b/g, "Челлендж")
+    .replace(/\bCould go alone\b/g, "Можно было без этого")
+    .replace(/\bCut Custom\b/g, "Сократить другое")
+    .replace(/\bCut custom\b/g, "Сократить другое")
+    .replace(/\bidentity app\./g, "приложение против утечек кошелька.")
+    .replace(/Анти-думспендинг identity app\./g, "Приложение против утечек кошелька.")
+
 
   return next;
 }
