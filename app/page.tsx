@@ -1950,22 +1950,22 @@ function applyRuntimeLanguageRules(value: string, language: Language) {
     .replace(/You watch crypto charts every (day|день)\\./g, "Ты каждый день смотришь crypto-чарты.")
     .replace(/But do you watch your own \\$BROKE (Chart|График)\\?/g, "Но смотришь ли ты свой $BROKE Chart?")
     .replace(/You spent (\\$[\\d,.]+) on custom (today|сегодня)\\./g, "Сегодня ты потратил $1 на другое.")
-    .replace(/That becomes (\\$[\\d,.]+)\\/мес if this rhythm repeats\\./g, "Если так продолжится, это станет $1/мес.")
-    .replace(/That becomes (\\$[\\d,.]+)\\/mo if this rhythm repeats\\./g, "Если так продолжится, это станет $1/мес.")
-    .replace(/(\\$[\\d,.]+) was marked as (Не нужно|Not needed) \\/ (Возможно|Maybe) in the last 7 (days|дней)\\./g, "$1 отмечено как Не нужно / Возможно за последние 7 дней.")
-    .replace(/At this pace, leaks could reach (\\$[\\d,.]+) за месяц\\./g, "В таком темпе утечки могут достичь $1 в месяц.")
-    .replace(/At this pace, leaks could reach (\\$[\\d,.]+) per month\\./g, "В таком темпе утечки могут достичь $1 в месяц.")
-    .replace(/Wallet HP is (\\d+\\/100) and (реальный баланс|real balance) is still positive\\./g, "Wallet HP $1, и реальный баланс всё ещё положительный.")
-    .replace(/(\\d+) дня без takeout/g, "$1 дня без еды на заказ")
-    .replace(/Держи расходы на takeout ниже лимита (\\d+) дня\\./g, "Держи расходы на еду на заказ ниже лимита $1 дня.")
+    .replace(/That becomes (\$[\d,.]+)\/мес if this rhythm repeats\./g, "Если так продолжится, это станет $1/мес.")
+    .replace(/That becomes (\$[\d,.]+)\/mo if this rhythm repeats\./g, "Если так продолжится, это станет $1/мес.")
+    .replace(/(\$[\d,.]+) was marked as (Не нужно|Not needed) \/ (Возможно|Maybe) in the last 7 (days|дней)\./g, "$1 отмечено как Не нужно / Возможно за последние 7 дней.")
+    .replace(/At this pace, leaks could reach (\$[\d,.]+) за месяц\./g, "В таком темпе утечки могут достичь $1 в месяц.")
+    .replace(/At this pace, leaks could reach (\$[\d,.]+) per month\./g, "В таком темпе утечки могут достичь $1 в месяц.")
+    .replace(/Wallet HP is (\d+\/100) and (реальный баланс|real balance) is still positive\./g, "Wallet HP $1, и реальный баланс всё ещё положительный.")
+    .replace(/(\d+) дня без takeout/g, "$1 дня без еды на заказ")
+    .replace(/Держи расходы на takeout ниже лимита (\d+) дня\./g, "Держи расходы на еду на заказ ниже лимита $1 дня.")
     .replace(/Cut Такси/g, "Сократить такси")
     .replace(/Reduce Курение/g, "Сократить курение")
     .replace(/Cut Кофе/g, "Сократить кофе")
-    .replace(/(\\d+) tracked · (\\d+)% reduction/g, "$1 запись · сокращение $2%")
+    .replace(/(\d+) tracked · (\d+)% reduction/g, "$1 запись · сокращение $2%")
     .replace(/Total Potential Savings/g, "Общая потенциальная экономия")
     .replace(/Твой score/g, "Твой счёт")
-    .replace(/\\bcustom\\b/g, "другое")
-    .replace(/\\btakeout\\b/g, "еда на заказ");
+    .replace(/\bcustom\b/g, "другое")
+    .replace(/\btakeout\b/g, "еда на заказ");
 
   return next;
 }
