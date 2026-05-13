@@ -1533,7 +1533,32 @@ const ruText: Record<string, string> = {
   "Only public progress. No income or balance exposed.": "Только публичный прогресс. Доход и баланс не раскрываются.",
   "Test how much you could save by reducing leaks.": "Проверь, сколько можно сохранить, если сократить утечки.",
   "Adjust income without exposing private data publicly.": "Настрой доход без публичного раскрытия личных данных.",
-  "Rent, food, transport, internet, and basics.": "Аренда, еда, транспорт, интернет и базовые расходы.",};
+  "Rent, food, transport, internet, and basics.": "Аренда, еда, транспорт, интернет и базовые расходы.",
+  "Daily / Weekly Reports": "Дневные / недельные отчёты",
+  "Generate quick shareable wallet reports.": "Создавай быстрые отчёты кошелька для шаринга.",
+  "Reports": "Отчёты",
+  "Daily Wallet Report": "Дневной отчёт кошелька",
+  "Weekly Wallet Report": "Недельный отчёт кошелька",
+  "Clean day": "Чистый день",
+  "Small leak": "Маленькая утечка",
+  "Leak warning": "Предупреждение об утечке",
+  "Score": "Счёт",
+  "Share daily report": "Поделиться дневным отчётом",
+  "Share weekly report": "Поделиться недельным отчётом",
+  "Privacy rule:": "Правило приватности:",
+  "Reports never expose income or real balance.": "Отчёты никогда не показывают доход или реальный баланс.",
+  "Report copied. Paste it in Telegram, X, or anywhere you want.": "Отчёт скопирован. Вставь его в Telegram, X или куда нужно.",
+  "Copy report": "Скопируй отчёт",
+  "$BROKE Daily Wallet Report": "$BROKE Дневной отчёт кошелька",
+  "$BROKE Weekly Wallet Report": "$BROKE Недельный отчёт кошелька",
+  "Spent today": "Потрачено сегодня",
+  "Leaks today": "Утечки сегодня",
+  "Daily score": "Дневной счёт",
+  "Weekly leaks": "Недельные утечки",
+  "Biggest leak": "Главная утечка",
+  "Life hours lost": "Потерянные часы жизни",
+  "No clear category movement yet today.": "Сегодня пока нет явного движения по категориям.",
+  "No major weekly leak is visible yet.": "Крупной недельной утечки пока не видно.",};
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
 function applyRussianDynamicRules(value: string) {
@@ -1630,7 +1655,19 @@ function applyRussianDynamicRules(value: string) {
     .replace(/(\d+) records · (\d+)% leak pressure/g, "$1 записей · $2% давление утечек")
     .replace(/(\d+)% pressure/g, "$1% давление")
     .replace(/^Avoid ([A-Za-zА-Яа-яёЁ _/-]+) today$/g, "Избегай $1 сегодня")
-    .replace(/^Control ([A-Za-zА-Яа-яёЁ _/-]+)$/g, "Контролируй $1");
+    .replace(/^Control ([A-Za-zА-Яа-яёЁ _/-]+)$/g, "Контролируй $1")
+    .replace(/Status: ([A-Za-zА-Яа-яёЁ _/-]+)/g, "Статус: $1")
+    .replace(/Wallet HP: (\d+\/100)/g, "Wallet HP: $1")
+    .replace(/Spent today: (\$[\d,.]+|C\$[\d,.]+)/g, "Потрачено сегодня: $1")
+    .replace(/Leaks today: (\$[\d,.]+|C\$[\d,.]+)/g, "Утечки сегодня: $1")
+    .replace(/Top category: ([A-Za-zА-Яа-яёЁ _/-]+)/g, "Главная категория: $1")
+    .replace(/Daily score: (\d+\/100)/g, "Дневной счёт: $1")
+    .replace(/Survival Score: (\d+\/100)/g, "Счёт выживания: $1")
+    .replace(/Weekly leaks: (\$[\d,.]+|C\$[\d,.]+)/g, "Недельные утечки: $1")
+    .replace(/Biggest leak: ([A-Za-zА-Яа-яёЁ _/()$,.+-]+)/g, "Главная утечка: $1")
+    .replace(/Life hours lost: ([\d.]+h)/g, "Потерянные часы жизни: $1")
+    .replace(/([A-Za-zА-Яа-яёЁ _/-]+) is the main movement today\./g, "$1 — главное движение сегодня.")
+    .replace(/([A-Za-zА-Яа-яёЁ _/-]+) is the biggest category this week\./g, "$1 — главная категория этой недели.");
 
   next = next
     .replace(/C\$([\d,.]+)\s+this week\b/g, (_match, amount) => `C$${amount} на этой неделе`)
@@ -4654,6 +4691,7 @@ function Header({
 
 // V55: Clean UI / Less Clutter uses collapsible detail sections.
 // V55.1: Polish adds Next Best Action and clearer collapsible section descriptions.
+// V56: Daily / Weekly Reports adds shareable report cards.
 function DashboardScreen({
   settings,
   summary,
@@ -4855,6 +4893,22 @@ function DashboardScreen({
           <b>{identityStats.weeklySurvivalScore}/100</b>
         </summary>
         <V2IdentityPanel settings={settings} identityStats={identityStats} />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <div>
+            <span>Daily / Weekly Reports</span>
+            <small>Generate quick shareable wallet reports.</small>
+          </div>
+          <b>Reports</b>
+        </summary>
+        <ReportsPanel
+          settings={settings}
+          summary={summary}
+          expenses={allExpenses}
+          identityStats={identityStats}
+        />
       </details>
 
       <details className="clean-details">
@@ -5299,6 +5353,211 @@ function NextBestActionCard({
       <button type="button" onClick={onOpenAdd}>
         {action.button}
       </button>
+    </section>
+  );
+}
+
+function ReportsPanel({
+  settings,
+  summary,
+  expenses,
+  identityStats,
+}: {
+  settings: Settings;
+  summary: {
+    totalIncome: number;
+    fixedCosts: number;
+    spentThisMonth: number;
+    totalLeaks: number;
+    realBalance: number;
+    walletHp: number;
+    todaySpent: number;
+    streak: Streak;
+  };
+  expenses: Expense[];
+  identityStats: V2IdentityStats;
+}) {
+  const todayExpenses = useMemo(() => getTodayExpenses(expenses), [expenses]);
+  const weekExpenses = useMemo(() => getLastSevenDaysExpenses(expenses), [expenses]);
+
+  const todayLeakAmount = sum(
+    todayExpenses
+      .filter((expense) => expense.needType !== "Needed")
+      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
+  );
+
+  const weeklyLeakAmount = sum(
+    weekExpenses
+      .filter((expense) => expense.needType !== "Needed")
+      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
+  );
+
+  const todayTopCategory = getCategorySummaries(todayExpenses)
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount)[0];
+
+  const weekTopCategory = getCategorySummaries(weekExpenses)
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount)[0];
+
+  const todayStatus =
+    todayLeakAmount <= 0
+      ? "Clean day"
+      : todayLeakAmount <= Math.max(summary.totalIncome - summary.fixedCosts, 1) * 0.02
+        ? "Small leak"
+        : "Leak warning";
+
+  const weeklyStatus = identityStats.status;
+  const dailyScore = clamp(100 - Math.round((todayLeakAmount / Math.max(summary.totalIncome - summary.fixedCosts, 1)) * 100), 0, 100);
+
+  const dailyReportText = [
+    "$BROKE Daily Wallet Report",
+    "",
+    `Status: ${todayStatus}`,
+    `Wallet HP: ${summary.walletHp}/100`,
+    `Spent today: ${money(summary.todaySpent, settings.currency)}`,
+    `Leaks today: ${money(todayLeakAmount, settings.currency)}`,
+    `Top category: ${todayTopCategory ? categoryLabel(todayTopCategory.category) : "none"}`,
+    `Daily score: ${dailyScore}/100`,
+    "",
+    "Find the leak before it becomes your lifestyle.",
+    "Smoke is broke.",
+  ].join("\n");
+
+  const weeklyReportText = [
+    "$BROKE Weekly Wallet Report",
+    "",
+    `Status: ${weeklyStatus}`,
+    `Survival Score: ${identityStats.weeklySurvivalScore}/100`,
+    `Wallet HP: ${summary.walletHp}/100`,
+    `Weekly leaks: ${money(weeklyLeakAmount, settings.currency)}`,
+    `Biggest leak: ${
+      identityStats.biggestLeakAmount > 0
+        ? `${categoryLabel(identityStats.biggestLeakCategory)} (${money(identityStats.biggestLeakAmount, settings.currency)})`
+        : "none"
+    }`,
+    `Life hours lost: ${identityStats.lifeHoursLost}h`,
+    "",
+    "Find the leak before it becomes your lifestyle.",
+    "Smoke is broke.",
+  ].join("\n");
+
+  async function shareReport(text: string, title: string) {
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title,
+          text,
+          url: PROJECT_TG_URL,
+        });
+        return;
+      }
+    } catch {
+      // Native share can be cancelled or blocked in Telegram WebView.
+    }
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        window.alert("Report copied. Paste it in Telegram, X, or anywhere you want.");
+        return;
+      }
+    } catch {
+      // Clipboard can be blocked in Telegram WebView.
+    }
+
+    window.prompt("Copy report", text);
+  }
+
+  return (
+    <section className="reports-panel">
+      <div className="reports-grid">
+        <article className={`report-card ${todayLeakAmount > 0 ? "warning" : "clean"}`}>
+          <div className="report-head">
+            <img src={todayTopCategory ? getCategoryIcon(todayTopCategory.category) : A.walletMascot} alt="" />
+            <div>
+              <span>Daily Wallet Report</span>
+              <strong>{todayStatus}</strong>
+              <small>Today</small>
+            </div>
+          </div>
+
+          <div className="report-metrics">
+            <div>
+              <span>Spent</span>
+              <strong>{money(summary.todaySpent, settings.currency)}</strong>
+            </div>
+            <div>
+              <span>Leaks</span>
+              <strong>{money(todayLeakAmount, settings.currency)}</strong>
+            </div>
+            <div>
+              <span>Score</span>
+              <strong>{dailyScore}/100</strong>
+            </div>
+          </div>
+
+          <p>
+            {todayTopCategory
+              ? `${categoryLabel(todayTopCategory.category)} is the main movement today.`
+              : "No clear category movement yet today."}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => shareReport(dailyReportText, "$BROKE Daily Wallet Report")}
+          >
+            Share daily report
+          </button>
+        </article>
+
+        <article className={`report-card ${identityStats.weeklySurvivalScore >= 75 ? "clean" : "warning"}`}>
+          <div className="report-head">
+            <img src={identityStats.biggestLeakAmount > 0 ? getCategoryIcon(identityStats.biggestLeakCategory) : A.challengeTrophy} alt="" />
+            <div>
+              <span>Weekly Wallet Report</span>
+              <strong>{weeklyStatus}</strong>
+              <small>Last 7 days</small>
+            </div>
+          </div>
+
+          <div className="report-metrics">
+            <div>
+              <span>Survival</span>
+              <strong>{identityStats.weeklySurvivalScore}/100</strong>
+            </div>
+            <div>
+              <span>Leaks</span>
+              <strong>{money(weeklyLeakAmount, settings.currency)}</strong>
+            </div>
+            <div>
+              <span>Hours lost</span>
+              <strong>{identityStats.lifeHoursLost}h</strong>
+            </div>
+          </div>
+
+          <p>
+            {weekTopCategory
+              ? `${categoryLabel(weekTopCategory.category)} is the biggest category this week.`
+              : "No major weekly leak is visible yet."}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => shareReport(weeklyReportText, "$BROKE Weekly Wallet Report")}
+          >
+            Share weekly report
+          </button>
+        </article>
+      </div>
+
+      <div className="reports-note">
+        <strong>Privacy rule:</strong>
+        <span>Reports never expose income or real balance.</span>
+      </div>
     </section>
   );
 }
