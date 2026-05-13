@@ -9643,3 +9643,133 @@ html[lang="ru"] .share-card strong {
   font-size: 11px;
   line-height: 1.3;
 }
+
+
+/* ===== V56.1 REPORT IMAGE CARDS ===== */
+.report-public-share-card {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  overflow: hidden;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 82% 0%, rgba(183, 255, 25, 0.15), transparent 36%),
+    linear-gradient(180deg, rgba(8, 18, 8, 0.98), rgba(2, 4, 2, 0.98));
+  border: 1px solid rgba(183, 255, 25, 0.2);
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 255, 25, 0.04),
+    0 18px 44px rgba(0, 0, 0, 0.28);
+}
+
+.report-public-share-card.weekly {
+  background:
+    radial-gradient(circle at 82% 0%, rgba(255, 177, 43, 0.14), transparent 36%),
+    linear-gradient(180deg, rgba(18, 14, 8, 0.98), rgba(4, 3, 2, 0.98));
+  border-color: rgba(255, 177, 43, 0.22);
+}
+
+.report-public-share-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.report-public-share-top span {
+  display: block;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.report-public-share-card.weekly .report-public-share-top span {
+  color: var(--orange);
+}
+
+.report-public-share-top strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.06;
+  font-weight: 950;
+  letter-spacing: -0.45px;
+}
+
+.report-public-share-top small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.report-public-share-top img {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 14px rgba(183, 255, 25, 0.18));
+}
+
+.report-public-share-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.report-public-share-grid div {
+  min-height: 62px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.report-public-share-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.1;
+}
+
+.report-public-share-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.04;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.report-public-share-footer {
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.075);
+  text-align: center;
+}
+
+.report-public-share-footer strong {
+  display: block;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 900;
+}
+
+.report-public-share-footer span {
+  display: block;
+  margin-top: 5px;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.report-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
