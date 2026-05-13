@@ -8443,33 +8443,10 @@ html[dir="rtl"] .header-side.right {
 }
 
 
-/* ===== V47 DEEP I18N REFACTOR ===== */
-html[lang="ru"] .stat-card strong,
-html[lang="uk"] .stat-card strong,
-html[lang="de"] .stat-card strong,
-html[lang="pl"] .stat-card strong,
-html[lang="ro"] .stat-card strong {
-  letter-spacing: -0.7px;
-}
-
-html[lang="ru"] .share-preview-social strong,
-html[lang="uk"] .share-preview-social strong,
-html[lang="de"] .share-preview-social strong,
-html[lang="pl"] .share-preview-social strong,
-html[lang="ro"] .share-preview-social strong {
-  font-size: clamp(22px, 6.2vw, 31px);
-}
-
-html[lang="ar"] .help-modal,
-html[lang="ur"] .help-modal {
+/* ===== V47 PROPER REACT I18N LAYER ===== */
+/* React-level localization replaces the old DOM MutationObserver translator. */
+html[dir="rtl"] .help-modal,
+html[dir="rtl"] .screen,
+html[dir="rtl"] .phone {
   text-align: right;
-}
-
-html[lang="ar"] .bottom-nav span,
-html[lang="ur"] .bottom-nav span {
-  font-size: 11px;
-}
-
-.profile-select option {
-  color: #111;
 }
