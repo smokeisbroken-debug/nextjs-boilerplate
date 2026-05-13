@@ -1481,7 +1481,20 @@ const ruText: Record<string, string> = {
   "Days": "Дни",
   "Result": "Результат",
   "Survived": "Выжил",
-};
+
+  "Chart Pulse": "Пульс графика",
+  "tracked": "записано",
+  "No damage yet": "Пока без урона",
+  "records": "записей",
+  "leak pressure": "давление утечек",
+  "Add expenses to make the chart alive.": "Добавь расходы, чтобы график ожил.",
+  "Leaks": "Утечки",
+  "pressure": "давление",
+  "Top category": "Главная категория",
+  "Avg/day": "Среднее/день",
+  "daily pace": "дневной темп",
+  "No chart data yet": "Пока нет данных для графика",
+  "Add one expense and this screen turns into your wallet movement chart.": "Добавь один расход, и этот экран превратится в график движения кошелька.",};
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
 function applyRussianDynamicRules(value: string) {
@@ -1573,7 +1586,10 @@ function applyRussianDynamicRules(value: string) {
     .replace(/Saved: (\$[\d,.]+|C\$[\d,.]+)/g, "Сохранено: $1")
     .replace(/Over limit: (\$[\d,.]+|C\$[\d,.]+)/g, "Сверх лимита: $1")
     .replace(/Find the leak before it becomes your lifestyle\./g, "Найди утечку, пока она не стала образом жизни.")
-    .replace(/Smoke is broke\./g, "Smoke is broke.");
+    .replace(/Smoke is broke\./g, "Smoke is broke.")
+    .replace(/(\$[\d,.]+|C\$[\d,.]+) tracked/g, "$1 записано")
+    .replace(/(\d+) records · (\d+)% leak pressure/g, "$1 записей · $2% давление утечек")
+    .replace(/(\d+)% pressure/g, "$1% давление");
 
   next = next
     .replace(/C\$([\d,.]+)\s+this week\b/g, (_match, amount) => `C$${amount} на этой неделе`)
@@ -6749,6 +6765,7 @@ function AddExpenseScreen({
   );
 }
 
+// V54.6: Chart tab visual upgrade with pulse, stats, and empty state.
 function ChartScreen({
   settings,
   expenses,
@@ -6768,12 +6785,39 @@ function ChartScreen({
     return buildChartData(range, expenses, settings);
   }, [range, expenses, settings]);
 
+  const rangeExpenses = useMemo(() => {
+    if (range === "day") return getTodayExpenses(expenses);
+    if (range === "week") return getLastSevenDaysExpenses(expenses);
+
+    return getCurrentMonthExpenses(expenses);
+  }, [range, expenses]);
+
   const maxSpent = Math.max(...chartData.map((point) => point.spent), 1);
   const selectedPoint = chartData[chartData.length - 1];
 
   const periodOpen = chartData[0]?.open ?? 0;
   const periodSpent = sum(chartData.map((point) => point.spent));
   const periodClose = periodOpen - periodSpent;
+
+  const rangeLeaks = sum(
+    rangeExpenses
+      .filter((expense) => expense.needType !== "Needed")
+      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
+  );
+
+  const topRangeCategory = getCategorySummaries(rangeExpenses)
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount)[0];
+
+  const averageDailySpend =
+    range === "day"
+      ? periodSpent
+      : range === "week"
+        ? periodSpent / 7
+        : periodSpent / getCurrentDayOfMonth();
+
+  const leakPressure = periodSpent > 0 ? Math.round((rangeLeaks / periodSpent) * 100) : 0;
+  const hasRangeData = rangeExpenses.length > 0;
 
   const title =
     range === "day"
@@ -6819,6 +6863,65 @@ function ChartScreen({
           Month
         </button>
       </div>
+
+      <section className="chart-pulse-card">
+        <div>
+          <span>Chart Pulse</span>
+          <strong>
+            {periodSpent > 0
+              ? `${money(periodSpent, settings.currency)} tracked`
+              : "No damage yet"}
+          </strong>
+          <small>
+            {hasRangeData
+              ? `${rangeExpenses.length} records · ${leakPressure}% leak pressure`
+              : "Add expenses to make the chart alive."}
+          </small>
+        </div>
+        <img src={A.chartFrog} alt="" />
+      </section>
+
+      <section className="chart-stats-grid">
+        <div>
+          <span>Damage</span>
+          <strong>
+            {periodSpent > 0 ? `-${money(periodSpent, settings.currency)}` : money(0, settings.currency)}
+          </strong>
+          <small>{title}</small>
+        </div>
+
+        <div>
+          <span>Leaks</span>
+          <strong>{money(rangeLeaks, settings.currency)}</strong>
+          <small>{leakPressure}% pressure</small>
+        </div>
+
+        <div>
+          <span>Top category</span>
+          <strong>{topRangeCategory ? categoryLabel(topRangeCategory.category) : "None"}</strong>
+          <small>
+            {topRangeCategory
+              ? money(topRangeCategory.amount, settings.currency)
+              : "No records"}
+          </small>
+        </div>
+
+        <div>
+          <span>Avg/day</span>
+          <strong>{money(averageDailySpend, settings.currency)}</strong>
+          <small>{range === "day" ? "today" : "daily pace"}</small>
+        </div>
+      </section>
+
+      {!hasRangeData && (
+        <section className="chart-empty-state">
+          <img src={A.chartFrog} alt="" />
+          <div>
+            <strong>No chart data yet</strong>
+            <p>Add one expense and this screen turns into your wallet movement chart.</p>
+          </div>
+        </section>
+      )}
 
       <section className={`big-chart ${range}`}>
         <div className="chart-lines">
