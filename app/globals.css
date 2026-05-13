@@ -8412,3 +8412,21 @@ html[lang="ru"] .help-modal-list span {
 html[lang="ru"] .profile-field:first-of-type .profile-select {
   border-color: rgba(183, 255, 25, 0.28) !important;
 }
+
+
+/* ===== V51 RU LEFTOVERS POLISH ===== */
+html[lang="ru"] .share-card strong,
+html[lang="ru"] .share-card span,
+html[lang="ru"] .leaderboard-card span,
+html[lang="ru"] .scenario-card h3,
+html[lang="ru"] .scenario-card span,
+html[lang="ru"] .chart-card span,
+html[lang="ru"] .wallet-insight-card span,
+html[lang="ru"] .wallet-insight-card p {
+  overflow-wrap: anywhere;
+}
+
+html[lang="ru"] .scenario-card h3,
+html[lang="ru"] .share-card strong {
+  line-height: 1.08;
+}
