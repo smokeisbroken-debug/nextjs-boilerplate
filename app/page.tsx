@@ -1494,7 +1494,25 @@ const ruText: Record<string, string> = {
   "Avg/day": "Среднее/день",
   "daily pace": "дневной темп",
   "No chart data yet": "Пока нет данных для графика",
-  "Add one expense and this screen turns into your wallet movement chart.": "Добавь один расход, и этот экран превратится в график движения кошелька.",};
+  "Add one expense and this screen turns into your wallet movement chart.": "Добавь один расход, и этот экран превратится в график движения кошелька.",
+  "Wallet Survival Report": "Отчёт выживания кошелька",
+  "Wallet Insights": "Инсайты кошелька",
+  "View": "Смотреть",
+  "Badges": "Бейджи",
+  "Public card": "Публичная карточка",
+  "Connection": "Подключение",
+  "Telegram": "Telegram",
+  "Synced": "Синхронизировано",
+  "Web": "Веб",
+  "Challenges": "Челленджи",
+  "Active": "Активно",
+  "Choose": "Выбрать",
+  "Optional": "Опционально",
+  "What If Scenarios": "Сценарии What If",
+  "ideas": "идей",
+  "Income Setup": "Настройка дохода",
+  "month": "месяц",
+  "Clean UI": "Чистый интерфейс",};
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
 function applyRussianDynamicRules(value: string) {
@@ -4611,6 +4629,7 @@ function Header({
   );
 }
 
+// V55: Clean UI / Less Clutter uses collapsible detail sections.
 function DashboardScreen({
   settings,
   summary,
@@ -4742,7 +4761,6 @@ function DashboardScreen({
       <LifeProfileSummaryCard settings={settings} />
 
       <StreakCard streak={summary.streak} />
-      <BadgeMiniStrip badges={badges} />
 
       <section className="hp-card">
         <div className="section-title">
@@ -4761,10 +4779,6 @@ function DashboardScreen({
         <p>Hold the line, fix the leaks.</p>
       </section>
 
-      <WalletInsightsPanel insights={walletInsights} />
-
-      <V2IdentityPanel settings={settings} identityStats={identityStats} />
-
       <BiggestLeakChallengePanel
         settings={settings}
         identityStats={identityStats}
@@ -4776,16 +4790,6 @@ function DashboardScreen({
         onOpenAdd={onOpenAdd}
       />
 
-      <DailyRoutinePanel
-        settings={settings}
-        summary={summary}
-        expenses={routineExpenses}
-        cloudReady={cloudAuthReady}
-        onRoutineComplete={onRoutineComplete}
-      />
-
-      <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
-
       {expenses.length === 0 && (
         <FirstLeakOnboardingCard
           settings={settings}
@@ -4794,44 +4798,108 @@ function DashboardScreen({
         />
       )}
 
-      <ShareResultCard
-        settings={settings}
-        walletHp={summary.walletHp}
-        totalLeaks={summary.totalLeaks}
-        realBalance={summary.realBalance}
-        potentialYearlySavings={summary.totalLeaks * 12}
-        leaderboard={leaderboard}
-        identityStats={identityStats}
-        shareInitData={telegram.isTelegram ? telegram.initData : ""}
-      />
+      <details className="clean-details">
+        <summary>
+          <span>Daily Routine</span>
+          <b>7 real tasks</b>
+        </summary>
+        <DailyRoutinePanel
+          settings={settings}
+          summary={summary}
+          expenses={routineExpenses}
+          cloudReady={cloudAuthReady}
+          onRoutineComplete={onRoutineComplete}
+        />
+      </details>
 
-      <section className="chart-preview">
-        <div className="section-title">
+      <details className="clean-details">
+        <summary>
+          <span>Wallet Survival Report</span>
+          <b>{identityStats.weeklySurvivalScore}/100</b>
+        </summary>
+        <V2IdentityPanel settings={settings} identityStats={identityStats} />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <span>Wallet Insights</span>
+          <b>View</b>
+        </summary>
+        <WalletInsightsPanel insights={walletInsights} />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <span>Badges</span>
+          <b>{badges.filter((badge) => badge.earned).length}/{badges.length}</b>
+        </summary>
+        <BadgeMiniStrip badges={badges} />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <span>Share Result</span>
+          <b>Public card</b>
+        </summary>
+        <ShareResultCard
+          settings={settings}
+          walletHp={summary.walletHp}
+          totalLeaks={summary.totalLeaks}
+          realBalance={summary.realBalance}
+          potentialYearlySavings={summary.totalLeaks * 12}
+          leaderboard={leaderboard}
+          identityStats={identityStats}
+          shareInitData={telegram.isTelegram ? telegram.initData : ""}
+        />
+      </details>
+
+      <details className="clean-details">
+        <summary>
           <span>$BROKE Chart</span>
-          <small>7D Preview</small>
-        </div>
-
-        <MiniChart chartDays={chartDays} />
-
-        <div className="damage-card">
-          <div>
-            <small>Today's Damage</small>
-            <strong>
-              {summary.todaySpent > 0
-                ? `-${money(summary.todaySpent, settings.currency)}`
-                : money(0, settings.currency)}
-            </strong>
-            <span>tracked today</span>
+          <b>7D Preview</b>
+        </summary>
+        <section className="chart-preview">
+          <div className="section-title">
+            <span>$BROKE Chart</span>
+            <small>7D Preview</small>
           </div>
-          <img src={A.chartFrog} alt="Chart frog" />
-        </div>
-      </section>
 
-      <RecentExpenses
-        settings={settings}
-        expenses={expenses}
-        onDeleteExpense={onDeleteExpense}
-      />
+          <MiniChart chartDays={chartDays} />
+
+          <div className="damage-card">
+            <div>
+              <small>Today's Damage</small>
+              <strong>
+                {summary.todaySpent > 0
+                  ? `-${money(summary.todaySpent, settings.currency)}`
+                  : money(0, settings.currency)}
+              </strong>
+              <span>tracked today</span>
+            </div>
+            <img src={A.chartFrog} alt="Chart frog" />
+          </div>
+        </section>
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <span>Recent Expenses</span>
+          <b>{expenses.length} total</b>
+        </summary>
+        <RecentExpenses
+          settings={settings}
+          expenses={expenses}
+          onDeleteExpense={onDeleteExpense}
+        />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <span>Connection</span>
+          <b>{telegram.isTelegram ? "Telegram" : webAuth.authenticated ? "Synced" : "Web"}</b>
+        </summary>
+        <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
+      </details>
     </div>
   );
 }
@@ -7343,22 +7411,39 @@ function WhatIfScreen({
         </small>
       </section>
 
-      <ChallengesPanel
-        templates={challengeTemplates.length ? challengeTemplates : defaultChallengeTemplates}
-        activeChallenge={activeChallenge}
-        progress={challengeProgress}
-        loading={challengeLoading}
-        currency={settings.currency}
-        onStartChallenge={onStartChallenge}
-      />
+      <details className="clean-details" open={Boolean(activeChallenge || challengeProgress)}>
+        <summary>
+          <span>Challenges</span>
+          <b>{activeChallenge ? "Active" : "Choose"}</b>
+        </summary>
+        <ChallengesPanel
+          templates={challengeTemplates.length ? challengeTemplates : defaultChallengeTemplates}
+          activeChallenge={activeChallenge}
+          progress={challengeProgress}
+          loading={challengeLoading}
+          currency={settings.currency}
+          onStartChallenge={onStartChallenge}
+        />
+      </details>
 
-      <LeaderboardPanel
-        leaderboard={leaderboard}
-        loading={leaderboardLoading}
-        onToggleLeaderboard={onToggleLeaderboard}
-      />
+      <details className="clean-details">
+        <summary>
+          <span>Public Leaderboard</span>
+          <b>Optional</b>
+        </summary>
+        <LeaderboardPanel
+          leaderboard={leaderboard}
+          loading={leaderboardLoading}
+          onToggleLeaderboard={onToggleLeaderboard}
+        />
+      </details>
 
-      <section className="whatif-list">
+      <details className="clean-details" open>
+        <summary>
+          <span>What If Scenarios</span>
+          <b>{cards.length} ideas</b>
+        </summary>
+        <section className="whatif-list">
         {cards.map((item) => {
           const reduction = reductions[item.category] ?? defaultReduction(item.category);
           const monthlySave = item.amount * reduction;
@@ -7408,6 +7493,7 @@ function WhatIfScreen({
           );
         })}
       </section>
+      </details>
 
       <section className="savings-card">
         <img src={A.walletMascot} alt="" />
@@ -7493,8 +7579,13 @@ function SettingsScreen({
 
       <LifeProfileEditor settings={settings} setSettings={setSettings} />
 
-      <section className="settings-group">
-        <h3>{getIncomePeriodLabel(settings)}</h3>
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <span>Income Setup</span>
+          <b>{money(totalIncome, settings.currency)}</b>
+        </summary>
+        <section className="settings-group">
+          <h3>{getIncomePeriodLabel(settings)}</h3>
 
         <EditableMoneyLine
           label={getPrimaryIncomeLabel(settings)}
@@ -7523,10 +7614,16 @@ function SettingsScreen({
           strong
           good
         />
-      </section>
+        </section>
+      </details>
 
-      <section className="settings-group">
-        <h3>Fixed Life Costs</h3>
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <span>Fixed Life Costs</span>
+          <b>{money(fixedCosts, settings.currency)}</b>
+        </summary>
+        <section className="settings-group">
+          <h3>Fixed Life Costs</h3>
 
         {settings.profile.hasRent && (
           <EditableMoneyLine
@@ -7585,7 +7682,8 @@ function SettingsScreen({
           strong
           bad
         />
-      </section>
+        </section>
+      </details>
 
       <section className="settings-menu">
         <div className="menu-line">
@@ -7660,48 +7758,73 @@ function SettingsScreen({
         </button>
       </section>
 
-      <StreakSettingsPanel streak={streak} />
-      <BadgeVaultPanel badges={badges} />
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <span>Streak Progress</span>
+          <b>{streak.currentStreak} days</b>
+        </summary>
+        <StreakSettingsPanel streak={streak} />
+      </details>
 
-      <section className="tracked-panel">
-        <div className="section-title">
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <span>Badge Vault</span>
+          <b>{badges.filter((badge) => badge.earned).length}/{badges.length}</b>
+        </summary>
+        <BadgeVaultPanel badges={badges} />
+      </details>
+
+      <details className="clean-details settings-clean-details">
+        <summary>
           <span>Tracked Expenses</span>
-          <small>{money(monthSpent, settings.currency)} this month</small>
-        </div>
-
-        <div className="tracked-stats">
-          <div>
-            <span>Total records</span>
-            <strong>{expenses.length}</strong>
+          <b>{currentMonthExpenses.length} month</b>
+        </summary>
+        <section className="tracked-panel">
+          <div className="section-title">
+            <span>Tracked Expenses</span>
+            <small>{money(monthSpent, settings.currency)} this month</small>
           </div>
-          <div>
-            <span>This month</span>
-            <strong>{currentMonthExpenses.length}</strong>
-          </div>
-          <div>
-            <span>Month spent</span>
-            <strong>{money(monthSpent, settings.currency)}</strong>
-          </div>
-        </div>
 
-        <CategorySummaryList
-          summaries={categorySummaries}
-          currency={settings.currency}
-        />
-      </section>
+          <div className="tracked-stats">
+            <div>
+              <span>Total records</span>
+              <strong>{expenses.length}</strong>
+            </div>
+            <div>
+              <span>This month</span>
+              <strong>{currentMonthExpenses.length}</strong>
+            </div>
+            <div>
+              <span>Month spent</span>
+              <strong>{money(monthSpent, settings.currency)}</strong>
+            </div>
+          </div>
 
-      <section className="recent-card">
-        <div className="section-title">
+          <CategorySummaryList
+            summaries={categorySummaries}
+            currency={settings.currency}
+          />
+        </section>
+      </details>
+
+      <details className="clean-details settings-clean-details">
+        <summary>
           <span>Latest Records</span>
-          <small>{latestExpenses.length ? `${latestExpenses.length} latest` : "No records"}</small>
-        </div>
+          <b>{latestExpenses.length ? `${latestExpenses.length} latest` : "No records"}</b>
+        </summary>
+        <section className="recent-card">
+          <div className="section-title">
+            <span>Latest Records</span>
+            <small>{latestExpenses.length ? `${latestExpenses.length} latest` : "No records"}</small>
+          </div>
 
-        <LatestRecordsList
-          expenses={latestExpenses}
-          currency={settings.currency}
-          onDeleteExpense={onDeleteExpense}
-        />
-      </section>
+          <LatestRecordsList
+            expenses={latestExpenses}
+            currency={settings.currency}
+            onDeleteExpense={onDeleteExpense}
+          />
+        </section>
+      </details>
 
       <details className="tech-details">
         <summary>Connection details</summary>
