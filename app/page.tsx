@@ -1472,6 +1472,7 @@ const ruText: Record<string, string> = {
   "$BROKE Mission Result": "$BROKE Результат миссии",
   "Copy mission result": "Скопируй результат миссии",
   "Wallet HP protected.": "Wallet HP защищён.",
+  "Mission result copied. Paste it in Telegram, X, or anywhere you want.": "Результат миссии скопирован. Вставь его в Telegram, X или куда нужно.",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -5295,6 +5296,7 @@ function DailyRoutinePanel({
 
 
 
+// V54.2: failed mission saved value is forced to zero, and share result has visible fallbacks.
 function BiggestLeakChallengePanel({
   settings,
   identityStats,
@@ -5322,7 +5324,8 @@ function BiggestLeakChallengePanel({
   const possibleSavings = Math.max(0, Math.round((weeklyAmount / 7) * 3 - targetSpend));
 
   const baselineForMission = mission ? Math.round((mission.baselineWeekly / 7) * 3) : 0;
-  const missionSaved = mission ? Math.max(0, Math.round(baselineForMission - progress.spent)) : 0;
+  const rawMissionSaved = mission ? Math.max(0, Math.round(baselineForMission - progress.spent)) : 0;
+  const missionSaved = mission && progress.failed ? 0 : rawMissionSaved;
   const missionOver = mission ? Math.max(0, Math.round(progress.spent - mission.targetSpend)) : 0;
 
   const statusLabel = mission
@@ -5362,26 +5365,44 @@ function BiggestLeakChallengePanel({
     : "";
 
   async function shareMissionResult() {
-    if (!mission) return;
+    if (!mission || !shareText) return;
 
     triggerHaptic("light");
     markDailyRoutineAction("sharedProgress");
+
+    const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(
+      PROJECT_TG_URL
+    )}&text=${encodeURIComponent(shareText)}`;
 
     try {
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({
           title: "$BROKE Mission Result",
           text: shareText,
+          url: PROJECT_TG_URL,
         });
         return;
       }
+    } catch {
+      // User may cancel native share, or Telegram WebView may block it.
+      // Continue to visible fallback below.
+    }
 
-      if (navigator?.clipboard?.writeText) {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareText);
+        window.alert("Mission result copied. Paste it in Telegram, X, or anywhere you want.");
         return;
       }
     } catch {
-      // Sharing is optional. Fallback below.
+      // Clipboard may be blocked in Telegram WebView.
+    }
+
+    try {
+      openTelegramUrl(telegramShareUrl);
+      return;
+    } catch {
+      // Last fallback below.
     }
 
     window.prompt("Copy mission result", shareText);
