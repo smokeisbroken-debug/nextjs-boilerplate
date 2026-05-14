@@ -10192,3 +10192,56 @@ html[lang="ru"] .share-card strong {
 
 /* ===== V56.4 GROWTH SEND TO BOT ===== */
 /* Growth card primary share now uses /api/share-result to send PNG to the Telegram bot chat. */
+
+
+/* ===== V56.5 GROWTH PUBLIC ASSETS ===== */
+.growth-asset-strip {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.growth-asset-strip img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 22px;
+  border: 1px solid rgba(183, 255, 25, 0.15);
+  background: rgba(0, 0, 0, 0.26);
+  box-shadow:
+    0 0 24px rgba(183, 255, 25, 0.08),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.growth-leak-card {
+  grid-template-columns: 62px minmax(0, 1fr) auto;
+}
+
+.growth-leak-asset {
+  width: 62px;
+  height: 62px;
+  object-fit: cover;
+  border-radius: 18px;
+  border: 1px solid rgba(183, 255, 25, 0.14);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.growth-saved-list article > img {
+  border-radius: 14px;
+}
+
+@media (max-width: 380px) {
+  .growth-leak-card {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+
+  .growth-leak-card button {
+    grid-column: 1 / -1;
+  }
+
+  .growth-leak-asset {
+    width: 54px;
+    height: 54px;
+  }
+}
