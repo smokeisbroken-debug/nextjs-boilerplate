@@ -8798,3 +8798,7 @@ html[lang="ru"] .profile-field:first-of-type .profile-select {
 
 /* ===== V51.3 GROWTH RU COMMAS BUILD FIX ===== */
 /* Fixes missing commas in ruText after Growth Lab dictionary entries. */
+
+
+/* ===== V51.4 GROWTH SHARE CARD IMAGE ===== */
+/* Growth share now generates a PNG card through canvas before using native share/download fallback. */
