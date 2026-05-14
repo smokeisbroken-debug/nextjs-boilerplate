@@ -2440,12 +2440,12 @@ const navItems: {
   label: string;
   icon: string;
 }[] = [
-  { id: "home", label: "Home", icon: A.navHome },
-  { id: "add", label: "Add", icon: A.navAdd },
-  { id: "chart", label: "Chart", icon: A.navChart },
-  { id: "growth", label: "Growth", icon: A.progressFlame },
-  { id: "whatif", label: "Save", icon: A.navWhatIf },
-  { id: "settings", label: "Settings", icon: A.navSettings },
+  { id: "home", label: "Home", icon: "/nav-home.png" },
+  { id: "add", label: "Add", icon: "/nav-add.png" },
+  { id: "chart", label: "Chart", icon: "/nav-chart.png" },
+  { id: "growth", label: "Growth", icon: "/nav-growth.png" },
+  { id: "whatif", label: "Save", icon: "/nav-save.png" },
+  { id: "settings", label: "Settings", icon: "/nav-settings.png" },
 ];
 
 function uid() {
