@@ -1644,6 +1644,164 @@ const ruText: Record<string, string> = {
   "Bot delivery failed. The card preview is ready below and share text was copied.": "Отправка через бота не прошла. Предпросмотр карточки готов ниже, текст скопирован.",
   "Bot delivery failed. The card preview is ready below.": "Отправка через бота не прошла. Предпросмотр карточки готов ниже.",
   "The main flow sends this PNG to your Telegram bot chat. If Telegram blocks delivery, you can still download the card, copy the text, or long-press the preview.": "Основной способ — отправить PNG в чат с Telegram-ботом. Если Telegram заблокирует отправку, можно скачать карточку, скопировать текст или удержать изображение предпросмотра.",
+  "Home Guide": "Гайд Home",
+  "Home: Wallet Command Center": "Home: центр управления кошельком",
+  "Home is the main control room. It shows your Wallet HP, life cost, leaks, daily routine, reports, badges, and the next action to take.": "Home — главный центр управления. Здесь видны Wallet HP, расходы жизни, утечки, ежедневная рутина, отчёты, бейджи и следующее действие.",
+  "Daily Home rule": "Правило Home на день",
+  "Open Home once per day, read the Next Best Action, then fix one leak instead of trying to change everything at once.": "Открывай Home один раз в день, читай Next Best Action и исправляй одну утечку вместо попытки изменить всё сразу.",
+  "1. Read the four main numbers": "1. Прочитай четыре главные цифры",
+  "Income shows the money you planned for the period.": "Income показывает деньги, запланированные на период.",
+  "Life Cost shows fixed costs like rent, bills, transport, food basics, and required expenses.": "Life Cost показывает фиксированные расходы: аренду, счета, транспорт, базовую еду и обязательные траты.",
+  "Money Leaks shows optional or questionable spending that can quietly drain the wallet.": "Money Leaks показывает необязательные или спорные траты, которые тихо сливают кошелёк.",
+  "Real Balance shows what is left after costs and tracked spending.": "Real Balance показывает, что осталось после расходов жизни и записанных трат.",
+  "2. Understand Wallet HP": "2. Пойми Wallet HP",
+  "Wallet HP is the health score of the wallet.": "Wallet HP — это показатель здоровья кошелька.",
+  "High HP means the wallet is stable.": "Высокий HP означает, что кошелёк стабилен.",
+  "Low HP means leaks are putting pressure on the month.": "Низкий HP означает, что утечки давят на месяц.",
+  "The goal is not perfection. The goal is to keep HP alive by reducing the loudest leak.": "Цель не в идеальности. Цель — сохранить HP, уменьшая самую громкую утечку.",
+  "3. Use Next Best Action": "3. Используй Next Best Action",
+  "Next Best Action tells the user what to do now.": "Next Best Action показывает, что сделать сейчас.",
+  "It can suggest adding the first record, controlling the biggest leak, checking the chart, or sharing safe progress.": "Он может предложить добавить первую запись, взять под контроль главную утечку, проверить график или поделиться безопасным прогрессом.",
+  "This keeps the app from feeling like a notebook and turns it into a daily discipline tool.": "Так приложение перестаёт быть блокнотом и становится инструментом ежедневной дисциплины.",
+  "4. Check reports and cards": "4. Проверяй отчёты и карточки",
+  "Daily and weekly reports summarize what happened without exposing private income.": "Дневные и недельные отчёты показывают итоги без раскрытия личного дохода.",
+  "Share cards are safe for Telegram or X because they focus on status, Wallet HP, score, leaks, and public progress.": "Share-карточки безопасны для Telegram или X, потому что показывают статус, Wallet HP, счёт, утечки и публичный прогресс.",
+  "Use reports when you want community proof without showing sensitive numbers.": "Используй отчёты, когда нужен social proof без личных чисел.",
+  "5. Complete the daily routine": "5. Выполняй ежедневную рутину",
+  "The routine is not a fake one-click task.": "Рутина — это не фейковое задание в один клик.",
+  "It is completed when the user really opens the app, tracks expenses, marks leaks, checks charts, checks Save, and shares progress.": "Она выполняется, когда пользователь реально открывает app, записывает расходы, отмечает утечки, смотрит график, проверяет Save и делится прогрессом.",
+  "This makes $BROKE feel like discipline, not just finance tracking.": "Это делает $BROKE дисциплиной, а не просто учётом финансов.",
+  "Add Guide": "Гайд Add",
+  "Add: Track Expenses Correctly": "Add: как правильно записывать расходы",
+  "Add is where the app becomes honest. Every useful chart, leak score, Growth simulation, and report depends on real records here.": "Add — место, где приложение становится честным. Каждый полезный график, leak score, Growth simulation и отчёт зависят от реальных записей здесь.",
+  "Add rule": "Правило Add",
+  "Track the expense immediately, choose the real category, and mark Needed / Maybe / Not needed honestly.": "Записывай трату сразу, выбирай реальную категорию и честно отмечай Needed / Maybe / Not needed.",
+  "1. Enter the real amount": "1. Вводи реальную сумму",
+  "Use the amount field for the exact spending amount.": "Используй поле суммы для точной траты.",
+  "Small expenses matter because repeated small leaks become monthly damage.": "Маленькие расходы важны, потому что повторяющиеся мелкие утечки становятся месячным уроном.",
+  "Do not wait until the end of the week if you can track the expense now.": "Не жди конца недели, если можно записать расход сейчас.",
+  "2. Choose the right category": "2. Выбери правильную категорию",
+  "Categories make the biggest leak visible.": "Категории делают главную утечку видимой.",
+  "Coffee, smoking, takeout, shopping, transport, subscriptions, and custom categories should be used consistently.": "Кофе, курение, еда на заказ, покупки, транспорт, подписки и свои категории нужно использовать последовательно.",
+  "If the same habit is tracked under different names, the app cannot detect the leak properly.": "Если одна привычка записана под разными названиями, app не сможет правильно найти утечку.",
+  "3. Mark Needed / Maybe / Not needed": "3. Отмечай Needed / Maybe / Not needed",
+  "Needed means the expense was necessary and does not count as a leak.": "Needed означает, что трата была необходимой и не считается утечкой.",
+  "Maybe means the expense was questionable and counts as half pressure.": "Maybe означает спорную трату и считается как половина давления.",
+  "Not needed means it was a full money leak.": "Not needed означает полноценную money leak.",
+  "Honest marking makes Wallet HP, Save, Chart, and Growth Lab much more accurate.": "Честная отметка делает Wallet HP, Save, Chart и Growth Lab намного точнее.",
+  "4. Add notes when context matters": "4. Добавляй заметки, когда важен контекст",
+  "Notes explain why the expense happened.": "Заметки объясняют, почему случилась трата.",
+  "This helps users notice emotional spending, boredom spending, stress spending, or routine habits.": "Это помогает замечать эмоциональные траты, траты от скуки, стрессовые покупки или привычки.",
+  "A short note is enough. The goal is awareness, not paperwork.": "Короткой заметки достаточно. Цель — осознанность, а не бюрократия.",
+  "5. Use quick add carefully": "5. Используй Quick Add аккуратно",
+  "Quick Add is for repeated expenses.": "Quick Add нужен для повторяющихся расходов.",
+  "It is fast, but the amount should still be checked.": "Это быстро, но сумму всё равно нужно проверять.",
+  "If the quick amount is wrong, edit it before saving the record.": "Если быстрая сумма неправильная, измени её перед сохранением.",
+  "Chart Guide": "Гайд Chart",
+  "$BROKE Chart: Wallet Movement": "$BROKE Chart: движение кошелька",
+  "Chart turns spending into a visual movement system. It helps users see red days, pressure, spending volume, and the habits that move the wallet down.": "Chart превращает расходы в визуальное движение. Он помогает видеть красные дни, давление, объём расходов и привычки, которые тянут кошелёк вниз.",
+  "Chart rule": "Правило Chart",
+  "Do not only watch crypto charts. Watch your own wallet chart and find the day where the leak started.": "Смотри не только crypto-чарты. Смотри свой график кошелька и находи день, где началась утечка.",
+  "1. Choose the right range": "1. Выбери правильный период",
+  "Day shows the current daily damage.": "Day показывает текущий дневной урон.",
+  "Week shows the last seven days and is best for habits.": "Week показывает последние семь дней и лучше всего подходит для привычек.",
+  "Month shows the larger pressure across the current month.": "Month показывает большее давление за текущий месяц.",
+  "Switch ranges to understand whether a leak is temporary or becoming normal.": "Переключай периоды, чтобы понять, утечка временная или уже становится нормой.",
+  "2. Read spending volume": "2. Читай spending volume",
+  "Spending volume shows how heavy the outgoing money was.": "Spending volume показывает, насколько тяжёлым был отток денег.",
+  "A high volume day is not always bad if it was needed.": "День с большим объёмом не всегда плохой, если траты были нужными.",
+  "A high volume day with Not needed or Maybe expenses is a warning signal.": "День с большим объёмом и Not needed / Maybe — это сигнал тревоги.",
+  "3. Find the top category": "3. Найди главную категорию",
+  "Top category shows the strongest spending movement in the selected period.": "Top category показывает самое сильное движение расходов за выбранный период.",
+  "If the same category keeps appearing, it is probably a lifestyle leak.": "Если одна категория появляется снова и снова, это, скорее всего, lifestyle leak.",
+  "This is the category to control first.": "Эту категорию нужно контролировать первой.",
+  "4. Use Wallet Insights": "4. Используй Wallet Insights",
+  "Wallet Insights explain what the chart means in plain language.": "Wallet Insights объясняют график простым языком.",
+  "They turn numbers into actions.": "Они превращают цифры в действия.",
+  "Use them when a user does not know what to fix next.": "Используй их, когда непонятно, что исправлять дальше.",
+  "5. Share only safe chart context": "5. Делись только безопасным контекстом",
+  "Chart data can be emotional and personal.": "Данные графика могут быть личными и эмоциональными.",
+  "Public sharing should avoid private income and real balance.": "В публичном share не стоит показывать личный доход и реальный баланс.",
+  "Use clean share cards or public summaries instead of raw personal numbers.": "Используй clean share cards или публичные итоги вместо личных сырых чисел.",
+  "Growth Guide": "Гайд Growth",
+  "Growth Lab: Leak to Growth": "Growth Lab: утечка в рост",
+  "Growth Lab shows what could happen if money leaks were redirected into saving, building, or simulated growth. It is a planning tool, not staking and not an investment product.": "Growth Lab показывает, что могло бы произойти, если перенаправить money leaks в накопления, развитие или симуляцию роста. Это инструмент планирования, не staking и не инвестиционный продукт.",
+  "Growth Lab rule": "Правило Growth Lab",
+  "Simulation only. No deposits, no custody, no guaranteed returns, and no financial advice.": "Только симуляция. Без депозитов, без хранения средств, без гарантированной доходности и без финансового совета.",
+  "1. Understand what Growth Lab is": "1. Пойми, что такое Growth Lab",
+  "Growth Lab is a simulator.": "Growth Lab — это симулятор.",
+  "It does not hold user funds.": "Он не хранит деньги пользователей.",
+  "It does not promise income.": "Он не обещает доход.",
+  "It shows possible outcomes if repeated leaks are redirected into a plan.": "Он показывает возможные сценарии, если повторяющиеся утечки перенаправить в план.",
+  "2. Use my leaks": "2. Используй Use my leaks",
+  "Use my leaks reads the tracked Not needed and Maybe expenses.": "Use my leaks берёт записанные расходы Not needed и Maybe.",
+  "It converts the leak into a weekly contribution idea.": "Он превращает утечку в идею еженедельного пополнения.",
+  "This connects the real app data to a simple growth scenario.": "Так реальные данные приложения связываются с простым сценарием роста.",
+  "3. Manual simulation": "3. Ручная симуляция",
+  "Starting amount is the amount the user begins with.": "Starting amount — сумма, с которой пользователь начинает.",
+  "Contribution is the amount added daily, weekly, or monthly.": "Contribution — сумма, добавляемая ежедневно, еженедельно или ежемесячно.",
+  "Duration controls how long the simulation runs.": "Duration задаёт срок симуляции.",
+  "Yearly growth is only a user-selected assumption.": "Yearly growth — только предположение, выбранное пользователем.",
+  "4. Read Worst / Base / Best case": "4. Читай Worst / Base / Best case",
+  "Worst case shows a conservative outcome.": "Worst case показывает осторожный сценарий.",
+  "Base case uses the selected assumption.": "Base case использует выбранное предположение.",
+  "Best case shows a more optimistic path.": "Best case показывает более оптимистичный путь.",
+  "These are scenarios, not predictions.": "Это сценарии, а не прогнозы.",
+  "5. Share the Growth card": "5. Делись Growth card",
+  "Send card to TG bot generates a clean PNG card.": "Send card to TG bot создаёт чистую PNG-карточку.",
+  "The bot sends it to the user chat, and the user can forward it anywhere.": "Бот отправляет её пользователю в чат, а пользователь может переслать её куда нужно.",
+  "The card is designed for public sharing and does not show private income.": "Карточка создана для публичного share и не показывает личный доход.",
+  "Save Guide": "Гайд Save",
+  "Save: What If Scenarios": "Save: сценарии What If",
+  "Save shows what could be saved if one leak was reduced. It is the practical side of $BROKE: stop one leak, protect Wallet HP, and build proof of progress.": "Save показывает, сколько можно сохранить, если уменьшить одну утечку. Это практическая часть $BROKE: остановить утечку, защитить Wallet HP и создать proof of progress.",
+  "Save rule": "Правило Save",
+  "Pick one realistic reduction. A small reduction that actually happens is stronger than a perfect plan that nobody follows.": "Выбери одно реалистичное сокращение. Маленькое сокращение, которое реально выполняется, сильнее идеального плана, которого никто не придерживается.",
+  "1. Read potential savings": "1. Читай potential savings",
+  "Potential savings shows how much could be protected if spending is reduced.": "Potential savings показывает, сколько можно защитить, если уменьшить расходы.",
+  "It is based on tracked expenses and selected reduction levels.": "Это основано на записанных расходах и выбранных уровнях сокращения.",
+  "If there is no real data, the app can show demo scenarios until expenses are added.": "Если реальных данных нет, app может показывать demo-сценарии до добавления расходов.",
+  "2. Adjust reduction levels": "2. Настраивай reduction levels",
+  "Each card can simulate cutting a category by a percentage.": "Каждая карточка может симулировать сокращение категории на процент.",
+  "This helps the user test realistic changes before committing.": "Это помогает протестировать реалистичные изменения перед решением.",
+  "The goal is not to remove life. The goal is to stop the leak that gives the least value.": "Цель не в том, чтобы убрать жизнь. Цель — остановить утечку, которая даёт меньше всего пользы.",
+  "3. Start leak challenges": "3. Запускай leak challenges",
+  "Challenges turn savings into a simple mission.": "Challenges превращают экономию в простую миссию.",
+  "Examples include no takeout, coffee control, smoking cut, shopping freeze, or subscription killer.": "Примеры: no takeout, coffee control, smoking cut, shopping freeze или subscription killer.",
+  "Challenges should be concrete and short enough to complete.": "Challenges должны быть конкретными и достаточно короткими, чтобы их реально завершить.",
+  "4. Track public progress": "4. Отслеживай публичный прогресс",
+  "Leaderboard and challenge progress are public-friendly.": "Leaderboard и progress челленджей подходят для публичного показа.",
+  "They show discipline without revealing private financial details.": "Они показывают дисциплину без раскрытия личных финансовых деталей.",
+  "This creates community proof around the $BROKE identity.": "Это создаёт community proof вокруг $BROKE identity.",
+  "5. Use Save with Growth Lab": "5. Используй Save вместе с Growth Lab",
+  "Save shows what can be reduced.": "Save показывает, что можно уменьшить.",
+  "Growth Lab shows what that saved amount could become in a simulation.": "Growth Lab показывает, чем эта сохранённая сумма могла бы стать в симуляции.",
+  "Together they create the full story: find the leak, stop the leak, redirect the leak.": "Вместе они создают полную историю: найти утечку, остановить утечку, перенаправить утечку.",
+  "Settings Guide": "Гайд Settings",
+  "Settings: Make the App Fit Real Life": "Settings: настрой app под реальную жизнь",
+  "Settings controls the life profile behind the calculations. Country, currency, life mode, rent mode, income style, and sync settings make the app realistic for different users.": "Settings управляет life profile за расчётами. Страна, валюта, режим жизни, аренда, стиль дохода и sync делают app реалистичным для разных пользователей.",
+  "Settings rule": "Правило Settings",
+  "Set the profile once, then update it only when real life changes. Wrong settings create wrong Wallet HP and wrong leak pressure.": "Настрой профиль один раз, потом меняй только при реальных изменениях. Неверные настройки дают неверный Wallet HP и неправильное давление утечек.",
+  "1. Life Profile": "1. Life Profile",
+  "Life Profile adapts the app to the user.": "Life Profile адаптирует app под пользователя.",
+  "A student, worker, freelancer, or person living with family should not be judged by the same assumptions.": "Студент, работник, фрилансер или человек, живущий с семьёй, не должны оцениваться по одним и тем же предположениям.",
+  "Country and currency help make numbers feel real.": "Страна и валюта делают числа более реальными.",
+  "2. Income setup": "2. Настройка дохода",
+  "Income should match the user's real situation.": "Доход должен соответствовать реальной ситуации пользователя.",
+  "Monthly, weekly, daily, allowance, and irregular income should be entered differently.": "Monthly, weekly, daily, allowance и irregular income нужно вводить по-разному.",
+  "The app uses income to understand pressure, not to expose private data.": "App использует доход, чтобы понять давление, а не чтобы раскрывать личные данные.",
+  "3. Fixed costs": "3. Фиксированные расходы",
+  "Fixed costs are required costs like rent, bills, transport basics, food basics, school, or family support.": "Fixed costs — обязательные расходы: аренда, счета, базовый транспорт, базовая еда, школа или поддержка семьи.",
+  "These costs reduce available money before leaks are calculated.": "Эти расходы уменьшают доступные деньги до расчёта утечек.",
+  "If fixed costs are wrong, Wallet HP will feel wrong.": "Если fixed costs неверные, Wallet HP будет казаться неправильным.",
+  "4. Sync and account state": "4. Sync и состояние аккаунта",
+  "Telegram sync keeps progress connected to the user profile.": "Telegram sync связывает прогресс с профилем пользователя.",
+  "Web sync allows website and Telegram usage to match.": "Web sync позволяет сайту и Telegram использовать один прогресс.",
+  "If sync shows an error, the app can still work locally until cloud sync recovers.": "Если sync показывает ошибку, app может работать локально до восстановления cloud sync.",
+  "5. Data control": "5. Контроль данных",
+  "Settings includes reset and data management areas.": "Settings содержит reset и управление данными.",
+  "Reset should be used carefully because it can remove local progress.": "Reset нужно использовать осторожно, потому что он может удалить локальный прогресс.",
+  "Public cards are safer than raw exports because they hide income and real balance.": "Public cards безопаснее сырых экспортов, потому что скрывают доход и real balance.",
+  "Guide tabs": "Вкладки гайда",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -4246,6 +4404,7 @@ export default function Home() {
             leaderboardLoading={leaderboardLoading}
             onToggleLeaderboard={toggleLeaderboardPublic}
             onBack={goHome}
+            onHelp={openHelp}
           />
         )}
 
@@ -4253,7 +4412,7 @@ export default function Home() {
           <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
         )}
 
-        {helpOpen && <HelpGuideModal onClose={() => setHelpOpen(false)} />}
+        {helpOpen && <HelpGuideModal activeTab={activeTab} onClose={() => setHelpOpen(false)} />}
 
         {toast && <AppToastView toast={toast} />}
       </section>
@@ -4267,51 +4426,391 @@ export default function Home() {
 
 
 
-function HelpGuideModal({ onClose }: { onClose: () => void }) {
-  const sections = [
+function HelpGuideModal({
+  activeTab,
+  onClose,
+}: {
+  activeTab: Tab;
+  onClose: () => void;
+}) {
+  const [selectedGuide, setSelectedGuide] = useState<Tab>(activeTab);
+
+  const tabGuides: Record<
+    Tab,
     {
-      title: "1. Set your Life Profile",
-      body:
-        "Choose your country or type your own, set currency, life mode, income style, rent mode and work/study hours. This makes the app fit your real life.",
-      icon: A.walletMascot,
+      label: string;
+      eyebrow: string;
+      title: string;
+      intro: string;
+      icon: string;
+      footerTitle: string;
+      footerBody: string;
+      sections: {
+        title: string;
+        body: string[];
+        icon: string;
+      }[];
+    }
+  > = {
+    home: {
+      label: "Home",
+      eyebrow: "Home Guide",
+      title: "Home: Wallet Command Center",
+      intro:
+        "Home is the main control room. It shows your Wallet HP, life cost, leaks, daily routine, reports, badges, and the next action to take.",
+      icon: "/nav-home.png",
+      footerTitle: "Daily Home rule",
+      footerBody:
+        "Open Home once per day, read the Next Best Action, then fix one leak instead of trying to change everything at once.",
+      sections: [
+        {
+          title: "1. Read the four main numbers",
+          body: [
+            "Income shows the money you planned for the period.",
+            "Life Cost shows fixed costs like rent, bills, transport, food basics, and required expenses.",
+            "Money Leaks shows optional or questionable spending that can quietly drain the wallet.",
+            "Real Balance shows what is left after costs and tracked spending.",
+          ],
+          icon: A.walletHp,
+        },
+        {
+          title: "2. Understand Wallet HP",
+          body: [
+            "Wallet HP is the health score of the wallet.",
+            "High HP means the wallet is stable.",
+            "Low HP means leaks are putting pressure on the month.",
+            "The goal is not perfection. The goal is to keep HP alive by reducing the loudest leak.",
+          ],
+          icon: A.walletMascot,
+        },
+        {
+          title: "3. Use Next Best Action",
+          body: [
+            "Next Best Action tells the user what to do now.",
+            "It can suggest adding the first record, controlling the biggest leak, checking the chart, or sharing safe progress.",
+            "This keeps the app from feeling like a notebook and turns it into a daily discipline tool.",
+          ],
+          icon: A.nextAction,
+        },
+        {
+          title: "4. Check reports and cards",
+          body: [
+            "Daily and weekly reports summarize what happened without exposing private income.",
+            "Share cards are safe for Telegram or X because they focus on status, Wallet HP, score, leaks, and public progress.",
+            "Use reports when you want community proof without showing sensitive numbers.",
+          ],
+          icon: A.export,
+        },
+        {
+          title: "5. Complete the daily routine",
+          body: [
+            "The routine is not a fake one-click task.",
+            "It is completed when the user really opens the app, tracks expenses, marks leaks, checks charts, checks Save, and shares progress.",
+            "This makes $BROKE feel like discipline, not just finance tracking.",
+          ],
+          icon: A.dailyCheck,
+        },
+      ],
     },
-    {
-      title: "2. Add real expenses",
-      body:
-        "Go to Add, enter the amount, choose a category, and mark if it was Needed, Maybe, or Not needed.",
-      icon: A.addFrog,
+    add: {
+      label: "Add",
+      eyebrow: "Add Guide",
+      title: "Add: Track Expenses Correctly",
+      intro:
+        "Add is where the app becomes honest. Every useful chart, leak score, Growth simulation, and report depends on real records here.",
+      icon: "/nav-add.png",
+      footerTitle: "Add rule",
+      footerBody:
+        "Track the expense immediately, choose the real category, and mark Needed / Maybe / Not needed honestly.",
+      sections: [
+        {
+          title: "1. Enter the real amount",
+          body: [
+            "Use the amount field for the exact spending amount.",
+            "Small expenses matter because repeated small leaks become monthly damage.",
+            "Do not wait until the end of the week if you can track the expense now.",
+          ],
+          icon: A.addFrog,
+        },
+        {
+          title: "2. Choose the right category",
+          body: [
+            "Categories make the biggest leak visible.",
+            "Coffee, smoking, takeout, shopping, transport, subscriptions, and custom categories should be used consistently.",
+            "If the same habit is tracked under different names, the app cannot detect the leak properly.",
+          ],
+          icon: A.category,
+        },
+        {
+          title: "3. Mark Needed / Maybe / Not needed",
+          body: [
+            "Needed means the expense was necessary and does not count as a leak.",
+            "Maybe means the expense was questionable and counts as half pressure.",
+            "Not needed means it was a full money leak.",
+            "Honest marking makes Wallet HP, Save, Chart, and Growth Lab much more accurate.",
+          ],
+          icon: A.leaks,
+        },
+        {
+          title: "4. Add notes when context matters",
+          body: [
+            "Notes explain why the expense happened.",
+            "This helps users notice emotional spending, boredom spending, stress spending, or routine habits.",
+            "A short note is enough. The goal is awareness, not paperwork.",
+          ],
+          icon: A.pencil,
+        },
+        {
+          title: "5. Use quick add carefully",
+          body: [
+            "Quick Add is for repeated expenses.",
+            "It is fast, but the amount should still be checked.",
+            "If the quick amount is wrong, edit it before saving the record.",
+          ],
+          icon: A.plus,
+        },
+      ],
     },
-    {
-      title: "3. Mark leaks honestly",
-      body:
-        "Needed does not count as a leak. Maybe counts as half. Not needed counts as a full wallet leak.",
-      icon: A.leaks,
+    chart: {
+      label: "Chart",
+      eyebrow: "Chart Guide",
+      title: "$BROKE Chart: Wallet Movement",
+      intro:
+        "Chart turns spending into a visual movement system. It helps users see red days, pressure, spending volume, and the habits that move the wallet down.",
+      icon: "/nav-chart.png",
+      footerTitle: "Chart rule",
+      footerBody:
+        "Do not only watch crypto charts. Watch your own wallet chart and find the day where the leak started.",
+      sections: [
+        {
+          title: "1. Choose the right range",
+          body: [
+            "Day shows the current daily damage.",
+            "Week shows the last seven days and is best for habits.",
+            "Month shows the larger pressure across the current month.",
+            "Switch ranges to understand whether a leak is temporary or becoming normal.",
+          ],
+          icon: A.navChart,
+        },
+        {
+          title: "2. Read spending volume",
+          body: [
+            "Spending volume shows how heavy the outgoing money was.",
+            "A high volume day is not always bad if it was needed.",
+            "A high volume day with Not needed or Maybe expenses is a warning signal.",
+          ],
+          icon: A.chartFrog,
+        },
+        {
+          title: "3. Find the top category",
+          body: [
+            "Top category shows the strongest spending movement in the selected period.",
+            "If the same category keeps appearing, it is probably a lifestyle leak.",
+            "This is the category to control first.",
+          ],
+          icon: A.leaks,
+        },
+        {
+          title: "4. Use Wallet Insights",
+          body: [
+            "Wallet Insights explain what the chart means in plain language.",
+            "They turn numbers into actions.",
+            "Use them when a user does not know what to fix next.",
+          ],
+          icon: A.insight,
+        },
+        {
+          title: "5. Share only safe chart context",
+          body: [
+            "Chart data can be emotional and personal.",
+            "Public sharing should avoid private income and real balance.",
+            "Use clean share cards or public summaries instead of raw personal numbers.",
+          ],
+          icon: A.export,
+        },
+      ],
     },
-    {
-      title: "4. Use Daily Routine",
-      body:
-        "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check chart, check Save, and share public proof.",
-      icon: A.dailyCheck,
+    growth: {
+      label: "Growth",
+      eyebrow: "Growth Guide",
+      title: "Growth Lab: Leak to Growth",
+      intro:
+        "Growth Lab shows what could happen if money leaks were redirected into saving, building, or simulated growth. It is a planning tool, not staking and not an investment product.",
+      icon: "/nav-growth.png",
+      footerTitle: "Growth Lab rule",
+      footerBody:
+        "Simulation only. No deposits, no custody, no guaranteed returns, and no financial advice.",
+      sections: [
+        {
+          title: "1. Understand what Growth Lab is",
+          body: [
+            "Growth Lab is a simulator.",
+            "It does not hold user funds.",
+            "It does not promise income.",
+            "It shows possible outcomes if repeated leaks are redirected into a plan.",
+          ],
+          icon: GROWTH_PUBLIC_ASSETS.hero,
+        },
+        {
+          title: "2. Use my leaks",
+          body: [
+            "Use my leaks reads the tracked Not needed and Maybe expenses.",
+            "It converts the leak into a weekly contribution idea.",
+            "This connects the real app data to a simple growth scenario.",
+          ],
+          icon: GROWTH_PUBLIC_ASSETS.leak,
+        },
+        {
+          title: "3. Manual simulation",
+          body: [
+            "Starting amount is the amount the user begins with.",
+            "Contribution is the amount added daily, weekly, or monthly.",
+            "Duration controls how long the simulation runs.",
+            "Yearly growth is only a user-selected assumption.",
+          ],
+          icon: GROWTH_PUBLIC_ASSETS.lab,
+        },
+        {
+          title: "4. Read Worst / Base / Best case",
+          body: [
+            "Worst case shows a conservative outcome.",
+            "Base case uses the selected assumption.",
+            "Best case shows a more optimistic path.",
+            "These are scenarios, not predictions.",
+          ],
+          icon: GROWTH_PUBLIC_ASSETS.market,
+        },
+        {
+          title: "5. Share the Growth card",
+          body: [
+            "Send card to TG bot generates a clean PNG card.",
+            "The bot sends it to the user chat, and the user can forward it anywhere.",
+            "The card is designed for public sharing and does not show private income.",
+          ],
+          icon: GROWTH_PUBLIC_ASSETS.trophy,
+        },
+      ],
     },
-    {
-      title: "5. Read Wallet Survival",
-      body:
-        "Survival Score, Biggest Leak, Hours Lost, Status and Doomspending Alert show what is draining your wallet this week.",
-      icon: A.challengeTrophy,
+    whatif: {
+      label: "Save",
+      eyebrow: "Save Guide",
+      title: "Save: What If Scenarios",
+      intro:
+        "Save shows what could be saved if one leak was reduced. It is the practical side of $BROKE: stop one leak, protect Wallet HP, and build proof of progress.",
+      icon: "/nav-save.png",
+      footerTitle: "Save rule",
+      footerBody:
+        "Pick one realistic reduction. A small reduction that actually happens is stronger than a perfect plan that nobody follows.",
+      sections: [
+        {
+          title: "1. Read potential savings",
+          body: [
+            "Potential savings shows how much could be protected if spending is reduced.",
+            "It is based on tracked expenses and selected reduction levels.",
+            "If there is no real data, the app can show demo scenarios until expenses are added.",
+          ],
+          icon: A.whatIfFrog,
+        },
+        {
+          title: "2. Adjust reduction levels",
+          body: [
+            "Each card can simulate cutting a category by a percentage.",
+            "This helps the user test realistic changes before committing.",
+            "The goal is not to remove life. The goal is to stop the leak that gives the least value.",
+          ],
+          icon: A.scenario,
+        },
+        {
+          title: "3. Start leak challenges",
+          body: [
+            "Challenges turn savings into a simple mission.",
+            "Examples include no takeout, coffee control, smoking cut, shopping freeze, or subscription killer.",
+            "Challenges should be concrete and short enough to complete.",
+          ],
+          icon: A.challengeTrophy,
+        },
+        {
+          title: "4. Track public progress",
+          body: [
+            "Leaderboard and challenge progress are public-friendly.",
+            "They show discipline without revealing private financial details.",
+            "This creates community proof around the $BROKE identity.",
+          ],
+          icon: A.leaderboard,
+        },
+        {
+          title: "5. Use Save with Growth Lab",
+          body: [
+            "Save shows what can be reduced.",
+            "Growth Lab shows what that saved amount could become in a simulation.",
+            "Together they create the full story: find the leak, stop the leak, redirect the leak.",
+          ],
+          icon: GROWTH_PUBLIC_ASSETS.market,
+        },
+      ],
     },
-    {
-      title: "6. Check the $BROKE Chart",
-      body:
-        "The chart shows how your balance moves like a trading chart. Green days are controlled. Red days show damage.",
-      icon: A.navChart,
+    settings: {
+      label: "Settings",
+      eyebrow: "Settings Guide",
+      title: "Settings: Make the App Fit Real Life",
+      intro:
+        "Settings controls the life profile behind the calculations. Country, currency, life mode, rent mode, income style, and sync settings make the app realistic for different users.",
+      icon: "/nav-settings.png",
+      footerTitle: "Settings rule",
+      footerBody:
+        "Set the profile once, then update it only when real life changes. Wrong settings create wrong Wallet HP and wrong leak pressure.",
+      sections: [
+        {
+          title: "1. Life Profile",
+          body: [
+            "Life Profile adapts the app to the user.",
+            "A student, worker, freelancer, or person living with family should not be judged by the same assumptions.",
+            "Country and currency help make numbers feel real.",
+          ],
+          icon: A.profile,
+        },
+        {
+          title: "2. Income setup",
+          body: [
+            "Income should match the user's real situation.",
+            "Monthly, weekly, daily, allowance, and irregular income should be entered differently.",
+            "The app uses income to understand pressure, not to expose private data.",
+          ],
+          icon: A.income,
+        },
+        {
+          title: "3. Fixed costs",
+          body: [
+            "Fixed costs are required costs like rent, bills, transport basics, food basics, school, or family support.",
+            "These costs reduce available money before leaks are calculated.",
+            "If fixed costs are wrong, Wallet HP will feel wrong.",
+          ],
+          icon: A.lifeCost,
+        },
+        {
+          title: "4. Sync and account state",
+          body: [
+            "Telegram sync keeps progress connected to the user profile.",
+            "Web sync allows website and Telegram usage to match.",
+            "If sync shows an error, the app can still work locally until cloud sync recovers.",
+          ],
+          icon: A.telegram,
+        },
+        {
+          title: "5. Data control",
+          body: [
+            "Settings includes reset and data management areas.",
+            "Reset should be used carefully because it can remove local progress.",
+            "Public cards are safer than raw exports because they hide income and real balance.",
+          ],
+          icon: A.settings,
+        },
+      ],
     },
-    {
-      title: "7. Share safely",
-      body:
-        "Share cards hide income and real balance. They only show safe public progress like Wallet HP, status, score, rank, streak and badges.",
-      icon: A.export,
-    },
-  ];
+  };
+
+  const guideTabs: Tab[] = ["home", "add", "chart", "growth", "whatif", "settings"];
+  const guide = tabGuides[selectedGuide] ?? tabGuides.home;
 
   return (
     <div
@@ -4320,11 +4819,11 @@ function HelpGuideModal({ onClose }: { onClose: () => void }) {
       aria-modal="true"
       aria-label="$BROKE Life Tracker guide"
     >
-      <div className="help-modal">
+      <div className="help-modal tab-guide-modal">
         <div className="help-modal-head">
           <div>
-            <span>Guide</span>
-            <strong>How to use $BROKE</strong>
+            <span>{guide.eyebrow}</span>
+            <strong>{guide.title}</strong>
           </div>
 
           <button type="button" onClick={onClose} aria-label="Close guide">
@@ -4332,26 +4831,42 @@ function HelpGuideModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <p className="help-modal-intro">
-          $BROKE is not a normal expense tracker. It helps you find wallet leaks,
-          build discipline, and share safe progress.
-        </p>
+        <div className="tab-guide-tabs" role="tablist" aria-label="Guide tabs">
+          {guideTabs.map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              className={selectedGuide === tab ? "active" : ""}
+              onClick={() => setSelectedGuide(tab)}
+            >
+              <img src={tabGuides[tab].icon} alt="" />
+              <span>{tabGuides[tab].label}</span>
+            </button>
+          ))}
+        </div>
 
-        <div className="help-modal-list">
-          {sections.map((section) => (
+        <section className="tab-guide-hero">
+          <img src={guide.icon} alt="" />
+          <p>{guide.intro}</p>
+        </section>
+
+        <div className="help-modal-list tab-guide-list">
+          {guide.sections.map((section) => (
             <article key={section.title}>
               <img src={section.icon} alt="" />
               <div>
                 <strong>{section.title}</strong>
-                <span>{section.body}</span>
+                {section.body.map((line) => (
+                  <span key={line}>{line}</span>
+                ))}
               </div>
             </article>
           ))}
         </div>
 
         <div className="help-modal-footer">
-          <strong>Simple rule:</strong>
-          <span>Track honestly. Fix one leak at a time. Protect Wallet HP.</span>
+          <strong>{guide.footerTitle}</strong>
+          <span>{guide.footerBody}</span>
         </div>
 
         <button type="button" className="help-modal-close" onClick={onClose}>
@@ -9030,6 +9545,7 @@ function SettingsScreen({
   leaderboardLoading,
   onToggleLeaderboard,
   onBack,
+  onHelp,
 }: {
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
@@ -9047,6 +9563,7 @@ function SettingsScreen({
   leaderboardLoading: boolean;
   onToggleLeaderboard: (nextValue: boolean) => void;
   onBack: () => void;
+  onHelp: () => void;
 }) {
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
@@ -9077,7 +9594,7 @@ function SettingsScreen({
 
   return (
     <div className="screen">
-      <Header title="Settings" showBack onBack={onBack} />
+      <Header title="Settings" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
       <LifeProfileEditor settings={settings} setSettings={setSettings} />
 
