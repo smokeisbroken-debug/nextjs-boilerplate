@@ -10813,3 +10813,73 @@ html[lang="ru"] .tab-guide-hero p {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== V57.1 BIND SHARE CARD PNG ASSETS ===== */
+
+.premium-share-card {
+  position: relative;
+}
+
+.premium-share-card-art {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.14;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  filter: saturate(1.05) contrast(1.08);
+}
+
+.public-share-image-card.premium-share-card .premium-share-card-art {
+  opacity: 0.12;
+}
+
+.report-public-share-card.premium-share-card .premium-share-card-art,
+.mission-public-share-card.premium-share-card .premium-share-card-art {
+  opacity: 0.13;
+}
+
+.growth-share-preview.premium-share-card .premium-share-card-art {
+  opacity: 0.08;
+}
+
+.premium-share-card > *:not(.premium-share-card-art) {
+  position: relative;
+  z-index: 1;
+}
+
+.premium-share-card::before {
+  z-index: 0 !important;
+}
+
+.premium-share-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(2, 4, 2, 0.18), rgba(2, 4, 2, 0.42)),
+    radial-gradient(circle at 78% 10%, rgba(183, 255, 25, 0.09), transparent 32%);
+}
+
+.premium-share-card > *:not(.premium-share-card-art) {
+  position: relative;
+  z-index: 2;
+}
+
+.report-public-share-card.weekly.premium-share-card::after {
+  background:
+    linear-gradient(180deg, rgba(2, 4, 2, 0.18), rgba(2, 4, 2, 0.44)),
+    radial-gradient(circle at 78% 10%, rgba(255, 177, 43, 0.10), transparent 32%);
+}
+
+@media (max-width: 430px) {
+  .premium-share-card-art {
+    opacity: 0.10;
+  }
+}
