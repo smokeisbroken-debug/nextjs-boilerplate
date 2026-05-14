@@ -112,6 +112,13 @@ type Expense = {
   createdAt: string;
 };
 
+type OnboardingStarterExpense = {
+  category: string;
+  amount: number;
+  needType: NeedType;
+  note: string;
+};
+
 type Settings = {
   currency: Currency;
   language: Language;
@@ -1802,6 +1809,45 @@ const ruText: Record<string, string> = {
   "Reset should be used carefully because it can remove local progress.": "Reset нужно использовать осторожно, потому что он может удалить локальный прогресс.",
   "Public cards are safer than raw exports because they hide income and real balance.": "Public cards безопаснее сырых экспортов, потому что скрывают доход и real balance.",
   "Guide tabs": "Вкладки гайда",
+  "Wallet Survival Setup": "Настройка выживания кошелька",
+  "Fit the app to your life": "Настрой app под свою жизнь",
+  "Set money coming in": "Настрой входящие деньги",
+  "Set fixed life costs": "Настрой расходы жизни",
+  "Prepare the first real leak": "Подготовь первую реальную утечку",
+  "Start the 3-day path": "Начни 3-дневный путь",
+  "Costs": "Расходы",
+  "This is not a boring expense tracker. It is a wallet survival system: find the leak, protect Wallet HP, then redirect the saved money into growth.": "Это не скучный трекер расходов. Это система выживания кошелька: найди утечку, защити Wallet HP, потом перенаправь сохранённые деньги в рост.",
+  "Find the leak": "Найди утечку",
+  "Track one real expense and mark if it was Needed, Maybe, or Not needed.": "Запиши одну реальную трату и отметь её как Needed, Maybe или Not needed.",
+  "Protect Wallet HP": "Защити Wallet HP",
+  "Your HP shows if leaks are putting pressure on the month.": "HP показывает, давят ли утечки на месяц.",
+  "Redirect into Growth": "Перенаправь в Growth",
+  "Use Growth Lab to simulate what saved leaks could become.": "Используй Growth Lab, чтобы симулировать, во что могли бы превратиться сохранённые утечки.",
+  "Privacy rule": "Правило приватности",
+  "Public cards hide income and real balance. You share progress, not private numbers.": "Публичные карточки скрывают доход и реальный баланс. Ты делишься прогрессом, а не личными числами.",
+  "Make the app local.": "Сделай app локальным.",
+  "Country, currency and life mode change the meaning of every number. A student, worker and freelancer should not be judged by the same setup.": "Страна, валюта и life mode меняют смысл каждой цифры. Студент, работник и фрилансер не должны оцениваться по одной настройке.",
+  "Set what comes in.": "Настрой, что приходит.",
+  "Use the way money actually reaches you: salary, allowance, daily work, weekly pay, or irregular income.": "Укажи, как деньги реально приходят: зарплата, allowance, дневная работа, недельная оплата или нерегулярный доход.",
+  "Not public": "Не публично",
+  "Income is used for calculations. Share cards do not expose it.": "Доход используется для расчётов. Share-карточки его не показывают.",
+  "Set what must be paid.": "Настрой обязательные платежи.",
+  "Only add costs that apply. If you live with family or you are a student, rent can stay off.": "Добавляй только те расходы, которые подходят. Если живёшь с семьёй или ты студент, аренду можно отключить.",
+  "Real balance before leaks": "Реальный баланс до утечек",
+  "Prepare one expense.": "Подготовь одну трату.",
+  "This does not create a fake record. It prepares the Add tab so the user can confirm the first real local leak.": "Это не создаёт фейковую запись. Это подготавливает вкладку Add, чтобы пользователь сам подтвердил первую реальную локальную утечку.",
+  "Expected amount": "Ожидаемая сумма",
+  "Discipline rule": "Правило дисциплины",
+  "Do not just click and pretend. After onboarding, Add opens and the record must be saved manually.": "Нельзя просто нажать и притвориться. После onboarding откроется Add, и запись нужно сохранить вручную.",
+  "Your wallet system is ready.": "Твоя система кошелька готова.",
+  "Needs data": "Нужны данные",
+  "First 3-day path": "Первый 3-дневный путь",
+  "Day 1 — track your first leak.": "День 1 — запиши первую утечку.",
+  "Day 2 — check the chart and biggest leak.": "День 2 — проверь график и главную утечку.",
+  "Day 3 — share a safe public result card.": "День 3 — поделись безопасной публичной карточкой результата.",
+  "Skip setup": "Пропустить настройку",
+  "Open Add and track it": "Открыть Add и записать",
+  "First leak from onboarding": "Первая утечка из onboarding",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -4118,7 +4164,11 @@ export default function Home() {
     setHelpOpen(true);
   }
 
-  function completeOnboarding(nextSettings: Settings) {
+  function completeOnboarding(
+    nextSettings: Settings,
+    targetTab: Tab = "home",
+    starterExpense?: OnboardingStarterExpense
+  ) {
     triggerHaptic("success");
 
     const completedSettings: Settings = {
@@ -4129,7 +4179,15 @@ export default function Home() {
     setSettings(completedSettings);
     setOnboardingCompleted(true);
     localStorage.setItem(ONBOARDING_KEY, "true");
-    setActiveTab("home");
+
+    if (starterExpense) {
+      setSelectedCategory(starterExpense.category);
+      setAmount(String(starterExpense.amount));
+      setExpenseType(starterExpense.needType);
+      setNote(starterExpense.note);
+    }
+
+    setActiveTab(targetTab);
 
     if (cloudAuthReady) {
       callBrokeApi(cloudInitData, "saveSettings", {
@@ -5020,16 +5078,62 @@ function OnboardingScreen({
 }: {
   settings: Settings;
   telegram: TelegramState;
-  onComplete: (settings: Settings) => void;
+  onComplete: (
+    settings: Settings,
+    targetTab?: Tab,
+    starterExpense?: OnboardingStarterExpense
+  ) => void;
 }) {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<Settings>(() => normalizeSettings(settings));
+  const [starterLeak, setStarterLeak] = useState(firstLeakPresets[0]);
+  const [starterAmount, setStarterAmount] = useState(firstLeakPresets[0].amount);
 
-  const totalSteps = 5;
+  const onboardingSteps = [
+    {
+      label: "Start",
+      title: "Wallet Survival Setup",
+      icon: A.walletMascot,
+    },
+    {
+      label: "Profile",
+      title: "Fit the app to your life",
+      icon: A.appFrog,
+    },
+    {
+      label: "Income",
+      title: "Set money coming in",
+      icon: A.income,
+    },
+    {
+      label: "Costs",
+      title: "Set fixed life costs",
+      icon: A.lifeCost,
+    },
+    {
+      label: "First leak",
+      title: "Prepare the first real leak",
+      icon: A.leaks,
+    },
+    {
+      label: "Ready",
+      title: "Start the 3-day path",
+      icon: A.progressFlame,
+    },
+  ];
+
+  const totalSteps = onboardingSteps.length;
+  const currentStep = onboardingSteps[step];
   const firstName = telegram.user?.first_name || "there";
   const totalIncome = getTotalIncome(draft);
   const totalFixedCosts = getFixedCosts(draft);
   const realBalance = totalIncome - totalFixedCosts;
+  const setupQuality =
+    draft.profile.country &&
+    totalIncome > 0 &&
+    (totalFixedCosts > 0 || draft.profile.lifeMode === "Student" || draft.profile.lifeMode === "Living with family")
+      ? "Ready"
+      : "Needs data";
 
   function updateIncome(key: keyof Settings["income"], value: string) {
     setDraft((prev) => ({
@@ -5051,6 +5155,12 @@ function OnboardingScreen({
     }));
   }
 
+  function selectStarterLeak(leak: (typeof firstLeakPresets)[number]) {
+    triggerHaptic("light");
+    setStarterLeak(leak);
+    setStarterAmount(leak.amount);
+  }
+
   function next() {
     triggerHaptic("light");
     setStep((prev) => Math.min(prev + 1, totalSteps - 1));
@@ -5061,13 +5171,30 @@ function OnboardingScreen({
     setStep((prev) => Math.max(prev - 1, 0));
   }
 
+  function finish(targetTab: Tab = "home") {
+    const finalSettings = normalizeSettings(draft);
+    const starterExpense =
+      targetTab === "add"
+        ? {
+            category: starterLeak.category,
+            amount: Math.max(Math.round(starterAmount), 1),
+            needType: "Not needed" as NeedType,
+            note: "First leak from onboarding",
+          }
+        : undefined;
+
+    onComplete(finalSettings, targetTab, starterExpense);
+  }
+
   return (
-    <div className="screen onboarding-screen">
-      <div className="onboarding-top">
-        <img src={A.appFrog} alt="$BROKE" />
+    <div className="screen onboarding-screen v58-onboarding">
+      <div className="onboarding-top v58-onboarding-top">
+        <img src={currentStep.icon} alt="" />
         <div>
-          <span>Step {step + 1} / {totalSteps}</span>
-          <strong>Life Setup</strong>
+          <span>
+            Step {step + 1} / {totalSteps} · {currentStep.label}
+          </span>
+          <strong>{currentStep.title}</strong>
         </div>
       </div>
 
@@ -5075,40 +5202,91 @@ function OnboardingScreen({
         <i style={{ width: `${((step + 1) / totalSteps) * 100}%` }} />
       </div>
 
-      {step === 0 && (
-        <section className="onboarding-card intro">
-          <img src={A.walletMascot} alt="" />
-          <h1>Welcome, {firstName}.</h1>
-          <p>
-            $BROKE adapts to your real life: student, worker, freelancer, local
-            currency, rent or no rent. No one-size-fits-all finance notebook.
-          </p>
+      <div className="v58-step-dots" aria-label="Onboarding progress">
+        {onboardingSteps.map((item, index) => (
+          <button
+            key={item.label}
+            type="button"
+            className={index === step ? "active" : index < step ? "done" : ""}
+            onClick={() => setStep(index)}
+            aria-label={item.label}
+          >
+            <span>{index + 1}</span>
+          </button>
+        ))}
+      </div>
 
-          <div className="onboarding-points">
-            <div>
-              <b>01</b>
-              <span>Choose region</span>
-            </div>
-            <div>
-              <b>02</b>
-              <span>Set life mode</span>
-            </div>
-            <div>
-              <b>03</b>
-              <span>Find local leaks</span>
-            </div>
+      {step === 0 && (
+        <section className="onboarding-card intro v58-onboarding-hero">
+          <div className="v58-hero-copy">
+            <span>$BROKE Life Tracker</span>
+            <h1>Welcome, {firstName}.</h1>
+            <p>
+              This is not a boring expense tracker. It is a wallet survival system:
+              find the leak, protect Wallet HP, then redirect the saved money into growth.
+            </p>
+          </div>
+
+          <div className="v58-onboarding-route">
+            <article>
+              <img src={A.leaks} alt="" />
+              <div>
+                <strong>Find the leak</strong>
+                <span>Track one real expense and mark if it was Needed, Maybe, or Not needed.</span>
+              </div>
+            </article>
+
+            <article>
+              <img src={A.walletMascot} alt="" />
+              <div>
+                <strong>Protect Wallet HP</strong>
+                <span>Your HP shows if leaks are putting pressure on the month.</span>
+              </div>
+            </article>
+
+            <article>
+              <img src={GROWTH_PUBLIC_ASSETS.market} alt="" />
+              <div>
+                <strong>Redirect into Growth</strong>
+                <span>Use Growth Lab to simulate what saved leaks could become.</span>
+              </div>
+            </article>
+          </div>
+
+          <div className="v58-privacy-note">
+            <strong>Privacy rule</strong>
+            <span>Public cards hide income and real balance. You share progress, not private numbers.</span>
           </div>
         </section>
       )}
 
       {step === 1 && (
-        <LifeProfileEditor settings={draft} setSettings={setDraft} />
+        <section className="v58-onboarding-stack">
+          <div className="v58-guidance-card">
+            <img src={A.appFrog} alt="" />
+            <div>
+              <strong>Make the app local.</strong>
+              <span>
+                Country, currency and life mode change the meaning of every number. A student,
+                worker and freelancer should not be judged by the same setup.
+              </span>
+            </div>
+          </div>
+
+          <LifeProfileEditor settings={draft} setSettings={setDraft} />
+        </section>
       )}
 
       {step === 2 && (
-        <section className="onboarding-card">
-          <h2>{getIncomePeriodLabel(draft)}</h2>
-          <p>Use the way money actually comes to you: salary, allowance, daily, weekly, or irregular.</p>
+        <section className="onboarding-card v58-onboarding-card">
+          <div className="v58-card-head">
+            <img src={A.income} alt="" />
+            <div>
+              <span>{getIncomePeriodLabel(draft)}</span>
+              <h2>Set what comes in.</h2>
+              <p>Use the way money actually reaches you: salary, allowance, daily work, weekly pay, or irregular income.</p>
+            </div>
+          </div>
 
           <div className="onboarding-fields">
             <EditableMoneyLine
@@ -5133,17 +5311,34 @@ function OnboardingScreen({
             />
           </div>
 
-          <div className="onboarding-total">
-            <span>Estimated monthly income</span>
-            <strong>{money(totalIncome, draft.currency)}</strong>
+          <div className="v58-onboarding-summary-grid">
+            <div>
+              <span>Estimated monthly income</span>
+              <strong>{money(totalIncome, draft.currency)}</strong>
+            </div>
+            <div>
+              <span>Income style</span>
+              <strong>{draft.profile.incomeStyle}</strong>
+            </div>
+          </div>
+
+          <div className="v58-privacy-note">
+            <strong>Not public</strong>
+            <span>Income is used for calculations. Share cards do not expose it.</span>
           </div>
         </section>
       )}
 
       {step === 3 && (
-        <section className="onboarding-card">
-          <h2>Fixed life costs</h2>
-          <p>Only add what applies. If you live with family or you are a student, rent can stay off.</p>
+        <section className="onboarding-card v58-onboarding-card">
+          <div className="v58-card-head">
+            <img src={A.lifeCost} alt="" />
+            <div>
+              <span>Fixed life costs</span>
+              <h2>Set what must be paid.</h2>
+              <p>Only add costs that apply. If you live with family or you are a student, rent can stay off.</p>
+            </div>
+          </div>
 
           <div className="onboarding-fields">
             {draft.profile.hasRent && (
@@ -5184,48 +5379,110 @@ function OnboardingScreen({
             />
           </div>
 
-          <div className="onboarding-total">
-            <span>Total fixed costs</span>
-            <strong>{money(totalFixedCosts, draft.currency)}</strong>
+          <div className="v58-onboarding-summary-grid">
+            <div>
+              <span>Total fixed costs</span>
+              <strong>{money(totalFixedCosts, draft.currency)}</strong>
+            </div>
+            <div>
+              <span>Real balance before leaks</span>
+              <strong className={realBalance >= 0 ? "good" : "bad"}>
+                {money(realBalance, draft.currency)}
+              </strong>
+            </div>
           </div>
         </section>
       )}
 
       {step === 4 && (
-        <section className="onboarding-card final">
-          <img src={A.homeMascot} alt="" />
-          <h2>Your tracker fits your life.</h2>
+        <section className="onboarding-card v58-onboarding-card">
+          <div className="v58-card-head">
+            <img src={A.leaks} alt="" />
+            <div>
+              <span>First real leak</span>
+              <h2>Prepare one expense.</h2>
+              <p>
+                This does not create a fake record. It prepares the Add tab so the user can confirm
+                the first real local leak.
+              </p>
+            </div>
+          </div>
 
-          <div className="onboarding-summary">
+          <div className="v58-starter-leak-grid">
+            {firstLeakPresets.map((leak) => (
+              <button
+                key={leak.category}
+                type="button"
+                className={starterLeak.category === leak.category ? "active" : ""}
+                onClick={() => selectStarterLeak(leak)}
+              >
+                <img src={leak.icon} alt="" />
+                <strong>{leak.label}</strong>
+                <span>{categoryLabel(leak.category)}</span>
+              </button>
+            ))}
+          </div>
+
+          <EditableMoneyLine
+            label="Expected amount"
+            value={starterAmount}
+            currency={draft.currency}
+            onChange={(value) => setStarterAmount(safeNumber(value))}
+          />
+
+          <div className="v58-privacy-note warning">
+            <strong>Discipline rule</strong>
+            <span>Do not just click and pretend. After onboarding, Add opens and the record must be saved manually.</span>
+          </div>
+        </section>
+      )}
+
+      {step === 5 && (
+        <section className="onboarding-card final v58-onboarding-final">
+          <img src={A.homeMascot} alt="" />
+          <span className={`v58-setup-status ${setupQuality === "Ready" ? "ready" : "needs-data"}`}>
+            {setupQuality}
+          </span>
+          <h2>Your wallet system is ready.</h2>
+
+          <div className="v58-onboarding-summary-grid final">
             <div>
               <span>Profile</span>
               <strong>{draft.profile.lifeMode}</strong>
             </div>
             <div>
               <span>Region</span>
-              <strong>{draft.profile.country}</strong>
+              <strong>{draft.profile.country || "Custom"}</strong>
             </div>
             <div>
-              <span>Real balance</span>
-              <strong>{money(realBalance, draft.currency)}</strong>
+              <span>Currency</span>
+              <strong>{draft.currency}</strong>
+            </div>
+            <div>
+              <span>First leak</span>
+              <strong>
+                {categoryLabel(starterLeak.category)} · {money(Math.max(starterAmount, 1), draft.currency)}
+              </strong>
             </div>
           </div>
 
-          <p>
-            Next step: add one real local leak. Data, transport, snacks, smoking,
-            takeout, gaming, or anything that quietly drains the wallet.
-          </p>
+          <div className="v58-first-path">
+            <strong>First 3-day path</strong>
+            <span>Day 1 — track your first leak.</span>
+            <span>Day 2 — check the chart and biggest leak.</span>
+            <span>Day 3 — share a safe public result card.</span>
+          </div>
         </section>
       )}
 
-      <div className="onboarding-actions">
+      <div className="onboarding-actions v58-onboarding-actions">
         {step > 0 ? (
           <button type="button" className="secondary-btn" onClick={back}>
             Back
           </button>
         ) : (
-          <button type="button" className="secondary-btn ghost" onClick={() => onComplete(draft)}>
-            Skip
+          <button type="button" className="secondary-btn ghost" onClick={() => finish("home")}>
+            Skip setup
           </button>
         )}
 
@@ -5237,9 +5494,9 @@ function OnboardingScreen({
           <button
             type="button"
             className="primary-btn onboarding-next"
-            onClick={() => onComplete(draft)}
+            onClick={() => finish("add")}
           >
-            Add first leak
+            Open Add and track it
           </button>
         )}
       </div>
