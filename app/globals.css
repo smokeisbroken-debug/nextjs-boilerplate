@@ -8790,3 +8790,7 @@ html[lang="ru"] .profile-field:first-of-type .profile-select {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== V51.1 DUPLICATE RU KEY BUILD FIX ===== */
+/* Removes duplicate object keys from ruText after Growth Lab translations. */
