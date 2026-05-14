@@ -6131,7 +6131,7 @@ function ReportsPanel({
           <div className="report-head">
             <img src={todayTopCategory ? getCategoryIcon(todayTopCategory.category) : A.walletMascot} alt="" />
             <div>
-              <span>Daily Wallet Report</span>
+              <span>$BROKE DAILY REPORT</span>
               <strong>{todayStatus}</strong>
               <small>Today</small>
             </div>
@@ -6158,7 +6158,7 @@ function ReportsPanel({
               : "No clear category movement yet today."}
           </p>
 
-          <div className="report-public-share-card daily" ref={dailyReportCardRef}>
+          <div className="report-public-share-card daily premium-share-card" ref={dailyReportCardRef}>
             <div className="report-public-share-top">
               <div>
                 <span>$BROKE DAILY REPORT</span>
@@ -6213,7 +6213,7 @@ function ReportsPanel({
           <div className="report-head">
             <img src={identityStats.biggestLeakAmount > 0 ? getCategoryIcon(identityStats.biggestLeakCategory) : A.challengeTrophy} alt="" />
             <div>
-              <span>Weekly Wallet Report</span>
+              <span>$BROKE WEEKLY REPORT</span>
               <strong>{weeklyStatus}</strong>
               <small>Last 7 days</small>
             </div>
@@ -6240,7 +6240,7 @@ function ReportsPanel({
               : "No major weekly leak is visible yet."}
           </p>
 
-          <div className="report-public-share-card weekly" ref={weeklyReportCardRef}>
+          <div className="report-public-share-card weekly premium-share-card" ref={weeklyReportCardRef}>
             <div className="report-public-share-top">
               <div>
                 <span>$BROKE WEEKLY REPORT</span>
@@ -6735,7 +6735,7 @@ function BiggestLeakChallengePanel({
               >
                 <div className="mission-public-share-top">
                   <div>
-                    <span>$BROKE MISSION</span>
+                    <span>$BROKE MISSION CARD</span>
                     <strong>{resultTitle}</strong>
                     <small>{progress.failed ? "Limit broken" : "Wallet HP protected"}</small>
                   </div>
@@ -7663,11 +7663,11 @@ function ShareResultCard({
         <small>Telegram / X ready</small>
       </div>
 
-      <div className="public-share-image-card" ref={shareCardRef}>
+      <div className="public-share-image-card premium-share-card" ref={shareCardRef}>
         <div className="public-share-top">
           <div>
-            <span>$BROKE RESULT</span>
-            <strong>Public share card</strong>
+            <span>$BROKE IDENTITY</span>
+            <strong>Premium public card</strong>
           </div>
           <img src={A.walletMascot} alt="" />
         </div>
@@ -9259,7 +9259,7 @@ function GrowthLabScreen({
       </section>
 
       {growthShareCardUrl && (
-        <section className="growth-share-preview">
+        <section className="growth-share-preview premium-share-card">
           <div className="section-title">
             <span>Growth card ready</span>
             <small>PNG</small>
