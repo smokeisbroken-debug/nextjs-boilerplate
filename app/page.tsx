@@ -1435,14 +1435,16 @@ const ruText: Record<string, string> = {
   "Best case": "Лучший сценарий",
   "This is only a simulation. It is not financial advice and does not guarantee returns.": "Это только симуляция. Это не финансовый совет и не гарантия дохода.",
   "Save simulation": "Сохранить симуляцию",
-  "Share growth plan": "Поделиться планом роста",
+  "Share growth card": "Поделиться планом роста",
   "Saved simulations": "Сохранённые симуляции",
   "No saved plans yet.": "Сохранённых планов пока нет.",
   "Create one simulation and save it here.": "Создай симуляцию и сохрани её здесь.",
   "Growth plan copied.": "План роста скопирован.",
   "Leak to Growth Plan": "План утечки в рост",
   "Simulation only. No guaranteed returns.": "Только симуляция. Доход не гарантируется.",
-  "Find the leak. Redirect it into growth.": "Найди утечку. Перенаправь её в рост."
+  "Find the leak. Redirect it into growth.": "Найди утечку. Перенаправь её в рост.",
+  "Share growth card": "Поделиться карточкой роста",
+  "Growth card saved. Share text copied.": "Карточка роста сохранена. Текст скопирован.",
 
 };
 
@@ -6574,6 +6576,294 @@ function getLeakAmountForGrowth(expenses: Expense[]) {
   }, 0);
 }
 
+
+function drawGrowthRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
+  const r = Math.min(radius, width / 2, height / 2);
+
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+function fillGrowthRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  fillStyle: string
+) {
+  drawGrowthRoundRect(ctx, x, y, width, height, radius);
+  ctx.fillStyle = fillStyle;
+  ctx.fill();
+}
+
+function strokeGrowthRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  strokeStyle: string,
+  lineWidth = 2
+) {
+  drawGrowthRoundRect(ctx, x, y, width, height, radius);
+  ctx.strokeStyle = strokeStyle;
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+}
+
+function drawGrowthWrappedText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+  maxLines = 3
+) {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let line = "";
+
+  words.forEach((word) => {
+    const testLine = line ? `${line} ${word}` : word;
+
+    if (ctx.measureText(testLine).width > maxWidth && line) {
+      lines.push(line);
+      line = word;
+      return;
+    }
+
+    line = testLine;
+  });
+
+  if (line) lines.push(line);
+
+  lines.slice(0, maxLines).forEach((item, index) => {
+    ctx.fillText(item, x, y + index * lineHeight);
+  });
+}
+
+function buildGrowthShareText(simulation: GrowthSimulation, settings: Settings) {
+  const result = getGrowthFinal(simulation);
+
+  return [
+    "$BROKE Growth Lab",
+    "",
+    `I found a ${money(simulation.contributionAmount, settings.currency)} ${growthFrequencyLabel(
+      simulation.contributionFrequency
+    )} wallet leak.`,
+    `If redirected for ${simulation.durationMonths} months:`,
+    `Total contributed: ${money(result.contributed, settings.currency)}`,
+    `Estimated final value: ${money(result.balance, settings.currency)}`,
+    `Estimated gain: ${money(result.gain, settings.currency)}`,
+    "",
+    "Simulation only. No guaranteed returns.",
+    "Find the leak. Redirect it into growth.",
+  ].join("\n");
+}
+
+async function buildGrowthShareCardBlob(
+  simulation: GrowthSimulation,
+  settings: Settings
+): Promise<Blob> {
+  const result = getGrowthFinal(simulation);
+  const cases = getGrowthCases(simulation);
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1350;
+
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    throw new Error("Canvas is not available");
+  }
+
+  const green = "#b7ff19";
+  const green2 = "#67ff2a";
+  const text = "#f4f7f0";
+  const muted = "rgba(244,247,240,0.68)";
+  const panel = "rgba(9, 20, 14, 0.92)";
+  const panel2 = "rgba(16, 35, 19, 0.92)";
+  const border = "rgba(183,255,25,0.22)";
+
+  ctx.fillStyle = "#020402";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let x = 0; x < canvas.width; x += 82) {
+    ctx.strokeStyle = "rgba(183,255,25,0.045)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y < canvas.height; y += 82) {
+    ctx.strokeStyle = "rgba(183,255,25,0.04)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
+  }
+
+  const glow1 = ctx.createRadialGradient(170, 125, 0, 170, 125, 360);
+  glow1.addColorStop(0, "rgba(183,255,25,0.28)");
+  glow1.addColorStop(1, "rgba(183,255,25,0)");
+  ctx.fillStyle = glow1;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const glow2 = ctx.createRadialGradient(920, 1110, 0, 920, 1110, 390);
+  glow2.addColorStop(0, "rgba(103,255,42,0.19)");
+  glow2.addColorStop(1, "rgba(103,255,42,0)");
+  ctx.fillStyle = glow2;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = green;
+  ctx.font = "900 34px Arial, sans-serif";
+  ctx.fillText("$BROKE", 66, 86);
+
+  ctx.fillStyle = text;
+  ctx.font = "900 80px Arial, sans-serif";
+  ctx.fillText("GROWTH LAB", 64, 164);
+
+  ctx.fillStyle = muted;
+  ctx.font = "500 30px Arial, sans-serif";
+  ctx.fillText("Leak to Growth simulation card", 68, 210);
+
+  fillGrowthRoundRect(ctx, 62, 265, 956, 244, 34, panel);
+  strokeGrowthRoundRect(ctx, 62, 265, 956, 244, 34, border, 2);
+
+  ctx.fillStyle = green;
+  ctx.font = "900 36px Arial, sans-serif";
+  ctx.fillText("I found a wallet leak.", 94, 326);
+
+  ctx.fillStyle = text;
+  ctx.font = "900 76px Arial, sans-serif";
+  ctx.fillText(
+    `${money(simulation.contributionAmount, settings.currency)}`,
+    94,
+    410
+  );
+
+  ctx.fillStyle = muted;
+  ctx.font = "700 28px Arial, sans-serif";
+  ctx.fillText(`${growthFrequencyLabel(simulation.contributionFrequency)} redirected`, 94, 452);
+
+  fillGrowthRoundRect(ctx, 690, 314, 270, 118, 28, "rgba(183,255,25,0.10)");
+  strokeGrowthRoundRect(ctx, 690, 314, 270, 118, 28, "rgba(183,255,25,0.24)", 2);
+  ctx.fillStyle = muted;
+  ctx.font = "700 24px Arial, sans-serif";
+  ctx.fillText("Duration", 724, 356);
+  ctx.fillStyle = green;
+  ctx.font = "900 44px Arial, sans-serif";
+  ctx.fillText(`${simulation.durationMonths} months`, 724, 408);
+
+  const cardY = 548;
+  const cardW = 456;
+  const cardH = 164;
+  const gap = 44;
+  const metrics = [
+    ["Total contributed", money(result.contributed, settings.currency)],
+    ["Estimated final value", money(result.balance, settings.currency)],
+    ["Estimated gain", money(result.gain, settings.currency)],
+    ["Simulated annual growth", `${simulation.expectedAnnualGrowth}%`],
+  ];
+
+  metrics.forEach((metric, index) => {
+    const col = index % 2;
+    const row = Math.floor(index / 2);
+    const x = 62 + col * (cardW + gap);
+    const y = cardY + row * (cardH + 30);
+
+    fillGrowthRoundRect(ctx, x, y, cardW, cardH, 28, panel2);
+    strokeGrowthRoundRect(ctx, x, y, cardW, cardH, 28, "rgba(255,255,255,0.075)", 1);
+
+    ctx.fillStyle = muted;
+    ctx.font = "700 24px Arial, sans-serif";
+    ctx.fillText(metric[0], x + 30, y + 48);
+
+    ctx.fillStyle = green;
+    ctx.font = "900 46px Arial, sans-serif";
+    drawGrowthWrappedText(ctx, metric[1], x + 30, y + 108, cardW - 60, 48, 1);
+  });
+
+  fillGrowthRoundRect(ctx, 62, 942, 956, 166, 30, "rgba(0,0,0,0.25)");
+  strokeGrowthRoundRect(ctx, 62, 942, 956, 166, 30, "rgba(183,255,25,0.14)", 1);
+
+  const caseItems = [
+    ["Worst", cases.worst.balance],
+    ["Base", cases.base.balance],
+    ["Best", cases.best.balance],
+  ];
+
+  caseItems.forEach((item, index) => {
+    const x = 98 + index * 310;
+
+    ctx.fillStyle = muted;
+    ctx.font = "700 24px Arial, sans-serif";
+    ctx.fillText(`${item[0]} case`, x, 996);
+
+    ctx.fillStyle = index === 1 ? green : text;
+    ctx.font = "900 42px Arial, sans-serif";
+    ctx.fillText(money(Number(item[1]), settings.currency), x, 1052);
+  });
+
+  fillGrowthRoundRect(ctx, 62, 1152, 956, 98, 26, "rgba(255,177,43,0.085)");
+  strokeGrowthRoundRect(ctx, 62, 1152, 956, 98, 26, "rgba(255,177,43,0.22)", 1);
+  ctx.fillStyle = "#ffdf8b";
+  ctx.font = "800 24px Arial, sans-serif";
+  ctx.fillText("Simulation only. No guaranteed returns. Not financial advice.", 94, 1211);
+
+  ctx.fillStyle = green2;
+  ctx.font = "900 28px Arial, sans-serif";
+  ctx.fillText("Find the leak. Redirect it into growth.", 66, 1300);
+
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+
+        reject(new Error("Could not create growth share card"));
+      },
+      "image/png",
+      0.95
+    );
+  });
+}
+
+async function downloadGrowthShareCard(blob: Blob) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "broke-growth-plan.png";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+
 function GrowthLabScreen({
   settings,
   expenses,
@@ -6669,39 +6959,46 @@ function GrowthLabScreen({
   }
 
   async function shareGrowthPlan(simulation = preview) {
-    const result = getGrowthFinal(simulation);
-    const text = [
-      "$BROKE Growth Lab",
-      "",
-      `I found a ${money(simulation.contributionAmount, settings.currency)} ${growthFrequencyLabel(
-        simulation.contributionFrequency
-      )} wallet leak.`,
-      `If redirected for ${simulation.durationMonths} months:`,
-      `Total contributed: ${money(result.contributed, settings.currency)}`,
-      `Estimated final value: ${money(result.balance, settings.currency)}`,
-      `Estimated gain: ${money(result.gain, settings.currency)}`,
-      "",
-      "Simulation only. No guaranteed returns.",
-      "Find the leak. Redirect it into growth.",
-    ].join("\n");
+    const text = buildGrowthShareText(simulation, settings);
 
     try {
-      if (navigator.share) {
+      const blob = await buildGrowthShareCardBlob(simulation, settings);
+      const file = new File([blob], "broke-growth-plan.png", {
+        type: "image/png",
+      });
+
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           title: "$BROKE Growth Lab",
           text,
+          files: [file],
         });
-      } else if (navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-        window.alert("Growth plan copied.");
       } else {
-        window.alert(text);
+        await downloadGrowthShareCard(blob);
+
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(text);
+        }
+
+        window.alert("Growth card saved. Share text copied.");
       }
 
       markDailyRoutineAction("sharedProgress");
       triggerHaptic("success");
     } catch {
-      // User can cancel native share.
+      try {
+        if (navigator.share) {
+          await navigator.share({
+            title: "$BROKE Growth Lab",
+            text,
+          });
+        } else if (navigator.clipboard) {
+          await navigator.clipboard.writeText(text);
+          window.alert("Growth plan copied.");
+        }
+      } catch {
+        // Ignore cancelled share.
+      }
     }
   }
 
