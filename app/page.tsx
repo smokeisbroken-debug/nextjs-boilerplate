@@ -1627,6 +1627,23 @@ const ruText: Record<string, string> = {
   "Leak to Growth Plan": "План утечки в рост",
   "Simulation only. No guaranteed returns.": "Только симуляция. Доход не гарантируется.",
   "Find the leak. Redirect it into growth.": "Найди утечку. Перенаправь её в рост.",
+  "Generate share card": "Создать карточку",
+  "Creating card...": "Создаём карточку...",
+  "Growth card ready": "Карточка роста готова",
+  "Growth share card preview": "Предпросмотр карточки роста",
+  "In Telegram WebView, direct file share can be blocked. Use Download card, copy the text, or long-press the image preview.": "В Telegram WebView прямая отправка файла может блокироваться. Нажми Download card, скопируй текст или удержи изображение предпросмотра.",
+  "Download card": "Скачать карточку",
+  "Share text copied.": "Текст скопирован.",
+  "Growth card generated. Save it from the preview below. Share text copied.": "Карточка создана. Сохрани её из предпросмотра ниже. Текст скопирован.",
+  "Growth card generated. Save it from the preview below.": "Карточка создана. Сохрани её из предпросмотра ниже.",
+  "Send card to TG bot": "Отправить карточку в TG-бота",
+  "Sending to bot...": "Отправляем в бота...",
+  "Growth card was sent to your Telegram bot chat. Open the bot chat and forward it anywhere.": "Карточка роста отправлена в чат с Telegram-ботом. Открой бота и перешли её куда нужно.",
+  "Telegram bot delivery needs Telegram initData. Open the app inside Telegram and try again. The card preview is ready below and share text was copied.": "Для отправки в Telegram-бота нужен Telegram initData. Открой приложение внутри Telegram и попробуй снова. Предпросмотр карточки готов ниже, текст скопирован.",
+  "Telegram bot delivery needs Telegram initData. Open the app inside Telegram and try again. The card preview is ready below.": "Для отправки в Telegram-бота нужен Telegram initData. Открой приложение внутри Telegram и попробуй снова. Предпросмотр карточки готов ниже.",
+  "Bot delivery failed. The card preview is ready below and share text was copied.": "Отправка через бота не прошла. Предпросмотр карточки готов ниже, текст скопирован.",
+  "Bot delivery failed. The card preview is ready below.": "Отправка через бота не прошла. Предпросмотр карточки готов ниже.",
+  "The main flow sends this PNG to your Telegram bot chat. If Telegram blocks delivery, you can still download the card, copy the text, or long-press the preview.": "Основной способ — отправить PNG в чат с Telegram-ботом. Если Telegram заблокирует отправку, можно скачать карточку, скопировать текст или удержать изображение предпросмотра.",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -4188,6 +4205,7 @@ export default function Home() {
           <GrowthLabScreen
             settings={settings}
             expenses={currentMonthExpenses}
+            shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onBack={goHome}
             onHelp={openHelp}
           />
@@ -8294,14 +8312,26 @@ async function downloadGrowthShareCard(blob: Blob) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function downloadGrowthShareCardUrl(url: string) {
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "broke-growth-plan.png";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
+
 function GrowthLabScreen({
   settings,
   expenses,
+  shareInitData,
   onBack,
   onHelp,
 }: {
   settings: Settings;
   expenses: Expense[];
+  shareInitData: string;
   onBack: () => void;
   onHelp: () => void;
 }) {
@@ -8316,6 +8346,17 @@ function GrowthLabScreen({
   const [expectedAnnualGrowth, setExpectedAnnualGrowth] = useState("10");
   const [riskLevel, setRiskLevel] = useState<GrowthRisk>("medium");
   const [reinvest, setReinvest] = useState(true);
+  const [growthShareCardUrl, setGrowthShareCardUrl] = useState("");
+  const [growthShareText, setGrowthShareText] = useState("");
+  const [isBuildingShareCard, setIsBuildingShareCard] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (growthShareCardUrl) {
+        URL.revokeObjectURL(growthShareCardUrl);
+      }
+    };
+  }, [growthShareCardUrl]);
 
   const leakAmount = useMemo(() => getLeakAmountForGrowth(expenses), [expenses]);
   const categorySummaries = useMemo(() => getCategorySummaries(expenses), [expenses]);
@@ -8387,47 +8428,89 @@ function GrowthLabScreen({
     triggerHaptic("light");
   }
 
+  async function copyGrowthShareText(text = growthShareText || buildGrowthShareText(preview, settings)) {
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        window.alert("Share text copied.");
+      }
+    } catch {
+      // Clipboard can be unavailable in some Telegram webviews.
+    }
+  }
+
   async function shareGrowthPlan(simulation = preview) {
     const text = buildGrowthShareText(simulation, settings);
 
+    setIsBuildingShareCard(true);
+
     try {
       const blob = await buildGrowthShareCardBlob(simulation, settings);
+      const cardUrl = URL.createObjectURL(blob);
+
+      setGrowthShareText(text);
+      setGrowthShareCardUrl((previousUrl) => {
+        if (previousUrl) {
+          URL.revokeObjectURL(previousUrl);
+        }
+
+        return cardUrl;
+      });
+
       const file = new File([blob], "broke-growth-plan.png", {
         type: "image/png",
       });
 
-      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+      if (shareInitData) {
+        await sendShareImageViaBot(file, shareInitData, text);
+        window.alert(
+          "Growth card was sent to your Telegram bot chat. Open the bot chat and forward it anywhere."
+        );
+      } else if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           title: "$BROKE Growth Lab",
           text,
           files: [file],
         });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        window.alert(
+          "Telegram bot delivery needs Telegram initData. Open the app inside Telegram and try again. The card preview is ready below and share text was copied."
+        );
       } else {
-        await downloadGrowthShareCard(blob);
-
-        if (navigator.clipboard) {
-          await navigator.clipboard.writeText(text);
-        }
-
-        window.alert("Growth card saved. Share text copied.");
+        window.alert(
+          "Telegram bot delivery needs Telegram initData. Open the app inside Telegram and try again. The card preview is ready below."
+        );
       }
 
       markDailyRoutineAction("sharedProgress");
       triggerHaptic("success");
     } catch {
       try {
-        if (navigator.share) {
+        const blob = await buildGrowthShareCardBlob(simulation, settings);
+        const file = new File([blob], "broke-growth-plan.png", {
+          type: "image/png",
+        });
+
+        if (navigator.share && navigator.canShare?.({ files: [file] })) {
           await navigator.share({
             title: "$BROKE Growth Lab",
             text,
+            files: [file],
           });
         } else if (navigator.clipboard) {
           await navigator.clipboard.writeText(text);
-          window.alert("Growth plan copied.");
+          window.alert(
+            "Bot delivery failed. The card preview is ready below and share text was copied."
+          );
+        } else {
+          window.alert("Bot delivery failed. The card preview is ready below.");
         }
       } catch {
-        // User cancelled share.
+        // User cancelled share or browser blocked the fallback.
       }
+    } finally {
+      setIsBuildingShareCard(false);
     }
   }
 
@@ -8608,11 +8691,40 @@ function GrowthLabScreen({
           <button type="button" onClick={saveSimulation}>
             Save simulation
           </button>
-          <button type="button" onClick={() => void shareGrowthPlan(preview)}>
-            Share growth card
+          <button
+            type="button"
+            disabled={isBuildingShareCard}
+            onClick={() => void shareGrowthPlan(preview)}
+          >
+            {isBuildingShareCard ? "Sending to bot..." : "Send card to TG bot"}
           </button>
         </div>
       </section>
+
+      {growthShareCardUrl && (
+        <section className="growth-share-preview">
+          <div className="section-title">
+            <span>Growth card ready</span>
+            <small>PNG</small>
+          </div>
+
+          <img src={growthShareCardUrl} alt="Growth share card preview" />
+
+          <p>
+            The main flow sends this PNG to your Telegram bot chat. If Telegram blocks
+            delivery, you can still download the card, copy the text, or long-press the preview.
+          </p>
+
+          <div className="growth-actions">
+            <button type="button" onClick={() => downloadGrowthShareCardUrl(growthShareCardUrl)}>
+              Download card
+            </button>
+            <button type="button" onClick={() => void copyGrowthShareText()}>
+              Copy share text
+            </button>
+          </div>
+        </section>
+      )}
 
       <section className="growth-result-card">
         <div className="section-title">
