@@ -1853,6 +1853,29 @@ const ruText: Record<string, string> = {
   "Track a leak first so the app can detect it.": "Сначала запиши утечку, чтобы app смог её найти.",
   "your custom leak": "твоя своя утечка",
   "no leak detected yet": "утечка пока не найдена",
+  "Start here": "Начни здесь",
+  "Your wallet has no movement yet.": "У кошелька пока нет движения.",
+  "Track one real expense to unlock Wallet HP, Chart movement, Save scenarios, Growth Lab and share cards.": "Запиши один реальный расход, чтобы открыть Wallet HP, движение графика, Save-сценарии, Growth Lab и share-карточки.",
+  "Add first expense": "Добавь первый расход",
+  "Use a real spend, not a fake test.": "Используй реальную трату, не фейковый тест.",
+  "Mark the leak": "Отметь утечку",
+  "Needed, Maybe or Not needed.": "Needed, Maybe или Not needed.",
+  "Unlock the system": "Открой систему",
+  "Chart, Save, Growth and reports become real.": "Chart, Save, Growth и отчёты станут реальными.",
+  "No leaks tracked yet.": "Утечки пока не записаны.",
+  "Add your first expense to make Wallet HP, Chart and Growth Lab real.": "Добавь первый расход, чтобы Wallet HP, Chart и Growth Lab стали реальными.",
+  "$BROKE Chart is waiting": "$BROKE Chart ждёт",
+  "No wallet movement yet.": "Пока нет движения кошелька.",
+  "Track one expense to create the first candle, spending volume and leak pressure.": "Запиши один расход, чтобы создать первую свечу, spending volume и leak pressure.",
+  "Track first expense": "Записать первый расход",
+  "Growth Lab needs a real leak": "Growth Lab нужна реальная утечка",
+  "No leaks detected yet.": "Утечки пока не найдены.",
+  "Add one Not needed or Maybe expense first. Then Growth Lab can turn that leak into a realistic simulation.": "Сначала добавь один расход Not needed или Maybe. Затем Growth Lab сможет превратить эту утечку в реалистичную симуляцию.",
+  "Add first leak": "Добавить первую утечку",
+  "Save is in demo mode": "Save в демо-режиме",
+  "No real scenarios yet.": "Пока нет реальных сценариев.",
+  "Add expenses first. Then $BROKE will show what you could save by reducing your real leaks.": "Сначала добавь расходы. Затем $BROKE покажет, сколько можно сохранить, уменьшая реальные утечки.",
+  "Add expense to unlock Save": "Добавить расход, чтобы открыть Save",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -4419,6 +4442,7 @@ export default function Home() {
             walletInsights={walletInsights}
             onBack={goHome}
             onExport={openExportHelp}
+            onOpenAdd={() => setActiveTab("add")}
           />
         )}
 
@@ -4429,6 +4453,7 @@ export default function Home() {
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onBack={goHome}
             onHelp={openHelp}
+            onOpenAdd={() => setActiveTab("add")}
           />
         )}
 
@@ -4446,6 +4471,7 @@ export default function Home() {
             onStartChallenge={startChallenge}
             onBack={goHome}
             onHelp={openHelp}
+            onOpenAdd={() => setActiveTab("add")}
           />
         )}
 
@@ -5693,6 +5719,8 @@ function DashboardScreen({
         ))}
       </section>
 
+      {allExpenses.length === 0 && <FirstRunPathCard onOpenAdd={onOpenAdd} />}
+
       <TodayMissionPanel
         settings={settings}
         summary={summary}
@@ -5871,6 +5899,7 @@ function DashboardScreen({
           settings={settings}
           expenses={expenses}
           onDeleteExpense={onDeleteExpense}
+          onOpenAdd={onOpenAdd}
         />
       </details>
 
@@ -5892,6 +5921,52 @@ function DashboardScreen({
 
 
 
+
+function FirstRunPathCard({ onOpenAdd }: { onOpenAdd: () => void }) {
+  return (
+    <section className="v58-empty-card v58-first-run-card">
+      <div className="v58-empty-head">
+        <img src={A.walletMascot} alt="" />
+        <div>
+          <span>Start here</span>
+          <strong>Your wallet has no movement yet.</strong>
+          <p>
+            Track one real expense to unlock Wallet HP, Chart movement, Save scenarios,
+            Growth Lab and share cards.
+          </p>
+        </div>
+      </div>
+
+      <div className="v58-empty-steps">
+        <article>
+          <b>1</b>
+          <div>
+            <strong>Add first expense</strong>
+            <span>Use a real spend, not a fake test.</span>
+          </div>
+        </article>
+        <article>
+          <b>2</b>
+          <div>
+            <strong>Mark the leak</strong>
+            <span>Needed, Maybe or Not needed.</span>
+          </div>
+        </article>
+        <article>
+          <b>3</b>
+          <div>
+            <strong>Unlock the system</strong>
+            <span>Chart, Save, Growth and reports become real.</span>
+          </div>
+        </article>
+      </div>
+
+      <button type="button" className="v58-empty-primary" onClick={onOpenAdd}>
+        Track first leak
+      </button>
+    </section>
+  );
+}
 
 function LifeProfileSummaryCard({ settings }: { settings: Settings }) {
   return (
@@ -8041,10 +8116,12 @@ function RecentExpenses({
   settings,
   expenses,
   onDeleteExpense,
+  onOpenAdd,
 }: {
   settings: Settings;
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
+  onOpenAdd: () => void;
 }) {
   return (
     <section className="recent-card">
@@ -8054,9 +8131,13 @@ function RecentExpenses({
       </div>
 
       {expenses.length === 0 ? (
-        <div className="empty-expenses">
+        <div className="empty-expenses v58-empty-mini">
           <img src={A.addFrog} alt="" />
-          <p>No leaks tracked yet. Add your first expense.</p>
+          <strong>No leaks tracked yet.</strong>
+          <span>Add your first expense to make Wallet HP, Chart and Growth Lab real.</span>
+          <button type="button" onClick={onOpenAdd}>
+            Track first leak
+          </button>
         </div>
       ) : (
         <div className="expense-list">
@@ -8254,12 +8335,14 @@ function ChartScreen({
   walletInsights,
   onBack,
   onExport,
+  onOpenAdd,
 }: {
   settings: Settings;
   expenses: Expense[];
   walletInsights: WalletInsight[];
   onBack: () => void;
   onExport: () => void;
+  onOpenAdd: () => void;
 }) {
   const [range, setRange] = useState<ChartRange>("week");
 
@@ -8396,11 +8479,17 @@ function ChartScreen({
       </section>
 
       {!hasRangeData && (
-        <section className="chart-empty-state">
+        <section className="chart-empty-state v58-empty-card v58-chart-empty">
           <img src={A.chartFrog} alt="" />
           <div>
-            <strong>No chart data yet</strong>
-            <p>Add one expense and this screen turns into your wallet movement chart.</p>
+            <span>$BROKE Chart is waiting</span>
+            <strong>No wallet movement yet.</strong>
+            <p>
+              Track one expense to create the first candle, spending volume and leak pressure.
+            </p>
+            <button type="button" onClick={onOpenAdd}>
+              Track first expense
+            </button>
           </div>
         </section>
       )}
@@ -9182,12 +9271,14 @@ function GrowthLabScreen({
   shareInitData,
   onBack,
   onHelp,
+  onOpenAdd,
 }: {
   settings: Settings;
   expenses: Expense[];
   shareInitData: string;
   onBack: () => void;
   onHelp: () => void;
+  onOpenAdd: () => void;
 }) {
   const [savedSimulations, setSavedSimulations] = useState<GrowthSimulation[]>(() =>
     readGrowthSimulations()
@@ -9427,10 +9518,29 @@ function GrowthLabScreen({
           </p>
         </div>
 
-        <button type="button" onClick={useMyLeaks}>
-          Use my leaks
+        <button type="button" onClick={leakAmount > 0 ? useMyLeaks : onOpenAdd}>
+          {leakAmount > 0 ? "Use my leaks" : "Track first leak"}
         </button>
       </section>
+
+      {leakAmount <= 0 && (
+        <section className="v58-empty-card v58-growth-empty">
+          <div className="v58-empty-head">
+            <img src={GROWTH_PUBLIC_ASSETS.lab} alt="" />
+            <div>
+              <span>Growth Lab needs a real leak</span>
+              <strong>No leaks detected yet.</strong>
+              <p>
+                Add one Not needed or Maybe expense first. Then Growth Lab can turn
+                that leak into a realistic simulation.
+              </p>
+            </div>
+          </div>
+          <button type="button" className="v58-empty-primary" onClick={onOpenAdd}>
+            Add first leak
+          </button>
+        </section>
+      )}
 
       <section className="growth-form-card">
         <div className="section-title">
@@ -9677,6 +9787,7 @@ function WhatIfScreen({
   onStartChallenge,
   onBack,
   onHelp,
+  onOpenAdd,
 }: {
   settings: Settings;
   expenses: Expense[];
@@ -9690,6 +9801,7 @@ function WhatIfScreen({
   onStartChallenge: (challengeId: string) => void;
   onBack: () => void;
   onHelp: () => void;
+  onOpenAdd: () => void;
 }) {
   const [reductions, setReductions] = useState<Record<string, number>>({});
 
@@ -9753,6 +9865,25 @@ function WhatIfScreen({
           /month · {money(totalMonthlySavings * 12, settings.currency)}/year
         </small>
       </section>
+
+      {!hasRealData && (
+        <section className="v58-empty-card v58-save-empty">
+          <div className="v58-empty-head">
+            <img src={A.whatIfFrog} alt="" />
+            <div>
+              <span>Save is in demo mode</span>
+              <strong>No real scenarios yet.</strong>
+              <p>
+                Add expenses first. Then $BROKE will show what you could save by
+                reducing your real leaks.
+              </p>
+            </div>
+          </div>
+          <button type="button" className="v58-empty-primary" onClick={onOpenAdd}>
+            Add expense to unlock Save
+          </button>
+        </section>
+      )}
 
       <details className="clean-details" open={Boolean(activeChallenge || challengeProgress)}>
         <summary>
