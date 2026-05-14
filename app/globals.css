@@ -10431,3 +10431,385 @@ html[lang="ru"] .tab-guide-hero p {
 
 /* ===== V56.9.1 TAB GUIDES ASSET FIX ===== */
 /* Fixes invalid icon references inside Detailed Tab Guides. */
+
+
+/* ===== V57 PREMIUM SHARE CARDS ===== */
+
+.premium-share-card,
+.public-share-image-card,
+.report-public-share-card,
+.mission-public-share-card,
+.growth-share-preview {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 26px !important;
+  border: 1px solid rgba(183, 255, 25, 0.18) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.12), transparent 32%),
+    radial-gradient(circle at 0% 100%, rgba(72, 255, 140, 0.09), transparent 28%),
+    linear-gradient(180deg, rgba(11, 18, 12, 0.98), rgba(4, 7, 5, 0.985)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    inset 0 0 0 1px rgba(183, 255, 25, 0.04),
+    0 22px 50px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(183, 255, 25, 0.04) !important;
+}
+
+.premium-share-card::before,
+.public-share-image-card::before,
+.report-public-share-card::before,
+.mission-public-share-card::before,
+.growth-share-preview::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.035), transparent 24%),
+    linear-gradient(180deg, rgba(183, 255, 25, 0.02), transparent 24%, transparent 72%, rgba(183, 255, 25, 0.05));
+  pointer-events: none;
+}
+
+.share-card {
+  gap: 12px;
+}
+
+.share-card .section-title span {
+  color: var(--green);
+  font-weight: 950;
+  letter-spacing: 0.28px;
+  text-transform: uppercase;
+}
+
+.share-card .section-title small {
+  color: rgba(244, 247, 240, 0.68);
+}
+
+.public-share-top,
+.report-public-share-top,
+.mission-public-share-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.public-share-top > div,
+.report-public-share-top > div,
+.mission-public-share-top > div {
+  min-width: 0;
+}
+
+.public-share-top span,
+.report-public-share-top span,
+.mission-public-share-top span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(183, 255, 25, 0.10);
+  border: 1px solid rgba(183, 255, 25, 0.18);
+  color: var(--green);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.public-share-top strong,
+.report-public-share-top strong,
+.mission-public-share-top strong {
+  display: block;
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  font-weight: 980;
+}
+
+.public-share-top small,
+.report-public-share-top small,
+.mission-public-share-top small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(244, 247, 240, 0.64);
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 820;
+}
+
+.public-share-top img,
+.report-public-share-top img,
+.mission-public-share-top img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 18px;
+  filter: drop-shadow(0 0 18px rgba(183, 255, 25, 0.16));
+}
+
+.share-preview,
+.public-share-meta,
+.public-share-savings,
+.report-public-share-grid,
+.mission-public-share-grid,
+.growth-case-grid {
+  gap: 10px !important;
+}
+
+.share-preview div,
+.public-share-meta > div,
+.public-share-savings > div,
+.report-public-share-grid > div,
+.mission-public-share-grid > div,
+.growth-case-grid > div {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px !important;
+  padding: 12px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.015)),
+    rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 8px 18px rgba(0, 0, 0, 0.12);
+}
+
+.share-preview div::after,
+.public-share-meta > div::after,
+.public-share-savings > div::after,
+.report-public-share-grid > div::after,
+.mission-public-share-grid > div::after,
+.growth-case-grid > div::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(183, 255, 25, 0.24), rgba(255,255,255,0));
+  opacity: 0.7;
+}
+
+.share-preview span,
+.public-share-meta span,
+.public-share-savings span,
+.report-public-share-grid span,
+.mission-public-share-grid span,
+.growth-case-grid span {
+  display: block;
+  color: rgba(244, 247, 240, 0.62) !important;
+  font-size: 10px !important;
+  line-height: 1.1;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.34px;
+}
+
+.share-preview strong,
+.public-share-meta strong,
+.public-share-savings strong,
+.report-public-share-grid strong,
+.mission-public-share-grid strong,
+.growth-case-grid strong,
+.share-preview b,
+.public-share-meta b,
+.public-share-savings b,
+.report-public-share-grid b,
+.mission-public-share-grid b,
+.growth-case-grid b {
+  display: block;
+  margin-top: 6px;
+  color: var(--text) !important;
+  font-size: 18px !important;
+  line-height: 1.02;
+  font-weight: 980;
+  letter-spacing: -0.02em;
+}
+
+.share-preview .good,
+.public-share-meta .good,
+.public-share-savings .good,
+.report-public-share-grid .good,
+.mission-public-share-grid .good,
+.growth-case-grid .good {
+  color: #b7ff19 !important;
+}
+
+.share-preview .bad,
+.public-share-meta .bad,
+.public-share-savings .bad,
+.report-public-share-grid .bad,
+.mission-public-share-grid .bad,
+.growth-case-grid .bad {
+  color: #ff8f7a !important;
+}
+
+.public-share-footer,
+.report-public-share-footer,
+.mission-public-share-footer {
+  margin-top: 16px !important;
+  display: grid;
+  gap: 5px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(183, 255, 25, 0.10);
+}
+
+.public-share-footer strong,
+.report-public-share-footer strong,
+.mission-public-share-footer strong {
+  color: var(--text) !important;
+  font-size: 15px !important;
+  line-height: 1.15;
+  font-weight: 950;
+}
+
+.public-share-footer span,
+.report-public-share-footer span,
+.mission-public-share-footer span {
+  color: rgba(244, 247, 240, 0.64) !important;
+  font-size: 11px !important;
+  line-height: 1.24;
+  font-weight: 800;
+}
+
+.share-privacy-note {
+  margin-top: 0;
+  padding: 12px 13px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+  color: rgba(244, 247, 240, 0.72);
+  font-size: 12px;
+  line-height: 1.36;
+}
+
+.share-privacy-note strong {
+  color: var(--green);
+}
+
+.share-buttons,
+.share-image-actions,
+.growth-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.copy-share-btn,
+.share-image-actions button,
+.growth-actions button,
+.share-buttons button {
+  min-height: 50px;
+  border-radius: 18px !important;
+  border: 1px solid rgba(183, 255, 25, 0.16) !important;
+  background:
+    linear-gradient(180deg, rgba(183, 255, 25, 0.12), rgba(183, 255, 25, 0.055)) !important;
+  color: var(--text) !important;
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: 0.01em;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 12px 24px rgba(0, 0, 0, 0.14);
+}
+
+.copy-share-btn:hover,
+.share-image-actions button:hover,
+.growth-actions button:hover,
+.share-buttons button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+.copy-share-btn:disabled,
+.share-image-actions button:disabled,
+.growth-actions button:disabled,
+.share-buttons button:disabled {
+  opacity: 0.62;
+  transform: none;
+  filter: none;
+}
+
+.share-image-only-btn {
+  color: var(--green) !important;
+}
+
+.growth-share-preview {
+  padding: 18px !important;
+}
+
+.growth-share-preview .growth-disclaimer {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(244, 247, 240, 0.68);
+  font-size: 11px;
+  line-height: 1.34;
+}
+
+.growth-share-preview .growth-mini-chart {
+  margin: 14px 0;
+  padding: 12px 12px 10px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(183, 255, 25, 0.10), transparent 35%),
+    rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(183, 255, 25, 0.12);
+}
+
+.growth-share-preview .growth-mini-chart > div {
+  border-radius: 999px 999px 10px 10px;
+  background: linear-gradient(180deg, rgba(183, 255, 25, 0.32), rgba(183, 255, 25, 0.08));
+}
+
+.growth-share-preview .growth-mini-chart span {
+  color: rgba(244, 247, 240, 0.6);
+  font-size: 9px;
+  font-weight: 850;
+}
+
+@media (max-width: 430px) {
+  .public-share-top strong,
+  .report-public-share-top strong,
+  .mission-public-share-top strong {
+    font-size: 19px;
+  }
+
+  .public-share-top img,
+  .report-public-share-top img,
+  .mission-public-share-top img {
+    width: 60px;
+    height: 60px;
+  }
+
+  .share-preview strong,
+  .public-share-meta strong,
+  .public-share-savings strong,
+  .report-public-share-grid strong,
+  .mission-public-share-grid strong,
+  .growth-case-grid strong,
+  .share-preview b,
+  .public-share-meta b,
+  .public-share-savings b,
+  .report-public-share-grid b,
+  .mission-public-share-grid b,
+  .growth-case-grid b {
+    font-size: 16px !important;
+  }
+
+  .share-buttons,
+  .share-image-actions,
+  .growth-actions {
+    grid-template-columns: 1fr;
+  }
+}
