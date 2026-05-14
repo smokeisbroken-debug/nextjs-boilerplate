@@ -1876,6 +1876,26 @@ const ruText: Record<string, string> = {
   "No real scenarios yet.": "Пока нет реальных сценариев.",
   "Add expenses first. Then $BROKE will show what you could save by reducing your real leaks.": "Сначала добавь расходы. Затем $BROKE покажет, сколько можно сохранить, уменьшая реальные утечки.",
   "Add expense to unlock Save": "Добавить расход, чтобы открыть Save",
+  "First 3-Day User Journey": "Первый 3-дневный путь",
+  "complete": "выполнено",
+  "Turn first use into a habit.": "Преврати первое использование в привычку.",
+  "Follow the first 3 days: track a real leak, read the chart, then share a safe public result card.": "Пройди первые 3 дня: запиши реальную утечку, посмотри график, затем поделись безопасной публичной карточкой.",
+  "Track Day 1 leak": "Записать утечку Day 1",
+  "Check Chart": "Проверить Chart",
+  "Open share card": "Открыть share-карточку",
+  "Keep streak alive": "Сохрани серию",
+  "Day 1 — Track first leak": "Day 1 — запиши первую утечку",
+  "First real movement detected.": "Первое реальное движение найдено.",
+  "Add one real Needed / Maybe / Not needed expense.": "Добавь один реальный расход Needed / Maybe / Not needed.",
+  "Day 2 — Check Chart": "Day 2 — проверь Chart",
+  "Chart checked. You saw the wallet movement.": "Chart проверен. Ты увидел движение кошелька.",
+  "Open Chart and find the biggest movement.": "Открой Chart и найди главное движение.",
+  "Unlock this after your first expense.": "Откроется после первого расхода.",
+  "Day 3 — Share result": "Day 3 — поделись результатом",
+  "Public progress shared.": "Публичный прогресс опубликован.",
+  "Open the public card and share without private numbers.": "Открой публичную карточку и поделись без личных чисел.",
+  "Unlock this after checking Chart.": "Откроется после проверки Chart.",
+  "none yet": "пока нет",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -4407,6 +4427,10 @@ export default function Home() {
             onDeleteExpense={deleteExpense}
             onQuickLeak={addQuickExpense}
             onOpenAdd={() => setActiveTab("add")}
+            onOpenChart={() => {
+              markDailyRoutineAction("checkedChart");
+              setActiveTab("chart");
+            }}
             telegram={telegram}
             webAuth={webAuth}
             cloudStatus={cloudStatus}
@@ -5614,6 +5638,7 @@ function DashboardScreen({
   onDeleteExpense,
   onQuickLeak,
   onOpenAdd,
+  onOpenChart,
   telegram,
   webAuth,
   cloudStatus,
@@ -5646,6 +5671,7 @@ function DashboardScreen({
   onDeleteExpense: (id: string) => void;
   onQuickLeak: (category: string, value: number, needType?: NeedType) => void;
   onOpenAdd: () => void;
+  onOpenChart: () => void;
   telegram: TelegramState;
   webAuth: WebAuthState;
   cloudStatus: CloudStatus;
@@ -5726,6 +5752,14 @@ function DashboardScreen({
         summary={summary}
         identityStats={identityStats}
         onOpenAdd={onOpenAdd}
+      />
+
+      <FirstThreeDayJourneyCard
+        summary={summary}
+        allExpenses={allExpenses}
+        identityStats={identityStats}
+        onOpenAdd={onOpenAdd}
+        onOpenChart={onOpenChart}
       />
 
       <LifeProfileSummaryCard settings={settings} />
@@ -5839,7 +5873,7 @@ function DashboardScreen({
         <BadgeMiniStrip badges={badges} />
       </details>
 
-      <details className="clean-details">
+      <details className="clean-details" id="share-result-card-panel">
         <summary>
           <div>
             <span>Share Result</span>
@@ -5921,6 +5955,168 @@ function DashboardScreen({
 
 
 
+
+function FirstThreeDayJourneyCard({
+  summary,
+  allExpenses,
+  identityStats,
+  onOpenAdd,
+  onOpenChart,
+}: {
+  summary: {
+    todaySpent: number;
+    walletHp: number;
+    streak: Streak;
+  };
+  allExpenses: Expense[];
+  identityStats: V2IdentityStats;
+  onOpenAdd: () => void;
+  onOpenChart: () => void;
+}) {
+  const [routineActions, setRoutineActions] = useState<DailyRoutineActions>(() =>
+    readDailyRoutineActions()
+  );
+
+  useEffect(() => {
+    setRoutineActions(readDailyRoutineActions());
+  }, [summary.todaySpent, identityStats.biggestLeakAmount, summary.streak.currentStreak]);
+
+  const day1Done = allExpenses.length > 0 || summary.todaySpent > 0;
+  const day2Unlocked = day1Done;
+  const day2Done = day1Done && routineActions.checkedChart;
+  const day3Unlocked = day2Done;
+  const day3Done = day2Done && routineActions.sharedProgress;
+  const completedCount = [day1Done, day2Done, day3Done].filter(Boolean).length;
+
+  function openChartStep() {
+    triggerHaptic("light");
+    markDailyRoutineAction("checkedChart");
+    setRoutineActions(readDailyRoutineActions());
+    onOpenChart();
+  }
+
+  function openShareStep() {
+    triggerHaptic("light");
+
+    if (typeof document === "undefined") return;
+
+    const element = document.getElementById("share-result-card-panel") as HTMLDetailsElement | null;
+
+    if (element) {
+      element.open = true;
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }
+
+  const nextAction =
+    !day1Done
+      ? {
+          label: "Track Day 1 leak",
+          onClick: onOpenAdd,
+        }
+      : !day2Done
+        ? {
+            label: "Check Chart",
+            onClick: openChartStep,
+          }
+        : !day3Done
+          ? {
+              label: "Open share card",
+              onClick: openShareStep,
+            }
+          : {
+              label: "Keep streak alive",
+              onClick: onOpenAdd,
+            };
+
+  return (
+    <section className="first-journey-card">
+      <div className="section-title">
+        <span>First 3-Day User Journey</span>
+        <small>{completedCount}/3 complete</small>
+      </div>
+
+      <div className="first-journey-hero">
+        <img src={A.progressFlame} alt="" />
+        <div>
+          <strong>Turn first use into a habit.</strong>
+          <p>
+            Follow the first 3 days: track a real leak, read the chart, then share
+            a safe public result card.
+          </p>
+        </div>
+      </div>
+
+      <div className="first-journey-progress">
+        <i style={{ width: `${(completedCount / 3) * 100}%` }} />
+      </div>
+
+      <div className="first-journey-grid">
+        <article className={day1Done ? "done" : "active"}>
+          <b>{day1Done ? "✓" : "1"}</b>
+          <div>
+            <strong>Day 1 — Track first leak</strong>
+            <span>
+              {day1Done
+                ? "First real movement detected."
+                : "Add one real Needed / Maybe / Not needed expense."}
+            </span>
+          </div>
+        </article>
+
+        <article className={day2Done ? "done" : day2Unlocked ? "active" : "locked"}>
+          <b>{day2Done ? "✓" : "2"}</b>
+          <div>
+            <strong>Day 2 — Check Chart</strong>
+            <span>
+              {day2Done
+                ? "Chart checked. You saw the wallet movement."
+                : day2Unlocked
+                  ? "Open Chart and find the biggest movement."
+                  : "Unlock this after your first expense."}
+            </span>
+          </div>
+        </article>
+
+        <article className={day3Done ? "done" : day3Unlocked ? "active" : "locked"}>
+          <b>{day3Done ? "✓" : "3"}</b>
+          <div>
+            <strong>Day 3 — Share result</strong>
+            <span>
+              {day3Done
+                ? "Public progress shared."
+                : day3Unlocked
+                  ? "Open the public card and share without private numbers."
+                  : "Unlock this after checking Chart."}
+            </span>
+          </div>
+        </article>
+      </div>
+
+      <div className="first-journey-bottom">
+        <div>
+          <span>Wallet HP</span>
+          <strong>{summary.walletHp}/100</strong>
+        </div>
+        <div>
+          <span>Biggest leak</span>
+          <strong>
+            {identityStats.biggestLeakAmount > 0
+              ? categoryLabel(identityStats.biggestLeakCategory)
+              : "none yet"}
+          </strong>
+        </div>
+      </div>
+
+      <button type="button" onClick={nextAction.onClick}>
+        {nextAction.label}
+      </button>
+    </section>
+  );
+}
 
 function FirstRunPathCard({ onOpenAdd }: { onOpenAdd: () => void }) {
   return (
