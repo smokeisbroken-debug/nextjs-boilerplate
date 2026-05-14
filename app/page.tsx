@@ -1,5 +1,6 @@
 "use client";
 
+// BROKE v51.2 clean file — replace app/page.tsx completely, do not paste into old file.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
@@ -1397,53 +1398,54 @@ const ruText: Record<string, string> = {
   "UAH (₴)": "UAH (₴)",
   "PLN (zł)": "PLN (zł)",
   "GEL (₾)": "GEL (₾)",
-  "KZT (₸)": "KZT (₸)"
-  "Growth": "Рост"
-  "$BROKE Growth Lab": "$BROKE Growth Lab"
-  "Leak to Growth": "Утечка в рост"
-  "Turn money leaks into future value.": "Превращай денежные утечки в будущую ценность."
-  "Simulation only. No real funds are deposited, no custody, and no guaranteed returns.": "Только симуляция. Реальные средства не вносятся, хранения денег нет, доход не гарантируется."
-  "This month’s detected leaks": "Найденные утечки за месяц"
-  "This month's detected leaks": "Найденные утечки за месяц"
-  "Biggest leak": "Главная утечка"
-  "No leaks yet. Add expenses to create a real plan.": "Утечек пока нет. Добавь расходы, чтобы создать реальный план."
-  "Use my leaks": "Использовать мои утечки"
-  "Create simulation": "Создать симуляцию"
-  "Simulation name": "Название симуляции"
-  "Starting amount": "Стартовая сумма"
-  "Contribution": "Пополнение"
-  "Duration": "Срок"
-  "months": "месяцев"
-  "Yearly growth": "Годовой рост"
-  "% simulated": "% симуляция"
-  "Low": "Низкий"
-  "Medium": "Средний"
-  "High": "Высокий"
-  "Low risk": "Низкий риск"
-  "Medium risk": "Средний риск"
-  "High risk": "Высокий риск"
-  "Reinvest simulated gains": "Реинвестировать симулированную прибыль"
-  "Your Growth Simulation": "Твоя симуляция роста"
-  "Projected": "Прогноз"
-  "Total contributed": "Всего внесено"
-  "Final value": "Итоговая сумма"
-  "Estimated gain": "Оценочная прибыль"
-  "Monthly redirected": "Перенаправлено в месяц"
-  "Worst case": "Худший сценарий"
-  "Base case": "Базовый сценарий"
-  "Best case": "Лучший сценарий"
-  "This is only a simulation. It is not financial advice and does not guarantee returns.": "Это только симуляция. Это не финансовый совет и не гарантия дохода."
-  "Save simulation": "Сохранить симуляцию"
-  "Share growth plan": "Поделиться планом роста"
-  "Saved simulations": "Сохранённые симуляции"
-  "No saved plans yet.": "Сохранённых планов пока нет."
-  "Create one simulation and save it here.": "Создай симуляцию и сохрани её здесь."
-  "Growth plan copied.": "План роста скопирован."
-  "Leak to Growth Plan": "План утечки в рост"
-  "Simulation only. No guaranteed returns.": "Только симуляция. Доход не гарантируется."
+  "KZT (₸)": "KZT (₸)",
+  "Growth": "Рост",
+  "$BROKE Growth Lab": "$BROKE Growth Lab",
+  "Leak to Growth": "Утечка в рост",
+  "Turn money leaks into future value.": "Превращай денежные утечки в будущую ценность.",
+  "Simulation only. No real funds are deposited, no custody, and no guaranteed returns.": "Только симуляция. Реальные средства не вносятся, хранения денег нет, доход не гарантируется.",
+  "This month’s detected leaks": "Найденные утечки за месяц",
+  "This month's detected leaks": "Найденные утечки за месяц",
+  "Biggest leak": "Главная утечка",
+  "No leaks yet. Add expenses to create a real plan.": "Утечек пока нет. Добавь расходы, чтобы создать реальный план.",
+  "Use my leaks": "Использовать мои утечки",
+  "Create simulation": "Создать симуляцию",
+  "Simulation name": "Название симуляции",
+  "Starting amount": "Стартовая сумма",
+  "Contribution": "Пополнение",
+  "Duration": "Срок",
+  "months": "месяцев",
+  "Yearly growth": "Годовой рост",
+  "% simulated": "% симуляция",
+  "Low": "Низкий",
+  "Medium": "Средний",
+  "High": "Высокий",
+  "Low risk": "Низкий риск",
+  "Medium risk": "Средний риск",
+  "High risk": "Высокий риск",
+  "Reinvest simulated gains": "Реинвестировать симулированную прибыль",
+  "Your Growth Simulation": "Твоя симуляция роста",
+  "Projected": "Прогноз",
+  "Total contributed": "Всего внесено",
+  "Final value": "Итоговая сумма",
+  "Estimated gain": "Оценочная прибыль",
+  "Monthly redirected": "Перенаправлено в месяц",
+  "Worst case": "Худший сценарий",
+  "Base case": "Базовый сценарий",
+  "Best case": "Лучший сценарий",
+  "This is only a simulation. It is not financial advice and does not guarantee returns.": "Это только симуляция. Это не финансовый совет и не гарантия дохода.",
+  "Save simulation": "Сохранить симуляцию",
+  "Share growth plan": "Поделиться планом роста",
+  "Saved simulations": "Сохранённые симуляции",
+  "No saved plans yet.": "Сохранённых планов пока нет.",
+  "Create one simulation and save it here.": "Создай симуляцию и сохрани её здесь.",
+  "Growth plan copied.": "План роста скопирован.",
+  "Leak to Growth Plan": "План утечки в рост",
+  "Simulation only. No guaranteed returns.": "Только симуляция. Доход не гарантируется.",
   "Find the leak. Redirect it into growth.": "Найди утечку. Перенаправь её в рост."
 
 };
+
 
 
 function applyRussianDynamicRules(value: string) {
