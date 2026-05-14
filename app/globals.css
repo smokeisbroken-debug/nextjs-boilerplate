@@ -11325,3 +11325,229 @@ html[lang="ru"] .tab-guide-hero p {
 .mission-steps div.danger .mission-step-copy small {
   color: rgba(255, 214, 132, 0.86);
 }
+
+
+/* ===== V58.2 BETTER EMPTY STATES ===== */
+
+.v58-empty-card {
+  position: relative;
+  overflow: hidden;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 24px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 82% 0%, rgba(183, 255, 25, 0.14), transparent 38%),
+    radial-gradient(circle at 0% 100%, rgba(72, 255, 140, 0.07), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.047), rgba(255, 255, 255, 0.014));
+  border: 1px solid rgba(183, 255, 25, 0.16);
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 255, 25, 0.035),
+    0 14px 36px rgba(0, 0, 0, 0.26);
+}
+
+.v58-empty-head {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 13px;
+  align-items: center;
+}
+
+.v58-empty-head > img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 16px;
+  filter: drop-shadow(0 0 14px rgba(183, 255, 25, 0.18));
+}
+
+.v58-empty-head span {
+  display: block;
+  color: var(--green);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.38px;
+}
+
+.v58-empty-head strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.05;
+  font-weight: 980;
+  letter-spacing: -0.45px;
+}
+
+.v58-empty-head p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.36;
+  font-weight: 720;
+}
+
+.v58-empty-steps {
+  display: grid;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.v58-empty-steps article {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 52px;
+  padding: 9px 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.034);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.v58-empty-steps b {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #061006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  font-size: 12px;
+  font-weight: 980;
+}
+
+.v58-empty-steps strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.v58-empty-steps span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 740;
+}
+
+.v58-empty-primary,
+.v58-empty-card button,
+.v58-empty-mini button,
+.chart-empty-state button {
+  min-height: 46px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 17px;
+  color: #061006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  box-shadow: 0 10px 22px rgba(183, 255, 25, 0.12);
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 980;
+}
+
+.v58-first-run-card {
+  margin-top: 10px;
+}
+
+.v58-empty-mini {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.v58-empty-mini strong {
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.v58-empty-mini span {
+  max-width: 280px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.34;
+  font-weight: 740;
+}
+
+.v58-empty-mini button {
+  width: min(100%, 260px);
+}
+
+.chart-empty-state.v58-empty-card {
+  grid-template-columns: 78px minmax(0, 1fr);
+  align-items: center;
+}
+
+.chart-empty-state.v58-empty-card > img {
+  width: 74px;
+  height: 74px;
+  object-fit: contain;
+}
+
+.chart-empty-state.v58-empty-card div span {
+  display: block;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.34px;
+}
+
+.chart-empty-state.v58-empty-card div strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.06;
+  font-weight: 980;
+}
+
+.chart-empty-state.v58-empty-card div p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.34;
+}
+
+.chart-empty-state.v58-empty-card button {
+  width: auto;
+  min-width: 180px;
+}
+
+.v58-growth-empty,
+.v58-save-empty {
+  margin-top: 12px;
+}
+
+@media (max-width: 430px) {
+  .v58-empty-head,
+  .chart-empty-state.v58-empty-card {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .v58-empty-head > img,
+  .chart-empty-state.v58-empty-card > img {
+    width: 50px;
+    height: 50px;
+  }
+
+  .v58-empty-head strong,
+  .chart-empty-state.v58-empty-card div strong {
+    font-size: 17px;
+  }
+
+  .chart-empty-state.v58-empty-card button {
+    width: 100%;
+  }
+}
