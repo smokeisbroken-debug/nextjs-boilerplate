@@ -4490,7 +4490,7 @@ function HelpGuideModal({
             "It can suggest adding the first record, controlling the biggest leak, checking the chart, or sharing safe progress.",
             "This keeps the app from feeling like a notebook and turns it into a daily discipline tool.",
           ],
-          icon: A.nextAction,
+          icon: A.progressFlame,
         },
         {
           title: "4. Check reports and cards",
@@ -4539,7 +4539,7 @@ function HelpGuideModal({
             "Coffee, smoking, takeout, shopping, transport, subscriptions, and custom categories should be used consistently.",
             "If the same habit is tracked under different names, the app cannot detect the leak properly.",
           ],
-          icon: A.category,
+          icon: A.categories,
         },
         {
           title: "3. Mark Needed / Maybe / Not needed",
@@ -4567,7 +4567,7 @@ function HelpGuideModal({
             "It is fast, but the amount should still be checked.",
             "If the quick amount is wrong, edit it before saving the record.",
           ],
-          icon: A.plus,
+          icon: A.navAdd,
         },
       ],
     },
@@ -4617,7 +4617,7 @@ function HelpGuideModal({
             "They turn numbers into actions.",
             "Use them when a user does not know what to fix next.",
           ],
-          icon: A.insight,
+          icon: A.walletMascot,
         },
         {
           title: "5. Share only safe chart context",
@@ -4718,7 +4718,7 @@ function HelpGuideModal({
             "This helps the user test realistic changes before committing.",
             "The goal is not to remove life. The goal is to stop the leak that gives the least value.",
           ],
-          icon: A.scenario,
+          icon: A.navWhatIf,
         },
         {
           title: "3. Start leak challenges",
@@ -4736,7 +4736,7 @@ function HelpGuideModal({
             "They show discipline without revealing private financial details.",
             "This creates community proof around the $BROKE identity.",
           ],
-          icon: A.leaderboard,
+          icon: A.challengeTrophy,
         },
         {
           title: "5. Use Save with Growth Lab",
@@ -4767,7 +4767,7 @@ function HelpGuideModal({
             "A student, worker, freelancer, or person living with family should not be judged by the same assumptions.",
             "Country and currency help make numbers feel real.",
           ],
-          icon: A.profile,
+          icon: A.walletMascot,
         },
         {
           title: "2. Income setup",
@@ -4794,7 +4794,7 @@ function HelpGuideModal({
             "Web sync allows website and Telegram usage to match.",
             "If sync shows an error, the app can still work locally until cloud sync recovers.",
           ],
-          icon: A.telegram,
+          icon: A.appFrog,
         },
         {
           title: "5. Data control",
@@ -4803,7 +4803,7 @@ function HelpGuideModal({
             "Reset should be used carefully because it can remove local progress.",
             "Public cards are safer than raw exports because they hide income and real balance.",
           ],
-          icon: A.settings,
+          icon: A.navSettings,
         },
       ],
     },
