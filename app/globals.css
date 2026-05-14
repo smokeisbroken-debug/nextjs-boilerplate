@@ -10267,3 +10267,163 @@ html[lang="ru"] .share-card strong {
     saturate(1.18)
     drop-shadow(0 0 10px rgba(183, 255, 25, 0.56));
 }
+
+
+/* ===== V56.9 DETAILED TAB GUIDES ===== */
+.tab-guide-modal {
+  max-height: min(88vh, 860px);
+}
+
+.tab-guide-tabs {
+  margin: 14px 0 12px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tab-guide-tabs button {
+  min-width: 0;
+  min-height: 64px;
+  padding: 7px 3px 6px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 4px;
+  border-radius: 16px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.065);
+}
+
+.tab-guide-tabs button.active {
+  color: var(--green);
+  background: rgba(183, 255, 25, 0.10);
+  border-color: rgba(183, 255, 25, 0.24);
+  box-shadow: 0 0 18px rgba(183, 255, 25, 0.10);
+}
+
+.tab-guide-tabs img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 10px;
+  filter: drop-shadow(0 0 8px rgba(183, 255, 25, 0.16));
+}
+
+.tab-guide-tabs span {
+  max-width: 100%;
+  overflow: hidden;
+  color: currentColor;
+  font-size: 8.5px;
+  line-height: 1;
+  font-weight: 950;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-guide-hero {
+  margin: 0 0 12px;
+  min-height: 90px;
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(183, 255, 25, 0.14), transparent 42%),
+    rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(183, 255, 25, 0.12);
+}
+
+.tab-guide-hero img {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+  border-radius: 18px;
+  filter: drop-shadow(0 0 14px rgba(183, 255, 25, 0.18));
+}
+
+.tab-guide-hero p {
+  margin: 0;
+  color: rgba(244, 247, 240, 0.76);
+  font-size: 13px;
+  line-height: 1.38;
+}
+
+.tab-guide-list {
+  gap: 11px;
+}
+
+.tab-guide-list article {
+  align-items: start;
+  grid-template-columns: 52px minmax(0, 1fr);
+  padding: 13px;
+  border-radius: 20px;
+}
+
+.tab-guide-list article > img {
+  width: 48px;
+  height: 48px;
+  border-radius: 15px;
+}
+
+.tab-guide-list strong {
+  font-size: 14.5px;
+}
+
+.tab-guide-list span {
+  position: relative;
+  padding-left: 12px;
+  margin-top: 7px;
+  font-size: 12px;
+  line-height: 1.36;
+}
+
+.tab-guide-list span::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(183, 255, 25, 0.78);
+  box-shadow: 0 0 8px rgba(183, 255, 25, 0.25);
+}
+
+html[lang="ru"] .tab-guide-tabs span,
+html[lang="ru"] .tab-guide-list span,
+html[lang="ru"] .tab-guide-hero p {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 380px) {
+  .tab-guide-tabs {
+    gap: 4px;
+  }
+
+  .tab-guide-tabs button {
+    min-height: 58px;
+    border-radius: 14px;
+  }
+
+  .tab-guide-tabs img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .tab-guide-tabs span {
+    font-size: 7.6px;
+  }
+
+  .tab-guide-hero {
+    grid-template-columns: 58px minmax(0, 1fr);
+  }
+
+  .tab-guide-hero img {
+    width: 56px;
+    height: 56px;
+  }
+}
