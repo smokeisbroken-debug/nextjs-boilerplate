@@ -8568,7 +8568,7 @@ function GrowthLabScreen({
           src={GROWTH_PUBLIC_ASSETS.leak}
           alt=""
           onError={(event) => {
-            event.currentTarget.src = A.moneyLeak;
+            event.currentTarget.src = A.leaks;
           }}
         />
 
