@@ -296,6 +296,16 @@ type DailyRoutineActions = {
   sharedProgress: boolean;
 };
 
+type ReturnHookAction = "add_leak" | "check_chart" | "share_result" | "keep_streak";
+
+type ReturnHookGoal = {
+  createdAt: string;
+  targetDate: string;
+  action: ReturnHookAction;
+  title: string;
+  detail: string;
+};
+
 type CommunityMessage = {
   id: string;
   senderName: string;
@@ -1896,6 +1906,22 @@ const ruText: Record<string, string> = {
   "Open the public card and share without private numbers.": "Открой публичную карточку и поделись без личных чисел.",
   "Unlock this after checking Chart.": "Откроется после проверки Chart.",
   "none yet": "пока нет",
+  "Return Hook": "Крючок возврата",
+  "not locked": "не закреплено",
+  "tomorrow": "завтра",
+  "Return tomorrow and track one real leak": "Вернись завтра и запиши одну реальную утечку",
+  "The first return should create real wallet movement, not a fake click.": "Первое возвращение должно создать реальное движение кошелька, а не фейковый клик.",
+  "Return tomorrow and check the chart": "Вернись завтра и проверь график",
+  "See if the same leak repeats and where wallet pressure starts.": "Посмотри, повторяется ли та же утечка и где начинается давление на кошелёк.",
+  "Return tomorrow and share a safe result": "Вернись завтра и поделись безопасным результатом",
+  "Use a public card. It hides income and real balance.": "Используй публичную карточку. Она скрывает доход и реальный баланс.",
+  "Return tomorrow and keep the streak alive": "Вернись завтра и сохрани серию",
+  "One small real action tomorrow is better than a perfect plan today.": "Одно маленькое реальное действие завтра лучше идеального плана сегодня.",
+  "Lock tomorrow goal": "Закрепить цель на завтра",
+  "Tomorrow goal locked": "Цель на завтра закреплена",
+  "Return hook completed": "Крючок возврата выполнен",
+  "Target": "Цель",
+  "No fake completion. The app only counts real tracking, chart checks, or real share actions.": "Без фейкового выполнения. App считает только реальные записи, проверки графика или настоящие share-действия.",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -2776,6 +2802,48 @@ function markDailyRoutineAction(action: DailyRoutineActionKey) {
     date,
     [action]: true,
   });
+}
+
+const RETURN_HOOK_KEY = "broke-return-hook-goal-v1";
+
+function getTomorrowDayKey() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return dayKey(date);
+}
+
+function readReturnHookGoal(): ReturnHookGoal | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(RETURN_HOOK_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as Partial<ReturnHookGoal>;
+
+    if (!parsed.targetDate || !parsed.action || !parsed.title || !parsed.detail) {
+      return null;
+    }
+
+    return parsed as ReturnHookGoal;
+  } catch {
+    return null;
+  }
+}
+
+function writeReturnHookGoal(goal: ReturnHookGoal | null) {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (!goal) {
+      window.localStorage.removeItem(RETURN_HOOK_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(RETURN_HOOK_KEY, JSON.stringify(goal));
+  } catch {
+    // Return hook is optional. Ignore storage errors.
+  }
 }
 
 const DAILY_ROUTINE_REWARD_KEY = "broke-daily-routine-reward-v1";
@@ -5762,6 +5830,14 @@ function DashboardScreen({
         onOpenChart={onOpenChart}
       />
 
+      <DailyReturnHookCard
+        summary={summary}
+        allExpenses={allExpenses}
+        identityStats={identityStats}
+        onOpenAdd={onOpenAdd}
+        onOpenChart={onOpenChart}
+      />
+
       <LifeProfileSummaryCard settings={settings} />
 
       <StreakCard streak={summary.streak} />
@@ -6114,6 +6190,199 @@ function FirstThreeDayJourneyCard({
       <button type="button" onClick={nextAction.onClick}>
         {nextAction.label}
       </button>
+    </section>
+  );
+}
+
+function DailyReturnHookCard({
+  summary,
+  allExpenses,
+  identityStats,
+  onOpenAdd,
+  onOpenChart,
+}: {
+  summary: {
+    todaySpent: number;
+    walletHp: number;
+    streak: Streak;
+  };
+  allExpenses: Expense[];
+  identityStats: V2IdentityStats;
+  onOpenAdd: () => void;
+  onOpenChart: () => void;
+}) {
+  const [routineActions, setRoutineActions] = useState<DailyRoutineActions>(() =>
+    readDailyRoutineActions()
+  );
+  const [goal, setGoal] = useState<ReturnHookGoal | null>(() => readReturnHookGoal());
+
+  useEffect(() => {
+    setRoutineActions(readDailyRoutineActions());
+    setGoal(readReturnHookGoal());
+  }, [summary.todaySpent, summary.streak.currentStreak, allExpenses.length]);
+
+  const todayKey = dayKey(new Date());
+  const tomorrowKey = getTomorrowDayKey();
+
+  const suggestedAction: {
+    action: ReturnHookAction;
+    title: string;
+    detail: string;
+    button: string;
+  } =
+    allExpenses.length === 0
+      ? {
+          action: "add_leak",
+          title: "Return tomorrow and track one real leak",
+          detail: "The first return should create real wallet movement, not a fake click.",
+          button: "Track first leak",
+        }
+      : !routineActions.checkedChart
+        ? {
+            action: "check_chart",
+            title: "Return tomorrow and check the chart",
+            detail: "See if the same leak repeats and where wallet pressure starts.",
+            button: "Check Chart",
+          }
+        : !routineActions.sharedProgress
+          ? {
+              action: "share_result",
+              title: "Return tomorrow and share a safe result",
+              detail: "Use a public card. It hides income and real balance.",
+              button: "Open share card",
+            }
+          : {
+              action: "keep_streak",
+              title: "Return tomorrow and keep the streak alive",
+              detail: "One small real action tomorrow is better than a perfect plan today.",
+              button: "Keep streak alive",
+            };
+
+  const activeGoal = goal?.targetDate === todayKey ? goal : null;
+  const futureGoal = goal?.targetDate === tomorrowKey ? goal : null;
+  const displayGoal = activeGoal || futureGoal || null;
+  const isTodayGoal = Boolean(activeGoal);
+
+  const activeGoalCompleted =
+    activeGoal?.action === "add_leak"
+      ? allExpenses.length > 0 || summary.todaySpent > 0
+      : activeGoal?.action === "check_chart"
+        ? routineActions.checkedChart
+        : activeGoal?.action === "share_result"
+          ? routineActions.sharedProgress
+          : activeGoal?.action === "keep_streak"
+            ? summary.streak.currentStreak > 0
+            : false;
+
+  function lockTomorrowGoal() {
+    triggerHaptic("success");
+
+    const nextGoal: ReturnHookGoal = {
+      createdAt: new Date().toISOString(),
+      targetDate: tomorrowKey,
+      action: suggestedAction.action,
+      title: suggestedAction.title,
+      detail: suggestedAction.detail,
+    };
+
+    writeReturnHookGoal(nextGoal);
+    setGoal(nextGoal);
+  }
+
+  function openSharePanel() {
+    triggerHaptic("light");
+
+    if (typeof document === "undefined") return;
+
+    const element = document.getElementById("share-result-card-panel") as HTMLDetailsElement | null;
+
+    if (element) {
+      element.open = true;
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }
+
+  function runGoalAction(action: ReturnHookAction) {
+    if (action === "check_chart") {
+      markDailyRoutineAction("checkedChart");
+      setRoutineActions(readDailyRoutineActions());
+      onOpenChart();
+      return;
+    }
+
+    if (action === "share_result") {
+      openSharePanel();
+      return;
+    }
+
+    onOpenAdd();
+  }
+
+  const buttonLabel =
+    isTodayGoal && activeGoalCompleted
+      ? "Return hook completed"
+      : isTodayGoal && activeGoal
+        ? suggestedAction.button
+        : futureGoal
+          ? "Tomorrow goal locked"
+          : "Lock tomorrow goal";
+
+  return (
+    <section className="daily-return-hook-card">
+      <div className="section-title">
+        <span>Return Hook</span>
+        <small>{displayGoal ? (isTodayGoal ? "today" : "tomorrow") : "not locked"}</small>
+      </div>
+
+      <div className="return-hook-hero">
+        <img src={A.dailyCheck} alt="" />
+        <div>
+          <strong>{displayGoal?.title || suggestedAction.title}</strong>
+          <p>{displayGoal?.detail || suggestedAction.detail}</p>
+        </div>
+      </div>
+
+      <div className="return-hook-grid">
+        <div>
+          <span>Target</span>
+          <strong>{displayGoal?.targetDate || tomorrowKey}</strong>
+        </div>
+        <div>
+          <span>Wallet HP</span>
+          <strong>{summary.walletHp}/100</strong>
+        </div>
+        <div>
+          <span>Biggest leak</span>
+          <strong>
+            {identityStats.biggestLeakAmount > 0
+              ? categoryLabel(identityStats.biggestLeakCategory)
+              : "none yet"}
+          </strong>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        className={isTodayGoal && activeGoalCompleted ? "completed" : ""}
+        disabled={Boolean(futureGoal && !isTodayGoal)}
+        onClick={() => {
+          if (isTodayGoal && activeGoal) {
+            runGoalAction(activeGoal.action);
+            return;
+          }
+
+          lockTomorrowGoal();
+        }}
+      >
+        {buttonLabel}
+      </button>
+
+      <small className="return-hook-note">
+        No fake completion. The app only counts real tracking, chart checks, or real share actions.
+      </small>
     </section>
   );
 }
