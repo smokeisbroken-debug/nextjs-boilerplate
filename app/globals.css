@@ -8794,3 +8794,7 @@ html[lang="ru"] .profile-field:first-of-type .profile-select {
 
 /* ===== V51.1 DUPLICATE RU KEY BUILD FIX ===== */
 /* Removes duplicate object keys from ruText after Growth Lab translations. */
+
+
+/* ===== V51.3 GROWTH RU COMMAS BUILD FIX ===== */
+/* Fixes missing commas in ruText after Growth Lab dictionary entries. */
