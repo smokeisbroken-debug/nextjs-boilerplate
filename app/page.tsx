@@ -1,6 +1,5 @@
 "use client";
 
-// BROKE v51.2 clean file — replace app/page.tsx completely, do not paste into old file.
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
@@ -200,6 +199,16 @@ type ChallengeProgress = {
   percentUsed: number;
 };
 
+type LocalLeakMission = {
+  id: string;
+  category: string;
+  startedAt: string;
+  endsAt: string;
+  baselineWeekly: number;
+  targetSpend: number;
+  createdAt: string;
+};
+
 type BadgeItem = {
   id: string;
   title: string;
@@ -370,6 +379,7 @@ declare global {
 }
 
 const STORAGE_KEY = "broke-life-tracker-v1";
+const LEAK_MISSION_KEY = "broke-local-leak-mission-v1";
 const ONBOARDING_KEY = "broke-life-tracker-onboarding-completed-v1";
 const PROJECT_X_URL = "https://x.com/SmokeIsBroke";
 const PROJECT_TG_URL = "https://t.me/SmokeIsBrokeSol";
@@ -1399,6 +1409,183 @@ const ruText: Record<string, string> = {
   "PLN (zł)": "PLN (zł)",
   "GEL (₾)": "GEL (₾)",
   "KZT (₸)": "KZT (₸)",
+  "days": "дней",
+  "day": "день",
+  "done": "выполнено",
+  "unlocked": "открыто",
+  "this week": "на этой неделе",
+  "today": "сегодня",
+  "latest": "последних",
+  "All": "Все",
+  "survival": "выживание",
+  "Leak:": "Утечка:",
+  "Ready for Telegram / X": "Готово для Telegram / X",
+  "X ready": "Готово для X",
+  "14/45 unlocked": "14/45 открыто",
+  "Spending Volume": "Объём расходов",
+  "Spending Volume — Последние 7 дней": "Объём расходов — последние 7 дней",
+  "Last 7 дней": "Последние 7 дней",
+  "Latest Expenses": "Последние расходы",
+  "Challenge": "Челлендж",
+  "Could go alone": "Можно было без этого",
+  "crypto charts": "крипто-графики",
+  "crypto-chartы": "крипто-графики",
+  "You watch crypto-chartы every день.": "Ты каждый день смотришь крипто-графики.",
+  "Trust": "Доверие",
+  "streak": "серия",
+  "badges": "бейджей",
+  "badge": "бейдж",
+  "challenges": "челленджей",
+  "challenge": "челлендж",
+  "How does this ranking work?": "Как работает этот рейтинг?",
+  "Hours lost:": "Потеряно часов:",
+  "#1 Daily": "#1 за день",
+  "Cut Custom": "Сократить другое",
+  "Cut custom": "Сократить другое",
+  "Today Mission": "Миссия на сегодня",
+  "Protect your Wallet HP today.": "Защити Wallet HP сегодня.",
+  "Track one real expense, avoid your biggest leak, and keep the routine alive.": "Запиши один реальный расход, избегай главной утечки и сохрани рутину.",
+  "Track one real expense": "Записать один реальный расход",
+  "Avoid biggest leak:": "Избегай главной утечки:",
+  "Keep daily discipline alive": "Сохрани ежедневную дисциплину",
+  "Yearly risk": "Риск за год",
+  "Track now": "Записать сейчас",
+  "active": "активно",
+  "Quick Add": "Быстрое добавление",
+  "amount stays editable": "сумму можно изменить",
+  "Latest impact": "Последний эффект",
+  "tracked.": "записано.",
+  "looks small once. Repeated daily, it becomes a real wallet leak.": "один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.",
+  "If repeated daily": "Если повторять ежедневно",
+  "Yearly damage": "Урон за год",
+  "Life hours traded": "Часы жизни обменяны",
+  "estimated": "примерно",
+  "/month": "/мес",
+  "/year": "/год",
+  "Takeout": "Еда на заказ",
+  "Biggest Leak Challenge": "Челлендж главной утечки",
+  "Suggested": "Предложено",
+  "Find your first leak": "Найди первую утечку",
+  "Start mission": "Начать миссию",
+  "Track first leak": "Записать первую утечку",
+  "Track mission expense": "Записать расход миссии",
+  "Spent": "Потрачено",
+  "Limit": "Лимит",
+  "Days left": "Дней осталось",
+  "3-day target": "Цель на 3 дня",
+  "Possible save": "Можно сохранить",
+  "Mission started": "Миссия началась",
+  "Track a leak first": "Сначала запиши утечку",
+  "Add one Not needed or Maybe expense.": "Добавь один расход Не нужно или Возможно.",
+  "Mission active": "Миссия активна",
+  "Mission survived": "Миссия пройдена",
+  "Mission survived.": "Миссия пройдена.",
+  "Mission failed": "Миссия провалена",
+  "Mission failed.": "Миссия провалена.",
+  "Mission in progress.": "Миссия в процессе.",
+  "Mission Result": "Результат миссии",
+  "You stayed under the leak limit. Wallet HP protected.": "Ты удержался ниже лимита утечки. Wallet HP защищён.",
+  "The leak broke the limit. Reset and run it back.": "Утечка пробила лимит. Сбрось и попробуй снова.",
+  "Keep tracking. The result card unlocks when this mission ends.": "Продолжай записывать. Карточка результата откроется после завершения миссии.",
+  "Saved": "Сохранено",
+  "Over limit": "Сверх лимита",
+  "Protected": "Защищён",
+  "Share result": "Поделиться результатом",
+  "Start new mission": "Новая миссия",
+  "$BROKE Mission Result": "$BROKE Результат миссии",
+  "Copy mission result": "Скопируй результат миссии",
+  "Wallet HP protected.": "Wallet HP защищён.",
+  "Mission result copied. Paste it in Telegram, X, or anywhere you want.": "Результат миссии скопирован. Вставь его в Telegram, X или куда нужно.",
+  "Mission image was sent to your Telegram bot chat.": "Картинка миссии отправлена в чат с Telegram-ботом.",
+  "Mission image downloaded. You can post it in Telegram or X.": "Картинка миссии скачана. Её можно опубликовать в Telegram или X.",
+  "$BROKE MISSION": "$BROKE МИССИЯ",
+  "Limit broken": "Лимит пробит",
+  "Wallet HP protected": "Wallet HP защищён",
+  "Days": "Дни",
+  "Result": "Результат",
+  "Survived": "Выжил",
+
+  "Chart Pulse": "Пульс графика",
+  "tracked": "записано",
+  "No damage yet": "Пока без урона",
+  "records": "записей",
+  "leak pressure": "давление утечек",
+  "Add expenses to make the chart alive.": "Добавь расходы, чтобы график ожил.",
+  "Leaks": "Утечки",
+  "pressure": "давление",
+  "Top category": "Главная категория",
+  "Avg/day": "Среднее/день",
+  "daily pace": "дневной темп",
+  "No chart data yet": "Пока нет данных для графика",
+  "Add one expense and this screen turns into your wallet movement chart.": "Добавь один расход, и этот экран превратится в график движения кошелька.",
+  "Wallet Survival Report": "Отчёт выживания кошелька",
+  "Wallet Insights": "Инсайты кошелька",
+  "View": "Смотреть",
+  "Badges": "Бейджи",
+  "Public card": "Публичная карточка",
+  "Connection": "Подключение",
+  "Telegram": "Telegram",
+  "Synced": "Синхронизировано",
+  "Web": "Веб",
+  "Challenges": "Челленджи",
+  "Active": "Активно",
+  "Choose": "Выбрать",
+  "Optional": "Опционально",
+  "What If Scenarios": "Сценарии What If",
+  "ideas": "идей",
+  "Income Setup": "Настройка дохода",
+  "month": "месяц",
+  "Clean UI": "Чистый интерфейс",
+  "Next Best Action": "Следующее лучшее действие",
+  "Start with one honest record. The app gets smarter after real data.": "Начни с одной честной записи. Приложение становится умнее после реальных данных.",
+  "Avoid random spending today": "Избегай случайных трат сегодня",
+  "Avoid": "Избегай",
+  "Wallet HP is under pressure. Protect it by blocking the biggest leak for one day.": "Wallet HP под давлением. Защити его, заблокировав главную утечку на один день.",
+  "Control random spending": "Контролируй случайные траты",
+  "Control": "Контролируй",
+  "This is the loudest leak right now. Keep it under control before it becomes normal.": "Это самая громкая утечка сейчас. Держи её под контролем, пока она не стала нормой.",
+  "Track next move": "Записать следующий шаг",
+  "Keep the wallet clean": "Держи кошелёк чистым",
+  "No major leak detected. Keep tracking and protect the streak.": "Крупной утечки не видно. Продолжай записывать и защищай серию.",
+  "7 actions to keep your wallet alive today.": "7 действий, чтобы кошелёк сегодня выжил.",
+  "Your weekly score, status, and biggest leak.": "Твой недельный счёт, статус и главная утечка.",
+  "See what habit is draining you most.": "Смотри, какая привычка сливает больше всего.",
+  "Create a clean public progress card.": "Создай чистую публичную карточку прогресса.",
+  "Preview wallet movement and today’s damage.": "Предпросмотр движения кошелька и сегодняшнего урона.",
+  "Pick a leak-control mission when you are ready.": "Выбери миссию контроля утечки, когда будешь готов.",
+  "Only public progress. No income or balance exposed.": "Только публичный прогресс. Доход и баланс не раскрываются.",
+  "Test how much you could save by reducing leaks.": "Проверь, сколько можно сохранить, если сократить утечки.",
+  "Adjust income without exposing private data publicly.": "Настрой доход без публичного раскрытия личных данных.",
+  "Rent, food, transport, internet, and basics.": "Аренда, еда, транспорт, интернет и базовые расходы.",
+  "Daily / Weekly Reports": "Дневные / недельные отчёты",
+  "Generate quick shareable wallet reports.": "Создавай быстрые отчёты кошелька для шаринга.",
+  "Reports": "Отчёты",
+  "Daily Wallet Report": "Дневной отчёт кошелька",
+  "Weekly Wallet Report": "Недельный отчёт кошелька",
+  "Clean day": "Чистый день",
+  "Small leak": "Маленькая утечка",
+  "Leak warning": "Предупреждение об утечке",
+  "Score": "Счёт",
+  "Share daily report": "Поделиться дневным отчётом",
+  "Share weekly report": "Поделиться недельным отчётом",
+  "Privacy rule:": "Правило приватности:",
+  "Reports never expose income or real balance.": "Отчёты никогда не показывают доход или реальный баланс.",
+  "Report copied. Paste it in Telegram, X, or anywhere you want.": "Отчёт скопирован. Вставь его в Telegram, X или куда нужно.",
+  "Copy report": "Скопируй отчёт",
+  "$BROKE Daily Wallet Report": "$BROKE Дневной отчёт кошелька",
+  "$BROKE Weekly Wallet Report": "$BROKE Недельный отчёт кошелька",
+  "Spent today": "Потрачено сегодня",
+  "Leaks today": "Утечки сегодня",
+  "Daily score": "Дневной счёт",
+  "Weekly leaks": "Недельные утечки",
+  "Biggest leak": "Главная утечка",
+  "Life hours lost": "Потерянные часы жизни",
+  "No clear category movement yet today.": "Сегодня пока нет явного движения по категориям.",
+  "No major weekly leak is visible yet.": "Крупной недельной утечки пока не видно.",
+  "$BROKE DAILY REPORT": "$BROKE ДНЕВНОЙ ОТЧЁТ",
+  "$BROKE WEEKLY REPORT": "$BROKE НЕДЕЛЬНЫЙ ОТЧЁТ",
+  "Report image was sent to your Telegram bot chat.": "Картинка отчёта отправлена в чат с Telegram-ботом.",
+  "Report image downloaded. You can post it in Telegram or X.": "Картинка отчёта скачана. Её можно опубликовать в Telegram или X.",
   "Growth": "Рост",
   "$BROKE Growth Lab": "$BROKE Growth Lab",
   "Leak to Growth": "Утечка в рост",
@@ -1406,7 +1593,6 @@ const ruText: Record<string, string> = {
   "Simulation only. No real funds are deposited, no custody, and no guaranteed returns.": "Только симуляция. Реальные средства не вносятся, хранения денег нет, доход не гарантируется.",
   "This month’s detected leaks": "Найденные утечки за месяц",
   "This month's detected leaks": "Найденные утечки за месяц",
-  "Biggest leak": "Главная утечка",
   "No leaks yet. Add expenses to create a real plan.": "Утечек пока нет. Добавь расходы, чтобы создать реальный план.",
   "Use my leaks": "Использовать мои утечки",
   "Create simulation": "Создать симуляцию",
@@ -1417,9 +1603,6 @@ const ruText: Record<string, string> = {
   "months": "месяцев",
   "Yearly growth": "Годовой рост",
   "% simulated": "% симуляция",
-  "Low": "Низкий",
-  "Medium": "Средний",
-  "High": "Высокий",
   "Low risk": "Низкий риск",
   "Medium risk": "Средний риск",
   "High risk": "Высокий риск",
@@ -1435,20 +1618,18 @@ const ruText: Record<string, string> = {
   "Best case": "Лучший сценарий",
   "This is only a simulation. It is not financial advice and does not guarantee returns.": "Это только симуляция. Это не финансовый совет и не гарантия дохода.",
   "Save simulation": "Сохранить симуляцию",
-  "Share growth card": "Поделиться планом роста",
+  "Share growth card": "Поделиться карточкой роста",
   "Saved simulations": "Сохранённые симуляции",
   "No saved plans yet.": "Сохранённых планов пока нет.",
   "Create one simulation and save it here.": "Создай симуляцию и сохрани её здесь.",
+  "Growth card saved. Share text copied.": "Карточка роста сохранена. Текст скопирован.",
   "Growth plan copied.": "План роста скопирован.",
   "Leak to Growth Plan": "План утечки в рост",
   "Simulation only. No guaranteed returns.": "Только симуляция. Доход не гарантируется.",
   "Find the leak. Redirect it into growth.": "Найди утечку. Перенаправь её в рост.",
-  "Growth card saved. Share text copied.": "Карточка роста сохранена. Текст скопирован.",
-
 };
 
-
-
+// V54.1: mission result translation rules are included inside applyRussianDynamicRules.
 function applyRussianDynamicRules(value: string) {
   let next = value;
 
@@ -1471,37 +1652,101 @@ function applyRussianDynamicRules(value: string) {
     .replace(/\bspent\b/g, "потрачено")
     .replace(/Spending Volume — Last 7 (days|дней)/g, "Объём расходов — последние 7 дней")
     .replace(/Last 7 (days|дней)/g, "Последние 7 дней")
-    .replace(/You watch crypto charts every (day|день)\./g, "Ты каждый день смотришь crypto-чарты.")
-    .replace(/But do you watch your own \$BROKE (Chart|График)\?/g, "Но смотришь ли ты свой $BROKE Chart?")
-    .replace(/You spent ([^ ]+) on ([A-Za-zА-Яа-яёЁ /-]+) today\./g, "Сегодня ты потратил $1 на $2.")
-    .replace(/That becomes ([^ ]+)\/month if this rhythm repeats\./g, "Если так продолжится, это станет $1/мес.")
-    .replace(/That becomes ([^ ]+)\/мес if this rhythm repeats\./g, "Если так продолжится, это станет $1/мес.")
-    .replace(/([\d.,]+%?) of your rent in the last 7 (days|дней)\./g, "$1 от твоей аренды за последние 7 дней.")
-    .replace(/(.+) is already ([\d.,]+%) of your rent in the last 7 (days|дней)\./g, "$1 уже $2 от твоей аренды за последние 7 дней.")
-    .replace(/(.+) appeared (\d+) times in the last 7 (days|дней)\./g, "$1 появлялось $2 раз(а) за последние 7 дней.")
-    .replace(/(.+) is repeating this week\./g, "$1 повторяется на этой неделе.")
-    .replace(/This is a good moment to start a (.+) control challenge\./g, "Это хороший момент начать челлендж контроля: $1.")
-    .replace(/([^ ]+) was marked as (Не нужно|Not needed) \/ (Возможно|Maybe) in the last 7 (days|дней)\./g, "$1 отмечено как Не нужно / Возможно за последние 7 дней.")
-    .replace(/At this pace, leaks could reach ([^ ]+) this month\./g, "В таком темпе утечки могут достичь $1 в этом месяце.")
-    .replace(/Wallet HP is down to (\d+\/100)\./g, "Wallet HP упал до $1.")
-    .replace(/Wallet HP is (\d+\/100) and real balance is still positive\./g, "Wallet HP $1, и реальный баланс всё ещё положительный.")
-    .replace(/([^ ]+) in leaks vs ([^ ]+) phone cost\./g, "$1 утечек против $2 расходов на телефон.")
-    .replace(/(.+) drained ([^ ]+) this week\./g, "$1 слил(а) $2 на этой неделе.")
-    .replace(/([^ ]+) in weekly leaks detected\./g, "Обнаружено $1 недельных утечек.")
-    .replace(/You traded about ([\d.]+) hours of life for leaks this week\. That is not a small habit\./g, "На этой неделе ты обменял около $1 часов жизни на утечки. Это уже не мелкая привычка.")
-    .replace(/(.+) is trying to become your lifestyle\./g, "$1 пытается стать твоим стилем жизни.")
-    .replace(/Complete (\d+) more task(s)?/g, "Осталось заданий: $1")
-    .replace(/(\d+) record(s)? tracked today\./g, "Сегодня записей: $1.")
-    .replace(/(\d+) tracked · (\d+)% reduction/g, "$1 запись · сокращение $2%")
-    .replace(/\/month/g, "/мес")
-    .replace(/\/year/g, "/год")
-    .replace(/\bscore\b/g, "счёт")
+    .replace(/You watch crypto charts every (day|день)\./g, "Ты каждый день смотришь крипто-графики.")
+    .replace(/You watch crypto-chartы every день\./g, "Ты каждый день смотришь крипто-графики.")
+    .replace(/\bcrypto-chartы\b/g, "крипто-графики")
+    .replace(/But do you watch your own \$BROKE (Chart|График)\?/g, "Но следишь ли ты за своим $BROKE Chart?")
+    .replace(/Но смотришь ли ты свой \$BROKE Chart\?/g, "Но следишь ли ты за своим $BROKE Chart?")
+    .replace(/You spent (\$[\d,.]+|C\$[\d,.]+) on custom (today|сегодня)\./g, "Сегодня ты потратил $1 на другое.")
+    .replace(/That becomes (\$[\d,.]+|C\$[\d,.]+)\/мес if this rhythm repeats\./g, "Если так продолжится, это станет $1/мес.")
+    .replace(/That becomes (\$[\d,.]+|C\$[\d,.]+)\/mo if this rhythm repeats\./g, "Если так продолжится, это станет $1/мес.")
+    .replace(/(\$[\d,.]+|C\$[\d,.]+) was marked as (Не нужно|Not needed) \/ (Возможно|Maybe) in the last 7 (days|дней)\./g, "$1 отмечено как Не нужно / Возможно за последние 7 дней.")
+    .replace(/At this pace, leaks could reach (\$[\d,.]+|C\$[\d,.]+) за месяц\./g, "В таком темпе утечки могут достичь $1 в месяц.")
+    .replace(/At this pace, leaks could reach (\$[\d,.]+|C\$[\d,.]+) per month\./g, "В таком темпе утечки могут достичь $1 в месяц.")
+    .replace(/Wallet HP is (\d+\/100) and (реальный баланс|real balance) is still positive\./g, "Wallet HP $1, и реальный баланс всё ещё положительный.")
+    .replace(/(\d+) дня без takeout/g, "$1 дня без еду на заказ")
+    .replace(/Держи расходы на takeout ниже лимита (\d+) дня\./g, "Держи расходы на еду на заказ ниже лимита $1 дня.")
+    .replace(/(\d+)\s+days\b/g, "$1 дня")
+    .replace(/(\d+)\/(\d+)\s+done\b/g, "$1/$2 выполнено")
+    .replace(/(\d+)\/(\d+)\s+unlocked\b/g, "$1/$2 открыто")
+    .replace(/(\d+)\s+latest\b/g, "$1 последних")
+    .replace(/#(\d+)\s+Daily\b/g, "#$1 за день")
+    .replace(/Hours lost:\s*([\d.]+)h/g, "Потеряно часов: $1ч")
+    .replace(/Leak:\s*([A-Za-zА-Яа-яёЁ _-]+)/g, "Утечка: $1")
+    .replace(/(\$[\d,.]+)\s+this week\b/g, "$1 на этой неделе")
+    .replace(/(\$[\d,.]+)\/year\b/g, "$1/год")
+    .replace(/(\$[\d,.]+)\/month\b/g, "$1/мес")
+    .replace(/\bSpending Volume — Последние 7 дней\b/g, "Объём расходов — последние 7 дней")
+    .replace(/\bSpending Volume — Last 7 days\b/g, "Объём расходов — последние 7 дней")
+    .replace(/\bLast 7 days\b/g, "Последние 7 дней")
+    .replace(/\b4 latest\b/g, "4 последних")
+    .replace(/Trust L(\d+)\s*·\s*(\d+)d streak\s*·\s*(\d+) badges/g, "Доверие L$1 · серия $2д · $3 бейджей")
+    .replace(/L(\d+)\s*·\s*(\d+)d streak\s*·\s*(\d+) badges\s*·\s*(\d+) challenges/g, "L$1 · серия $2д · $3 бейджей · $4 челленджей")
+    .replace(/(\d+)d streak/g, "серия $1д")
+    .replace(/(\d+) badges/g, "$1 бейджей")
+    .replace(/(\d+) challenges/g, "$1 челленджей")
+    .replace(/\bAll\b/g, "Все")
+    .replace(/\bsurvival\b/g, "выживание")
+    .replace(/\bChallenge\b/g, "Челлендж")
+    .replace(/\bCould go alone\b/g, "Можно было без этого")
+    .replace(/\bCut Custom\b/g, "Сократить другое")
+    .replace(/\bCut custom\b/g, "Сократить другое")
+    .replace(/\bCut Такси\b/g, "Сократить такси")
+    .replace(/\bReduce Курение\b/g, "Сократить курение")
+    .replace(/\bCut Кофе\b/g, "Сократить кофе")
+    .replace(/\bidentity app\./g, "приложение против утечек кошелька.")
+    .replace(/Анти-думспендинг identity app\./g, "Приложение против утечек кошелька.")
+    .replace(/Твой score/g, "Твой счёт")
     .replace(/\bcustom\b/g, "другое")
     .replace(/\btakeout\b/g, "еда на заказ")
-    .replace(/Cut Такси/g, "Сократить такси")
-    .replace(/Reduce Курение/g, "Сократить курение")
-    .replace(/Cut Кофе/g, "Сократить кофе")
-    .replace(/Твой score/g, "Твой счёт")
+    .replace(/Avoid biggest leak:\s*([A-Za-zА-Яа-яёЁ _/-]+)/g, "Избегай главной утечки: $1")
+    .replace(/(\d+)\/3 active/g, "$1/3 активно")
+    .replace(/(Coffee|Taxi|Smoking|Takeout|Custom) tracked\./g, "$1 записано.")
+    .replace(/(\$[\d,.]+) looks small once\. Repeated daily, it becomes a real wallet leak\./g, "$1 один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.")
+    .replace(/Anti-([A-Za-zА-Яа-яёЁ _/-]+) mission/g, "Анти-$1 миссия")
+    .replace(/Start anti-([A-Za-zА-Яа-яёЁ _/-]+) mission/g, "Начать анти-$1 миссию")
+    .replace(/Stay under (\$[\d,.]+|C\$[\d,.]+) for 3 days\./g, "Удержись ниже $1 за 3 дня.")
+    .replace(/(\$[\d,.]+|C\$[\d,.]+) drained this week\. Cut it before it becomes normal\./g, "$1 слилось на этой неделе. Сократи это, пока не стало нормой.")
+    .replace(/Track one Not needed or Maybe expense first\. Then the app will build a mission around it\./g, "Сначала добавь расход Не нужно или Возможно. Потом app построит миссию вокруг него.")
+    .replace(/(\d+)d left/g, "$1д осталось")
+    .replace(/(\$[\d,.]+|C\$[\d,.]+) max/g, "макс. $1")
+    .replace(/Possible save:\s*(\$[\d,.]+|C\$[\d,.]+)/g, "Можно сохранить: $1")
+    .replace(/3-day anti-([A-Za-zА-Яа-яёЁ _/-]+) challenge/g, "3-дневный анти-$1 челлендж")
+    .replace(/Leak: ([A-Za-zА-Яа-яёЁ _/-]+)/g, "Утечка: $1")
+    .replace(/Days: 3/g, "Дней: 3")
+    .replace(/Limit: (\$[\d,.]+|C\$[\d,.]+)/g, "Лимит: $1")
+    .replace(/Spent: (\$[\d,.]+|C\$[\d,.]+)/g, "Потрачено: $1")
+    .replace(/Saved: (\$[\d,.]+|C\$[\d,.]+)/g, "Сохранено: $1")
+    .replace(/Over limit: (\$[\d,.]+|C\$[\d,.]+)/g, "Сверх лимита: $1")
+    .replace(/Find the leak before it becomes your lifestyle\./g, "Найди утечку, пока она не стала образом жизни.")
+    .replace(/Smoke is broke\./g, "Smoke is broke.")
+    .replace(/(\$[\d,.]+|C\$[\d,.]+) tracked/g, "$1 записано")
+    .replace(/(\d+) records · (\d+)% leak pressure/g, "$1 записей · $2% давление утечек")
+    .replace(/(\d+)% pressure/g, "$1% давление")
+    .replace(/^Avoid ([A-Za-zА-Яа-яёЁ _/-]+) today$/g, "Избегай $1 сегодня")
+    .replace(/^Control ([A-Za-zА-Яа-яёЁ _/-]+)$/g, "Контролируй $1")
+    .replace(/Status: ([A-Za-zА-Яа-яёЁ _/-]+)/g, "Статус: $1")
+    .replace(/Wallet HP: (\d+\/100)/g, "Wallet HP: $1")
+    .replace(/Spent today: (\$[\d,.]+|C\$[\d,.]+)/g, "Потрачено сегодня: $1")
+    .replace(/Leaks today: (\$[\d,.]+|C\$[\d,.]+)/g, "Утечки сегодня: $1")
+    .replace(/Top category: ([A-Za-zА-Яа-яёЁ _/-]+)/g, "Главная категория: $1")
+    .replace(/Daily score: (\d+\/100)/g, "Дневной счёт: $1")
+    .replace(/Survival Score: (\d+\/100)/g, "Счёт выживания: $1")
+    .replace(/Weekly leaks: (\$[\d,.]+|C\$[\d,.]+)/g, "Недельные утечки: $1")
+    .replace(/Biggest leak: ([A-Za-zА-Яа-яёЁ _/()$,.+-]+)/g, "Главная утечка: $1")
+    .replace(/Life hours lost: ([\d.]+h)/g, "Потерянные часы жизни: $1")
+    .replace(/([A-Za-zА-Яа-яёЁ _/-]+) is the main movement today\./g, "$1 — главное движение сегодня.")
+    .replace(/([A-Za-zА-Яа-яёЁ _/-]+) is the biggest category this week\./g, "$1 — главная категория этой недели.");
+
+  next = next
+    .replace(/C\$([\d,.]+)\s+this week\b/g, (_match, amount) => `C$${amount} на этой неделе`)
+    .replace(/C\$([\d,.]+)\/year\b/g, (_match, amount) => `C$${amount}/год`)
+    .replace(/C\$([\d,.]+)\/год\b/g, (_match, amount) => `C$${amount}/год`)
+    .replace(/C\$([\d,.]+)\/month\b/g, (_match, amount) => `C$${amount}/мес`)
+    .replace(/C\$([\d,.]+)\/мес\b/g, (_match, amount) => `C$${amount}/мес`)
+    .replace(/C\$([\d,.]+) looks small once\. Repeated daily, it becomes a real wallet leak\./g, (_match, amount) => `C$${amount} один раз выглядит мелочью. Каждый день — это уже реальная утечка кошелька.`);
+
+  next = next
     .replace(/Biggest leak: /g, "Главная утечка: ")
     .replace(/Final:/g, "Итог:")
     .replace(/Gain:/g, "Прибыль:");
@@ -1737,6 +1982,14 @@ const firstLeakPresets = [
   { category: "Smoking", amount: 5, icon: A.smoking, label: "Smoking leak" },
   { category: "Takeouts", amount: 15, icon: A.takeouts, label: "Takeout leak" },
   { category: "Shopping", amount: 20, icon: A.shopping, label: "Random buy" },
+];
+
+const quickAddPresets = [
+  { category: "Coffee", amount: 2, icon: A.coffee, label: "Coffee" },
+  { category: "Taxi", amount: 10, icon: A.taxi, label: "Taxi" },
+  { category: "Smoking", amount: 5, icon: A.smoking, label: "Smoking" },
+  { category: "Takeouts", amount: 15, icon: A.takeouts, label: "Takeout" },
+  { category: "Custom", amount: 10, icon: A.custom, label: "Custom" },
 ];
 
 const defaultChallengeTemplates: ChallengeTemplate[] = [
@@ -2602,6 +2855,112 @@ function getTodayExpenses(expenses: Expense[]) {
   return expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === today);
 }
 
+function readLocalLeakMission(): LocalLeakMission | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(LEAK_MISSION_KEY);
+
+    if (!raw) return null;
+
+    const mission = JSON.parse(raw) as Partial<LocalLeakMission>;
+
+    if (
+      !mission.id ||
+      !mission.category ||
+      !mission.startedAt ||
+      !mission.endsAt ||
+      typeof mission.targetSpend !== "number"
+    ) {
+      return null;
+    }
+
+    return mission as LocalLeakMission;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalLeakMission(mission: LocalLeakMission | null) {
+  if (typeof window === "undefined") return;
+
+  try {
+    if (!mission) {
+      window.localStorage.removeItem(LEAK_MISSION_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(LEAK_MISSION_KEY, JSON.stringify(mission));
+  } catch {
+    // Local mission is optional. Ignore storage errors.
+  }
+}
+
+function createLocalLeakMission(category: string, baselineWeekly: number): LocalLeakMission {
+  const started = new Date();
+  const ends = new Date(started);
+  ends.setDate(started.getDate() + 3);
+
+  const targetSpend = Math.max(1, Math.round((baselineWeekly / 7) * 3 * 0.5));
+
+  return {
+    id: uid(),
+    category,
+    startedAt: started.toISOString(),
+    endsAt: ends.toISOString(),
+    baselineWeekly,
+    targetSpend,
+    createdAt: started.toISOString(),
+  };
+}
+
+function getLocalLeakMissionProgress(mission: LocalLeakMission | null, expenses: Expense[]) {
+  if (!mission) {
+    return {
+      spent: 0,
+      percentUsed: 0,
+      daysLeft: 0,
+      completed: false,
+      failed: false,
+      active: false,
+    };
+  }
+
+  const start = new Date(mission.startedAt);
+  const end = new Date(mission.endsAt);
+  const now = new Date();
+
+  const spent = sum(
+    expenses
+      .filter((expense) => {
+        const created = new Date(expense.createdAt);
+        return (
+          created >= start &&
+          created <= end &&
+          expense.category === mission.category &&
+          expense.needType !== "Needed"
+        );
+      })
+      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
+  );
+
+  const percentUsed =
+    mission.targetSpend > 0 ? clamp(Math.round((spent / mission.targetSpend) * 100), 0, 150) : 0;
+  const daysLeft = Math.max(0, Math.ceil((end.getTime() - now.getTime()) / 86400000));
+  const completed = now > end && spent <= mission.targetSpend;
+  const failed = spent > mission.targetSpend;
+  const active = !completed && !failed && now <= end;
+
+  return {
+    spent,
+    percentUsed,
+    daysLeft,
+    completed,
+    failed,
+    active,
+  };
+}
+
 function getDaysInCurrentMonth() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -3063,6 +3422,7 @@ export default function Home() {
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [toast, setToast] = useState<AppToast | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [leakMission, setLeakMission] = useState<LocalLeakMission | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   const openAppTrackedRef = useRef(false);
@@ -3073,6 +3433,7 @@ export default function Home() {
   const [note, setNote] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Coffee");
   const [expenseType, setExpenseType] = useState<NeedType>("Needed");
+  const [lastTrackedExpense, setLastTrackedExpense] = useState<Expense | null>(null);
 
   const cloudInitData = telegram.isTelegram ? telegram.initData : "";
   const cloudAuthReady = Boolean(
@@ -3209,6 +3570,8 @@ export default function Home() {
       if (localStorage.getItem(ONBOARDING_KEY) === "true") {
         setOnboardingCompleted(true);
       }
+
+      setLeakMission(readLocalLeakMission());
     } catch {
       localStorage.removeItem(STORAGE_KEY);
     } finally {
@@ -3444,6 +3807,7 @@ export default function Home() {
 
     triggerHaptic("success");
     setExpenses((prev) => [expense, ...prev]);
+    setLastTrackedExpense(expense);
     setAmount("");
     setNote("");
     setExpenseType("Needed");
@@ -3486,6 +3850,7 @@ export default function Home() {
 
     triggerHaptic("success");
     setExpenses((prev) => [expense, ...prev]);
+    setLastTrackedExpense(expense);
     setAmount("");
     setNote("");
     setSelectedCategory(category);
@@ -3627,6 +3992,27 @@ export default function Home() {
     }
   }
 
+  function startLocalLeakMission(category: string, baselineWeekly: number) {
+    if (!category || category === "No leak") {
+      showToast("Track a leak first", "Add one Not needed or Maybe expense.", "info");
+      setActiveTab("add");
+      return;
+    }
+
+    const mission = createLocalLeakMission(category, baselineWeekly);
+    writeLocalLeakMission(mission);
+    setLeakMission(mission);
+    triggerHaptic("success");
+    showToast("Mission started", `3-day anti-${categoryLabel(category)} challenge`, "xp");
+  }
+
+  function resetLocalLeakMission() {
+    writeLocalLeakMission(null);
+    setLeakMission(null);
+    triggerHaptic("light");
+    showToast("Mission cleared", "You can start a new anti-leak mission.", "info");
+  }
+
   async function trackXpAction(
     xpAction: XpAction,
     context = "$BROKE Score updated"
@@ -3754,6 +4140,9 @@ export default function Home() {
             expenses={currentMonthExpenses.slice(0, 6)}
             routineExpenses={currentMonthExpenses}
             allExpenses={expenses}
+            leakMission={leakMission}
+            onStartLeakMission={startLocalLeakMission}
+            onResetLeakMission={resetLocalLeakMission}
             onDeleteExpense={deleteExpense}
             onQuickLeak={addQuickExpense}
             onOpenAdd={() => setActiveTab("add")}
@@ -3778,6 +4167,7 @@ export default function Home() {
             setSelectedCategory={setSelectedCategory}
             expenseType={expenseType}
             setExpenseType={setExpenseType}
+            lastTrackedExpense={lastTrackedExpense}
             onAdd={addExpense}
             onBack={goHome}
             onHelp={openHelp}
@@ -4383,6 +4773,10 @@ function Header({
   );
 }
 
+// V55: Clean UI / Less Clutter uses collapsible detail sections.
+// V55.1: Polish adds Next Best Action and clearer collapsible section descriptions.
+// V56: Daily / Weekly Reports adds shareable report cards.
+// V56.1: Daily / Weekly Reports share clean image cards.
 function DashboardScreen({
   settings,
   summary,
@@ -4393,6 +4787,9 @@ function DashboardScreen({
   expenses,
   routineExpenses,
   allExpenses,
+  leakMission,
+  onStartLeakMission,
+  onResetLeakMission,
   onDeleteExpense,
   onQuickLeak,
   onOpenAdd,
@@ -4422,6 +4819,9 @@ function DashboardScreen({
   expenses: Expense[];
   routineExpenses: Expense[];
   allExpenses: Expense[];
+  leakMission: LocalLeakMission | null;
+  onStartLeakMission: (category: string, baselineWeekly: number) => void;
+  onResetLeakMission: () => void;
   onDeleteExpense: (id: string) => void;
   onQuickLeak: (category: string, value: number, needType?: NeedType) => void;
   onOpenAdd: () => void;
@@ -4498,10 +4898,16 @@ function DashboardScreen({
         ))}
       </section>
 
+      <TodayMissionPanel
+        settings={settings}
+        summary={summary}
+        identityStats={identityStats}
+        onOpenAdd={onOpenAdd}
+      />
+
       <LifeProfileSummaryCard settings={settings} />
 
       <StreakCard streak={summary.streak} />
-      <BadgeMiniStrip badges={badges} />
 
       <section className="hp-card">
         <div className="section-title">
@@ -4520,19 +4926,23 @@ function DashboardScreen({
         <p>Hold the line, fix the leaks.</p>
       </section>
 
-      <WalletInsightsPanel insights={walletInsights} />
-
-      <V2IdentityPanel settings={settings} identityStats={identityStats} />
-
-      <DailyRoutinePanel
-        settings={settings}
+      <NextBestActionCard
         summary={summary}
-        expenses={routineExpenses}
-        cloudReady={cloudAuthReady}
-        onRoutineComplete={onRoutineComplete}
+        identityStats={identityStats}
+        expenses={allExpenses}
+        onOpenAdd={onOpenAdd}
       />
 
-      <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
+      <BiggestLeakChallengePanel
+        settings={settings}
+        identityStats={identityStats}
+        mission={leakMission}
+        expenses={allExpenses}
+        shareInitData={telegram.isTelegram ? telegram.initData : ""}
+        onStartMission={onStartLeakMission}
+        onResetMission={onResetLeakMission}
+        onOpenAdd={onOpenAdd}
+      />
 
       {expenses.length === 0 && (
         <FirstLeakOnboardingCard
@@ -4542,44 +4952,140 @@ function DashboardScreen({
         />
       )}
 
-      <ShareResultCard
-        settings={settings}
-        walletHp={summary.walletHp}
-        totalLeaks={summary.totalLeaks}
-        realBalance={summary.realBalance}
-        potentialYearlySavings={summary.totalLeaks * 12}
-        leaderboard={leaderboard}
-        identityStats={identityStats}
-        shareInitData={telegram.isTelegram ? telegram.initData : ""}
-      />
-
-      <section className="chart-preview">
-        <div className="section-title">
-          <span>$BROKE Chart</span>
-          <small>7D Preview</small>
-        </div>
-
-        <MiniChart chartDays={chartDays} />
-
-        <div className="damage-card">
+      <details className="clean-details">
+        <summary>
           <div>
-            <small>Today's Damage</small>
-            <strong>
-              {summary.todaySpent > 0
-                ? `-${money(summary.todaySpent, settings.currency)}`
-                : money(0, settings.currency)}
-            </strong>
-            <span>tracked today</span>
+            <span>Daily Routine</span>
+            <small>7 actions to keep your wallet alive today.</small>
           </div>
-          <img src={A.chartFrog} alt="Chart frog" />
-        </div>
-      </section>
+          <b>7 real tasks</b>
+        </summary>
+        <DailyRoutinePanel
+          settings={settings}
+          summary={summary}
+          expenses={routineExpenses}
+          cloudReady={cloudAuthReady}
+          onRoutineComplete={onRoutineComplete}
+        />
+      </details>
 
-      <RecentExpenses
-        settings={settings}
-        expenses={expenses}
-        onDeleteExpense={onDeleteExpense}
-      />
+      <details className="clean-details">
+        <summary>
+          <div>
+            <span>Wallet Survival Report</span>
+            <small>Your weekly score, status, and biggest leak.</small>
+          </div>
+          <b>{identityStats.weeklySurvivalScore}/100</b>
+        </summary>
+        <V2IdentityPanel settings={settings} identityStats={identityStats} />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <div>
+            <span>Daily / Weekly Reports</span>
+            <small>Generate quick shareable wallet reports.</small>
+          </div>
+          <b>Reports</b>
+        </summary>
+        <ReportsPanel
+          settings={settings}
+          summary={summary}
+          expenses={allExpenses}
+          identityStats={identityStats}
+          shareInitData={telegram.isTelegram ? telegram.initData : ""}
+        />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <div>
+            <span>Wallet Insights</span>
+            <small>See what habit is draining you most.</small>
+          </div>
+          <b>View</b>
+        </summary>
+        <WalletInsightsPanel insights={walletInsights} />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <span>Badges</span>
+          <b>{badges.filter((badge) => badge.earned).length}/{badges.length}</b>
+        </summary>
+        <BadgeMiniStrip badges={badges} />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <div>
+            <span>Share Result</span>
+            <small>Create a clean public progress card.</small>
+          </div>
+          <b>Public card</b>
+        </summary>
+        <ShareResultCard
+          settings={settings}
+          walletHp={summary.walletHp}
+          totalLeaks={summary.totalLeaks}
+          realBalance={summary.realBalance}
+          potentialYearlySavings={summary.totalLeaks * 12}
+          leaderboard={leaderboard}
+          identityStats={identityStats}
+          shareInitData={telegram.isTelegram ? telegram.initData : ""}
+        />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <div>
+            <span>$BROKE Chart</span>
+            <small>Preview wallet movement and today’s damage.</small>
+          </div>
+          <b>7D Preview</b>
+        </summary>
+        <section className="chart-preview">
+          <div className="section-title">
+            <span>$BROKE Chart</span>
+            <small>7D Preview</small>
+          </div>
+
+          <MiniChart chartDays={chartDays} />
+
+          <div className="damage-card">
+            <div>
+              <small>Today's Damage</small>
+              <strong>
+                {summary.todaySpent > 0
+                  ? `-${money(summary.todaySpent, settings.currency)}`
+                  : money(0, settings.currency)}
+              </strong>
+              <span>tracked today</span>
+            </div>
+            <img src={A.chartFrog} alt="Chart frog" />
+          </div>
+        </section>
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <span>Recent Expenses</span>
+          <b>{expenses.length} total</b>
+        </summary>
+        <RecentExpenses
+          settings={settings}
+          expenses={expenses}
+          onDeleteExpense={onDeleteExpense}
+        />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <span>Connection</span>
+          <b>{telegram.isTelegram ? "Telegram" : webAuth.authenticated ? "Synced" : "Web"}</b>
+        </summary>
+        <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
+      </details>
     </div>
   );
 }
@@ -4864,6 +5370,407 @@ function V2IdentityPanel({
   );
 }
 
+function NextBestActionCard({
+  summary,
+  identityStats,
+  expenses,
+  onOpenAdd,
+}: {
+  summary: {
+    totalIncome: number;
+    fixedCosts: number;
+    spentThisMonth: number;
+    totalLeaks: number;
+    realBalance: number;
+    walletHp: number;
+    todaySpent: number;
+    streak: Streak;
+  };
+  identityStats: V2IdentityStats;
+  expenses: Expense[];
+  onOpenAdd: () => void;
+}) {
+  const today = dayKey(new Date());
+  const todayExpenses = expenses.filter(
+    (expense) => dayKey(new Date(expense.createdAt)) === today
+  );
+  const hasTrackedToday = todayExpenses.length > 0;
+  const leakLabel =
+    identityStats.biggestLeakAmount > 0
+      ? categoryLabel(identityStats.biggestLeakCategory)
+      : "random spending";
+
+  const action = !hasTrackedToday
+    ? {
+        title: "Track one real expense",
+        body: "Start with one honest record. The app gets smarter after real data.",
+        button: "Track now",
+        tone: "green",
+      }
+    : summary.walletHp < 55
+      ? {
+          title: `Avoid ${leakLabel} today`,
+          body: "Wallet HP is under pressure. Protect it by blocking the biggest leak for one day.",
+          button: "Add context",
+          tone: "red",
+        }
+      : identityStats.biggestLeakAmount > 0
+        ? {
+            title: `Control ${leakLabel}`,
+            body: "This is the loudest leak right now. Keep it under control before it becomes normal.",
+            button: "Track next move",
+            tone: "orange",
+          }
+        : {
+            title: "Keep the wallet clean",
+            body: "No major leak detected. Keep tracking and protect the streak.",
+            button: "Track now",
+            tone: "green",
+          };
+
+  return (
+    <section className={`next-action-card ${action.tone}`}>
+      <div>
+        <span>Next Best Action</span>
+        <strong>{action.title}</strong>
+        <p>{action.body}</p>
+      </div>
+
+      <button type="button" onClick={onOpenAdd}>
+        {action.button}
+      </button>
+    </section>
+  );
+}
+
+function ReportsPanel({
+  settings,
+  summary,
+  expenses,
+  identityStats,
+  shareInitData,
+}: {
+  settings: Settings;
+  summary: {
+    totalIncome: number;
+    fixedCosts: number;
+    spentThisMonth: number;
+    totalLeaks: number;
+    realBalance: number;
+    walletHp: number;
+    todaySpent: number;
+    streak: Streak;
+  };
+  expenses: Expense[];
+  identityStats: V2IdentityStats;
+  shareInitData: string;
+}) {
+  const [reportSharing, setReportSharing] = useState<"daily" | "weekly" | null>(null);
+  const dailyReportCardRef = useRef<HTMLDivElement | null>(null);
+  const weeklyReportCardRef = useRef<HTMLDivElement | null>(null);
+  const todayExpenses = useMemo(() => getTodayExpenses(expenses), [expenses]);
+  const weekExpenses = useMemo(() => getLastSevenDaysExpenses(expenses), [expenses]);
+
+  const todayLeakAmount = sum(
+    todayExpenses
+      .filter((expense) => expense.needType !== "Needed")
+      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
+  );
+
+  const weeklyLeakAmount = sum(
+    weekExpenses
+      .filter((expense) => expense.needType !== "Needed")
+      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
+  );
+
+  const todayTopCategory = getCategorySummaries(todayExpenses)
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount)[0];
+
+  const weekTopCategory = getCategorySummaries(weekExpenses)
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount)[0];
+
+  const todayStatus =
+    todayLeakAmount <= 0
+      ? "Clean day"
+      : todayLeakAmount <= Math.max(summary.totalIncome - summary.fixedCosts, 1) * 0.02
+        ? "Small leak"
+        : "Leak warning";
+
+  const weeklyStatus = identityStats.status;
+  const dailyScore = clamp(100 - Math.round((todayLeakAmount / Math.max(summary.totalIncome - summary.fixedCosts, 1)) * 100), 0, 100);
+
+  const dailyReportText = [
+    "$BROKE Daily Wallet Report",
+    "",
+    `Status: ${todayStatus}`,
+    `Wallet HP: ${summary.walletHp}/100`,
+    `Spent today: ${money(summary.todaySpent, settings.currency)}`,
+    `Leaks today: ${money(todayLeakAmount, settings.currency)}`,
+    `Top category: ${todayTopCategory ? categoryLabel(todayTopCategory.category) : "none"}`,
+    `Daily score: ${dailyScore}/100`,
+    "",
+    "Find the leak before it becomes your lifestyle.",
+    "Smoke is broke.",
+  ].join("\n");
+
+  const weeklyReportText = [
+    "$BROKE Weekly Wallet Report",
+    "",
+    `Status: ${weeklyStatus}`,
+    `Survival Score: ${identityStats.weeklySurvivalScore}/100`,
+    `Wallet HP: ${summary.walletHp}/100`,
+    `Weekly leaks: ${money(weeklyLeakAmount, settings.currency)}`,
+    `Biggest leak: ${
+      identityStats.biggestLeakAmount > 0
+        ? `${categoryLabel(identityStats.biggestLeakCategory)} (${money(identityStats.biggestLeakAmount, settings.currency)})`
+        : "none"
+    }`,
+    `Life hours lost: ${identityStats.lifeHoursLost}h`,
+    "",
+    "Find the leak before it becomes your lifestyle.",
+    "Smoke is broke.",
+  ].join("\n");
+
+  async function copyReportText(text: string) {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        window.alert("Report copied. Paste it in Telegram, X, or anywhere you want.");
+        return;
+      }
+    } catch {
+      // Clipboard can be blocked in Telegram WebView.
+    }
+
+    window.prompt("Copy report", text);
+  }
+
+  async function shareReport(
+    text: string,
+    title: string,
+    cardRef: React.RefObject<HTMLDivElement | null>,
+    reportType: "daily" | "weekly"
+  ) {
+    if (reportSharing) return;
+
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+    setReportSharing(reportType);
+
+    try {
+      if (cardRef.current) {
+        const imageFile = await createShareImageFileFromElement(cardRef.current);
+        const nativeShared = await tryNativeImageShare(imageFile);
+
+        if (nativeShared) {
+          return;
+        }
+
+        if (shareInitData) {
+          try {
+            await sendShareImageViaBot(imageFile, shareInitData, text);
+            window.alert("Report image was sent to your Telegram bot chat.");
+            return;
+          } catch {
+            // Continue to download fallback below.
+          }
+        }
+
+        downloadImageFile(imageFile);
+        window.alert("Report image downloaded. You can post it in Telegram or X.");
+        return;
+      }
+    } catch {
+      // Image generation can fail in some WebViews. Use text fallback.
+    } finally {
+      setReportSharing(null);
+    }
+
+    await copyReportText(text);
+  }
+
+  return (
+    <section className="reports-panel">
+      <div className="reports-grid">
+        <article className={`report-card ${todayLeakAmount > 0 ? "warning" : "clean"}`}>
+          <div className="report-head">
+            <img src={todayTopCategory ? getCategoryIcon(todayTopCategory.category) : A.walletMascot} alt="" />
+            <div>
+              <span>Daily Wallet Report</span>
+              <strong>{todayStatus}</strong>
+              <small>Today</small>
+            </div>
+          </div>
+
+          <div className="report-metrics">
+            <div>
+              <span>Spent</span>
+              <strong>{money(summary.todaySpent, settings.currency)}</strong>
+            </div>
+            <div>
+              <span>Leaks</span>
+              <strong>{money(todayLeakAmount, settings.currency)}</strong>
+            </div>
+            <div>
+              <span>Score</span>
+              <strong>{dailyScore}/100</strong>
+            </div>
+          </div>
+
+          <p>
+            {todayTopCategory
+              ? `${categoryLabel(todayTopCategory.category)} is the main movement today.`
+              : "No clear category movement yet today."}
+          </p>
+
+          <div className="report-public-share-card daily" ref={dailyReportCardRef}>
+            <div className="report-public-share-top">
+              <div>
+                <span>$BROKE DAILY REPORT</span>
+                <strong>{todayStatus}</strong>
+                <small>Wallet HP {summary.walletHp}/100</small>
+              </div>
+              <img src={todayTopCategory ? getCategoryIcon(todayTopCategory.category) : A.walletMascot} alt="" />
+            </div>
+
+            <div className="report-public-share-grid">
+              <div>
+                <span>Spent</span>
+                <strong>{money(summary.todaySpent, settings.currency)}</strong>
+              </div>
+              <div>
+                <span>Leaks</span>
+                <strong>{money(todayLeakAmount, settings.currency)}</strong>
+              </div>
+              <div>
+                <span>Score</span>
+                <strong>{dailyScore}/100</strong>
+              </div>
+              <div>
+                <span>Top category</span>
+                <strong>{todayTopCategory ? categoryLabel(todayTopCategory.category) : "None"}</strong>
+              </div>
+            </div>
+
+            <div className="report-public-share-footer">
+              <strong>Find the leak before it becomes your lifestyle.</strong>
+              <span>$BROKE Life Tracker · Smoke is broke.</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={reportSharing === "daily"}
+            onClick={() =>
+              shareReport(
+                dailyReportText,
+                "$BROKE Daily Wallet Report",
+                dailyReportCardRef,
+                "daily"
+              )
+            }
+          >
+            {reportSharing === "daily" ? "Preparing image..." : "Share daily report"}
+          </button>
+        </article>
+
+        <article className={`report-card ${identityStats.weeklySurvivalScore >= 75 ? "clean" : "warning"}`}>
+          <div className="report-head">
+            <img src={identityStats.biggestLeakAmount > 0 ? getCategoryIcon(identityStats.biggestLeakCategory) : A.challengeTrophy} alt="" />
+            <div>
+              <span>Weekly Wallet Report</span>
+              <strong>{weeklyStatus}</strong>
+              <small>Last 7 days</small>
+            </div>
+          </div>
+
+          <div className="report-metrics">
+            <div>
+              <span>Survival</span>
+              <strong>{identityStats.weeklySurvivalScore}/100</strong>
+            </div>
+            <div>
+              <span>Leaks</span>
+              <strong>{money(weeklyLeakAmount, settings.currency)}</strong>
+            </div>
+            <div>
+              <span>Hours lost</span>
+              <strong>{identityStats.lifeHoursLost}h</strong>
+            </div>
+          </div>
+
+          <p>
+            {weekTopCategory
+              ? `${categoryLabel(weekTopCategory.category)} is the biggest category this week.`
+              : "No major weekly leak is visible yet."}
+          </p>
+
+          <div className="report-public-share-card weekly" ref={weeklyReportCardRef}>
+            <div className="report-public-share-top">
+              <div>
+                <span>$BROKE WEEKLY REPORT</span>
+                <strong>{weeklyStatus}</strong>
+                <small>Survival {identityStats.weeklySurvivalScore}/100</small>
+              </div>
+              <img src={identityStats.biggestLeakAmount > 0 ? getCategoryIcon(identityStats.biggestLeakCategory) : A.challengeTrophy} alt="" />
+            </div>
+
+            <div className="report-public-share-grid">
+              <div>
+                <span>Survival</span>
+                <strong>{identityStats.weeklySurvivalScore}/100</strong>
+              </div>
+              <div>
+                <span>Leaks</span>
+                <strong>{money(weeklyLeakAmount, settings.currency)}</strong>
+              </div>
+              <div>
+                <span>Hours lost</span>
+                <strong>{identityStats.lifeHoursLost}h</strong>
+              </div>
+              <div>
+                <span>Biggest leak</span>
+                <strong>
+                  {identityStats.biggestLeakAmount > 0
+                    ? categoryLabel(identityStats.biggestLeakCategory)
+                    : "None"}
+                </strong>
+              </div>
+            </div>
+
+            <div className="report-public-share-footer">
+              <strong>Find the leak before it becomes your lifestyle.</strong>
+              <span>$BROKE Life Tracker · Smoke is broke.</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            disabled={reportSharing === "weekly"}
+            onClick={() =>
+              shareReport(
+                weeklyReportText,
+                "$BROKE Weekly Wallet Report",
+                weeklyReportCardRef,
+                "weekly"
+              )
+            }
+          >
+            {reportSharing === "weekly" ? "Preparing image..." : "Share weekly report"}
+          </button>
+        </article>
+      </div>
+
+      <div className="reports-note">
+        <strong>Privacy rule:</strong>
+        <span>Reports never expose income or real balance.</span>
+      </div>
+    </section>
+  );
+}
+
 function DailyRoutinePanel({
   settings,
   summary,
@@ -5062,6 +5969,463 @@ function DailyRoutinePanel({
       <div className="routine-rule">
         <strong>Discipline rule:</strong>
         <span>you cannot tap tasks complete. Complete the action, then the checkmark appears.</span>
+      </div>
+    </section>
+  );
+}
+
+
+
+// V54.2: failed mission saved value is forced to zero, and share result has visible fallbacks.
+// V54.3: Mission share text uses real line breaks, not literal backslash-n.
+// V54.4: mission result shares a clean image card like the main Share Result card.
+// V54.5: duplicate ruText keys removed for strict TypeScript build.
+function BiggestLeakChallengePanel({
+  settings,
+  identityStats,
+  mission,
+  expenses,
+  shareInitData,
+  onStartMission,
+  onResetMission,
+  onOpenAdd,
+}: {
+  settings: Settings;
+  identityStats: V2IdentityStats;
+  mission: LocalLeakMission | null;
+  expenses: Expense[];
+  shareInitData: string;
+  onStartMission: (category: string, baselineWeekly: number) => void;
+  onResetMission: () => void;
+  onOpenAdd: () => void;
+}) {
+  const [missionImageSharing, setMissionImageSharing] = useState(false);
+  const missionShareCardRef = useRef<HTMLDivElement | null>(null);
+  const progress = getLocalLeakMissionProgress(mission, expenses);
+  const hasLeak = identityStats.biggestLeakAmount > 0;
+  const suggestedCategory = hasLeak ? identityStats.biggestLeakCategory : "No leak";
+  const missionCategory = mission?.category || suggestedCategory;
+  const missionLabel = hasLeak ? categoryLabel(suggestedCategory) : "your first leak";
+  const weeklyAmount = hasLeak ? identityStats.biggestLeakAmount : 0;
+  const targetSpend = mission?.targetSpend ?? Math.max(1, Math.round((weeklyAmount / 7) * 3 * 0.5));
+  const possibleSavings = Math.max(0, Math.round((weeklyAmount / 7) * 3 - targetSpend));
+
+  const baselineForMission = mission ? Math.round((mission.baselineWeekly / 7) * 3) : 0;
+  const rawMissionSaved = mission ? Math.max(0, Math.round(baselineForMission - progress.spent)) : 0;
+  const missionSaved = mission && progress.failed ? 0 : rawMissionSaved;
+  const missionOver = mission ? Math.max(0, Math.round(progress.spent - mission.targetSpend)) : 0;
+
+  const statusLabel = mission
+    ? progress.completed
+      ? "Completed"
+      : progress.failed
+        ? "Failed"
+        : `${progress.daysLeft}d left`
+    : "Suggested";
+
+  const resultTitle = progress.completed
+    ? "Mission survived"
+    : progress.failed
+      ? "Mission failed"
+      : "Mission active";
+
+  const resultBody = progress.completed
+    ? "You stayed under the leak limit. Wallet HP protected."
+    : progress.failed
+      ? "The leak broke the limit. Reset and run it back."
+      : "Keep tracking. The result card unlocks when this mission ends.";
+
+  const shareText = mission
+    ? [
+        progress.completed ? "Mission survived." : progress.failed ? "Mission failed." : "Mission in progress.",
+        "",
+        `Leak: ${categoryLabel(mission.category)}`,
+        `Days: 3`,
+        `Limit: ${money(mission.targetSpend, settings.currency)}`,
+        `Spent: ${money(progress.spent, settings.currency)}`,
+        `Saved: ${money(missionSaved, settings.currency)}`,
+        progress.failed ? `Over limit: ${money(missionOver, settings.currency)}` : "Wallet HP protected.",
+        "",
+        "Find the leak before it becomes your lifestyle.",
+        "Smoke is broke.",
+      ].join("\n")
+    : "";
+
+  async function copyMissionResultText() {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        window.alert("Mission result copied. Paste it in Telegram, X, or anywhere you want.");
+        return;
+      }
+    } catch {
+      // Clipboard can be blocked inside Telegram WebView.
+    }
+
+    window.prompt("Copy mission result", shareText);
+  }
+
+  async function shareMissionResult() {
+    if (!mission || !shareText || missionImageSharing) return;
+
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+    setMissionImageSharing(true);
+
+    try {
+      if (missionShareCardRef.current) {
+        const imageFile = await createShareImageFileFromElement(missionShareCardRef.current);
+        const nativeShared = await tryNativeImageShare(imageFile);
+
+        if (nativeShared) {
+          return;
+        }
+
+        if (shareInitData) {
+          try {
+            await sendShareImageViaBot(imageFile, shareInitData, shareText);
+            window.alert("Mission image was sent to your Telegram bot chat.");
+            return;
+          } catch {
+            // Continue to download fallback below.
+          }
+        }
+
+        downloadImageFile(imageFile);
+        window.alert("Mission image downloaded. You can post it in Telegram or X.");
+        return;
+      }
+    } catch {
+      // Image generation or file sharing failed. Use text fallback below.
+    } finally {
+      setMissionImageSharing(false);
+    }
+
+    await copyMissionResultText();
+  }
+
+  return (
+    <section
+      className={`biggest-leak-challenge-card ${
+        mission ? (progress.failed ? "failed" : progress.completed ? "completed" : "active") : ""
+      }`}
+    >
+      <div className="section-title">
+        <span>Biggest Leak Challenge</span>
+        <small>{statusLabel}</small>
+      </div>
+
+      <div className="blc-hero">
+        <img src={getCategoryIcon(missionCategory)} alt="" />
+
+        <div>
+          <strong>
+            {mission
+              ? `Anti-${categoryLabel(mission.category)} mission`
+              : hasLeak
+                ? `Start anti-${missionLabel} mission`
+                : "Find your first leak"}
+          </strong>
+          <p>
+            {mission
+              ? `Stay under ${money(mission.targetSpend, settings.currency)} for 3 days.`
+              : hasLeak
+                ? `${money(weeklyAmount, settings.currency)} drained this week. Cut it before it becomes normal.`
+                : "Track one Not needed or Maybe expense first. Then the app will build a mission around it."}
+          </p>
+        </div>
+      </div>
+
+      {mission ? (
+        <>
+          <div className="blc-progress">
+            <div style={{ width: `${Math.min(progress.percentUsed, 100)}%` }} />
+          </div>
+
+          <div className="blc-stats">
+            <div>
+              <span>Spent</span>
+              <strong>{money(progress.spent, settings.currency)}</strong>
+            </div>
+
+            <div>
+              <span>Limit</span>
+              <strong>{money(mission.targetSpend, settings.currency)}</strong>
+            </div>
+
+            <div>
+              <span>Days left</span>
+              <strong>{progress.daysLeft}</strong>
+            </div>
+          </div>
+
+          {(progress.completed || progress.failed) && (
+            <div className={`mission-result-card ${progress.completed ? "completed" : "failed"}`}>
+              <div className="mission-result-head">
+                <img
+                  src={progress.completed ? A.challengeCompleted : A.challengeFailed}
+                  alt=""
+                />
+
+                <div>
+                  <span>Mission Result</span>
+                  <strong>{resultTitle}</strong>
+                  <p>{resultBody}</p>
+                </div>
+              </div>
+
+              <div className="mission-result-grid">
+                <div>
+                  <span>Leak</span>
+                  <strong>{categoryLabel(mission.category)}</strong>
+                </div>
+
+                <div>
+                  <span>Spent</span>
+                  <strong>{money(progress.spent, settings.currency)}</strong>
+                </div>
+
+                <div>
+                  <span>Saved</span>
+                  <strong>{money(missionSaved, settings.currency)}</strong>
+                </div>
+
+                <div>
+                  <span>{progress.failed ? "Over limit" : "Wallet HP"}</span>
+                  <strong>{progress.failed ? money(missionOver, settings.currency) : "Protected"}</strong>
+                </div>
+              </div>
+
+              <div
+                className={`mission-public-share-card ${progress.failed ? "failed" : "completed"}`}
+                ref={missionShareCardRef}
+              >
+                <div className="mission-public-share-top">
+                  <div>
+                    <span>$BROKE MISSION</span>
+                    <strong>{resultTitle}</strong>
+                    <small>{progress.failed ? "Limit broken" : "Wallet HP protected"}</small>
+                  </div>
+                  <img src={progress.completed ? A.challengeCompleted : A.challengeFailed} alt="" />
+                </div>
+
+                <div className="mission-public-share-grid">
+                  <div>
+                    <span>Leak</span>
+                    <strong>{categoryLabel(mission.category)}</strong>
+                  </div>
+
+                  <div>
+                    <span>Days</span>
+                    <strong>3</strong>
+                  </div>
+
+                  <div>
+                    <span>Limit</span>
+                    <strong>{money(mission.targetSpend, settings.currency)}</strong>
+                  </div>
+
+                  <div>
+                    <span>Spent</span>
+                    <strong>{money(progress.spent, settings.currency)}</strong>
+                  </div>
+
+                  <div>
+                    <span>Saved</span>
+                    <strong>{money(missionSaved, settings.currency)}</strong>
+                  </div>
+
+                  <div>
+                    <span>{progress.failed ? "Over limit" : "Result"}</span>
+                    <strong>{progress.failed ? money(missionOver, settings.currency) : "Survived"}</strong>
+                  </div>
+                </div>
+
+                <div className="mission-public-share-footer">
+                  <strong>Find the leak before it becomes your lifestyle.</strong>
+                  <span>$BROKE Life Tracker · t.me/BrokeLifeTrackerBot</span>
+                </div>
+              </div>
+
+              <div className="mission-result-actions">
+                <button type="button" onClick={shareMissionResult} disabled={missionImageSharing}>
+                  {missionImageSharing ? "Preparing image..." : "Share result"}
+                </button>
+
+                <button type="button" className="secondary" onClick={onResetMission}>
+                  Start new mission
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!progress.completed && !progress.failed && (
+            <button type="button" className="blc-secondary-btn" onClick={onOpenAdd}>
+              Track mission expense
+            </button>
+          )}
+        </>
+      ) : (
+        <div className="blc-start-row">
+          <div>
+            <span>3-day target</span>
+            <strong>{money(targetSpend, settings.currency)} max</strong>
+            <small>Possible save: {money(possibleSavings, settings.currency)}</small>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              hasLeak ? onStartMission(suggestedCategory, weeklyAmount) : onOpenAdd()
+            }
+          >
+            {hasLeak ? "Start mission" : "Track first leak"}
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function TodayMissionPanel({
+  settings,
+  summary,
+  identityStats,
+  onOpenAdd,
+}: {
+  settings: Settings;
+  summary: {
+    totalIncome: number;
+    fixedCosts: number;
+    spentThisMonth: number;
+    totalLeaks: number;
+    realBalance: number;
+    walletHp: number;
+    todaySpent: number;
+    streak: Streak;
+  };
+  identityStats: V2IdentityStats;
+  onOpenAdd: () => void;
+}) {
+  const targetLeak =
+    identityStats.biggestLeakAmount > 0
+      ? categoryLabel(identityStats.biggestLeakCategory)
+      : "first leak";
+
+  const missionProgress = [
+    summary.todaySpent > 0,
+    identityStats.biggestLeakAmount > 0,
+    summary.streak.currentStreak > 0,
+  ].filter(Boolean).length;
+
+  const estimatedYearlyLeak = identityStats.weeklyLeaks > 0
+    ? identityStats.weeklyLeaks * 52
+    : summary.totalLeaks * 12;
+
+  return (
+    <section className="today-mission-card">
+      <div className="section-title">
+        <span>Today Mission</span>
+        <small>{missionProgress}/3 active</small>
+      </div>
+
+      <div className="mission-hero">
+        <img src={A.walletMascot} alt="" />
+
+        <div>
+          <strong>Protect your Wallet HP today.</strong>
+          <p>
+            Track one real expense, avoid your biggest leak, and keep the routine
+            alive.
+          </p>
+        </div>
+      </div>
+
+      <div className="mission-steps">
+        <div className={summary.todaySpent > 0 ? "done" : ""}>
+          <b>{summary.todaySpent > 0 ? "✓" : "1"}</b>
+          <span>Track one real expense</span>
+        </div>
+
+        <div className={identityStats.biggestLeakAmount > 0 ? "danger" : ""}>
+          <b>2</b>
+          <span>Avoid biggest leak: {targetLeak}</span>
+        </div>
+
+        <div className={summary.streak.currentStreak > 0 ? "done" : ""}>
+          <b>{summary.streak.currentStreak > 0 ? "✓" : "3"}</b>
+          <span>Keep daily discipline alive</span>
+        </div>
+      </div>
+
+      <div className="mission-bottom">
+        <div>
+          <span>Yearly risk</span>
+          <strong>{money(estimatedYearlyLeak, settings.currency)}</strong>
+        </div>
+
+        <button type="button" onClick={onOpenAdd}>
+          Track now
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function ExpenseImpactCard({
+  settings,
+  expense,
+}: {
+  settings: Settings;
+  expense: Expense | null;
+}) {
+  if (!expense) return null;
+
+  const monthlyImpact = expense.amount * 30;
+  const yearlyImpact = expense.amount * 365;
+  const hourlyValue = Math.max(
+    getTotalIncome(settings) / Math.max(settings.profile.workHoursPerMonth, 1),
+    1
+  );
+  const hoursLost = Math.round((yearlyImpact / hourlyValue) * 10) / 10;
+
+  return (
+    <section className="expense-impact-card">
+      <div className="section-title">
+        <span>Latest impact</span>
+        <small>{expense.needType}</small>
+      </div>
+
+      <div className="impact-hero">
+        <img src={getCategoryIcon(expense.category)} alt="" />
+
+        <div>
+          <strong>{expense.category} tracked.</strong>
+          <p>
+            {money(expense.amount, settings.currency)} looks small once. Repeated
+            daily, it becomes a real wallet leak.
+          </p>
+        </div>
+      </div>
+
+      <div className="impact-grid">
+        <div>
+          <span>If repeated daily</span>
+          <strong>{money(monthlyImpact, settings.currency)}</strong>
+          <small>/month</small>
+        </div>
+
+        <div>
+          <span>Yearly damage</span>
+          <strong>{money(yearlyImpact, settings.currency)}</strong>
+          <small>/year</small>
+        </div>
+
+        <div>
+          <span>Life hours traded</span>
+          <strong>{hoursLost}h</strong>
+          <small>estimated</small>
+        </div>
       </div>
     </section>
   );
@@ -5927,6 +7291,7 @@ function AddExpenseScreen({
   setSelectedCategory,
   expenseType,
   setExpenseType,
+  lastTrackedExpense,
   onAdd,
   onBack,
   onHelp,
@@ -5940,6 +7305,7 @@ function AddExpenseScreen({
   setSelectedCategory: (value: string) => void;
   expenseType: NeedType;
   setExpenseType: (value: NeedType) => void;
+  lastTrackedExpense: Expense | null;
   onAdd: () => void;
   onBack: () => void;
   onHelp: () => void;
@@ -5968,6 +7334,32 @@ function AddExpenseScreen({
             onChange={(event) => setAmount(event.target.value)}
           />
           <b>{settings.currency}</b>
+        </div>
+      </section>
+
+      <section className="quick-add-panel">
+        <div className="section-title">
+          <span>Quick Add</span>
+          <small>amount stays editable</small>
+        </div>
+
+        <div className="quick-add-grid">
+          {quickAddPresets.map((preset) => (
+            <button
+              type="button"
+              key={preset.category}
+              onClick={() => {
+                setSelectedCategory(preset.category);
+                setAmount(String(preset.amount));
+                setExpenseType("Not needed");
+                triggerHaptic("light");
+              }}
+            >
+              <img src={preset.icon} alt="" />
+              <span>{preset.label}</span>
+              <strong>{money(preset.amount, settings.currency)}</strong>
+            </button>
+          ))}
         </div>
       </section>
 
@@ -6018,6 +7410,8 @@ function AddExpenseScreen({
         Add Expense
       </button>
 
+      <ExpenseImpactCard settings={settings} expense={lastTrackedExpense} />
+
       <div className="tiny-note">
         <img src={A.addFrog} alt="" />
         <span>Track daily leaks. Small leaks sink big wallets.</span>
@@ -6026,6 +7420,7 @@ function AddExpenseScreen({
   );
 }
 
+// V54.6: Chart tab visual upgrade with pulse, stats, and empty state.
 function ChartScreen({
   settings,
   expenses,
@@ -6045,12 +7440,39 @@ function ChartScreen({
     return buildChartData(range, expenses, settings);
   }, [range, expenses, settings]);
 
+  const rangeExpenses = useMemo(() => {
+    if (range === "day") return getTodayExpenses(expenses);
+    if (range === "week") return getLastSevenDaysExpenses(expenses);
+
+    return getCurrentMonthExpenses(expenses);
+  }, [range, expenses]);
+
   const maxSpent = Math.max(...chartData.map((point) => point.spent), 1);
   const selectedPoint = chartData[chartData.length - 1];
 
   const periodOpen = chartData[0]?.open ?? 0;
   const periodSpent = sum(chartData.map((point) => point.spent));
   const periodClose = periodOpen - periodSpent;
+
+  const rangeLeaks = sum(
+    rangeExpenses
+      .filter((expense) => expense.needType !== "Needed")
+      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
+  );
+
+  const topRangeCategory = getCategorySummaries(rangeExpenses)
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount)[0];
+
+  const averageDailySpend =
+    range === "day"
+      ? periodSpent
+      : range === "week"
+        ? periodSpent / 7
+        : periodSpent / getCurrentDayOfMonth();
+
+  const leakPressure = periodSpent > 0 ? Math.round((rangeLeaks / periodSpent) * 100) : 0;
+  const hasRangeData = rangeExpenses.length > 0;
 
   const title =
     range === "day"
@@ -6096,6 +7518,65 @@ function ChartScreen({
           Month
         </button>
       </div>
+
+      <section className="chart-pulse-card">
+        <div>
+          <span>Chart Pulse</span>
+          <strong>
+            {periodSpent > 0
+              ? `${money(periodSpent, settings.currency)} tracked`
+              : "No damage yet"}
+          </strong>
+          <small>
+            {hasRangeData
+              ? `${rangeExpenses.length} records · ${leakPressure}% leak pressure`
+              : "Add expenses to make the chart alive."}
+          </small>
+        </div>
+        <img src={A.chartFrog} alt="" />
+      </section>
+
+      <section className="chart-stats-grid">
+        <div>
+          <span>Damage</span>
+          <strong>
+            {periodSpent > 0 ? `-${money(periodSpent, settings.currency)}` : money(0, settings.currency)}
+          </strong>
+          <small>{title}</small>
+        </div>
+
+        <div>
+          <span>Leaks</span>
+          <strong>{money(rangeLeaks, settings.currency)}</strong>
+          <small>{leakPressure}% pressure</small>
+        </div>
+
+        <div>
+          <span>Top category</span>
+          <strong>{topRangeCategory ? categoryLabel(topRangeCategory.category) : "None"}</strong>
+          <small>
+            {topRangeCategory
+              ? money(topRangeCategory.amount, settings.currency)
+              : "No records"}
+          </small>
+        </div>
+
+        <div>
+          <span>Avg/day</span>
+          <strong>{money(averageDailySpend, settings.currency)}</strong>
+          <small>{range === "day" ? "today" : "daily pace"}</small>
+        </div>
+      </section>
+
+      {!hasRangeData && (
+        <section className="chart-empty-state">
+          <img src={A.chartFrog} alt="" />
+          <div>
+            <strong>No chart data yet</strong>
+            <p>Add one expense and this screen turns into your wallet movement chart.</p>
+          </div>
+        </section>
+      )}
 
       <section className={`big-chart ${range}`}>
         <div className="chart-lines">
@@ -6428,7 +7909,7 @@ function ActiveChallengeCard({
 }
 
 
-const GROWTH_SIMULATIONS_KEY = "broke-growth-simulations-v1";
+const GROWTH_SIMULATIONS_KEY = "broke-growth-simulations-v2";
 
 function growthFrequencyMultiplier(frequency: GrowthFrequency) {
   if (frequency === "daily") return 30;
@@ -6495,7 +7976,10 @@ function monthlyGrowthContribution(simulation: GrowthSimulation) {
   return simulation.contributionAmount * growthFrequencyMultiplier(simulation.contributionFrequency);
 }
 
-function calculateGrowthPoints(simulation: GrowthSimulation, annualGrowthOverride?: number): GrowthPoint[] {
+function calculateGrowthPoints(
+  simulation: GrowthSimulation,
+  annualGrowthOverride?: number
+): GrowthPoint[] {
   const annualGrowth = clamp(
     annualGrowthOverride ?? simulation.expectedAnnualGrowth,
     0,
@@ -6544,6 +8028,7 @@ function calculateGrowthPoints(simulation: GrowthSimulation, annualGrowthOverrid
 
 function getGrowthFinal(simulation: GrowthSimulation, annualGrowthOverride?: number) {
   const points = calculateGrowthPoints(simulation, annualGrowthOverride);
+
   return points[points.length - 1] || {
     month: 0,
     balance: simulation.startingAmount,
@@ -6555,7 +8040,6 @@ function getGrowthFinal(simulation: GrowthSimulation, annualGrowthOverride?: num
 function getGrowthCases(simulation: GrowthSimulation) {
   const spread =
     simulation.riskLevel === "low" ? 0.35 : simulation.riskLevel === "medium" ? 0.7 : 1.15;
-
   const baseRate = simulation.expectedAnnualGrowth;
   const worstRate = Math.max(0, baseRate * (1 - spread));
   const bestRate = Math.min(100, baseRate * (1 + spread));
@@ -6573,88 +8057,6 @@ function getLeakAmountForGrowth(expenses: Expense[]) {
     if (expense.needType === "Maybe") return acc + expense.amount * 0.5;
     return acc;
   }, 0);
-}
-
-
-function drawGrowthRoundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number
-) {
-  const r = Math.min(radius, width / 2, height / 2);
-
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + width, y, x + width, y + height, r);
-  ctx.arcTo(x + width, y + height, x, y + height, r);
-  ctx.arcTo(x, y + height, x, y, r);
-  ctx.arcTo(x, y, x + r, y, r);
-  ctx.closePath();
-}
-
-function fillGrowthRoundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-  fillStyle: string
-) {
-  drawGrowthRoundRect(ctx, x, y, width, height, radius);
-  ctx.fillStyle = fillStyle;
-  ctx.fill();
-}
-
-function strokeGrowthRoundRect(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  radius: number,
-  strokeStyle: string,
-  lineWidth = 2
-) {
-  drawGrowthRoundRect(ctx, x, y, width, height, radius);
-  ctx.strokeStyle = strokeStyle;
-  ctx.lineWidth = lineWidth;
-  ctx.stroke();
-}
-
-function drawGrowthWrappedText(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  lineHeight: number,
-  maxLines = 3
-) {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let line = "";
-
-  words.forEach((word) => {
-    const testLine = line ? `${line} ${word}` : word;
-
-    if (ctx.measureText(testLine).width > maxWidth && line) {
-      lines.push(line);
-      line = word;
-      return;
-    }
-
-    line = testLine;
-  });
-
-  if (line) lines.push(line);
-
-  lines.slice(0, maxLines).forEach((item, index) => {
-    ctx.fillText(item, x, y + index * lineHeight);
-  });
 }
 
 function buildGrowthShareText(simulation: GrowthSimulation, settings: Settings) {
@@ -6676,6 +8078,55 @@ function buildGrowthShareText(simulation: GrowthSimulation, settings: Settings) 
   ].join("\n");
 }
 
+function growthRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
+  const r = Math.min(radius, width / 2, height / 2);
+
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+
+function growthFillRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  fillStyle: string
+) {
+  growthRoundRect(ctx, x, y, width, height, radius);
+  ctx.fillStyle = fillStyle;
+  ctx.fill();
+}
+
+function growthStrokeRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+  strokeStyle: string,
+  lineWidth = 2
+) {
+  growthRoundRect(ctx, x, y, width, height, radius);
+  ctx.strokeStyle = strokeStyle;
+  ctx.lineWidth = lineWidth;
+  ctx.stroke();
+}
+
 async function buildGrowthShareCardBlob(
   simulation: GrowthSimulation,
   settings: Settings
@@ -6688,9 +8139,7 @@ async function buildGrowthShareCardBlob(
 
   const ctx = canvas.getContext("2d");
 
-  if (!ctx) {
-    throw new Error("Canvas is not available");
-  }
+  if (!ctx) throw new Error("Canvas is not available");
 
   const green = "#b7ff19";
   const green2 = "#67ff2a";
@@ -6698,7 +8147,6 @@ async function buildGrowthShareCardBlob(
   const muted = "rgba(244,247,240,0.68)";
   const panel = "rgba(9, 20, 14, 0.92)";
   const panel2 = "rgba(16, 35, 19, 0.92)";
-  const border = "rgba(183,255,25,0.22)";
 
   ctx.fillStyle = "#020402";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -6721,16 +8169,10 @@ async function buildGrowthShareCardBlob(
     ctx.stroke();
   }
 
-  const glow1 = ctx.createRadialGradient(170, 125, 0, 170, 125, 360);
-  glow1.addColorStop(0, "rgba(183,255,25,0.28)");
-  glow1.addColorStop(1, "rgba(183,255,25,0)");
-  ctx.fillStyle = glow1;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  const glow2 = ctx.createRadialGradient(920, 1110, 0, 920, 1110, 390);
-  glow2.addColorStop(0, "rgba(103,255,42,0.19)");
-  glow2.addColorStop(1, "rgba(103,255,42,0)");
-  ctx.fillStyle = glow2;
+  const glow = ctx.createRadialGradient(165, 125, 0, 165, 125, 360);
+  glow.addColorStop(0, "rgba(183,255,25,0.28)");
+  glow.addColorStop(1, "rgba(183,255,25,0)");
+  ctx.fillStyle = glow;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.fillStyle = green;
@@ -6745,8 +8187,8 @@ async function buildGrowthShareCardBlob(
   ctx.font = "500 30px Arial, sans-serif";
   ctx.fillText("Leak to Growth simulation card", 68, 210);
 
-  fillGrowthRoundRect(ctx, 62, 265, 956, 244, 34, panel);
-  strokeGrowthRoundRect(ctx, 62, 265, 956, 244, 34, border, 2);
+  growthFillRoundRect(ctx, 62, 265, 956, 244, 34, panel);
+  growthStrokeRoundRect(ctx, 62, 265, 956, 244, 34, "rgba(183,255,25,0.22)", 2);
 
   ctx.fillStyle = green;
   ctx.font = "900 36px Arial, sans-serif";
@@ -6754,18 +8196,14 @@ async function buildGrowthShareCardBlob(
 
   ctx.fillStyle = text;
   ctx.font = "900 76px Arial, sans-serif";
-  ctx.fillText(
-    `${money(simulation.contributionAmount, settings.currency)}`,
-    94,
-    410
-  );
+  ctx.fillText(money(simulation.contributionAmount, settings.currency), 94, 410);
 
   ctx.fillStyle = muted;
   ctx.font = "700 28px Arial, sans-serif";
   ctx.fillText(`${growthFrequencyLabel(simulation.contributionFrequency)} redirected`, 94, 452);
 
-  fillGrowthRoundRect(ctx, 690, 314, 270, 118, 28, "rgba(183,255,25,0.10)");
-  strokeGrowthRoundRect(ctx, 690, 314, 270, 118, 28, "rgba(183,255,25,0.24)", 2);
+  growthFillRoundRect(ctx, 690, 314, 270, 118, 28, "rgba(183,255,25,0.10)");
+  growthStrokeRoundRect(ctx, 690, 314, 270, 118, 28, "rgba(183,255,25,0.24)", 2);
   ctx.fillStyle = muted;
   ctx.font = "700 24px Arial, sans-serif";
   ctx.fillText("Duration", 724, 356);
@@ -6773,10 +8211,6 @@ async function buildGrowthShareCardBlob(
   ctx.font = "900 44px Arial, sans-serif";
   ctx.fillText(`${simulation.durationMonths} months`, 724, 408);
 
-  const cardY = 548;
-  const cardW = 456;
-  const cardH = 164;
-  const gap = 44;
   const metrics = [
     ["Total contributed", money(result.contributed, settings.currency)],
     ["Estimated final value", money(result.balance, settings.currency)],
@@ -6787,11 +8221,11 @@ async function buildGrowthShareCardBlob(
   metrics.forEach((metric, index) => {
     const col = index % 2;
     const row = Math.floor(index / 2);
-    const x = 62 + col * (cardW + gap);
-    const y = cardY + row * (cardH + 30);
+    const x = 62 + col * 500;
+    const y = 548 + row * 194;
 
-    fillGrowthRoundRect(ctx, x, y, cardW, cardH, 28, panel2);
-    strokeGrowthRoundRect(ctx, x, y, cardW, cardH, 28, "rgba(255,255,255,0.075)", 1);
+    growthFillRoundRect(ctx, x, y, 456, 164, 28, panel2);
+    growthStrokeRoundRect(ctx, x, y, 456, 164, 28, "rgba(255,255,255,0.075)", 1);
 
     ctx.fillStyle = muted;
     ctx.font = "700 24px Arial, sans-serif";
@@ -6799,19 +8233,17 @@ async function buildGrowthShareCardBlob(
 
     ctx.fillStyle = green;
     ctx.font = "900 46px Arial, sans-serif";
-    drawGrowthWrappedText(ctx, metric[1], x + 30, y + 108, cardW - 60, 48, 1);
+    ctx.fillText(metric[1], x + 30, y + 108);
   });
 
-  fillGrowthRoundRect(ctx, 62, 942, 956, 166, 30, "rgba(0,0,0,0.25)");
-  strokeGrowthRoundRect(ctx, 62, 942, 956, 166, 30, "rgba(183,255,25,0.14)", 1);
+  growthFillRoundRect(ctx, 62, 942, 956, 166, 30, "rgba(0,0,0,0.25)");
+  growthStrokeRoundRect(ctx, 62, 942, 956, 166, 30, "rgba(183,255,25,0.14)", 1);
 
-  const caseItems = [
+  [
     ["Worst", cases.worst.balance],
     ["Base", cases.base.balance],
     ["Best", cases.best.balance],
-  ];
-
-  caseItems.forEach((item, index) => {
+  ].forEach((item, index) => {
     const x = 98 + index * 310;
 
     ctx.fillStyle = muted;
@@ -6823,8 +8255,8 @@ async function buildGrowthShareCardBlob(
     ctx.fillText(money(Number(item[1]), settings.currency), x, 1052);
   });
 
-  fillGrowthRoundRect(ctx, 62, 1152, 956, 98, 26, "rgba(255,177,43,0.085)");
-  strokeGrowthRoundRect(ctx, 62, 1152, 956, 98, 26, "rgba(255,177,43,0.22)", 1);
+  growthFillRoundRect(ctx, 62, 1152, 956, 98, 26, "rgba(255,177,43,0.085)");
+  growthStrokeRoundRect(ctx, 62, 1152, 956, 98, 26, "rgba(255,177,43,0.22)", 1);
   ctx.fillStyle = "#ffdf8b";
   ctx.font = "800 24px Arial, sans-serif";
   ctx.fillText("Simulation only. No guaranteed returns. Not financial advice.", 94, 1211);
@@ -6861,7 +8293,6 @@ async function downloadGrowthShareCard(blob: Blob) {
 
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-
 
 function GrowthLabScreen({
   settings,
@@ -6941,7 +8372,6 @@ function GrowthLabScreen({
       id: uid(),
       createdAt: new Date().toISOString(),
     };
-
     const next = [simulation, ...savedSimulations].slice(0, 8);
 
     setSavedSimulations(next);
@@ -6996,7 +8426,7 @@ function GrowthLabScreen({
           window.alert("Growth plan copied.");
         }
       } catch {
-        // Ignore cancelled share.
+        // User cancelled share.
       }
     }
   }
@@ -7179,7 +8609,7 @@ function GrowthLabScreen({
             Save simulation
           </button>
           <button type="button" onClick={() => void shareGrowthPlan(preview)}>
-            Share growth plan
+            Share growth card
           </button>
         </div>
       </section>
@@ -7320,22 +8750,48 @@ function WhatIfScreen({
         </small>
       </section>
 
-      <ChallengesPanel
-        templates={challengeTemplates.length ? challengeTemplates : defaultChallengeTemplates}
-        activeChallenge={activeChallenge}
-        progress={challengeProgress}
-        loading={challengeLoading}
-        currency={settings.currency}
-        onStartChallenge={onStartChallenge}
-      />
+      <details className="clean-details" open={Boolean(activeChallenge || challengeProgress)}>
+        <summary>
+          <div>
+            <span>Challenges</span>
+            <small>Pick a leak-control mission when you are ready.</small>
+          </div>
+          <b>{activeChallenge ? "Active" : "Choose"}</b>
+        </summary>
+        <ChallengesPanel
+          templates={challengeTemplates.length ? challengeTemplates : defaultChallengeTemplates}
+          activeChallenge={activeChallenge}
+          progress={challengeProgress}
+          loading={challengeLoading}
+          currency={settings.currency}
+          onStartChallenge={onStartChallenge}
+        />
+      </details>
 
-      <LeaderboardPanel
-        leaderboard={leaderboard}
-        loading={leaderboardLoading}
-        onToggleLeaderboard={onToggleLeaderboard}
-      />
+      <details className="clean-details">
+        <summary>
+          <div>
+            <span>Public Leaderboard</span>
+            <small>Only public progress. No income or balance exposed.</small>
+          </div>
+          <b>Optional</b>
+        </summary>
+        <LeaderboardPanel
+          leaderboard={leaderboard}
+          loading={leaderboardLoading}
+          onToggleLeaderboard={onToggleLeaderboard}
+        />
+      </details>
 
-      <section className="whatif-list">
+      <details className="clean-details" open>
+        <summary>
+          <div>
+            <span>What If Scenarios</span>
+            <small>Test how much you could save by reducing leaks.</small>
+          </div>
+          <b>{cards.length} ideas</b>
+        </summary>
+        <section className="whatif-list">
         {cards.map((item) => {
           const reduction = reductions[item.category] ?? defaultReduction(item.category);
           const monthlySave = item.amount * reduction;
@@ -7385,6 +8841,7 @@ function WhatIfScreen({
           );
         })}
       </section>
+      </details>
 
       <section className="savings-card">
         <img src={A.walletMascot} alt="" />
@@ -7470,8 +8927,16 @@ function SettingsScreen({
 
       <LifeProfileEditor settings={settings} setSettings={setSettings} />
 
-      <section className="settings-group">
-        <h3>{getIncomePeriodLabel(settings)}</h3>
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <div>
+            <span>Income Setup</span>
+            <small>Adjust income without exposing private data publicly.</small>
+          </div>
+          <b>{money(totalIncome, settings.currency)}</b>
+        </summary>
+        <section className="settings-group">
+          <h3>{getIncomePeriodLabel(settings)}</h3>
 
         <EditableMoneyLine
           label={getPrimaryIncomeLabel(settings)}
@@ -7500,10 +8965,19 @@ function SettingsScreen({
           strong
           good
         />
-      </section>
+        </section>
+      </details>
 
-      <section className="settings-group">
-        <h3>Fixed Life Costs</h3>
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <div>
+            <span>Fixed Life Costs</span>
+            <small>Rent, food, transport, internet, and basics.</small>
+          </div>
+          <b>{money(fixedCosts, settings.currency)}</b>
+        </summary>
+        <section className="settings-group">
+          <h3>Fixed Life Costs</h3>
 
         {settings.profile.hasRent && (
           <EditableMoneyLine
@@ -7562,7 +9036,8 @@ function SettingsScreen({
           strong
           bad
         />
-      </section>
+        </section>
+      </details>
 
       <section className="settings-menu">
         <div className="menu-line">
@@ -7637,48 +9112,73 @@ function SettingsScreen({
         </button>
       </section>
 
-      <StreakSettingsPanel streak={streak} />
-      <BadgeVaultPanel badges={badges} />
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <span>Streak Progress</span>
+          <b>{streak.currentStreak} days</b>
+        </summary>
+        <StreakSettingsPanel streak={streak} />
+      </details>
 
-      <section className="tracked-panel">
-        <div className="section-title">
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <span>Badge Vault</span>
+          <b>{badges.filter((badge) => badge.earned).length}/{badges.length}</b>
+        </summary>
+        <BadgeVaultPanel badges={badges} />
+      </details>
+
+      <details className="clean-details settings-clean-details">
+        <summary>
           <span>Tracked Expenses</span>
-          <small>{money(monthSpent, settings.currency)} this month</small>
-        </div>
-
-        <div className="tracked-stats">
-          <div>
-            <span>Total records</span>
-            <strong>{expenses.length}</strong>
+          <b>{currentMonthExpenses.length} month</b>
+        </summary>
+        <section className="tracked-panel">
+          <div className="section-title">
+            <span>Tracked Expenses</span>
+            <small>{money(monthSpent, settings.currency)} this month</small>
           </div>
-          <div>
-            <span>This month</span>
-            <strong>{currentMonthExpenses.length}</strong>
-          </div>
-          <div>
-            <span>Month spent</span>
-            <strong>{money(monthSpent, settings.currency)}</strong>
-          </div>
-        </div>
 
-        <CategorySummaryList
-          summaries={categorySummaries}
-          currency={settings.currency}
-        />
-      </section>
+          <div className="tracked-stats">
+            <div>
+              <span>Total records</span>
+              <strong>{expenses.length}</strong>
+            </div>
+            <div>
+              <span>This month</span>
+              <strong>{currentMonthExpenses.length}</strong>
+            </div>
+            <div>
+              <span>Month spent</span>
+              <strong>{money(monthSpent, settings.currency)}</strong>
+            </div>
+          </div>
 
-      <section className="recent-card">
-        <div className="section-title">
+          <CategorySummaryList
+            summaries={categorySummaries}
+            currency={settings.currency}
+          />
+        </section>
+      </details>
+
+      <details className="clean-details settings-clean-details">
+        <summary>
           <span>Latest Records</span>
-          <small>{latestExpenses.length ? `${latestExpenses.length} latest` : "No records"}</small>
-        </div>
+          <b>{latestExpenses.length ? `${latestExpenses.length} latest` : "No records"}</b>
+        </summary>
+        <section className="recent-card">
+          <div className="section-title">
+            <span>Latest Records</span>
+            <small>{latestExpenses.length ? `${latestExpenses.length} latest` : "No records"}</small>
+          </div>
 
-        <LatestRecordsList
-          expenses={latestExpenses}
-          currency={settings.currency}
-          onDeleteExpense={onDeleteExpense}
-        />
-      </section>
+          <LatestRecordsList
+            expenses={latestExpenses}
+            currency={settings.currency}
+            onDeleteExpense={onDeleteExpense}
+          />
+        </section>
+      </details>
 
       <details className="tech-details">
         <summary>Connection details</summary>
