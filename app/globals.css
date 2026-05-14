@@ -8802,3 +8802,7 @@ html[lang="ru"] .profile-field:first-of-type .profile-select {
 
 /* ===== V51.4 GROWTH SHARE CARD IMAGE ===== */
 /* Growth share now generates a PNG card through canvas before using native share/download fallback. */
+
+
+/* ===== V51.5 GROWTH SHARE CARD DUPLICATE KEY FIX ===== */
+/* Removes duplicate ruText keys after share card label replacement. */
