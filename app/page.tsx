@@ -5949,7 +5949,7 @@ function DailyRoutinePanel({
       </div>
 
       <div className={`routine-reward ${routineComplete ? "unlocked" : ""}`}>
-        <img src={A.challengeTrophy} alt="" />
+        <img src={GROWTH_PUBLIC_ASSETS.trophy} alt="" onError={(event) => { event.currentTarget.src = A.challengeTrophy; }} />
 
         <div>
           <strong>
@@ -8322,6 +8322,15 @@ function downloadGrowthShareCardUrl(url: string) {
   link.remove();
 }
 
+
+const GROWTH_PUBLIC_ASSETS = {
+  hero: "/broke_growth_lab_assets/growth-lab-analyst-glow.png",
+  leak: "/broke_growth_lab_assets/growth-lab-loot-hacker.png",
+  market: "/broke_growth_lab_assets/growth-lab-market-controller.png",
+  lab: "/broke_growth_lab_assets/growth-lab-analyst-lab.png",
+  trophy: "/broke_growth_lab_assets/growth-lab-trophy.png",
+};
+
 function GrowthLabScreen({
   settings,
   expenses,
@@ -8526,10 +8535,43 @@ function GrowthLabScreen({
             Simulation only. No real funds are deposited, no custody, and no guaranteed returns.
           </p>
         </div>
-        <img src={A.whatIfFrog} alt="" />
+        <img src={GROWTH_PUBLIC_ASSETS.hero} alt="" onError={(event) => { event.currentTarget.src = A.whatIfFrog; }} />
+      </section>
+
+      <section className="growth-asset-strip">
+        <img
+          src={GROWTH_PUBLIC_ASSETS.market}
+          alt=""
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+        />
+        <img
+          src={GROWTH_PUBLIC_ASSETS.lab}
+          alt=""
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+        />
+        <img
+          src={GROWTH_PUBLIC_ASSETS.trophy}
+          alt=""
+          onError={(event) => {
+            event.currentTarget.style.display = "none";
+          }}
+        />
       </section>
 
       <section className="growth-leak-card">
+        <img
+          className="growth-leak-asset"
+          src={GROWTH_PUBLIC_ASSETS.leak}
+          alt=""
+          onError={(event) => {
+            event.currentTarget.src = A.moneyLeak;
+          }}
+        />
+
         <div>
           <span>This month’s detected leaks</span>
           <strong>{money(leakAmount, settings.currency)}</strong>
@@ -8746,7 +8788,7 @@ function GrowthLabScreen({
 
             return (
               <article key={simulation.id}>
-                <img src={A.progressFlame} alt="" />
+                <img src={GROWTH_PUBLIC_ASSETS.market} alt="" onError={(event) => { event.currentTarget.src = A.progressFlame; }} />
                 <div>
                   <strong>{simulation.title}</strong>
                   <span>
