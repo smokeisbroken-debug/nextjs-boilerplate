@@ -10249,3 +10249,7 @@ html[lang="ru"] .share-card strong {
 
 /* ===== V56.6 GROWTH ASSET FALLBACK FIX ===== */
 /* Fixes invalid A.moneyLeak fallback. Uses existing A.leaks instead. */
+
+
+/* ===== V56.7 GROWTH DIRECT PUBLIC ASSETS ===== */
+/* Uses direct /public image paths: /growth-lab-*.png */
