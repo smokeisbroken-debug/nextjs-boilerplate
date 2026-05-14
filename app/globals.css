@@ -10245,3 +10245,7 @@ html[lang="ru"] .share-card strong {
     height: 54px;
   }
 }
+
+
+/* ===== V56.6 GROWTH ASSET FALLBACK FIX ===== */
+/* Fixes invalid A.moneyLeak fallback. Uses existing A.leaks instead. */
