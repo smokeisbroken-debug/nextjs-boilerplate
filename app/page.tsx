@@ -1848,6 +1848,11 @@ const ruText: Record<string, string> = {
   "Skip setup": "Пропустить настройку",
   "Open Add and track it": "Открыть Add и записать",
   "First leak from onboarding": "Первая утечка из onboarding",
+  "Avoid your biggest leak today": "Избегай главной утечки сегодня",
+  "Detected:": "Найдено:",
+  "Track a leak first so the app can detect it.": "Сначала запиши утечку, чтобы app смог её найти.",
+  "your custom leak": "твоя своя утечка",
+  "no leak detected yet": "утечка пока не найдена",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -7113,10 +7118,14 @@ function TodayMissionPanel({
   identityStats: V2IdentityStats;
   onOpenAdd: () => void;
 }) {
+  const hasDetectedLeak = identityStats.biggestLeakAmount > 0;
+  const rawTargetLeak = identityStats.biggestLeakCategory || "";
   const targetLeak =
-    identityStats.biggestLeakAmount > 0
-      ? categoryLabel(identityStats.biggestLeakCategory)
-      : "first leak";
+    hasDetectedLeak
+      ? rawTargetLeak.toLowerCase() === "custom"
+        ? "your custom leak"
+        : categoryLabel(rawTargetLeak)
+      : "no leak detected yet";
 
   const missionProgress = [
     summary.todaySpent > 0,
@@ -7153,9 +7162,16 @@ function TodayMissionPanel({
           <span>Track one real expense</span>
         </div>
 
-        <div className={identityStats.biggestLeakAmount > 0 ? "danger" : ""}>
+        <div className={hasDetectedLeak ? "danger" : ""}>
           <b>2</b>
-          <span>Avoid biggest leak: {targetLeak}</span>
+          <span className="mission-step-copy">
+            <strong>Avoid your biggest leak today</strong>
+            <small>
+              {hasDetectedLeak
+                ? `Detected: ${targetLeak}`
+                : "Track a leak first so the app can detect it."}
+            </small>
+          </span>
         </div>
 
         <div className={summary.streak.currentStreak > 0 ? "done" : ""}>
