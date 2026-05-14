@@ -1922,6 +1922,30 @@ const ruText: Record<string, string> = {
   "Return hook completed": "Крючок возврата выполнен",
   "Target": "Цель",
   "No fake completion. The app only counts real tracking, chart checks, or real share actions.": "Без фейкового выполнения. App считает только реальные записи, проверки графика или настоящие share-действия.",
+  "Today’s Focus": "Фокус на сегодня",
+  "Tomorrow Hook": "Крючок на завтра",
+  "path": "путь",
+  "Track your first real leak": "Запиши первую реальную утечку",
+  "One real expense unlocks Wallet HP, Chart, Save, Growth Lab and public share cards.": "Один реальный расход открывает Wallet HP, Chart, Save, Growth Lab и публичные share-карточки.",
+  "Check your wallet movement": "Проверь движение кошелька",
+  "Open Chart once and find the category that started the biggest pressure.": "Открой Chart один раз и найди категорию, которая дала главное давление.",
+  "Share safe public progress": "Поделись безопасным публичным прогрессом",
+  "Open the public card. It hides income and real balance, but shows discipline.": "Открой публичную карточку. Она скрывает доход и реальный баланс, но показывает дисциплину.",
+  "Lock one reason to return tomorrow": "Закрепи причину вернуться завтра",
+  "The app should not end after one session. Set tomorrow’s real action now.": "App не должен заканчиваться одной сессией. Задай реальное действие на завтра.",
+  "Tomorrow goal is locked": "Цель на завтра закреплена",
+  "Continue goal": "Продолжить цель",
+  "Track": "Запись",
+  "First real leak": "Первая реальная утечка",
+  "Read": "Анализ",
+  "Chart movement": "Движение Chart",
+  "Public result": "Публичный результат",
+  "Return": "Возврат",
+  "Tomorrow hook": "Крючок на завтра",
+  "Home is now simplified: one main action here, extra systems below in collapsible sections.": "Home упрощён: здесь одно главное действие, дополнительные системы ниже в раскрывающихся секциях.",
+  "Optional 3-day mission built from your real leak pattern.": "Опциональная 3-дневная миссия на основе твоей реальной утечки.",
+  "Needs leak": "Нужна утечка",
+  "Quick preset if you want to start faster.": "Быстрый пресет, если хочешь начать быстрее.",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -5813,31 +5837,6 @@ function DashboardScreen({
         ))}
       </section>
 
-      {allExpenses.length === 0 && <FirstRunPathCard onOpenAdd={onOpenAdd} />}
-
-      <TodayMissionPanel
-        settings={settings}
-        summary={summary}
-        identityStats={identityStats}
-        onOpenAdd={onOpenAdd}
-      />
-
-      <FirstThreeDayJourneyCard
-        summary={summary}
-        allExpenses={allExpenses}
-        identityStats={identityStats}
-        onOpenAdd={onOpenAdd}
-        onOpenChart={onOpenChart}
-      />
-
-      <DailyReturnHookCard
-        summary={summary}
-        allExpenses={allExpenses}
-        identityStats={identityStats}
-        onOpenAdd={onOpenAdd}
-        onOpenChart={onOpenChart}
-      />
-
       <LifeProfileSummaryCard settings={settings} />
 
       <StreakCard streak={summary.streak} />
@@ -5859,30 +5858,50 @@ function DashboardScreen({
         <p>Hold the line, fix the leaks.</p>
       </section>
 
-      <NextBestActionCard
-        summary={summary}
-        identityStats={identityStats}
-        expenses={allExpenses}
-        onOpenAdd={onOpenAdd}
-      />
-
-      <BiggestLeakChallengePanel
+      <SmartHomeFocusCard
         settings={settings}
+        summary={summary}
+        allExpenses={allExpenses}
         identityStats={identityStats}
-        mission={leakMission}
-        expenses={allExpenses}
-        shareInitData={telegram.isTelegram ? telegram.initData : ""}
-        onStartMission={onStartLeakMission}
-        onResetMission={onResetLeakMission}
         onOpenAdd={onOpenAdd}
+        onOpenChart={onOpenChart}
       />
 
-      {expenses.length === 0 && (
-        <FirstLeakOnboardingCard
+      <details className="clean-details">
+        <summary>
+          <div>
+            <span>Biggest Leak Challenge</span>
+            <small>Optional 3-day mission built from your real leak pattern.</small>
+          </div>
+          <b>{identityStats.biggestLeakAmount > 0 ? "Ready" : "Needs leak"}</b>
+        </summary>
+        <BiggestLeakChallengePanel
           settings={settings}
-          onQuickLeak={onQuickLeak}
+          identityStats={identityStats}
+          mission={leakMission}
+          expenses={allExpenses}
+          shareInitData={telegram.isTelegram ? telegram.initData : ""}
+          onStartMission={onStartLeakMission}
+          onResetMission={onResetLeakMission}
           onOpenAdd={onOpenAdd}
         />
+      </details>
+
+      {expenses.length === 0 && (
+        <details className="clean-details">
+          <summary>
+            <div>
+              <span>First Leak Mission</span>
+              <small>Quick preset if you want to start faster.</small>
+            </div>
+            <b>Start</b>
+          </summary>
+          <FirstLeakOnboardingCard
+            settings={settings}
+            onQuickLeak={onQuickLeak}
+            onOpenAdd={onOpenAdd}
+          />
+        </details>
       )}
 
       <details className="clean-details">
@@ -6031,6 +6050,277 @@ function DashboardScreen({
 
 
 
+
+function SmartHomeFocusCard({
+  settings,
+  summary,
+  allExpenses,
+  identityStats,
+  onOpenAdd,
+  onOpenChart,
+}: {
+  settings: Settings;
+  summary: {
+    todaySpent: number;
+    totalLeaks: number;
+    walletHp: number;
+    streak: Streak;
+  };
+  allExpenses: Expense[];
+  identityStats: V2IdentityStats;
+  onOpenAdd: () => void;
+  onOpenChart: () => void;
+}) {
+  const [routineActions, setRoutineActions] = useState<DailyRoutineActions>(() =>
+    readDailyRoutineActions()
+  );
+  const [goal, setGoal] = useState<ReturnHookGoal | null>(() => readReturnHookGoal());
+
+  useEffect(() => {
+    setRoutineActions(readDailyRoutineActions());
+    setGoal(readReturnHookGoal());
+  }, [summary.todaySpent, summary.totalLeaks, summary.streak.currentStreak, allExpenses.length]);
+
+  const todayKey = dayKey(new Date());
+  const tomorrowKey = getTomorrowDayKey();
+  const hasExpense = allExpenses.length > 0 || summary.todaySpent > 0;
+  const chartChecked = routineActions.checkedChart;
+  const shareDone = routineActions.sharedProgress;
+  const activeGoal = goal?.targetDate === todayKey ? goal : null;
+  const futureGoal = goal?.targetDate === tomorrowKey ? goal : null;
+
+  const biggestLeak =
+    identityStats.biggestLeakAmount > 0
+      ? categoryLabel(identityStats.biggestLeakCategory)
+      : "none yet";
+
+  const stepStates = [
+    hasExpense,
+    hasExpense && chartChecked,
+    hasExpense && chartChecked && shareDone,
+    Boolean(futureGoal || activeGoal),
+  ];
+
+  const progress = Math.round((stepStates.filter(Boolean).length / stepStates.length) * 100);
+
+  function openSharePanel() {
+    triggerHaptic("light");
+
+    if (typeof document === "undefined") return;
+
+    const element = document.getElementById("share-result-card-panel") as HTMLDetailsElement | null;
+
+    if (element) {
+      element.open = true;
+      element.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }
+
+  function lockTomorrowGoal() {
+    triggerHaptic("success");
+
+    const nextGoal: ReturnHookGoal = {
+      createdAt: new Date().toISOString(),
+      targetDate: tomorrowKey,
+      action:
+        !hasExpense
+          ? "add_leak"
+          : !chartChecked
+            ? "check_chart"
+            : !shareDone
+              ? "share_result"
+              : "keep_streak",
+      title:
+        !hasExpense
+          ? "Return tomorrow and track one real leak"
+          : !chartChecked
+            ? "Return tomorrow and check the chart"
+            : !shareDone
+              ? "Return tomorrow and share a safe result"
+              : "Return tomorrow and keep the streak alive",
+      detail:
+        !hasExpense
+          ? "Create real wallet movement instead of a fake click."
+          : !chartChecked
+            ? "See if the same leak repeats and where wallet pressure starts."
+            : !shareDone
+              ? "Use a public card. It hides income and real balance."
+              : "One small real action tomorrow is enough to keep momentum.",
+    };
+
+    writeReturnHookGoal(nextGoal);
+    setGoal(nextGoal);
+  }
+
+  function openChartStep() {
+    triggerHaptic("light");
+    markDailyRoutineAction("checkedChart");
+    setRoutineActions(readDailyRoutineActions());
+    onOpenChart();
+  }
+
+  function runActiveGoal() {
+    if (!activeGoal) return;
+
+    if (activeGoal.action === "check_chart") {
+      openChartStep();
+      return;
+    }
+
+    if (activeGoal.action === "share_result") {
+      openSharePanel();
+      return;
+    }
+
+    onOpenAdd();
+  }
+
+  const activeGoalDone =
+    activeGoal?.action === "add_leak"
+      ? hasExpense
+      : activeGoal?.action === "check_chart"
+        ? chartChecked
+        : activeGoal?.action === "share_result"
+          ? shareDone
+          : activeGoal?.action === "keep_streak"
+            ? summary.streak.currentStreak > 0
+            : false;
+
+  const focus =
+    activeGoal && !activeGoalDone
+      ? {
+          eyebrow: "Today’s Focus",
+          title: activeGoal.title,
+          detail: activeGoal.detail,
+          button: "Continue goal",
+          action: runActiveGoal,
+        }
+      : !hasExpense
+        ? {
+            eyebrow: "Today’s Focus",
+            title: "Track your first real leak",
+            detail:
+              "One real expense unlocks Wallet HP, Chart, Save, Growth Lab and public share cards.",
+            button: "Track first leak",
+            action: onOpenAdd,
+          }
+        : !chartChecked
+          ? {
+              eyebrow: "Today’s Focus",
+              title: "Check your wallet movement",
+              detail:
+                "Open Chart once and find the category that started the biggest pressure.",
+              button: "Check Chart",
+              action: openChartStep,
+            }
+          : !shareDone
+            ? {
+                eyebrow: "Today’s Focus",
+                title: "Share safe public progress",
+                detail:
+                  "Open the public card. It hides income and real balance, but shows discipline.",
+                button: "Open share card",
+                action: openSharePanel,
+              }
+            : !futureGoal
+              ? {
+                  eyebrow: "Tomorrow Hook",
+                  title: "Lock one reason to return tomorrow",
+                  detail:
+                    "The app should not end after one session. Set tomorrow’s real action now.",
+                  button: "Lock tomorrow goal",
+                  action: lockTomorrowGoal,
+                }
+              : {
+                  eyebrow: "Tomorrow Hook",
+                  title: "Tomorrow goal is locked",
+                  detail: futureGoal.detail,
+                  button: "Keep streak alive",
+                  action: onOpenAdd,
+                };
+
+  return (
+    <section className="smart-home-focus-card">
+      <div className="section-title">
+        <span>Today’s Focus</span>
+        <small>{progress}% path</small>
+      </div>
+
+      <div className="smart-focus-hero">
+        <img src={A.walletMascot} alt="" />
+        <div>
+          <span>{focus.eyebrow}</span>
+          <strong>{focus.title}</strong>
+          <p>{focus.detail}</p>
+        </div>
+      </div>
+
+      <div className="smart-focus-progress">
+        <i style={{ width: `${progress}%` }} />
+      </div>
+
+      <div className="smart-focus-steps">
+        <article className={hasExpense ? "done" : "active"}>
+          <b>{hasExpense ? "✓" : "1"}</b>
+          <div>
+            <strong>Track</strong>
+            <span>First real leak</span>
+          </div>
+        </article>
+
+        <article className={chartChecked ? "done" : hasExpense ? "active" : "locked"}>
+          <b>{chartChecked ? "✓" : "2"}</b>
+          <div>
+            <strong>Read</strong>
+            <span>Chart movement</span>
+          </div>
+        </article>
+
+        <article className={shareDone ? "done" : chartChecked ? "active" : "locked"}>
+          <b>{shareDone ? "✓" : "3"}</b>
+          <div>
+            <strong>Share</strong>
+            <span>Public result</span>
+          </div>
+        </article>
+
+        <article className={futureGoal || activeGoal ? "done" : shareDone ? "active" : "locked"}>
+          <b>{futureGoal || activeGoal ? "✓" : "4"}</b>
+          <div>
+            <strong>Return</strong>
+            <span>Tomorrow hook</span>
+          </div>
+        </article>
+      </div>
+
+      <div className="smart-focus-metrics">
+        <div>
+          <span>Wallet HP</span>
+          <strong>{summary.walletHp}/100</strong>
+        </div>
+        <div>
+          <span>Biggest leak</span>
+          <strong>{biggestLeak}</strong>
+        </div>
+        <div>
+          <span>Today</span>
+          <strong>{money(summary.todaySpent, settings.currency)}</strong>
+        </div>
+      </div>
+
+      <button type="button" onClick={focus.action}>
+        {focus.button}
+      </button>
+
+      <small className="smart-focus-note">
+        Home is now simplified: one main action here, extra systems below in collapsible sections.
+      </small>
+    </section>
+  );
+}
 
 function FirstThreeDayJourneyCard({
   summary,
