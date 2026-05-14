@@ -10253,3 +10253,17 @@ html[lang="ru"] .share-card strong {
 
 /* ===== V56.7 GROWTH DIRECT PUBLIC ASSETS ===== */
 /* Uses direct /public image paths: /growth-lab-*.png */
+
+
+/* ===== V56.8 NAV ICON PACK ===== */
+/* Uses unified /public nav-*.png images without changing menu logic. */
+.bottom-nav button img {
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.bottom-nav button.active img {
+  filter:
+    saturate(1.18)
+    drop-shadow(0 0 10px rgba(183, 255, 25, 0.56));
+}
