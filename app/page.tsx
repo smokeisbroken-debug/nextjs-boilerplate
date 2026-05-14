@@ -1443,7 +1443,6 @@ const ruText: Record<string, string> = {
   "Leak to Growth Plan": "План утечки в рост",
   "Simulation only. No guaranteed returns.": "Только симуляция. Доход не гарантируется.",
   "Find the leak. Redirect it into growth.": "Найди утечку. Перенаправь её в рост.",
-  "Share growth card": "Поделиться карточкой роста",
   "Growth card saved. Share text copied.": "Карточка роста сохранена. Текст скопирован.",
 
 };
