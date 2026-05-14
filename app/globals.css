@@ -11296,3 +11296,32 @@ html[lang="ru"] .tab-guide-hero p {
     grid-template-columns: 0.78fr 1.22fr;
   }
 }
+
+
+/* ===== V58.1 CLEAR TODAY MISSION COPY ===== */
+/* Makes "avoid biggest leak" understandable and removes confusing "custom" wording. */
+
+.mission-steps .mission-step-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.mission-steps .mission-step-copy strong {
+  display: block;
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.12;
+  font-weight: 950;
+}
+
+.mission-steps .mission-step-copy small {
+  display: block;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.22;
+  font-weight: 760;
+}
+
+.mission-steps div.danger .mission-step-copy small {
+  color: rgba(255, 214, 132, 0.86);
+}
