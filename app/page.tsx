@@ -6159,6 +6159,11 @@ function ReportsPanel({
           </p>
 
           <div className="report-public-share-card daily premium-share-card" ref={dailyReportCardRef}>
+            <img
+              className="premium-share-card-art"
+              src={SHARE_CARD_PUBLIC_ASSETS.daily}
+              alt=""
+            />
             <div className="report-public-share-top">
               <div>
                 <span>$BROKE DAILY REPORT</span>
@@ -6241,6 +6246,11 @@ function ReportsPanel({
           </p>
 
           <div className="report-public-share-card weekly premium-share-card" ref={weeklyReportCardRef}>
+            <img
+              className="premium-share-card-art"
+              src={SHARE_CARD_PUBLIC_ASSETS.weekly}
+              alt=""
+            />
             <div className="report-public-share-top">
               <div>
                 <span>$BROKE WEEKLY REPORT</span>
@@ -6730,9 +6740,15 @@ function BiggestLeakChallengePanel({
               </div>
 
               <div
-                className={`mission-public-share-card ${progress.failed ? "failed" : "completed"}`}
+                className={`mission-public-share-card premium-share-card ${progress.failed ? "failed" : "completed"}`}
                 ref={missionShareCardRef}
               >
+                <img
+                  className="premium-share-card-art"
+                  src={SHARE_CARD_PUBLIC_ASSETS.mission}
+                  alt=""
+                />
+
                 <div className="mission-public-share-top">
                   <div>
                     <span>$BROKE MISSION CARD</span>
@@ -7664,6 +7680,11 @@ function ShareResultCard({
       </div>
 
       <div className="public-share-image-card premium-share-card" ref={shareCardRef}>
+        <img
+          className="premium-share-card-art"
+          src={SHARE_CARD_PUBLIC_ASSETS.result}
+          alt=""
+        />
         <div className="public-share-top">
           <div>
             <span>$BROKE IDENTITY</span>
@@ -8660,6 +8681,17 @@ function growthStrokeRoundRect(
   ctx.stroke();
 }
 
+
+function loadShareCardImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Could not load share card image: ${src}`));
+    image.src = src;
+  });
+}
+
 async function buildGrowthShareCardBlob(
   simulation: GrowthSimulation,
   settings: Settings
@@ -8683,6 +8715,19 @@ async function buildGrowthShareCardBlob(
 
   ctx.fillStyle = "#020402";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  try {
+    const premiumBackground = await loadShareCardImage(SHARE_CARD_PUBLIC_ASSETS.growth);
+    ctx.save();
+    ctx.globalAlpha = 0.16;
+    ctx.drawImage(premiumBackground, 0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
+    ctx.fillStyle = "rgba(2, 4, 2, 0.62)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  } catch {
+    // Public asset is optional. The canvas still renders with the built-in layout.
+  }
 
   for (let x = 0; x < canvas.width; x += 82) {
     ctx.strokeStyle = "rgba(183,255,25,0.045)";
@@ -8845,6 +8890,18 @@ const GROWTH_PUBLIC_ASSETS = {
   lab: "/growth-lab-analyst-lab.png",
   trophy: "/growth-lab-trophy.png",
 };
+
+
+const SHARE_CARD_PUBLIC_ASSETS = {
+  result: "/share-result-identity.png",
+  daily: "/share-daily-report.png",
+  weekly: "/share-weekly-report.png",
+  growth: "/share-growth-card.png",
+  mission: "/share-mission-card.png",
+  leaderboard: "/share-leaderboard-card.png",
+  background: "/share-card-premium-background.png",
+};
+
 
 function GrowthLabScreen({
   settings,
@@ -9260,6 +9317,11 @@ function GrowthLabScreen({
 
       {growthShareCardUrl && (
         <section className="growth-share-preview premium-share-card">
+          <img
+            className="premium-share-card-art"
+            src={SHARE_CARD_PUBLIC_ASSETS.growth}
+            alt=""
+          />
           <div className="section-title">
             <span>Growth card ready</span>
             <small>PNG</small>
