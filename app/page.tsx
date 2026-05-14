@@ -8324,11 +8324,11 @@ function downloadGrowthShareCardUrl(url: string) {
 
 
 const GROWTH_PUBLIC_ASSETS = {
-  hero: "/broke_growth_lab_assets/growth-lab-analyst-glow.png",
-  leak: "/broke_growth_lab_assets/growth-lab-loot-hacker.png",
-  market: "/broke_growth_lab_assets/growth-lab-market-controller.png",
-  lab: "/broke_growth_lab_assets/growth-lab-analyst-lab.png",
-  trophy: "/broke_growth_lab_assets/growth-lab-trophy.png",
+  hero: "/growth-lab-analyst-glow.png",
+  leak: "/growth-lab-loot-hacker.png",
+  market: "/growth-lab-market-controller.png",
+  lab: "/growth-lab-analyst-lab.png",
+  trophy: "/growth-lab-trophy.png",
 };
 
 function GrowthLabScreen({
