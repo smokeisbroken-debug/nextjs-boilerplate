@@ -8717,7 +8717,7 @@ async function buildGrowthShareCardBlob(
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   try {
-    const premiumBackground = await loadShareCardImage(SHARE_CARD_PUBLIC_ASSETS.growth);
+    const premiumBackground = await loadShareCardImage(SHARE_CARD_PUBLIC_ASSETS.background);
     ctx.save();
     ctx.globalAlpha = 0.16;
     ctx.drawImage(premiumBackground, 0, 0, canvas.width, canvas.height);
@@ -8893,12 +8893,12 @@ const GROWTH_PUBLIC_ASSETS = {
 
 
 const SHARE_CARD_PUBLIC_ASSETS = {
-  result: "/share-result-identity.png",
-  daily: "/share-daily-report.png",
-  weekly: "/share-weekly-report.png",
-  growth: "/share-growth-card.png",
-  mission: "/share-mission-card.png",
-  leaderboard: "/share-leaderboard-card.png",
+  result: "/share-card-premium-background.png",
+  daily: "/share-card-premium-background.png",
+  weekly: "/share-card-premium-background.png",
+  growth: "/share-card-premium-background.png",
+  mission: "/share-card-premium-background.png",
+  leaderboard: "/share-card-premium-background.png",
   background: "/share-card-premium-background.png",
 };
 
