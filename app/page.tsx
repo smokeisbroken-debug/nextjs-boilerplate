@@ -6032,7 +6032,14 @@ function DashboardScreen({
           </h1>
         </div>
 
-        <img className="home-mascot" src={A.homeMascot} alt="Mascot" />
+        <img
+          className="home-mascot"
+          src={PREMIUM_VISUAL_PACK.homeMascot}
+          alt="Mascot"
+          onError={(event) => {
+            event.currentTarget.src = A.homeMascot;
+          }}
+        />
       </section>
 
       <section className="stats-grid">
@@ -6461,7 +6468,13 @@ function SmartHomeFocusCard({
       </div>
 
       <div className="smart-focus-hero">
-        <img src={A.walletMascot} alt="" />
+        <img
+          src={PREMIUM_VISUAL_PACK.homeMascot}
+          alt=""
+          onError={(event) => {
+            event.currentTarget.src = A.walletMascot;
+          }}
+        />
         <div>
           <span>{focus.eyebrow}</span>
           <strong>{focus.title}</strong>
@@ -9099,7 +9112,13 @@ function RecentExpenses({
 
       {expenses.length === 0 ? (
         <div className="empty-expenses v58-empty-mini">
-          <img src={A.addFrog} alt="" />
+          <img
+            src={PREMIUM_VISUAL_PACK.firstLeakMascot}
+            alt=""
+            onError={(event) => {
+              event.currentTarget.src = A.addFrog;
+            }}
+          />
           <strong>No leaks tracked yet.</strong>
           <span>Add your first expense to make Wallet HP, Chart and Growth Lab real.</span>
           <button type="button" onClick={onOpenAdd}>
@@ -10046,7 +10065,7 @@ async function buildGrowthShareCardBlob(
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   try {
-    const premiumBackground = await loadShareCardImage(SHARE_CARD_PUBLIC_ASSETS.background);
+    const premiumBackground = await loadShareCardImage(PREMIUM_VISUAL_PACK.shareCleanBackground);
     ctx.save();
     ctx.globalAlpha = 0.16;
     ctx.drawImage(premiumBackground, 0, 0, canvas.width, canvas.height);
@@ -10229,6 +10248,14 @@ const SHARE_CARD_PUBLIC_ASSETS = {
   mission: "/share-card-premium-background.png",
   leaderboard: "/share-card-premium-background.png",
   background: "/share-card-premium-background.png",
+};
+
+const PREMIUM_VISUAL_PACK = {
+  homeMascot: "/home-premium-mascot.png",
+  survivalMascot: "/survival-mode-mascot.png",
+  growthMascot: "/growth-lab-mascot.png",
+  firstLeakMascot: "/first-leak-mascot.png",
+  shareCleanBackground: "/share-card-clean-bg.png",
 };
 
 
@@ -10438,7 +10465,13 @@ function GrowthLabScreen({
             Simulation only. No real funds are deposited, no custody, and no guaranteed returns.
           </p>
         </div>
-        <img src={GROWTH_PUBLIC_ASSETS.hero} alt="" onError={(event) => { event.currentTarget.src = A.whatIfFrog; }} />
+        <img
+          src={PREMIUM_VISUAL_PACK.growthMascot}
+          alt=""
+          onError={(event) => {
+            event.currentTarget.src = GROWTH_PUBLIC_ASSETS.hero;
+          }}
+        />
       </section>
 
       <section className="growth-asset-strip">
@@ -10493,7 +10526,13 @@ function GrowthLabScreen({
       {leakAmount <= 0 && (
         <section className="v58-empty-card v58-growth-empty">
           <div className="v58-empty-head">
-            <img src={GROWTH_PUBLIC_ASSETS.lab} alt="" />
+            <img
+              src={PREMIUM_VISUAL_PACK.growthMascot}
+              alt=""
+              onError={(event) => {
+                event.currentTarget.src = GROWTH_PUBLIC_ASSETS.lab;
+              }}
+            />
             <div>
               <span>Growth Lab needs a real leak</span>
               <strong>No leaks detected yet.</strong>
@@ -10779,7 +10818,13 @@ function SurvivalModePanel({
       </div>
 
       <div className="survival-hero">
-        <img src={A.walletMascot} alt="" />
+        <img
+          src={PREMIUM_VISUAL_PACK.survivalMascot}
+          alt=""
+          onError={(event) => {
+            event.currentTarget.src = A.walletMascot;
+          }}
+        />
         <div>
           <strong>{forecast.statusLabel}</strong>
           <p>{forecast.dangerLabel}</p>
@@ -10844,15 +10889,24 @@ function SurvivalModePanel({
       <div className="survival-share-card premium-share-card" ref={shareCardRef}>
         <img
           className="premium-share-card-art"
-          src={SHARE_CARD_PUBLIC_ASSETS.background}
+          src={PREMIUM_VISUAL_PACK.shareCleanBackground}
           alt=""
+          onError={(event) => {
+            event.currentTarget.src = SHARE_CARD_PUBLIC_ASSETS.background;
+          }}
         />
         <div className="survival-share-top">
           <div>
             <span>$BROKE SURVIVAL MODE</span>
             <strong>Can I survive until payday?</strong>
           </div>
-          <img src={A.walletMascot} alt="" />
+          <img
+            src={PREMIUM_VISUAL_PACK.survivalMascot}
+            alt=""
+            onError={(event) => {
+              event.currentTarget.src = A.walletMascot;
+            }}
+          />
         </div>
 
         <div className="survival-share-status">
@@ -10910,6 +10964,7 @@ function WhatIfScreen({
   onOpenAdd,
 }: {
   settings: Settings;
+  setSettings: Dispatch<SetStateAction<Settings>>;
   expenses: Expense[];
   challengeTemplates: ChallengeTemplate[];
   activeChallenge: UserChallenge | null;
