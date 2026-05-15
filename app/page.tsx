@@ -9098,7 +9098,6 @@ function RecentExpenses({
   onOpenAdd,
 }: {
   settings: Settings;
-  setSettings: Dispatch<SetStateAction<Settings>>;
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
   onOpenAdd: () => void;
