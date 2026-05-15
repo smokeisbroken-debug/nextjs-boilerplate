@@ -103,6 +103,23 @@ type GrowthPoint = {
   gain: number;
 };
 
+type SurvivalForecast = {
+  totalIncome: number;
+  fixedCosts: number;
+  spentThisMonth: number;
+  realBalance: number;
+  daysUntilIncome: number;
+  safeDailyBudget: number;
+  currentDailyPace: number;
+  leakDailyPace: number;
+  surviveDays: number;
+  diesBeforePaydayBy: number;
+  walletHpForecast: number;
+  status: "surviving" | "danger" | "critical";
+  statusLabel: string;
+  dangerLabel: string;
+};
+
 type Expense = {
   id: string;
   amount: number;
@@ -1946,6 +1963,23 @@ const ruText: Record<string, string> = {
   "Optional 3-day mission built from your real leak pattern.": "Опциональная 3-дневная миссия на основе твоей реальной утечки.",
   "Needs leak": "Нужна утечка",
   "Quick preset if you want to start faster.": "Быстрый пресет, если хочешь начать быстрее.",
+  "Survival Mode": "Режим выживания",
+  "Can you survive until payday?": "Доживёшь ли ты до следующего дохода?",
+  "Surviving until payday": "Доживаешь до следующего дохода",
+  "Danger before payday": "Опасность до следующего дохода",
+  "Critical wallet pressure": "Критическое давление на кошелёк",
+  "Days until income": "Дней до дохода",
+  "Safe daily budget": "Безопасный дневной бюджет",
+  "Current pace": "Текущий темп",
+  "Wallet HP forecast": "Прогноз Wallet HP",
+  "Survival forecast": "Прогноз выживания",
+  "Safe at current pace": "Безопасно при текущем темпе",
+  "Share survival card": "Поделиться survival-карточкой",
+  "Creating survival card...": "Создаём survival-карточку...",
+  "Can I survive until payday?": "Доживу ли я до дохода?",
+  "Safe/day": "Безопасно/день",
+  "Current/day": "Сейчас/день",
+  "See future damage before it happens.": "Увидь будущий урон до того, как он случится.",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -3021,6 +3055,94 @@ function getFixedCosts(settings: Settings) {
     settings.fixedCosts.data,
     settings.fixedCosts.education,
   ]);
+}
+
+function getDaysUntilIncome(settings: Settings) {
+  const now = new Date();
+
+  if (settings.profile.incomeStyle === "Daily") return 1;
+  if (settings.profile.incomeStyle === "Weekly") return 7;
+  if (settings.profile.incomeStyle === "Irregular") return 14;
+
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  return Math.max(lastDay - now.getDate() + 1, 1);
+}
+
+function getElapsedMonthDays() {
+  return Math.max(new Date().getDate(), 1);
+}
+
+function buildSurvivalForecast(settings: Settings, expenses: Expense[]): SurvivalForecast {
+  const totalIncome = getTotalIncome(settings);
+  const fixedCosts = getFixedCosts(settings);
+  const spentThisMonth = sum(expenses.map((expense) => expense.amount));
+  const realBalance = totalIncome - fixedCosts - spentThisMonth;
+  const daysUntilIncome = getDaysUntilIncome(settings);
+  const safeDailyBudget = Math.max(realBalance, 0) / Math.max(daysUntilIncome, 1);
+  const elapsedDays = getElapsedMonthDays();
+  const currentDailyPace = spentThisMonth > 0 ? spentThisMonth / elapsedDays : 0;
+  const leakDailyPace =
+    sum(
+      expenses
+        .filter((expense) => expense.needType !== "Needed")
+        .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
+    ) / elapsedDays;
+
+  const surviveDays =
+    realBalance <= 0
+      ? 0
+      : currentDailyPace <= 0
+        ? daysUntilIncome
+        : Math.floor(realBalance / Math.max(currentDailyPace, 1));
+
+  const diesBeforePaydayBy =
+    currentDailyPace <= safeDailyBudget || currentDailyPace <= 0
+      ? 0
+      : Math.max(daysUntilIncome - surviveDays, 0);
+
+  const pacePressure =
+    safeDailyBudget <= 0
+      ? 100
+      : Math.round((Math.max(currentDailyPace - safeDailyBudget, 0) / Math.max(safeDailyBudget, 1)) * 100);
+
+  const walletHpForecast = clamp(100 - pacePressure, 5, 100);
+  const status =
+    realBalance <= 0 || diesBeforePaydayBy >= Math.ceil(daysUntilIncome / 2)
+      ? "critical"
+      : diesBeforePaydayBy > 0
+        ? "danger"
+        : "surviving";
+
+  const statusLabel =
+    status === "surviving"
+      ? "Surviving until payday"
+      : status === "danger"
+        ? "Danger before payday"
+        : "Critical wallet pressure";
+
+  const dangerLabel =
+    diesBeforePaydayBy > 0
+      ? `Wallet dies ${diesBeforePaydayBy} day${diesBeforePaydayBy === 1 ? "" : "s"} before payday`
+      : currentDailyPace <= 0
+        ? "No spending pace detected yet"
+        : "You survive at the current pace";
+
+  return {
+    totalIncome,
+    fixedCosts,
+    spentThisMonth,
+    realBalance,
+    daysUntilIncome,
+    safeDailyBudget,
+    currentDailyPace,
+    leakDailyPace,
+    surviveDays,
+    diesBeforePaydayBy,
+    walletHpForecast,
+    status,
+    statusLabel,
+    dangerLabel,
+  };
 }
 
 function getCategoryIcon(category: string) {
@@ -10529,6 +10651,139 @@ function GrowthLabScreen({
 }
 
 
+function SurvivalModePanel({
+  settings,
+  forecast,
+  adjustedDailyPace,
+  daysSaved,
+  totalMonthlySavings,
+  shareCardRef,
+  sharing,
+  onShare,
+}: {
+  settings: Settings;
+  forecast: SurvivalForecast;
+  adjustedDailyPace: number;
+  daysSaved: number;
+  totalMonthlySavings: number;
+  shareCardRef: React.RefObject<HTMLDivElement | null>;
+  sharing: boolean;
+  onShare: () => void;
+}) {
+  const statusClass =
+    forecast.status === "surviving"
+      ? "surviving"
+      : forecast.status === "danger"
+        ? "danger"
+        : "critical";
+
+  return (
+    <section className={`survival-mode-card ${statusClass}`}>
+      <div className="section-title">
+        <span>Survival Mode</span>
+        <small>Can you survive until payday?</small>
+      </div>
+
+      <div className="survival-hero">
+        <img src={A.walletMascot} alt="" />
+        <div>
+          <strong>{forecast.statusLabel}</strong>
+          <p>{forecast.dangerLabel}</p>
+        </div>
+      </div>
+
+      <div className="survival-main-grid">
+        <div>
+          <span>Real balance</span>
+          <strong>{money(forecast.realBalance, settings.currency)}</strong>
+        </div>
+        <div>
+          <span>Days until income</span>
+          <strong>{forecast.daysUntilIncome}</strong>
+        </div>
+        <div>
+          <span>Safe daily budget</span>
+          <strong>{money(forecast.safeDailyBudget, settings.currency)}/day</strong>
+        </div>
+        <div>
+          <span>Current pace</span>
+          <strong>{money(forecast.currentDailyPace, settings.currency)}/day</strong>
+        </div>
+      </div>
+
+      <div className="survival-forecast-bar">
+        <span>Wallet HP forecast</span>
+        <div>
+          <i style={{ width: `${forecast.walletHpForecast}%` }} />
+        </div>
+        <strong>{forecast.walletHpForecast}/100</strong>
+      </div>
+
+      <div className="survival-danger-card">
+        <span>Survival forecast</span>
+        <strong>
+          {forecast.diesBeforePaydayBy > 0
+            ? `Danger: ${forecast.diesBeforePaydayBy} days short`
+            : "Safe at current pace"}
+        </strong>
+        <p>
+          If you reduce leaks by {money(totalMonthlySavings, settings.currency)}/month,
+          your pace could become {money(adjustedDailyPace, settings.currency)}/day.
+          {daysSaved > 0 ? ` That may save about ${daysSaved} day${daysSaved === 1 ? "" : "s"}.` : ""}
+        </p>
+      </div>
+
+      <div className="survival-share-card premium-share-card" ref={shareCardRef}>
+        <img
+          className="premium-share-card-art"
+          src={SHARE_CARD_PUBLIC_ASSETS.background}
+          alt=""
+        />
+        <div className="survival-share-top">
+          <div>
+            <span>$BROKE SURVIVAL MODE</span>
+            <strong>Can I survive until payday?</strong>
+          </div>
+          <img src={A.walletMascot} alt="" />
+        </div>
+
+        <div className="survival-share-status">
+          <span>{forecast.statusLabel}</span>
+          <strong>{forecast.dangerLabel}</strong>
+        </div>
+
+        <div className="survival-share-grid">
+          <div>
+            <span>Real balance</span>
+            <strong>{money(forecast.realBalance, settings.currency)}</strong>
+          </div>
+          <div>
+            <span>Days left</span>
+            <strong>{forecast.daysUntilIncome}</strong>
+          </div>
+          <div>
+            <span>Safe/day</span>
+            <strong>{money(forecast.safeDailyBudget, settings.currency)}</strong>
+          </div>
+          <div>
+            <span>Current/day</span>
+            <strong>{money(forecast.currentDailyPace, settings.currency)}</strong>
+          </div>
+        </div>
+
+        <div className="survival-share-footer">
+          <strong>See future damage before it happens.</strong>
+          <span>$BROKE Life Tracker · Survival Mode</span>
+        </div>
+      </div>
+
+      <button type="button" className="survival-share-button" onClick={onShare} disabled={sharing}>
+        {sharing ? "Creating survival card..." : "Share survival card"}
+      </button>
+    </section>
+  );
+}
+
 function WhatIfScreen({
   settings,
   expenses,
@@ -10559,6 +10814,8 @@ function WhatIfScreen({
   onOpenAdd: () => void;
 }) {
   const [reductions, setReductions] = useState<Record<string, number>>({});
+  const [survivalSharing, setSurvivalSharing] = useState(false);
+  const survivalCardRef = useRef<HTMLDivElement | null>(null);
 
   const categorySummaries = useMemo(() => {
     return getCategorySummaries(expenses)
@@ -10583,6 +10840,67 @@ function WhatIfScreen({
     const reduction = reductions[item.category] ?? defaultReduction(item.category);
     return acc + item.amount * reduction;
   }, 0);
+
+  const survivalForecast = useMemo(
+    () => buildSurvivalForecast(settings, expenses),
+    [settings, expenses]
+  );
+
+  const survivalAdjustedPace = Math.max(
+    survivalForecast.currentDailyPace - totalMonthlySavings / 30,
+    0
+  );
+  const survivalAdjustedDays =
+    survivalForecast.realBalance <= 0
+      ? 0
+      : survivalAdjustedPace <= 0
+        ? survivalForecast.daysUntilIncome
+        : Math.floor(survivalForecast.realBalance / Math.max(survivalAdjustedPace, 1));
+  const survivalDaysSaved = Math.max(
+    survivalAdjustedDays - survivalForecast.surviveDays,
+    0
+  );
+
+  const survivalShareText = [
+    "$BROKE Survival Mode",
+    "",
+    `Status: ${survivalForecast.statusLabel}`,
+    `Real balance: ${money(survivalForecast.realBalance, settings.currency)}`,
+    `Days until income: ${survivalForecast.daysUntilIncome}`,
+    `Safe daily budget: ${money(survivalForecast.safeDailyBudget, settings.currency)}/day`,
+    `Current pace: ${money(survivalForecast.currentDailyPace, settings.currency)}/day`,
+    `Forecast: ${survivalForecast.dangerLabel}`,
+    "",
+    "Can you survive until payday?",
+    "Smoke is broke.",
+  ].join("\n");
+
+  async function shareSurvivalCard() {
+    if (!survivalCardRef.current || survivalSharing) return;
+
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+    setSurvivalSharing(true);
+
+    try {
+      const imageFile = await createShareImageFileFromElement(survivalCardRef.current);
+      const nativeShared = await tryNativeImageShare(imageFile);
+
+      if (nativeShared) return;
+
+      try {
+        await sendShareImageViaBot(imageFile, "", survivalShareText);
+        window.alert("Survival card was sent to your Telegram bot chat.");
+      } catch {
+        downloadImageFile(imageFile);
+        window.alert("Survival card was downloaded as PNG.");
+      }
+    } catch {
+      window.alert("Survival card sharing is not supported by this browser.");
+    } finally {
+      setSurvivalSharing(false);
+    }
+  }
 
   function defaultReduction(category: string) {
     if (category === "Smoking") return 0.5;
@@ -10620,6 +10938,17 @@ function WhatIfScreen({
           /month · {money(totalMonthlySavings * 12, settings.currency)}/year
         </small>
       </section>
+
+      <SurvivalModePanel
+        settings={settings}
+        forecast={survivalForecast}
+        adjustedDailyPace={survivalAdjustedPace}
+        daysSaved={survivalDaysSaved}
+        totalMonthlySavings={totalMonthlySavings}
+        shareCardRef={survivalCardRef}
+        sharing={survivalSharing}
+        onShare={shareSurvivalCard}
+      />
 
       {!hasRealData && (
         <section className="v58-empty-card v58-save-empty">
