@@ -109,6 +109,7 @@ type SurvivalForecast = {
   spentThisMonth: number;
   realBalance: number;
   daysUntilIncome: number;
+  nextPaydayDate: string;
   safeDailyBudget: number;
   currentDailyPace: number;
   leakDailyPace: number;
@@ -162,6 +163,9 @@ type Settings = {
     phone: number;
     data: number;
     education: number;
+  };
+  survival: {
+    nextPaydayDate: string;
   };
 };
 
@@ -572,6 +576,9 @@ const defaultSettings: Settings = {
     phone: 80,
     data: 0,
     education: 0,
+  },
+  survival: {
+    nextPaydayDate: "",
   },
 };
 
@@ -1980,6 +1987,11 @@ const ruText: Record<string, string> = {
   "Safe/day": "Безопасно/день",
   "Current/day": "Сейчас/день",
   "See future damage before it happens.": "Увидь будущий урон до того, как он случится.",
+  "Next payday date": "Дата следующего дохода",
+  "Used for Survival Mode. Change it anytime after payday.": "Используется для Survival Mode. Можно изменить после зарплаты.",
+  "Payday date": "Дата дохода",
+  "Survival Mode uses this exact date instead of assuming the 1st of the month.": "Survival Mode использует эту точную дату, а не предполагает 1-е число месяца.",
+  "Next payday": "Следующий доход",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -2250,6 +2262,10 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
     fixedCosts: {
       ...defaultSettings.fixedCosts,
       ...(input?.fixedCosts || {}),
+    },
+    survival: {
+      ...defaultSettings.survival,
+      ...(input?.survival || {}),
     },
   };
 }
@@ -3057,15 +3073,84 @@ function getFixedCosts(settings: Settings) {
   ]);
 }
 
-function getDaysUntilIncome(settings: Settings) {
+function toDateInputValue(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function parseDateInputValue(value: string) {
+  if (!value) return null;
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function getFallbackNextPaydayDate(settings: Settings) {
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
 
-  if (settings.profile.incomeStyle === "Daily") return 1;
-  if (settings.profile.incomeStyle === "Weekly") return 7;
-  if (settings.profile.incomeStyle === "Irregular") return 14;
+  if (settings.profile.incomeStyle === "Daily") {
+    const next = new Date(now);
+    next.setDate(next.getDate() + 1);
+    return toDateInputValue(next);
+  }
 
-  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  return Math.max(lastDay - now.getDate() + 1, 1);
+  if (settings.profile.incomeStyle === "Weekly") {
+    const next = new Date(now);
+    next.setDate(next.getDate() + 7);
+    return toDateInputValue(next);
+  }
+
+  if (settings.profile.incomeStyle === "Irregular") {
+    const next = new Date(now);
+    next.setDate(next.getDate() + 14);
+    return toDateInputValue(next);
+  }
+
+  const firstNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  return toDateInputValue(firstNextMonth);
+}
+
+function getNextPaydayDate(settings: Settings) {
+  const raw = settings.survival?.nextPaydayDate || "";
+  const parsed = parseDateInputValue(raw);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (parsed && parsed >= today) {
+    return raw;
+  }
+
+  return getFallbackNextPaydayDate(settings);
+}
+
+function getDaysUntilIncome(settings: Settings) {
+  const payday = parseDateInputValue(getNextPaydayDate(settings));
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  if (!payday) return 1;
+
+  const diff = Math.ceil((payday.getTime() - today.getTime()) / 86400000);
+  return Math.max(diff, 1);
 }
 
 function getElapsedMonthDays() {
@@ -3078,6 +3163,7 @@ function buildSurvivalForecast(settings: Settings, expenses: Expense[]): Surviva
   const spentThisMonth = sum(expenses.map((expense) => expense.amount));
   const realBalance = totalIncome - fixedCosts - spentThisMonth;
   const daysUntilIncome = getDaysUntilIncome(settings);
+  const nextPaydayDate = getNextPaydayDate(settings);
   const safeDailyBudget = Math.max(realBalance, 0) / Math.max(daysUntilIncome, 1);
   const elapsedDays = getElapsedMonthDays();
   const currentDailyPace = spentThisMonth > 0 ? spentThisMonth / elapsedDays : 0;
@@ -3133,6 +3219,7 @@ function buildSurvivalForecast(settings: Settings, expenses: Expense[]): Surviva
     spentThisMonth,
     realBalance,
     daysUntilIncome,
+    nextPaydayDate,
     safeDailyBudget,
     currentDailyPace,
     leakDailyPace,
@@ -4698,6 +4785,7 @@ export default function Home() {
         {loaded && onboardingCompleted && activeTab === "whatif" && (
           <WhatIfScreen
             settings={settings}
+            setSettings={setSettings}
             expenses={currentMonthExpenses}
             challengeTemplates={challengeTemplates}
             activeChallenge={activeChallenge}
@@ -8997,6 +9085,7 @@ function RecentExpenses({
   onOpenAdd,
 }: {
   settings: Settings;
+  setSettings: Dispatch<SetStateAction<Settings>>;
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
   onOpenAdd: () => void;
@@ -10658,6 +10747,8 @@ function SurvivalModePanel({
   adjustedDailyPace,
   daysSaved,
   totalMonthlySavings,
+  nextPaydayDate,
+  onPaydayDateChange,
   shareCardRef,
   sharing,
   onShare,
@@ -10667,6 +10758,8 @@ function SurvivalModePanel({
   adjustedDailyPace: number;
   daysSaved: number;
   totalMonthlySavings: number;
+  nextPaydayDate: string;
+  onPaydayDateChange: (value: string) => void;
   shareCardRef: React.RefObject<HTMLDivElement | null>;
   sharing: boolean;
   onShare: () => void;
@@ -10693,10 +10786,24 @@ function SurvivalModePanel({
         </div>
       </div>
 
+      <label className="survival-payday-field">
+        <span>Next payday date</span>
+        <input
+          type="date"
+          value={nextPaydayDate}
+          onChange={(event) => onPaydayDateChange(event.target.value)}
+        />
+        <small>Used for Survival Mode. Change it anytime after payday.</small>
+      </label>
+
       <div className="survival-main-grid">
         <div>
           <span>Real balance</span>
           <strong>{money(forecast.realBalance, settings.currency)}</strong>
+        </div>
+        <div>
+          <span>Payday date</span>
+          <strong>{forecast.nextPaydayDate}</strong>
         </div>
         <div>
           <span>Days until income</span>
@@ -10787,6 +10894,7 @@ function SurvivalModePanel({
 
 function WhatIfScreen({
   settings,
+  setSettings,
   expenses,
   challengeTemplates,
   activeChallenge,
@@ -10869,6 +10977,7 @@ function WhatIfScreen({
     "",
     `Status: ${survivalForecast.statusLabel}`,
     `Real balance: ${money(survivalForecast.realBalance, settings.currency)}`,
+    `Next payday: ${survivalForecast.nextPaydayDate}`,
     `Days until income: ${survivalForecast.daysUntilIncome}`,
     `Safe daily budget: ${money(survivalForecast.safeDailyBudget, settings.currency)}/day`,
     `Current pace: ${money(survivalForecast.currentDailyPace, settings.currency)}/day`,
@@ -10923,6 +11032,16 @@ function WhatIfScreen({
     }));
   }
 
+  function updateSurvivalPaydayDate(value: string) {
+    setSettings((prev) => ({
+      ...prev,
+      survival: {
+        ...prev.survival,
+        nextPaydayDate: value,
+      },
+    }));
+  }
+
   return (
     <div className="screen">
       <Header title="Save" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
@@ -10954,6 +11073,8 @@ function WhatIfScreen({
         adjustedDailyPace={survivalAdjustedPace}
         daysSaved={survivalDaysSaved}
         totalMonthlySavings={totalMonthlySavings}
+        nextPaydayDate={settings.survival.nextPaydayDate || survivalForecast.nextPaydayDate}
+        onPaydayDateChange={updateSurvivalPaydayDate}
         shareCardRef={survivalCardRef}
         sharing={survivalSharing}
         onShare={shareSurvivalCard}
@@ -11151,6 +11272,16 @@ function SettingsScreen({
     }));
   }
 
+  function updateSurvivalPaydayDate(value: string) {
+    setSettings((prev) => ({
+      ...prev,
+      survival: {
+        ...prev.survival,
+        nextPaydayDate: value,
+      },
+    }));
+  }
+
   return (
     <div className="screen">
       <Header title="Settings" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
@@ -11195,6 +11326,16 @@ function SettingsScreen({
           strong
           good
         />
+
+        <label className="settings-date-field">
+          <span>Next payday date</span>
+          <input
+            type="date"
+            value={settings.survival.nextPaydayDate || getNextPaydayDate(settings)}
+            onChange={(event) => updateSurvivalPaydayDate(event.target.value)}
+          />
+          <small>Survival Mode uses this exact date instead of assuming the 1st of the month.</small>
+        </label>
         </section>
       </details>
 
