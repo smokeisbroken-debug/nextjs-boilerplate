@@ -12466,3 +12466,7 @@ html[lang="ru"] .tab-guide-hero p {
 
 /* ===== V59.4.1 SETSETTINGS TYPE FIX ===== */
 /* Fixes WhatIfScreen prop typing for setSettings used by Next Payday Date. */
+
+
+/* ===== V59.4.2 RECENT EXPENSES TYPE FIX ===== */
+/* Removes accidental setSettings requirement from RecentExpenses props. */
