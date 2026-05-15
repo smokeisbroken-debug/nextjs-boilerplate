@@ -4705,6 +4705,7 @@ export default function Home() {
             challengeLoading={challengeLoading}
             leaderboard={leaderboard}
             leaderboardLoading={leaderboardLoading}
+            shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onToggleLeaderboard={toggleLeaderboardPublic}
             onStartChallenge={startChallenge}
             onBack={goHome}
@@ -10793,6 +10794,7 @@ function WhatIfScreen({
   challengeLoading,
   leaderboard,
   leaderboardLoading,
+  shareInitData,
   onToggleLeaderboard,
   onStartChallenge,
   onBack,
@@ -10807,6 +10809,7 @@ function WhatIfScreen({
   challengeLoading: boolean;
   leaderboard: LeaderboardState | null;
   leaderboardLoading: boolean;
+  shareInitData: string;
   onToggleLeaderboard: (nextValue: boolean) => void;
   onStartChallenge: (challengeId: string) => void;
   onBack: () => void;
@@ -10888,12 +10891,18 @@ function WhatIfScreen({
 
       if (nativeShared) return;
 
+      if (!shareInitData) {
+        downloadImageFile(imageFile);
+        window.alert("Open the app inside Telegram to send the Survival card to the bot. On web, the PNG was downloaded.");
+        return;
+      }
+
       try {
-        await sendShareImageViaBot(imageFile, "", survivalShareText);
-        window.alert("Survival card was sent to your Telegram bot chat.");
+        await sendShareImageViaBot(imageFile, shareInitData, survivalShareText);
+        window.alert("Survival card was sent to your Telegram bot chat. Open the bot chat and forward it anywhere.");
       } catch {
         downloadImageFile(imageFile);
-        window.alert("Survival card was downloaded as PNG.");
+        window.alert("Bot delivery failed, so the Survival card was downloaded as PNG.");
       }
     } catch {
       window.alert("Survival card sharing is not supported by this browser.");
