@@ -12430,3 +12430,39 @@ html[lang="ru"] .tab-guide-hero p {
   line-height: 1.3;
   font-weight: 740;
 }
+
+
+/* ===== V59.4 BIND PREMIUM VISUAL PACK ===== */
+
+.home-mascot,
+.smart-focus-hero img,
+.survival-hero img,
+.survival-share-top img,
+.growth-hero img,
+.v58-empty-head > img,
+.empty-expenses img {
+  image-rendering: auto;
+}
+
+.home-mascot {
+  filter:
+    drop-shadow(0 0 18px rgba(183, 255, 25, 0.22))
+    drop-shadow(0 16px 28px rgba(0, 0, 0, 0.25));
+}
+
+.smart-focus-hero img,
+.survival-hero img,
+.growth-hero img {
+  background:
+    radial-gradient(circle at 50% 20%, rgba(183, 255, 25, 0.12), transparent 58%),
+    rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(183, 255, 25, 0.10);
+}
+
+.premium-share-card-art {
+  object-fit: cover;
+}
+
+
+/* ===== V59.4.1 SETSETTINGS TYPE FIX ===== */
+/* Fixes WhatIfScreen prop typing for setSettings used by Next Payday Date. */
