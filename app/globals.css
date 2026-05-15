@@ -12116,3 +12116,267 @@ html[lang="ru"] .tab-guide-hero p {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== V59 SURVIVAL MODE MVP ===== */
+
+.survival-mode-card {
+  margin-top: 14px;
+  padding: 15px;
+  border-radius: 25px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 86% 0%, rgba(183, 255, 25, 0.14), transparent 35%),
+    radial-gradient(circle at 0% 100%, rgba(157, 0, 255, 0.10), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.014));
+  border: 1px solid rgba(183, 255, 25, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(183, 255, 25, 0.035), 0 14px 36px rgba(0, 0, 0, 0.26);
+}
+
+.survival-mode-card.danger {
+  border-color: rgba(255, 177, 43, 0.25);
+}
+
+.survival-mode-card.critical {
+  border-color: rgba(255, 92, 80, 0.28);
+}
+
+.survival-hero {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 13px;
+  align-items: center;
+}
+
+.survival-hero img {
+  width: 60px;
+  height: 60px;
+  object-fit: contain;
+  border-radius: 18px;
+  filter: drop-shadow(0 0 14px rgba(183, 255, 25, 0.18));
+}
+
+.survival-hero strong {
+  display: block;
+  color: var(--text);
+  font-size: 21px;
+  line-height: 1.04;
+  font-weight: 980;
+  letter-spacing: -0.48px;
+}
+
+.survival-hero p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.36;
+  font-weight: 720;
+}
+
+.survival-main-grid,
+.survival-share-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.survival-main-grid div,
+.survival-share-grid div {
+  min-height: 72px;
+  padding: 11px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.survival-main-grid span,
+.survival-share-grid span,
+.survival-danger-card span,
+.survival-forecast-bar span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 820;
+  text-transform: uppercase;
+  letter-spacing: 0.24px;
+}
+
+.survival-main-grid strong,
+.survival-share-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--green);
+  font-size: 17px;
+  line-height: 1.08;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.survival-forecast-bar {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.034);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.survival-forecast-bar div {
+  height: 9px;
+  margin: 9px 0 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.survival-forecast-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+}
+
+.survival-forecast-bar strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.survival-danger-card {
+  margin-top: 12px;
+  padding: 13px;
+  border-radius: 18px;
+  background: rgba(255, 177, 43, 0.06);
+  border: 1px solid rgba(255, 177, 43, 0.14);
+}
+
+.survival-danger-card strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.08;
+  font-weight: 950;
+}
+
+.survival-danger-card p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.34;
+}
+
+.survival-share-card {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 25px;
+}
+
+.survival-share-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.survival-share-top span {
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.4px;
+}
+
+.survival-share-top strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 21px;
+  line-height: 1.04;
+  font-weight: 980;
+}
+
+.survival-share-top img {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+}
+
+.survival-share-status {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(183, 255, 25, 0.06);
+  border: 1px solid rgba(183, 255, 25, 0.13);
+}
+
+.survival-share-status span {
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.survival-share-status strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.08;
+}
+
+.survival-share-footer {
+  margin-top: 13px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(183, 255, 25, 0.12);
+}
+
+.survival-share-footer strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.survival-share-footer span {
+  display: block;
+  margin-top: 4px;
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.survival-share-button {
+  min-height: 48px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 17px;
+  color: #061006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  box-shadow: 0 10px 22px rgba(183, 255, 25, 0.12);
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 980;
+}
+
+@media (max-width: 430px) {
+  .survival-hero {
+    grid-template-columns: 54px minmax(0, 1fr);
+  }
+
+  .survival-hero img {
+    width: 52px;
+    height: 52px;
+  }
+
+  .survival-hero strong,
+  .survival-share-top strong {
+    font-size: 18px;
+  }
+
+  .survival-main-grid,
+  .survival-share-grid {
+    grid-template-columns: 1fr;
+  }
+}
