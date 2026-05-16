@@ -13193,6 +13193,16 @@ function SettingsScreen({
     }));
   }
 
+  function updatePublicProofMode(value: boolean) {
+    setSettings((prev) => ({
+      ...prev,
+      privacy: {
+        ...prev.privacy,
+        publicProofMode: value,
+      },
+    }));
+  }
+
   return (
     <div className="screen">
       <Header title="Settings" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
