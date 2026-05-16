@@ -6157,7 +6157,7 @@ function HelpGuideModal({
           icon: A.leaks,
         },
         {
-          title: "4. Use Analysis Lab"
+          title: "4. Use Analysis Lab",
           body: [
             "Analysis Lab explains patterns, repeated leaks, and category streaks in plain language.",
             "It turns repeated records into one clear action.",
