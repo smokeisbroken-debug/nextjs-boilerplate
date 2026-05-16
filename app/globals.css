@@ -14059,3 +14059,7 @@ html[lang="ru"] .tab-guide-hero p {
 
 /* ===== V60.7.1 CATEGORY SCOPE FIX ===== */
 /* Fixes categoryDisplayLabel references inside components that do not receive settings. */
+
+
+/* ===== V60.7.2 EXPENSE ROW COMPAT FIX ===== */
+/* Allows ExpenseRow to work with either full settings or legacy currency prop. */
