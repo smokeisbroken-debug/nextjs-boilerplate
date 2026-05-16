@@ -213,6 +213,21 @@ type MonthlyLeakArchive = {
   summaryComment: string;
 };
 
+type LeakPattern = {
+  id: string;
+  category: string;
+  icon: string;
+  title: string;
+  body: string;
+  why: string;
+  fix: string;
+  count: number;
+  total: number;
+  average: number;
+  severity: "low" | "medium" | "high";
+  tag: string;
+};
+
 type Streak = {
   currentStreak: number;
   bestStreak: number;
@@ -2076,6 +2091,23 @@ const ruText: Record<string, string> = {
   "Category total": "Всего в категории",
   "Check history": "Проверить историю",
   "Open Survival": "Открыть Survival",
+  "Pattern Detector": "Детектор паттернов",
+  "What the app sees behind your expenses.": "Что app видит за твоими расходами.",
+  "Why this matters": "Почему это важно",
+  "One fix": "Один фикс",
+  "Count": "Количество",
+  "Total": "Итого",
+  "Average": "Среднее",
+  "Detected patterns": "Найденные паттерны",
+  "No pattern yet": "Паттерна пока нет",
+  "Track more expenses to reveal behavior.": "Запиши больше расходов, чтобы увидеть поведение.",
+  "The detector needs repeated records to see habits, triggers, weekend leaks and decision-zone spending.": "Детектору нужны повторяющиеся записи, чтобы увидеть привычки, триггеры, weekend leaks и decision-zone spending.",
+  "Track more expenses": "Записать больше расходов",
+  "Repeated habit": "Повторяющаяся привычка",
+  "Weekend leak": "Утечка выходных",
+  "Heavy hit": "Тяжёлый удар",
+  "Decision leak": "Утечка решений",
+  "Small repeated leak": "Маленькая повторяющаяся утечка",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -3571,6 +3603,173 @@ function buildMonthlyLeakArchive(expenses: Expense[], selectedMonthKey: string):
     categories,
     summaryComment,
   };
+}
+
+
+function isWeekendDate(date: Date) {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
+
+function getDayPart(date: Date) {
+  const hour = date.getHours();
+
+  if (hour < 6) return "night";
+  if (hour < 12) return "morning";
+  if (hour < 18) return "afternoon";
+  return "evening";
+}
+
+function getDominantDayPart(expenses: Expense[]) {
+  const parts = new Map<string, number>();
+
+  for (const expense of expenses) {
+    const part = getDayPart(new Date(expense.createdAt));
+    parts.set(part, (parts.get(part) || 0) + 1);
+  }
+
+  return Array.from(parts.entries()).sort((a, b) => b[1] - a[1])[0] || ["unknown", 0];
+}
+
+function buildLeakPatterns(expenses: Expense[], settings: Settings): LeakPattern[] {
+  const monthExpenses = getCurrentMonthExpenses(expenses);
+  const archive = buildMonthlyLeakArchive(monthExpenses, monthKey(new Date()));
+  const patterns: LeakPattern[] = [];
+
+  for (const item of archive.categories) {
+    const label = sentenceCase(categoryLabel(item.category));
+    const weekendCount = item.purchases.filter((expense) => isWeekendDate(new Date(expense.createdAt))).length;
+    const notNeededCount = item.purchases.filter((expense) => expense.needType === "Not needed").length;
+    const maybeCount = item.purchases.filter((expense) => expense.needType === "Maybe").length;
+    const [dominantPart, dominantPartCount] = getDominantDayPart(item.purchases);
+    const amountLabel = money(item.total, settings.currency);
+    const averageLabel = money(item.average, settings.currency);
+
+    if (item.count >= 5) {
+      patterns.push({
+        id: `${item.category}-repeat`,
+        category: item.category,
+        icon: item.icon,
+        title: `${label} repeats too often`,
+        body: `${item.count} ${label} records this month became ${amountLabel}.`,
+        why: "This does not look like one random purchase. It looks like a repeated behavior.",
+        fix: `Cut only 2 ${label} repeats next week and watch the monthly total change.`,
+        count: item.count,
+        total: item.total,
+        average: item.average,
+        severity: item.count >= 10 || item.sharePercent >= 30 ? "high" : "medium",
+        tag: "Repeated habit",
+      });
+    }
+
+    if (dominantPart !== "unknown" && dominantPartCount >= 3 && dominantPartCount / Math.max(item.count, 1) >= 0.55) {
+      patterns.push({
+        id: `${item.category}-${dominantPart}`,
+        category: item.category,
+        icon: item.icon,
+        title: `${label} appears mostly in the ${dominantPart}`,
+        body: `${dominantPartCount} of ${item.count} ${label} records happened in the ${dominantPart}.`,
+        why:
+          dominantPart === "evening" || dominantPart === "night"
+            ? "This may be a tiredness, stress, or routine leak."
+            : "This may be connected to a daily routine or repeated trigger.",
+        fix:
+          dominantPart === "evening" || dominantPart === "night"
+            ? `Prepare one cheaper backup before the ${dominantPart}.`
+            : `Add one rule before the usual ${dominantPart} trigger.`,
+        count: dominantPartCount,
+        total: item.total,
+        average: item.average,
+        severity: "medium",
+        tag: `${sentenceCase(dominantPart)} trigger`,
+      });
+    }
+
+    if (weekendCount >= 2 && weekendCount / Math.max(item.count, 1) >= 0.5) {
+      patterns.push({
+        id: `${item.category}-weekend`,
+        category: item.category,
+        icon: item.icon,
+        title: `${label} is a weekend leak`,
+        body: `${weekendCount} of ${item.count} ${label} records happened on weekends.`,
+        why: "The leak may not be daily. It may appear when the week ends and discipline drops.",
+        fix: `Set a weekend limit before Friday. Do not decide while already spending.`,
+        count: weekendCount,
+        total: item.total,
+        average: item.average,
+        severity: "medium",
+        tag: "Weekend leak",
+      });
+    }
+
+    if (item.count <= 3 && item.total >= archive.totalSpent * 0.28 && item.total > 0) {
+      patterns.push({
+        id: `${item.category}-heavy`,
+        category: item.category,
+        icon: item.icon,
+        title: `${label} is a heavy-hit leak`,
+        body: `${item.count} purchase${item.count === 1 ? "" : "s"} created ${amountLabel} in pressure.`,
+        why: "This is not frequent, but each hit is large enough to move the month.",
+        fix: `Before the next ${label} purchase, wait 24 hours or set a hard cap.`,
+        count: item.count,
+        total: item.total,
+        average: item.average,
+        severity: "high",
+        tag: "Heavy hit",
+      });
+    }
+
+    if (maybeCount + notNeededCount >= 3 && (maybeCount + notNeededCount) / Math.max(item.count, 1) >= 0.6) {
+      patterns.push({
+        id: `${item.category}-decision`,
+        category: item.category,
+        icon: item.icon,
+        title: `${label} lives in the decision zone`,
+        body: `${maybeCount + notNeededCount} records were Maybe or Not needed.`,
+        why: "This category is not clearly life cost. It is where small decisions leak money.",
+        fix: `Make one rule: ${label} needs a reason before it gets tracked again.`,
+        count: maybeCount + notNeededCount,
+        total: item.leakTotal,
+        average: item.average,
+        severity: notNeededCount >= maybeCount ? "high" : "medium",
+        tag: "Decision leak",
+      });
+    }
+
+    if (item.count >= 4 && item.average <= Math.max(5, archive.totalSpent * 0.04)) {
+      patterns.push({
+        id: `${item.category}-small`,
+        category: item.category,
+        icon: item.icon,
+        title: `${label} is a small-leak pattern`,
+        body: `${item.count} purchases with an average of ${averageLabel}.`,
+        why: "The single purchase feels harmless. The pattern is what makes it expensive.",
+        fix: `Reduce the number of repeats, not only the price.`,
+        count: item.count,
+        total: item.total,
+        average: item.average,
+        severity: item.count >= 8 ? "high" : "medium",
+        tag: "Small repeated leak",
+      });
+    }
+  }
+
+  const unique = new Map<string, LeakPattern>();
+
+  for (const pattern of patterns) {
+    const existing = unique.get(pattern.id);
+
+    if (!existing || existing.total < pattern.total) {
+      unique.set(pattern.id, pattern);
+    }
+  }
+
+  return Array.from(unique.values())
+    .sort((a, b) => {
+      const severityScore = { high: 3, medium: 2, low: 1 };
+      return severityScore[b.severity] - severityScore[a.severity] || b.total - a.total;
+    })
+    .slice(0, 5);
 }
 
 
@@ -9705,6 +9904,102 @@ function AddExpenseScreen({
 }
 
 // V54.6: Chart tab visual upgrade with pulse, stats, and empty state.
+function PatternDetectorPanel({
+  settings,
+  patterns,
+  onOpenAdd,
+}: {
+  settings: Settings;
+  patterns: LeakPattern[];
+  onOpenAdd: () => void;
+}) {
+  const topPattern = patterns[0];
+
+  return (
+    <section className="pattern-detector-panel">
+      <div className="section-title">
+        <span>Pattern Detector</span>
+        <small>What the app sees behind your expenses.</small>
+      </div>
+
+      {topPattern ? (
+        <>
+          <div className={`pattern-detector-hero ${topPattern.severity}`}>
+            <img src={topPattern.icon} alt="" />
+            <div>
+              <span>{topPattern.tag}</span>
+              <strong>{topPattern.title}</strong>
+              <p>{topPattern.body}</p>
+            </div>
+          </div>
+
+          <div className="pattern-detector-insight">
+            <strong>Why this matters</strong>
+            <p>{topPattern.why}</p>
+          </div>
+
+          <div className="pattern-detector-fix">
+            <strong>One fix</strong>
+            <p>{topPattern.fix}</p>
+          </div>
+
+          <div className="pattern-detector-grid">
+            <div>
+              <span>Count</span>
+              <strong>{topPattern.count}x</strong>
+            </div>
+            <div>
+              <span>Total</span>
+              <strong>{money(topPattern.total, settings.currency)}</strong>
+            </div>
+            <div>
+              <span>Average</span>
+              <strong>{money(topPattern.average, settings.currency)}</strong>
+            </div>
+          </div>
+
+          <details className="pattern-more-details">
+            <summary>
+              <span>Detected patterns</span>
+              <b>{patterns.length}</b>
+            </summary>
+
+            <div className="pattern-list">
+              {patterns.map((pattern) => (
+                <article className={`pattern-item ${pattern.severity}`} key={pattern.id}>
+                  <img src={pattern.icon} alt="" />
+                  <div>
+                    <strong>{pattern.title}</strong>
+                    <span>{pattern.tag} · {pattern.count}x · {money(pattern.total, settings.currency)}</span>
+                    <p>{pattern.fix}</p>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </details>
+        </>
+      ) : (
+        <section className="v58-empty-card pattern-empty">
+          <div className="v58-empty-head">
+            <img src={A.chartFrog} alt="" />
+            <div>
+              <span>No pattern yet</span>
+              <strong>Track more expenses to reveal behavior.</strong>
+              <p>
+                The detector needs repeated records to see habits, triggers,
+                weekend leaks and decision-zone spending.
+              </p>
+            </div>
+          </div>
+          <button type="button" className="v58-empty-primary" onClick={onOpenAdd}>
+            Track more expenses
+          </button>
+        </section>
+      )}
+    </section>
+  );
+}
+
 function MonthlyLeakHistoryPanel({
   settings,
   archive,
@@ -9927,6 +10222,10 @@ function ChartScreen({
   const monthlyArchive = useMemo(
     () => buildMonthlyLeakArchive(historyExpenses, historyMonth),
     [historyExpenses, historyMonth]
+  );
+  const leakPatterns = useMemo(
+    () => buildLeakPatterns(expenses, settings),
+    [expenses, settings]
   );
 
   const monthlyHistoryShareText = [
@@ -10206,6 +10505,12 @@ function ChartScreen({
           </span>
         </div>
       </section>
+
+      <PatternDetectorPanel
+        settings={settings}
+        patterns={leakPatterns}
+        onOpenAdd={onOpenAdd}
+      />
 
       <MonthlyLeakHistoryPanel
         settings={settings}
