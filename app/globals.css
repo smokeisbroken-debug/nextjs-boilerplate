@@ -12778,3 +12778,214 @@ html[lang="ru"] .tab-guide-hero p {
     font-size: 18px;
   }
 }
+
+
+/* ===== V60.1 LEAK REFLECTION POPUPS ===== */
+
+.leak-reflection-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  align-items: end;
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.54));
+  backdrop-filter: blur(8px);
+}
+
+.leak-reflection-popup {
+  width: min(100%, 560px);
+  margin: 0 auto;
+  padding: 15px;
+  border-radius: 26px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 90% 0%, rgba(183, 255, 25, 0.15), transparent 35%),
+    radial-gradient(circle at 0% 100%, rgba(157, 0, 255, 0.11), transparent 36%),
+    rgba(5, 10, 6, 0.96);
+  border: 1px solid rgba(183, 255, 25, 0.18);
+  box-shadow:
+    inset 0 0 0 1px rgba(183, 255, 25, 0.04),
+    0 24px 70px rgba(0, 0, 0, 0.62);
+  animation: leakReflectionIn 0.22s ease-out;
+}
+
+@keyframes leakReflectionIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.leak-reflection-popup.maybe {
+  border-color: rgba(255, 177, 43, 0.24);
+}
+
+.leak-reflection-popup.heavy,
+.leak-reflection-popup.pattern {
+  border-color: rgba(255, 92, 80, 0.28);
+}
+
+.leak-reflection-popup.needed {
+  border-color: rgba(92, 255, 156, 0.20);
+}
+
+.leak-reflection-top {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 36px;
+  gap: 12px;
+  align-items: center;
+}
+
+.leak-reflection-top img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 15px;
+  background: rgba(183, 255, 25, 0.065);
+  border: 1px solid rgba(183, 255, 25, 0.12);
+  filter: drop-shadow(0 0 12px rgba(183, 255, 25, 0.18));
+}
+
+.leak-reflection-top span {
+  display: block;
+  color: var(--green);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.38px;
+}
+
+.leak-reflection-top strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.06;
+  font-weight: 980;
+  letter-spacing: -0.35px;
+}
+
+.leak-reflection-top small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 760;
+}
+
+.leak-reflection-top button {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.leak-reflection-popup > p {
+  margin: 13px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.38;
+  font-weight: 740;
+}
+
+.leak-reflection-insight {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(183, 255, 25, 0.07);
+  border: 1px solid rgba(183, 255, 25, 0.14);
+}
+
+.leak-reflection-insight strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.24;
+  font-weight: 950;
+}
+
+.leak-reflection-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.leak-reflection-mini-grid div {
+  min-height: 60px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.leak-reflection-mini-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 820;
+  text-transform: uppercase;
+  letter-spacing: 0.24px;
+}
+
+.leak-reflection-mini-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--green);
+  font-size: 17px;
+  line-height: 1.08;
+  font-weight: 950;
+}
+
+.leak-reflection-actions {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.leak-reflection-actions button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 15px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 12px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.leak-reflection-actions button.primary {
+  color: #061006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  box-shadow: 0 10px 22px rgba(183, 255, 25, 0.12);
+}
+
+@media (max-width: 430px) {
+  .leak-reflection-backdrop {
+    padding: 10px;
+  }
+
+  .leak-reflection-popup {
+    border-radius: 24px;
+  }
+
+  .leak-reflection-actions {
+    grid-template-columns: 1fr;
+  }
+}
