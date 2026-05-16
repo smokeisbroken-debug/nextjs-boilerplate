@@ -170,6 +170,7 @@ type Settings = {
   privacy: {
     publicProofMode: boolean;
   };
+  categoryNames: Record<string, string>;
 };
 
 type ChartPoint = {
@@ -665,6 +666,21 @@ const A = {
   premiumBadgeTrustLegend: "/premium_badge_trust_legend.png",
 };
 
+const defaultCategoryNames: Record<string, string> = {
+  Coffee: "Coffee",
+  Smoking: "Smoking",
+  Takeouts: "Takeouts",
+  Shopping: "Shopping",
+  Subscriptions: "Subscriptions",
+  Taxi: "Taxi",
+  Data: "Data",
+  School: "School",
+  Snacks: "Snacks",
+  Gaming: "Gaming",
+  Family: "Family",
+  Custom: "Custom",
+};
+
 const defaultSettings: Settings = {
   currency: "USD",
   language: "en",
@@ -698,6 +714,7 @@ const defaultSettings: Settings = {
   privacy: {
     publicProofMode: true,
   },
+  categoryNames: defaultCategoryNames,
 };
 
 const emptyCosts: Settings["fixedCosts"] = {
@@ -2229,6 +2246,12 @@ const ruText: Record<string, string> = {
   "hidden": "скрыто",
   "ON": "ВКЛ",
   "OFF": "ВЫКЛ",
+  "Smart Category Names": "Умные названия категорий",
+  "Rename categories without breaking history.": "Переименуй категории без поломки истории.",
+  "Personal": "Лично",
+  "Labels only": "Только названия",
+  "This changes how categories look in the app. Old expenses stay connected to the same category key, so history and patterns do not break.": "Это меняет только отображение категорий. Старые расходы остаются привязаны к тому же ключу, поэтому история и паттерны не ломаются.",
+  "Reset category names": "Сбросить названия категорий",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -2507,6 +2530,10 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
     privacy: {
       ...defaultSettings.privacy,
       ...(input?.privacy || {}),
+    },
+    categoryNames: {
+      ...defaultCategoryNames,
+      ...(input?.categoryNames || {}),
     },
   };
 }
@@ -4319,6 +4346,18 @@ function sentenceCase(value: string) {
 
 function categoryLabel(category: string) {
   return category === "Takeouts" ? "delivery / takeout" : category.toLowerCase();
+}
+
+function categoryDisplayName(settings: Settings, category: string) {
+  const customName = settings.categoryNames?.[category]?.trim();
+
+  if (customName) return customName;
+
+  return sentenceCase(categoryLabel(category));
+}
+
+function categoryDisplayLabel(settings: Settings, category: string) {
+  return categoryDisplayName(settings, category).toLowerCase();
 }
 
 function getStartOfToday() {
@@ -7337,7 +7376,7 @@ function ComebackModeCard({
           <span>Known pressure</span>
           <strong>
             {comeback.biggestLeakAmount > 0
-              ? categoryLabel(comeback.biggestLeakCategory)
+              ? categoryDisplayLabel(settings, comeback.biggestLeakCategory)
               : "none yet"}
           </strong>
         </div>
@@ -7401,7 +7440,7 @@ function SmartHomeFocusCard({
 
   const biggestLeak =
     identityStats.biggestLeakAmount > 0
-      ? categoryLabel(identityStats.biggestLeakCategory)
+      ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
       : "none yet";
 
   const stepStates = [
@@ -7787,7 +7826,7 @@ function FirstThreeDayJourneyCard({
           <span>Biggest leak</span>
           <strong>
             {identityStats.biggestLeakAmount > 0
-              ? categoryLabel(identityStats.biggestLeakCategory)
+              ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
               : "none yet"}
           </strong>
         </div>
@@ -7964,7 +8003,7 @@ function DailyReturnHookCard({
           <span>Biggest leak</span>
           <strong>
             {identityStats.biggestLeakAmount > 0
-              ? categoryLabel(identityStats.biggestLeakCategory)
+              ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
               : "none yet"}
           </strong>
         </div>
@@ -8241,7 +8280,7 @@ function V2IdentityPanel({
       label: "Biggest Leak",
       value:
         identityStats.biggestLeakAmount > 0
-          ? categoryLabel(identityStats.biggestLeakCategory)
+          ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
           : "None",
       detail:
         identityStats.biggestLeakAmount > 0
@@ -8338,7 +8377,7 @@ function NextBestActionCard({
   const hasTrackedToday = todayExpenses.length > 0;
   const leakLabel =
     identityStats.biggestLeakAmount > 0
-      ? categoryLabel(identityStats.biggestLeakCategory)
+      ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
       : "random spending";
 
   const action = !hasTrackedToday
@@ -8465,7 +8504,7 @@ function ReportsPanel({
     `Weekly leaks: ${money(weeklyLeakAmount, settings.currency)}`,
     `Biggest leak: ${
       identityStats.biggestLeakAmount > 0
-        ? `${categoryLabel(identityStats.biggestLeakCategory)} (${money(identityStats.biggestLeakAmount, settings.currency)})`
+        ? `${categoryDisplayLabel(settings, identityStats.biggestLeakCategory)} (${money(identityStats.biggestLeakAmount, settings.currency)})`
         : "none"
     }`,
     `Life hours lost: ${identityStats.lifeHoursLost}h`,
@@ -8685,7 +8724,7 @@ function ReportsPanel({
                 <span>Biggest leak</span>
                 <strong>
                   {identityStats.biggestLeakAmount > 0
-                    ? categoryLabel(identityStats.biggestLeakCategory)
+                    ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
                     : "None"}
                 </strong>
               </div>
@@ -9884,8 +9923,8 @@ function buildShareText({
     `Biggest leak: ${
       identityStats.biggestLeakAmount > 0
         ? publicProofMode
-          ? categoryLabel(identityStats.biggestLeakCategory)
-          : `${categoryLabel(identityStats.biggestLeakCategory)} (${money(
+          ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
+          : `${categoryDisplayLabel(settings, identityStats.biggestLeakCategory)} (${money(
               identityStats.biggestLeakAmount,
               settings.currency
             )})`
@@ -10140,7 +10179,7 @@ function ShareResultCard({
           <strong>
             Leak:{" "}
             {identityStats.biggestLeakAmount > 0
-              ? categoryLabel(identityStats.biggestLeakCategory)
+              ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
               : "none"}
           </strong>
           <strong>Hours lost: {identityStats.lifeHoursLost}h</strong>
@@ -10235,7 +10274,7 @@ function RecentExpenses({
             <ExpenseRow
               key={expense.id}
               expense={expense}
-              currency={settings.currency}
+              settings={settings}
               onDeleteExpense={onDeleteExpense}
             />
           ))}
@@ -10247,11 +10286,11 @@ function RecentExpenses({
 
 function ExpenseRow({
   expense,
-  currency,
+  settings,
   onDeleteExpense,
 }: {
   expense: Expense;
-  currency: Currency;
+  settings: Settings;
   onDeleteExpense: (id: string) => void;
 }) {
   return (
@@ -10259,14 +10298,14 @@ function ExpenseRow({
       <img src={getCategoryIcon(expense.category)} alt="" />
 
       <div>
-        <strong>{expense.category}</strong>
+        <strong>{categoryDisplayName(settings, expense.category)}</strong>
         <span>
           {expense.needType}
           {expense.note ? ` · ${expense.note}` : ""}
         </span>
       </div>
 
-      <b>{money(expense.amount, currency)}</b>
+      <b>{money(expense.amount, settings.currency)}</b>
 
       <button
         type="button"
@@ -10354,7 +10393,7 @@ function AddExpenseScreen({
               }}
             >
               <img src={preset.icon} alt="" />
-              <span>{preset.label}</span>
+              <span>{categoryDisplayName(settings, preset.category)}</span>
               <strong>{money(preset.amount, settings.currency)}</strong>
             </button>
           ))}
@@ -10372,7 +10411,7 @@ function AddExpenseScreen({
               onClick={() => setSelectedCategory(cat.name)}
             >
               <img src={cat.icon} alt="" />
-              <span>{cat.name}</span>
+              <span>{categoryDisplayName(settings, cat.name)}</span>
             </button>
           ))}
         </div>
@@ -10859,7 +10898,7 @@ function MonthlyLeakHistoryPanel({
           <div>
             <span>Top category</span>
             <strong>
-              {archive.topCategory ? categoryLabel(archive.topCategory.category) : "none"}
+              {archive.topCategory ? categoryDisplayLabel(settings, archive.topCategory.category) : "none"}
             </strong>
           </div>
         </div>
@@ -10867,7 +10906,7 @@ function MonthlyLeakHistoryPanel({
         <div className="monthly-share-comment">
           <strong>
             {archive.repeatedCategory
-              ? `${archive.repeatedCategory.count}x ${categoryLabel(archive.repeatedCategory.category)}`
+              ? `${archive.repeatedCategory.count}x ${categoryDisplayLabel(settings, archive.repeatedCategory.category)}`
               : "No repeated leak yet"}
           </strong>
           <span>{archive.summaryComment}</span>
@@ -10904,7 +10943,7 @@ function MonthlyLeakHistoryPanel({
               <summary>
                 <img src={item.icon} alt="" />
                 <div>
-                  <strong>{sentenceCase(categoryLabel(item.category))}</strong>
+                  <strong>{categoryDisplayName(settings, item.category)}</strong>
                   <span>
                     {money(item.total, settings.currency)} · {item.count} purchase{item.count === 1 ? "" : "s"} · avg {money(item.average, settings.currency)}
                   </span>
@@ -11017,12 +11056,12 @@ function ChartScreen({
     `Leak pressure: ${weeklyReview.leakPressure}%`,
     `Biggest leak: ${
       weeklyReview.biggestLeakAmount > 0
-        ? `${categoryLabel(weeklyReview.biggestLeakCategory)} (${money(weeklyReview.biggestLeakAmount, settings.currency)})`
+        ? `${categoryDisplayLabel(settings, weeklyReview.biggestLeakCategory)} (${money(weeklyReview.biggestLeakAmount, settings.currency)})`
         : "none"
     }`,
     `Most repeated: ${
       weeklyReview.mostRepeatedCount > 0
-        ? `${categoryLabel(weeklyReview.mostRepeatedCategory)} (${weeklyReview.mostRepeatedCount}x)`
+        ? `${categoryDisplayLabel(settings, weeklyReview.mostRepeatedCategory)} (${weeklyReview.mostRepeatedCount}x)`
         : "none"
     }`,
     "",
@@ -11075,12 +11114,12 @@ function ChartScreen({
     `Records: ${monthlyArchive.totalCount}`,
     `Top category: ${
       monthlyArchive.topCategory
-        ? `${categoryLabel(monthlyArchive.topCategory.category)} (${money(monthlyArchive.topCategory.total, settings.currency)})`
+        ? `${categoryDisplayLabel(settings, monthlyArchive.topCategory.category)} (${money(monthlyArchive.topCategory.total, settings.currency)})`
         : "none"
     }`,
     `Most repeated: ${
       monthlyArchive.repeatedCategory
-        ? `${categoryLabel(monthlyArchive.repeatedCategory.category)} (${monthlyArchive.repeatedCategory.count}x)`
+        ? `${categoryDisplayLabel(settings, monthlyArchive.repeatedCategory.category)} (${monthlyArchive.repeatedCategory.count}x)`
         : "none"
     }`,
     "",
@@ -11240,7 +11279,7 @@ function ChartScreen({
 
         <div>
           <span>Top category</span>
-          <strong>{topRangeCategory ? categoryLabel(topRangeCategory.category) : "None"}</strong>
+          <strong>{topRangeCategory ? categoryDisplayLabel(settings, topRangeCategory.category) : "None"}</strong>
           <small>
             {topRangeCategory
               ? money(topRangeCategory.amount, settings.currency)
@@ -13203,6 +13242,23 @@ function SettingsScreen({
     }));
   }
 
+  function updateCategoryName(category: string, value: string) {
+    setSettings((prev) => ({
+      ...prev,
+      categoryNames: {
+        ...prev.categoryNames,
+        [category]: value,
+      },
+    }));
+  }
+
+  function resetCategoryNames() {
+    setSettings((prev) => ({
+      ...prev,
+      categoryNames: defaultCategoryNames,
+    }));
+  }
+
   return (
     <div className="screen">
       <Header title="Settings" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
@@ -13247,6 +13303,46 @@ function SettingsScreen({
               <strong>Balance, payday, exact private amounts</strong>
             </div>
           </div>
+        </section>
+      </details>
+
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <div>
+            <span>Smart Category Names</span>
+            <small>Rename categories without breaking history.</small>
+          </div>
+          <b>Personal</b>
+        </summary>
+
+        <section className="settings-group smart-category-settings">
+          <div className="smart-category-explain">
+            <strong>Labels only</strong>
+            <span>
+              This changes how categories look in the app. Old expenses stay connected
+              to the same category key, so history and patterns do not break.
+            </span>
+          </div>
+
+          <div className="smart-category-list">
+            {categories.map((cat) => (
+              <label className="smart-category-row" key={cat.name}>
+                <img src={cat.icon} alt="" />
+                <div>
+                  <span>{cat.name}</span>
+                  <input
+                    value={settings.categoryNames[cat.name] || cat.name}
+                    placeholder={cat.name}
+                    onChange={(event) => updateCategoryName(cat.name, event.target.value)}
+                  />
+                </div>
+              </label>
+            ))}
+          </div>
+
+          <button type="button" className="smart-category-reset" onClick={resetCategoryNames}>
+            Reset category names
+          </button>
         </section>
       </details>
 
