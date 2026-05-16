@@ -13961,3 +13961,7 @@ html[lang="ru"] .tab-guide-hero p {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== V60.6.1 PUBLIC PROOF SETTINGS FIX ===== */
+/* Adds updatePublicProofMode inside SettingsScreen scope. */
