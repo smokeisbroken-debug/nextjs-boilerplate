@@ -2280,6 +2280,19 @@ const ruText: Record<string, string> = {
   "More wallet insights": "Ещё инсайты кошелька",
   "History Archive": "Архив истории",
   "Weekly review and monthly spending memory.": "Недельный обзор и месячная память расходов.",
+  "Share Reports": "Share-отчёты",
+  "Generate clean public wallet cards.": "Создать чистые публичные карточки кошелька.",
+  "Wallet Insights Lab": "Лаборатория инсайтов кошелька",
+  "More signals from habits, timing, and pressure.": "Больше сигналов по привычкам, времени и давлению.",
+  "Account / Sync": "Аккаунт / Синхронизация",
+  "No signal today": "Сегодня пока нет сигнала",
+  "Daily pace pressure": "Давление дневного темпа",
+  "Category concentration": "Концентрация категории",
+  "Maybe zone": "Зона Maybe",
+  "Evening trigger": "Вечерний триггер",
+  "Micro-leak tax": "Налог мелких утечек",
+  "Subscription audit": "Аудит подписок",
+  "Life cost is not the enemy": "Стоимость жизни — не враг",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -4792,6 +4805,141 @@ function buildWalletInsights(expenses: Expense[], settings: Settings): WalletIns
     });
   }
 
+  const todayHasRecords = todayExpenses.length > 0;
+  const monthTop = monthCategories[0];
+  const currentDay = Math.max(getCurrentDayOfMonth(), 1);
+  const daysLeftInMonth = Math.max(getDaysInCurrentMonth() - currentDay + 1, 1);
+  const remainingAfterTrackedMonth = Math.max(totalIncome - fixedCosts - monthSpent, 0);
+  const safeDailyPace = remainingAfterTrackedMonth / daysLeftInMonth;
+  const currentDailyPace = monthSpent / currentDay;
+
+  if (!todayHasRecords && monthExpenses.length > 0) {
+    insights.push({
+      id: "no_record_today",
+      title: "No signal today",
+      body: "No expense has been tracked today yet.",
+      detail: "The app gets smarter after one honest record. Add the first movement before the day disappears.",
+      icon: A.dailyCheck,
+      tone: "green",
+    });
+  }
+
+  if (monthExpenses.length >= 3 && currentDailyPace > safeDailyPace * 1.25 && safeDailyPace > 0) {
+    insights.push({
+      id: "daily_pace_pressure",
+      title: "Daily pace pressure",
+      body: `Current pace is ${money(currentDailyPace, settings.currency)}/day.`,
+      detail: `Safe pace is closer to ${money(safeDailyPace, settings.currency)}/day. This is where Survival Mode becomes important.`,
+      icon: PREMIUM_VISUAL_PACK.survivalMascot,
+      tone: currentDailyPace > safeDailyPace * 1.8 ? "red" : "orange",
+    });
+  }
+
+  if (monthTop && monthSpent > 0) {
+    const topShare = Math.round((monthTop.amount / monthSpent) * 100);
+
+    if (topShare >= 42) {
+      insights.push({
+        id: "category_concentration",
+        title: "Category concentration",
+        body: `${sentenceCase(categoryDisplayLabel(settings, monthTop.category))} is ${topShare}% of this month’s tracked spending.`,
+        detail: "When one category dominates the month, fixing everything is not needed. Start with the loudest category.",
+        icon: getCategoryIcon(monthTop.category),
+        tone: topShare >= 60 ? "red" : "orange",
+      });
+    }
+  }
+
+  const maybeCountWeek = weekExpenses.filter((item) => item.needType === "Maybe").length;
+
+  if (maybeCountWeek >= 3) {
+    insights.push({
+      id: "maybe_zone",
+      title: "Maybe zone",
+      body: `${maybeCountWeek} expenses were marked Maybe in the last 7 days.`,
+      detail: "Maybe is where discipline gets blurry. Decide if this category is life cost or a leak.",
+      icon: A.help,
+      tone: maybeCountWeek >= 5 ? "red" : "orange",
+    });
+  }
+
+  const weekendExpenses = weekExpenses.filter((expense) => {
+    const day = new Date(expense.createdAt).getDay();
+    return day === 0 || day === 6;
+  });
+  const weekendLeaks = sum(weekendExpenses.map(getExpenseLeakValue));
+
+  if (weekendLeaks > 0 && weekLeaks > 0 && weekendLeaks >= weekLeaks * 0.45) {
+    insights.push({
+      id: "weekend_leak",
+      title: "Weekend leak",
+      body: `${money(weekendLeaks, settings.currency)} of weekly leaks happened on the weekend.`,
+      detail: "The leak may not be daily. It may appear when structure drops.",
+      icon: A.calendar,
+      tone: weekendLeaks >= weekLeaks * 0.7 ? "red" : "orange",
+    });
+  }
+
+  const eveningExpenses = weekExpenses.filter((expense) => new Date(expense.createdAt).getHours() >= 18);
+  const eveningLeaks = sum(eveningExpenses.map(getExpenseLeakValue));
+
+  if (eveningLeaks > 0 && weekLeaks > 0 && eveningLeaks >= weekLeaks * 0.5) {
+    insights.push({
+      id: "evening_trigger",
+      title: "Evening trigger",
+      body: `${money(eveningLeaks, settings.currency)} of weekly leaks happened after 18:00.`,
+      detail: "This can be tiredness spending. Prepare a cheaper fallback before the evening starts.",
+      icon: A.progressFlame,
+      tone: eveningLeaks >= weekLeaks * 0.75 ? "red" : "orange",
+    });
+  }
+
+  const smallLeakLimit = Math.max(5, availableAfterLifeCost * 0.01);
+  const smallLeaks = monthExpenses.filter(
+    (expense) => expense.needType !== "Needed" && expense.amount <= smallLeakLimit
+  );
+
+  if (smallLeaks.length >= 5) {
+    const smallLeakTotal = sum(smallLeaks.map(getExpenseLeakValue));
+
+    insights.push({
+      id: "micro_leak_tax",
+      title: "Micro-leak tax",
+      body: `${smallLeaks.length} small leaks became ${money(smallLeakTotal, settings.currency)} this month.`,
+      detail: "The single purchase does not look dangerous. The repeat count is the danger.",
+      icon: A.leaks,
+      tone: smallLeaks.length >= 10 ? "red" : "orange",
+    });
+  }
+
+  const subscriptionMonth = monthExpenses.filter((expense) => expense.category === "Subscriptions");
+  const subscriptionTotal = sum(subscriptionMonth.map(getExpenseLeakValue));
+
+  if (subscriptionTotal > 0) {
+    insights.push({
+      id: "subscription_audit",
+      title: "Subscription audit",
+      body: `Subscriptions added ${money(subscriptionTotal, settings.currency)} in tracked pressure this month.`,
+      detail: "Quiet recurring costs are easy to normalize. Review them before they become invisible.",
+      icon: A.subscriptions,
+      tone: subscriptionTotal >= availableAfterLifeCost * 0.08 ? "red" : "gold",
+    });
+  }
+
+  const neededWeek = sum(weekExpenses.filter((item) => item.needType === "Needed").map((item) => item.amount));
+
+  if (neededWeek > 0 && neededWeek >= weekLeaks * 2 && weekLeaks > 0) {
+    insights.push({
+      id: "needed_vs_leak_balance",
+      title: "Life cost is not the enemy",
+      body: `Needed spending is bigger than leaks this week.`,
+      detail: "Good. Keep separating real life cost from optional damage. That makes the app accurate.",
+      icon: A.lifeCost,
+      tone: "green",
+    });
+  }
+
+
   const challengeCategory = weekCategories.find((item) =>
     ["Coffee", "Smoking", "Takeouts", "Shopping", "Subscriptions"].includes(item.category)
   );
@@ -4820,7 +4968,7 @@ function buildWalletInsights(expenses: Expense[], settings: Settings): WalletIns
     ];
   }
 
-  return insights.slice(0, 6);
+  return insights.slice(0, 10);
 }
 
 
@@ -6041,7 +6189,7 @@ function HelpGuideModal({
         {
           title: "4. Check reports and cards",
           body: [
-            "Daily and weekly reports summarize what happened without exposing private income.",
+            "Share Reports summarize what happened without exposing private income.",
             "Share cards are safe for Telegram or X because they focus on status, Wallet HP, score, leaks, and public progress.",
             "Use reports when you want community proof without showing sensitive numbers.",
           ],
@@ -7360,8 +7508,8 @@ function DashboardScreen({
       <details className="clean-details">
         <summary>
           <div>
-            <span>Daily / Weekly Reports</span>
-            <small>Generate quick shareable wallet reports.</small>
+            <span>Share Reports</span>
+            <small>Generate clean public wallet cards.</small>
           </div>
           <b>Reports</b>
         </summary>
@@ -7377,10 +7525,10 @@ function DashboardScreen({
       <details className="clean-details">
         <summary>
           <div>
-            <span>Wallet Insights</span>
-            <small>See what habit is draining you most.</small>
+            <span>Wallet Insights Lab</span>
+            <small>More signals from habits, timing, and pressure.</small>
           </div>
-          <b>View</b>
+          <b>{walletInsights.length} signals</b>
         </summary>
         <WalletInsightsPanel insights={walletInsights} />
       </details>
@@ -7459,7 +7607,7 @@ function DashboardScreen({
 
       <details className="clean-details">
         <summary>
-          <span>Connection</span>
+          <span>Account / Sync</span>
           <b>{telegram.isTelegram ? "Telegram" : webAuth.authenticated ? "Synced" : "Web"}</b>
         </summary>
         <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
@@ -11654,7 +11802,7 @@ function ChartScreen({
         onOpenAdd={onOpenAdd}
       />
 
-      <details className="chart-premium-details analysis-lab-details" open>
+      <details className="chart-premium-details analysis-lab-details">
         <summary>
           <div>
             <span>Analysis Lab</span>
