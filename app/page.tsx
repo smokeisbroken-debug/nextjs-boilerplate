@@ -269,6 +269,17 @@ type OneFixRecommendation = {
   source: string;
 };
 
+type ComebackState = {
+  daysAway: number;
+  lastActiveLabel: string;
+  estimatedMissedLeaks: number;
+  biggestLeakCategory: string;
+  biggestLeakAmount: number;
+  title: string;
+  body: string;
+  insight: string;
+};
+
 type Streak = {
   currentStreak: number;
   bestStreak: number;
@@ -2187,6 +2198,18 @@ const ruText: Record<string, string> = {
   "Starter mode": "Стартовый режим",
   "Weekly review": "Недельный обзор",
   "Weekly repeat": "Недельный повтор",
+  "Comeback Mode": "Режим возвращения",
+  "Restart without shame.": "Вернись без стыда.",
+  "Days away": "Дней отсутствия",
+  "Estimated hidden leak": "Оценочная скрытая утечка",
+  "Known pressure": "Известное давление",
+  "Add missed leak": "Добавить пропущенную утечку",
+  "Restart today": "Начать сегодня заново",
+  "Show damage": "Показать урон",
+  "Start with one honest record. Do not try to rebuild the whole missing period perfectly.": "Начни с одной честной записи. Не пытайся идеально восстановить весь пропущенный период.",
+  "No shame. But the wallet did not pause while the app was closed.": "Без стыда. Но кошелёк не ставился на паузу, пока app был закрыт.",
+  "No problem. Restart with one honest record.": "Не проблема. Начни заново с одной честной записи.",
+  "No strong leak estimate yet. Add one missed leak to rebuild the signal.": "Сильной оценки утечки пока нет. Добавь одну пропущенную утечку, чтобы восстановить сигнал.",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -4062,6 +4085,73 @@ function buildOneFixRecommendation(
 }
 
 
+function getLastExpenseDate(expenses: Expense[]) {
+  if (expenses.length === 0) return null;
+
+  return expenses
+    .map((expense) => new Date(expense.createdAt))
+    .sort((a, b) => b.getTime() - a.getTime())[0];
+}
+
+function getDaysSinceLastExpense(expenses: Expense[]) {
+  const last = getLastExpenseDate(expenses);
+  if (!last) return 0;
+
+  const today = getStartOfToday();
+  const lastDay = new Date(last);
+  lastDay.setHours(0, 0, 0, 0);
+
+  return Math.max(0, Math.floor((today.getTime() - lastDay.getTime()) / 86400000));
+}
+
+function buildComebackState(expenses: Expense[], settings: Settings): ComebackState | null {
+  if (expenses.length === 0) return null;
+
+  const daysAway = getDaysSinceLastExpense(expenses);
+  if (daysAway < 2) return null;
+
+  const lastDate = getLastExpenseDate(expenses);
+  const monthExpenses = getCurrentMonthExpenses(expenses);
+  const elapsedDays = Math.max(getCurrentDayOfMonth(), 1);
+  const dailyLeakPace = sum(monthExpenses.map(getExpenseLeakValue)) / elapsedDays;
+  const estimatedMissedLeaks = dailyLeakPace * daysAway;
+
+  const leakCategories = getCategorySummaries(
+    monthExpenses.filter((expense) => expense.needType !== "Needed")
+  );
+  const biggestLeak = leakCategories[0] || null;
+  const biggestLeakCategory = biggestLeak?.category || "none";
+  const biggestLeakAmount = biggestLeak?.amount || 0;
+  const lastActiveLabel = lastDate
+    ? lastDate.toLocaleDateString("en", { month: "short", day: "numeric" })
+    : "-";
+
+  const title =
+    daysAway >= 7
+      ? `You disappeared for ${daysAway} days`
+      : `You were away for ${daysAway} days`;
+  const body =
+    daysAway >= 7
+      ? "No shame. But the wallet did not pause while the app was closed."
+      : "No problem. Restart with one honest record.";
+  const insight =
+    estimatedMissedLeaks > 0
+      ? `Based on your recent leak pace, the hidden damage could be around ${money(estimatedMissedLeaks, settings.currency)}.`
+      : "No strong leak estimate yet. Add one missed leak to rebuild the signal.";
+
+  return {
+    daysAway,
+    lastActiveLabel,
+    estimatedMissedLeaks,
+    biggestLeakCategory,
+    biggestLeakAmount,
+    title,
+    body,
+    insight,
+  };
+}
+
+
 function getTelegramWebApp() {
   if (typeof window === "undefined") return undefined;
   return window.Telegram?.WebApp;
@@ -5534,6 +5624,7 @@ export default function Home() {
               markDailyRoutineAction("checkedChart");
               setActiveTab("chart");
             }}
+            onOpenSurvival={() => setActiveTab("whatif")}
             telegram={telegram}
             webAuth={webAuth}
             cloudStatus={cloudStatus}
@@ -6821,6 +6912,7 @@ function DashboardScreen({
   onQuickLeak,
   onOpenAdd,
   onOpenChart,
+  onOpenSurvival,
   telegram,
   webAuth,
   cloudStatus,
@@ -6854,6 +6946,7 @@ function DashboardScreen({
   onQuickLeak: (category: string, value: number, needType?: NeedType) => void;
   onOpenAdd: () => void;
   onOpenChart: () => void;
+  onOpenSurvival: () => void;
   telegram: TelegramState;
   webAuth: WebAuthState;
   cloudStatus: CloudStatus;
@@ -6896,6 +6989,9 @@ function DashboardScreen({
   const identityStats = useMemo(() => {
     return buildV2IdentityStats(allExpenses, settings, summary.walletHp);
   }, [allExpenses, settings, summary.walletHp]);
+  const comebackState = useMemo(() => {
+    return buildComebackState(allExpenses, settings);
+  }, [allExpenses, settings]);
 
   return (
     <div className="screen">
@@ -6963,6 +7059,17 @@ function DashboardScreen({
         onOpenAdd={onOpenAdd}
         onOpenChart={onOpenChart}
       />
+
+      {comebackState && (
+        <ComebackModeCard
+          settings={settings}
+          comeback={comebackState}
+          onAddMissedLeak={onOpenAdd}
+          onRestartToday={onOpenAdd}
+          onShowDamage={onOpenChart}
+          onOpenSurvival={onOpenSurvival}
+        />
+      )}
 
       <details className="clean-details">
         <summary>
@@ -7147,6 +7254,81 @@ function DashboardScreen({
 
 
 
+
+function ComebackModeCard({
+  settings,
+  comeback,
+  onAddMissedLeak,
+  onRestartToday,
+  onShowDamage,
+  onOpenSurvival,
+}: {
+  settings: Settings;
+  comeback: ComebackState;
+  onAddMissedLeak: () => void;
+  onRestartToday: () => void;
+  onShowDamage: () => void;
+  onOpenSurvival: () => void;
+}) {
+  return (
+    <section className="comeback-mode-card">
+      <div className="section-title">
+        <span>Comeback Mode</span>
+        <small>Restart without shame.</small>
+      </div>
+
+      <div className="comeback-hero">
+        <img src={A.progressFlame} alt="" />
+        <div>
+          <span>Last active: {comeback.lastActiveLabel}</span>
+          <strong>{comeback.title}</strong>
+          <p>{comeback.body}</p>
+        </div>
+      </div>
+
+      <div className="comeback-insight">
+        <strong>{comeback.insight}</strong>
+        <p>
+          Start with one honest record. Do not try to rebuild the whole missing period perfectly.
+        </p>
+      </div>
+
+      <div className="comeback-grid">
+        <div>
+          <span>Days away</span>
+          <strong>{comeback.daysAway}</strong>
+        </div>
+        <div>
+          <span>Estimated hidden leak</span>
+          <strong>{money(comeback.estimatedMissedLeaks, settings.currency)}</strong>
+        </div>
+        <div>
+          <span>Known pressure</span>
+          <strong>
+            {comeback.biggestLeakAmount > 0
+              ? categoryLabel(comeback.biggestLeakCategory)
+              : "none yet"}
+          </strong>
+        </div>
+      </div>
+
+      <div className="comeback-actions">
+        <button type="button" className="primary" onClick={onAddMissedLeak}>
+          Add missed leak
+        </button>
+        <button type="button" onClick={onRestartToday}>
+          Restart today
+        </button>
+        <button type="button" onClick={onShowDamage}>
+          Show damage
+        </button>
+        <button type="button" onClick={onOpenSurvival}>
+          Open Survival
+        </button>
+      </div>
+    </section>
+  );
+}
 
 function SmartHomeFocusCard({
   settings,
