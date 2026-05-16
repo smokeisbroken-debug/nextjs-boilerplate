@@ -14063,3 +14063,240 @@ html[lang="ru"] .tab-guide-hero p {
 
 /* ===== V60.7.2 EXPENSE ROW COMPAT FIX ===== */
 /* Allows ExpenseRow to work with either full settings or legacy currency prop. */
+
+
+/* ===== V60.8 LEAK STREAKS ===== */
+
+.leak-streaks-details {
+  margin-top: 14px;
+  border-radius: 25px;
+  overflow: hidden;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 86% 0%, rgba(183, 255, 25, 0.11), transparent 35%),
+    radial-gradient(circle at 0% 100%, rgba(157, 0, 255, 0.08), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.044), rgba(255, 255, 255, 0.014));
+  border: 1px solid rgba(183, 255, 25, 0.13);
+  box-shadow: inset 0 0 0 1px rgba(183, 255, 25, 0.032), 0 14px 36px rgba(0, 0, 0, 0.22);
+}
+
+.leak-streaks-details summary {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px;
+  cursor: pointer;
+}
+
+.leak-streaks-details summary span {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.08;
+  font-weight: 950;
+}
+
+.leak-streaks-details summary small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 740;
+}
+
+.leak-streaks-details summary b {
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.leak-streaks-panel {
+  padding: 0 15px 15px;
+}
+
+.leak-streak-hero {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 20px;
+  background: rgba(183, 255, 25, 0.055);
+  border: 1px solid rgba(183, 255, 25, 0.12);
+}
+
+.leak-streak-hero.red {
+  background: rgba(255, 92, 80, 0.055);
+  border-color: rgba(255, 92, 80, 0.18);
+}
+
+.leak-streak-hero.orange {
+  background: rgba(255, 177, 43, 0.055);
+  border-color: rgba(255, 177, 43, 0.15);
+}
+
+.leak-streak-hero.muted {
+  background: rgba(255, 255, 255, 0.034);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.leak-streak-hero img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.leak-streak-hero span {
+  display: block;
+  color: var(--green);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.34px;
+}
+
+.leak-streak-hero strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.06;
+  font-weight: 980;
+  letter-spacing: -0.35px;
+}
+
+.leak-streak-hero p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.34;
+  font-weight: 740;
+}
+
+.leak-streak-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.leak-streak-card {
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.leak-streak-card.green {
+  border-color: rgba(92, 255, 156, 0.14);
+}
+
+.leak-streak-card.orange {
+  border-color: rgba(255, 177, 43, 0.14);
+}
+
+.leak-streak-card.red {
+  border-color: rgba(255, 92, 80, 0.18);
+}
+
+.leak-streak-card img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 13px;
+  background: rgba(183, 255, 25, 0.055);
+}
+
+.leak-streak-card strong {
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.12;
+  font-weight: 950;
+}
+
+.leak-streak-card span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.28;
+  font-weight: 730;
+}
+
+.leak-streak-mini {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.leak-streak-mini div {
+  min-height: 48px;
+  padding: 7px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.045);
+}
+
+.leak-streak-mini small {
+  display: block;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.05;
+  font-weight: 820;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.leak-streak-mini b {
+  display: block;
+  margin-top: 5px;
+  color: var(--green);
+  font-size: 12px;
+  line-height: 1.08;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.leak-streak-action {
+  min-height: 46px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 17px;
+  color: #061006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  box-shadow: 0 10px 22px rgba(183, 255, 25, 0.12);
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 980;
+}
+
+@media (max-width: 430px) {
+  .leak-streak-hero,
+  .leak-streak-card {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+
+  .leak-streak-hero img,
+  .leak-streak-card img {
+    width: 42px;
+    height: 42px;
+  }
+
+  .leak-streak-mini {
+    grid-template-columns: 1fr;
+  }
+}
