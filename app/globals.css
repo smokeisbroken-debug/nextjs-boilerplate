@@ -14450,3 +14450,18 @@ html[lang="ru"] .tab-guide-hero p {
 
 /* ===== V60.9.1 GUIDE COMMA FIX ===== */
 /* Fixes missing commas in Help Guide objects after v60.9 guide text polish. */
+
+
+/* ===== V60.9.2 HOME CLEANUP + MORE WALLET INSIGHTS ===== */
+
+.wallet-insights-panel.expanded .wallet-insight-list {
+  max-height: none;
+}
+
+.clean-details summary b {
+  white-space: nowrap;
+}
+
+.analysis-lab-details:not([open]) {
+  opacity: 0.98;
+}
