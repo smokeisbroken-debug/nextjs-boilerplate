@@ -10247,27 +10247,54 @@ function buildShareText({
   ].join("\n");
 }
 
-async function createShareImageFileFromElement(element: HTMLElement) {
+async async function createShareImageFileFromElement(element: HTMLElement) {
   const html2canvasModule = await import("html2canvas");
   const html2canvas = html2canvasModule.default;
+  const captureId = `share-capture-${Date.now()}`;
 
-  const canvas = await html2canvas(element, {
-    backgroundColor: "#020402",
-    scale: Math.min(window.devicePixelRatio || 2, 3),
-    useCORS: true,
-  });
+  element.setAttribute("data-share-capture-id", captureId);
 
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob((result) => resolve(result), "image/png", 0.96);
-  });
+  try {
+    const canvas = await html2canvas(element, {
+      backgroundColor: "#020402",
+      scale: 2,
+      useCORS: true,
+      allowTaint: false,
+      foreignObjectRendering: false,
+      logging: false,
+      imageTimeout: 15000,
+      removeContainer: true,
+      scrollX: 0,
+      scrollY: 0,
+      onclone: (clonedDocument) => {
+        const clonedElement = clonedDocument.querySelector(
+          `[data-share-capture-id="${captureId}"]`
+        );
 
-  if (!blob) {
-    throw new Error("Could not create share image.");
+        if (clonedElement instanceof HTMLElement) {
+          clonedElement.classList.add("share-capture-safe");
+
+          clonedElement
+            .querySelectorAll<HTMLElement>("*")
+            .forEach((node) => node.classList.add("share-capture-safe-child"));
+        }
+      },
+    });
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob((result) => resolve(result), "image/png", 0.96);
+    });
+
+    if (!blob) {
+      throw new Error("Could not create share image.");
+    }
+
+    return new File([blob], "broke-life-tracker-result.png", {
+      type: "image/png",
+    });
+  } finally {
+    element.removeAttribute("data-share-capture-id");
   }
-
-  return new File([blob], "broke-life-tracker-result.png", {
-    type: "image/png",
-  });
 }
 
 async function tryNativeImageShare(imageFile: File) {
