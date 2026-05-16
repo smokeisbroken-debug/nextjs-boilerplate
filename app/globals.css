@@ -12989,3 +12989,251 @@ html[lang="ru"] .tab-guide-hero p {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== V60.2 PATTERN DETECTOR ===== */
+
+.pattern-detector-panel {
+  margin-top: 14px;
+  padding: 15px;
+  border-radius: 25px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 86% 0%, rgba(183, 255, 25, 0.12), transparent 35%),
+    radial-gradient(circle at 0% 100%, rgba(157, 0, 255, 0.09), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.046), rgba(255, 255, 255, 0.014));
+  border: 1px solid rgba(183, 255, 25, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(183, 255, 25, 0.035), 0 14px 36px rgba(0, 0, 0, 0.24);
+}
+
+.pattern-detector-hero {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 20px;
+  background: rgba(183, 255, 25, 0.055);
+  border: 1px solid rgba(183, 255, 25, 0.12);
+}
+
+.pattern-detector-hero.high {
+  background: rgba(255, 92, 80, 0.055);
+  border-color: rgba(255, 92, 80, 0.18);
+}
+
+.pattern-detector-hero.medium {
+  background: rgba(255, 177, 43, 0.055);
+  border-color: rgba(255, 177, 43, 0.15);
+}
+
+.pattern-detector-hero img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pattern-detector-hero span {
+  display: block;
+  color: var(--green);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.34px;
+}
+
+.pattern-detector-hero strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.06;
+  font-weight: 980;
+  letter-spacing: -0.35px;
+}
+
+.pattern-detector-hero p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.34;
+  font-weight: 740;
+}
+
+.pattern-detector-insight,
+.pattern-detector-fix {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.034);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pattern-detector-fix {
+  background: rgba(183, 255, 25, 0.06);
+  border-color: rgba(183, 255, 25, 0.12);
+}
+
+.pattern-detector-insight strong,
+.pattern-detector-fix strong {
+  display: block;
+  color: var(--green);
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.28px;
+}
+
+.pattern-detector-insight p,
+.pattern-detector-fix p {
+  margin: 7px 0 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.34;
+  font-weight: 740;
+}
+
+.pattern-detector-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pattern-detector-grid div {
+  min-height: 64px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pattern-detector-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 820;
+  text-transform: uppercase;
+  letter-spacing: 0.24px;
+}
+
+.pattern-detector-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--green);
+  font-size: 16px;
+  line-height: 1.08;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.pattern-more-details {
+  margin-top: 10px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.028);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.pattern-more-details summary {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.pattern-more-details summary span {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.pattern-more-details summary b {
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.pattern-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 10px 10px;
+}
+
+.pattern-item {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.045);
+}
+
+.pattern-item.high {
+  border-color: rgba(255, 92, 80, 0.18);
+}
+
+.pattern-item.medium {
+  border-color: rgba(255, 177, 43, 0.14);
+}
+
+.pattern-item img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 13px;
+}
+
+.pattern-item strong {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.08;
+  font-weight: 950;
+}
+
+.pattern-item span {
+  display: block;
+  margin-top: 4px;
+  color: var(--green);
+  font-size: 10.5px;
+  line-height: 1.16;
+  font-weight: 800;
+}
+
+.pattern-item p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.26;
+  font-weight: 730;
+}
+
+.pattern-empty {
+  margin-top: 10px;
+}
+
+@media (max-width: 430px) {
+  .pattern-detector-hero {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .pattern-detector-hero img {
+    width: 50px;
+    height: 50px;
+  }
+
+  .pattern-detector-grid {
+    grid-template-columns: 1fr;
+  }
+}
