@@ -13869,3 +13869,95 @@ html[lang="ru"] .tab-guide-hero p {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== V60.6 PUBLIC PROOF MODE ===== */
+
+.public-proof-settings {
+  display: grid;
+  gap: 12px;
+}
+
+.public-proof-switch-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 78px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(183, 255, 25, 0.055);
+  border: 1px solid rgba(183, 255, 25, 0.12);
+}
+
+.public-proof-switch-row strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.public-proof-switch-row span {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.34;
+  font-weight: 740;
+}
+
+.public-proof-switch-row button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.075);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.public-proof-switch-row button.active {
+  color: #061006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  box-shadow: 0 10px 22px rgba(183, 255, 25, 0.12);
+}
+
+.public-proof-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.public-proof-info-grid div {
+  min-height: 64px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.public-proof-info-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 820;
+  text-transform: uppercase;
+  letter-spacing: 0.24px;
+}
+
+.public-proof-info-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--green);
+  font-size: 13px;
+  line-height: 1.16;
+  font-weight: 950;
+}
+
+@media (max-width: 430px) {
+  .public-proof-switch-row,
+  .public-proof-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
