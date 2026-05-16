@@ -372,6 +372,22 @@ type AppToast = {
   tone: "xp" | "badge" | "info";
 };
 
+type LeakReflectionTone = "needed" | "maybe" | "leak" | "pattern" | "heavy";
+
+type LeakReflection = {
+  id: number;
+  title: string;
+  body: string;
+  insight: string;
+  amountLabel: string;
+  categoryLabel: string;
+  needType: NeedType;
+  categoryCount: number;
+  categoryTotalLabel: string;
+  icon: string;
+  tone: LeakReflectionTone;
+};
+
 type TelegramUser = {
   id: number;
   first_name?: string;
@@ -2041,6 +2057,25 @@ const ruText: Record<string, string> = {
   "Silent recurring leak": "Тихая регулярная утечка",
   "Habit leak": "Утечка привычки",
   "Monthly pressure": "Месячное давление",
+  "Leak recorded": "Утечка записана",
+  "This expense is now part of your wallet history.": "Эта трата теперь часть истории твоего кошелька.",
+  "Small actions are only small until they repeat.": "Маленькие действия маленькие только пока не повторяются.",
+  "Needed expense recorded": "Нужный расход записан",
+  "This is not a leak. This is life cost.": "Это не утечка. Это стоимость жизни.",
+  "The goal is not to stop living. The goal is to stop leaking.": "Цель не перестать жить. Цель — перестать протекать.",
+  "Maybe is the danger zone": "Maybe — опасная зона",
+  "Not fully needed. Not fully useless. But the money is still gone.": "Не совсем нужно. Не совсем бесполезно. Но деньги всё равно ушли.",
+  "Repeated maybes can quietly drain the month.": "Повторяющиеся maybe могут тихо слить месяц.",
+  "Heavy hit recorded": "Сильный удар записан",
+  "This one deserves a second look.": "Эта трата заслуживает второго взгляда.",
+  "Small leak recorded": "Маленькая утечка записана",
+  "Wallets usually bleed from repeated small leaks.": "Кошельки чаще кровоточат от повторяющихся мелких утечек.",
+  "Not needed expense recorded": "Ненужная трата записана",
+  "The first step is admitting where the wallet is leaking.": "Первый шаг — признать, где протекает кошелёк.",
+  "This is no longer a single purchase. It is a habit signal.": "Это уже не одиночная покупка. Это сигнал привычки.",
+  "Category total": "Всего в категории",
+  "Check history": "Проверить историю",
+  "Open Survival": "Открыть Survival",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -3346,6 +3381,81 @@ function getExpenseLeakValue(expense: Expense) {
   return expense.amount;
 }
 
+function buildLeakReflection(
+  expense: Expense,
+  allExpenses: Expense[],
+  settings: Settings
+): LeakReflection {
+  const thisMonth = getCurrentMonthExpenses(allExpenses);
+  const categoryExpenses = thisMonth.filter((item) => item.category === expense.category);
+  const categoryTotal = sum(categoryExpenses.map((item) => item.amount));
+  const categoryCount = categoryExpenses.length;
+  const average = categoryCount > 0 ? categoryTotal / categoryCount : expense.amount;
+  const amountLabel = money(expense.amount, settings.currency);
+  const categoryText = sentenceCase(categoryLabel(expense.category));
+  const tenTimes = money(expense.amount * 10, settings.currency);
+  const monthlyPace = money(categoryTotal, settings.currency);
+  const icon = getCategoryIcon(expense.category);
+
+  let tone: LeakReflectionTone = "leak";
+  let title = "Leak recorded";
+  let body = "This expense is now part of your wallet history.";
+  let insight = "Small actions are only small until they repeat.";
+
+  if (expense.needType === "Needed") {
+    tone = "needed";
+    title = "Needed expense recorded";
+    body = "This is not a leak. This is life cost.";
+    insight = "The goal is not to stop living. The goal is to stop leaking.";
+  } else if (expense.needType === "Maybe") {
+    tone = "maybe";
+    title = "Maybe is the danger zone";
+    body = "Not fully needed. Not fully useless. But the money is still gone.";
+    insight = "Repeated maybes can quietly drain the month.";
+  } else if (categoryCount >= 3) {
+    tone = "pattern";
+    title = `${categoryText} is becoming a pattern`;
+    body = `${categoryText} appeared ${categoryCount} times this month.`;
+    insight = `The problem is not one ${amountLabel} purchase. The problem is repetition.`;
+  } else if (expense.amount >= Math.max(average * 1.8, 25)) {
+    tone = "heavy";
+    title = "Heavy hit recorded";
+    body = `${amountLabel} moved the chart.`;
+    insight = "This one deserves a second look.";
+  } else if (expense.amount <= 5) {
+    tone = "leak";
+    title = "Small leak recorded";
+    body = `That was only ${amountLabel}, but 10 repeats become ${tenTimes}.`;
+    insight = "Wallets usually bleed from repeated small leaks.";
+  } else {
+    tone = "leak";
+    title = "Not needed expense recorded";
+    body = `You marked ${categoryText} as Not needed.`;
+    insight = "The first step is admitting where the wallet is leaking.";
+  }
+
+  if (categoryCount >= 5 && expense.needType !== "Needed") {
+    tone = "pattern";
+    title = `${categoryText} again`;
+    body = `${categoryCount} ${categoryText} records this month. Total: ${monthlyPace}.`;
+    insight = "This is no longer a single purchase. It is a habit signal.";
+  }
+
+  return {
+    id: Date.now(),
+    title,
+    body,
+    insight,
+    amountLabel,
+    categoryLabel: categoryText,
+    needType: expense.needType,
+    categoryCount,
+    categoryTotalLabel: monthlyPace,
+    icon,
+    tone,
+  };
+}
+
 function buildMonthlyCategoryComment(category: string, total: number, count: number, average: number) {
   const label = categoryLabel(category);
 
@@ -4201,6 +4311,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("Coffee");
   const [expenseType, setExpenseType] = useState<NeedType>("Needed");
   const [lastTrackedExpense, setLastTrackedExpense] = useState<Expense | null>(null);
+  const [leakReflection, setLeakReflection] = useState<LeakReflection | null>(null);
 
   const cloudInitData = telegram.isTelegram ? telegram.initData : "";
   const cloudAuthReady = Boolean(
@@ -4572,9 +4683,12 @@ export default function Home() {
       createdAt: new Date().toISOString(),
     };
 
+    const nextExpenses = [expense, ...expenses];
+
     triggerHaptic("success");
     setExpenses((prev) => [expense, ...prev]);
     setLastTrackedExpense(expense);
+    setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
     setAmount("");
     setNote("");
     setExpenseType("Needed");
@@ -4615,9 +4729,12 @@ export default function Home() {
       createdAt: new Date().toISOString(),
     };
 
+    const nextExpenses = [expense, ...expenses];
+
     triggerHaptic("success");
     setExpenses((prev) => [expense, ...prev]);
     setLastTrackedExpense(expense);
+    setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
     setAmount("");
     setNote("");
     setSelectedCategory(category);
@@ -5027,6 +5144,21 @@ export default function Home() {
         )}
 
         {helpOpen && <HelpGuideModal activeTab={activeTab} onClose={() => setHelpOpen(false)} />}
+
+        {leakReflection && (
+          <LeakReflectionPopupView
+            reflection={leakReflection}
+            onClose={() => setLeakReflection(null)}
+            onOpenHistory={() => {
+              setLeakReflection(null);
+              setActiveTab("chart");
+            }}
+            onOpenSurvival={() => {
+              setLeakReflection(null);
+              setActiveTab("whatif");
+            }}
+          />
+        )}
 
         {toast && <AppToastView toast={toast} />}
       </section>
@@ -5616,6 +5748,67 @@ function formatCommunityTime(value: string) {
   } catch {
     return "";
   }
+}
+
+function LeakReflectionPopupView({
+  reflection,
+  onClose,
+  onOpenHistory,
+  onOpenSurvival,
+}: {
+  reflection: LeakReflection;
+  onClose: () => void;
+  onOpenHistory: () => void;
+  onOpenSurvival: () => void;
+}) {
+  return (
+    <div className="leak-reflection-backdrop" role="presentation">
+      <section className={`leak-reflection-popup ${reflection.tone}`} role="dialog" aria-modal="true">
+        <div className="leak-reflection-top">
+          <img src={reflection.icon} alt="" />
+          <div>
+            <span>{reflection.needType}</span>
+            <strong>{reflection.title}</strong>
+            <small>
+              {reflection.amountLabel} · {reflection.categoryLabel}
+            </small>
+          </div>
+          <button type="button" aria-label="Close reflection" onClick={onClose}>
+            ×
+          </button>
+        </div>
+
+        <p>{reflection.body}</p>
+
+        <div className="leak-reflection-insight">
+          <strong>{reflection.insight}</strong>
+        </div>
+
+        <div className="leak-reflection-mini-grid">
+          <div>
+            <span>This month</span>
+            <strong>{reflection.categoryCount}x</strong>
+          </div>
+          <div>
+            <span>Category total</span>
+            <strong>{reflection.categoryTotalLabel}</strong>
+          </div>
+        </div>
+
+        <div className="leak-reflection-actions">
+          <button type="button" className="primary" onClick={onClose}>
+            Got it
+          </button>
+          <button type="button" onClick={onOpenHistory}>
+            Check history
+          </button>
+          <button type="button" onClick={onOpenSurvival}>
+            Open Survival
+          </button>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function AppToastView({ toast }: { toast: AppToast }) {
