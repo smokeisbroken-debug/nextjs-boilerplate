@@ -7826,7 +7826,7 @@ function FirstThreeDayJourneyCard({
           <span>Biggest leak</span>
           <strong>
             {identityStats.biggestLeakAmount > 0
-              ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
+              ? categoryLabel(identityStats.biggestLeakCategory)
               : "none yet"}
           </strong>
         </div>
@@ -8003,7 +8003,7 @@ function DailyReturnHookCard({
           <span>Biggest leak</span>
           <strong>
             {identityStats.biggestLeakAmount > 0
-              ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
+              ? categoryLabel(identityStats.biggestLeakCategory)
               : "none yet"}
           </strong>
         </div>
@@ -8377,7 +8377,7 @@ function NextBestActionCard({
   const hasTrackedToday = todayExpenses.length > 0;
   const leakLabel =
     identityStats.biggestLeakAmount > 0
-      ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
+      ? categoryLabel(identityStats.biggestLeakCategory)
       : "random spending";
 
   const action = !hasTrackedToday
