@@ -228,6 +228,31 @@ type LeakPattern = {
   tag: string;
 };
 
+type WeeklyReviewDay = {
+  key: string;
+  label: string;
+  spent: number;
+  leaks: number;
+  count: number;
+};
+
+type WeeklyReview = {
+  totalSpent: number;
+  totalLeaks: number;
+  totalCount: number;
+  leakPressure: number;
+  biggestLeakCategory: string;
+  biggestLeakAmount: number;
+  mostRepeatedCategory: string;
+  mostRepeatedCount: number;
+  bestDay: WeeklyReviewDay | null;
+  worstDay: WeeklyReviewDay | null;
+  oneFixTitle: string;
+  oneFixBody: string;
+  summary: string;
+  days: WeeklyReviewDay[];
+};
+
 type Streak = {
   currentStreak: number;
   bestStreak: number;
@@ -2108,6 +2133,21 @@ const ruText: Record<string, string> = {
   "Heavy hit": "Тяжёлый удар",
   "Decision leak": "Утечка решений",
   "Small repeated leak": "Маленькая повторяющаяся утечка",
+  "This Week in $BROKE": "Эта неделя в $BROKE",
+  "Weekly review, one fix, and share card.": "Недельный обзор, один фикс и share-карточка.",
+  "Spent this week": "Потрачено за неделю",
+  "Leaks this week": "Утечки за неделю",
+  "Leak pressure": "Давление утечек",
+  "Most repeated": "Чаще всего повторялось",
+  "Best day": "Лучший день",
+  "Worst day": "Худший день",
+  "No weekly records yet.": "Недельных записей пока нет.",
+  "$BROKE WEEKLY REVIEW": "$BROKE НЕДЕЛЬНЫЙ ОБЗОР",
+  "One week shows the pattern. One fix changes next week.": "Одна неделя показывает паттерн. Один фикс меняет следующую неделю.",
+  "Creating weekly review card...": "Создаём недельную карточку...",
+  "Share weekly review card": "Поделиться недельной карточкой",
+  "No repeat": "Нет повтора",
+  "No data": "Нет данных",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -3770,6 +3810,115 @@ function buildLeakPatterns(expenses: Expense[], settings: Settings): LeakPattern
       return severityScore[b.severity] - severityScore[a.severity] || b.total - a.total;
     })
     .slice(0, 5);
+}
+
+
+function formatShortDayLabel(key: string) {
+  const date = new Date(`${key}T00:00:00`);
+
+  return date.toLocaleDateString("en", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function buildWeeklyReview(expenses: Expense[], settings: Settings): WeeklyReview {
+  const weekExpenses = getLastSevenDaysExpenses(expenses);
+  const totalSpent = sum(weekExpenses.map((expense) => expense.amount));
+  const totalLeaks = sum(weekExpenses.map(getExpenseLeakValue));
+  const totalCount = weekExpenses.length;
+  const leakPressure = totalSpent > 0 ? Math.round((totalLeaks / totalSpent) * 100) : 0;
+
+  const categoryMap = new Map<string, { total: number; leaks: number; count: number }>();
+
+  for (const expense of weekExpenses) {
+    const current = categoryMap.get(expense.category) || { total: 0, leaks: 0, count: 0 };
+
+    categoryMap.set(expense.category, {
+      total: current.total + expense.amount,
+      leaks: current.leaks + getExpenseLeakValue(expense),
+      count: current.count + 1,
+    });
+  }
+
+  const categories = Array.from(categoryMap.entries()).map(([category, value]) => ({
+    category,
+    ...value,
+  }));
+
+  const biggestLeak = [...categories].sort((a, b) => b.leaks - a.leaks || b.total - a.total)[0];
+  const mostRepeated = [...categories].sort((a, b) => b.count - a.count || b.total - a.total)[0];
+
+  const dayMap = new Map<string, { spent: number; leaks: number; count: number }>();
+
+  for (const expense of weekExpenses) {
+    const key = dayKey(new Date(expense.createdAt));
+    const current = dayMap.get(key) || { spent: 0, leaks: 0, count: 0 };
+
+    dayMap.set(key, {
+      spent: current.spent + expense.amount,
+      leaks: current.leaks + getExpenseLeakValue(expense),
+      count: current.count + 1,
+    });
+  }
+
+  const days: WeeklyReviewDay[] = Array.from(dayMap.entries())
+    .map(([key, value]) => ({
+      key,
+      label: formatShortDayLabel(key),
+      spent: value.spent,
+      leaks: value.leaks,
+      count: value.count,
+    }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+
+  const spendingDays = days.filter((day) => day.count > 0);
+  const worstDay = [...spendingDays].sort((a, b) => b.spent - a.spent)[0] || null;
+  const bestDay = [...spendingDays].sort((a, b) => a.leaks - b.leaks || a.spent - b.spent)[0] || null;
+
+  const biggestLeakCategory = biggestLeak?.category || "none";
+  const biggestLeakAmount = biggestLeak?.leaks || 0;
+  const mostRepeatedCategory = mostRepeated?.category || "none";
+  const mostRepeatedCount = mostRepeated?.count || 0;
+
+  const oneFixTitle =
+    biggestLeak && biggestLeak.leaks > 0
+      ? `Reduce ${categoryLabel(biggestLeak.category)} next week`
+      : mostRepeated
+        ? `Watch ${categoryLabel(mostRepeated.category)} next week`
+        : "Track one honest week";
+
+  const oneFixBody =
+    biggestLeak && biggestLeak.leaks > 0
+      ? `Cut this leak by 30% next week. That would protect about ${money(biggestLeak.leaks * 0.3, settings.currency)}.`
+      : totalCount > 0
+        ? "You tracked movement, but the leak pattern is not strong yet. Keep logging for one more week."
+        : "Add expenses for 7 days. The review becomes useful only when the app has real records.";
+
+  const summary =
+    totalCount <= 0
+      ? "No weekly memory yet. Track one honest week and $BROKE will show what changed."
+      : biggestLeak && biggestLeak.leaks > 0
+        ? `${categoryLabel(biggestLeak.category)} created the strongest weekly leak. Start there before fixing everything else.`
+        : "This week has spending, but low leak pressure. Keep the useful expenses separate from the leaks.";
+
+  return {
+    totalSpent,
+    totalLeaks,
+    totalCount,
+    leakPressure,
+    biggestLeakCategory,
+    biggestLeakAmount,
+    mostRepeatedCategory,
+    mostRepeatedCount,
+    bestDay,
+    worstDay,
+    oneFixTitle,
+    oneFixBody,
+    summary,
+    days,
+  };
 }
 
 
@@ -10000,6 +10149,161 @@ function PatternDetectorPanel({
   );
 }
 
+function WeeklyReviewPanel({
+  settings,
+  review,
+  shareCardRef,
+  sharing,
+  onShare,
+}: {
+  settings: Settings;
+  review: WeeklyReview;
+  shareCardRef: React.RefObject<HTMLDivElement | null>;
+  sharing: boolean;
+  onShare: () => void;
+}) {
+  return (
+    <details className="weekly-review-details">
+      <summary>
+        <div>
+          <span>This Week in $BROKE</span>
+          <small>Weekly review, one fix, and share card.</small>
+        </div>
+        <b>{review.totalCount} records</b>
+      </summary>
+
+      <section className="weekly-review-panel">
+        <div className="weekly-review-summary">
+          <div>
+            <span>Spent this week</span>
+            <strong>{money(review.totalSpent, settings.currency)}</strong>
+          </div>
+          <div>
+            <span>Leaks this week</span>
+            <strong>{money(review.totalLeaks, settings.currency)}</strong>
+          </div>
+          <div>
+            <span>Leak pressure</span>
+            <strong>{review.leakPressure}%</strong>
+          </div>
+        </div>
+
+        <div className="weekly-review-grid">
+          <div>
+            <span>Biggest leak</span>
+            <strong>
+              {review.biggestLeakAmount > 0
+                ? categoryLabel(review.biggestLeakCategory)
+                : "none"}
+            </strong>
+            <small>
+              {review.biggestLeakAmount > 0
+                ? money(review.biggestLeakAmount, settings.currency)
+                : "No leak"}
+            </small>
+          </div>
+          <div>
+            <span>Most repeated</span>
+            <strong>
+              {review.mostRepeatedCount > 0
+                ? categoryLabel(review.mostRepeatedCategory)
+                : "none"}
+            </strong>
+            <small>
+              {review.mostRepeatedCount > 0 ? `${review.mostRepeatedCount}x` : "No repeat"}
+            </small>
+          </div>
+          <div>
+            <span>Best day</span>
+            <strong>{review.bestDay ? review.bestDay.label : "none"}</strong>
+            <small>
+              {review.bestDay ? `${money(review.bestDay.leaks, settings.currency)} leaks` : "No data"}
+            </small>
+          </div>
+          <div>
+            <span>Worst day</span>
+            <strong>{review.worstDay ? review.worstDay.label : "none"}</strong>
+            <small>
+              {review.worstDay ? money(review.worstDay.spent, settings.currency) : "No data"}
+            </small>
+          </div>
+        </div>
+
+        <div className="weekly-review-fix">
+          <strong>{review.oneFixTitle}</strong>
+          <p>{review.oneFixBody}</p>
+        </div>
+
+        <div className="weekly-review-days">
+          {review.days.length === 0 ? (
+            <span>No weekly records yet.</span>
+          ) : (
+            review.days.map((day) => (
+              <div key={day.key}>
+                <span>{day.label}</span>
+                <strong>{money(day.spent, settings.currency)}</strong>
+                <small>{day.count} records · {money(day.leaks, settings.currency)} leaks</small>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="weekly-review-share-card premium-share-card" ref={shareCardRef}>
+          <img
+            className="premium-share-card-art"
+            src={PREMIUM_VISUAL_PACK.shareCleanBackground}
+            alt=""
+            onError={(event) => {
+              event.currentTarget.src = SHARE_CARD_PUBLIC_ASSETS.background;
+            }}
+          />
+
+          <div className="weekly-share-top">
+            <div>
+              <span>$BROKE WEEKLY REVIEW</span>
+              <strong>This Week in $BROKE</strong>
+            </div>
+            <img src={A.chartFrog} alt="" />
+          </div>
+
+          <div className="weekly-share-grid">
+            <div>
+              <span>Spent</span>
+              <strong>{money(review.totalSpent, settings.currency)}</strong>
+            </div>
+            <div>
+              <span>Leaks</span>
+              <strong>{money(review.totalLeaks, settings.currency)}</strong>
+            </div>
+            <div>
+              <span>Pressure</span>
+              <strong>{review.leakPressure}%</strong>
+            </div>
+            <div>
+              <span>Records</span>
+              <strong>{review.totalCount}</strong>
+            </div>
+          </div>
+
+          <div className="weekly-share-fix">
+            <strong>{review.oneFixTitle}</strong>
+            <span>{review.oneFixBody}</span>
+          </div>
+
+          <div className="weekly-share-footer">
+            <strong>One week shows the pattern. One fix changes next week.</strong>
+            <span>$BROKE Life Tracker · Weekly Review</span>
+          </div>
+        </div>
+
+        <button type="button" className="weekly-review-share-button" onClick={onShare} disabled={sharing}>
+          {sharing ? "Creating weekly review card..." : "Share weekly review card"}
+        </button>
+      </section>
+    </details>
+  );
+}
+
 function MonthlyLeakHistoryPanel({
   settings,
   archive,
@@ -10212,7 +10516,14 @@ function ChartScreen({
   const [range, setRange] = useState<ChartRange>("week");
   const [historyMonth, setHistoryMonth] = useState(monthKey(new Date()));
   const [historySharing, setHistorySharing] = useState(false);
+  const [weeklyReviewSharing, setWeeklyReviewSharing] = useState(false);
   const historyShareCardRef = useRef<HTMLDivElement | null>(null);
+  const weeklyReviewShareCardRef = useRef<HTMLDivElement | null>(null);
+
+  const weeklyReview = useMemo(
+    () => buildWeeklyReview(expenses, settings),
+    [expenses, settings]
+  );
 
   const historyMonthOptions = useMemo(() => getMonthlyHistoryOptions(expenses), [expenses]);
   const historyExpenses = useMemo(
@@ -10227,6 +10538,64 @@ function ChartScreen({
     () => buildLeakPatterns(expenses, settings),
     [expenses, settings]
   );
+
+  const weeklyReviewShareText = [
+    "$BROKE Weekly Review",
+    "",
+    `Spent this week: ${money(weeklyReview.totalSpent, settings.currency)}`,
+    `Leaks this week: ${money(weeklyReview.totalLeaks, settings.currency)}`,
+    `Records: ${weeklyReview.totalCount}`,
+    `Leak pressure: ${weeklyReview.leakPressure}%`,
+    `Biggest leak: ${
+      weeklyReview.biggestLeakAmount > 0
+        ? `${categoryLabel(weeklyReview.biggestLeakCategory)} (${money(weeklyReview.biggestLeakAmount, settings.currency)})`
+        : "none"
+    }`,
+    `Most repeated: ${
+      weeklyReview.mostRepeatedCount > 0
+        ? `${categoryLabel(weeklyReview.mostRepeatedCategory)} (${weeklyReview.mostRepeatedCount}x)`
+        : "none"
+    }`,
+    "",
+    weeklyReview.oneFixTitle,
+    weeklyReview.oneFixBody,
+    "",
+    "One week shows the pattern. One fix changes next week.",
+    "Smoke is broke.",
+  ].join("\n");
+
+  async function shareWeeklyReviewCard() {
+    if (!weeklyReviewShareCardRef.current || weeklyReviewSharing) return;
+
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+    setWeeklyReviewSharing(true);
+
+    try {
+      const imageFile = await createShareImageFileFromElement(weeklyReviewShareCardRef.current);
+      const nativeShared = await tryNativeImageShare(imageFile);
+
+      if (nativeShared) return;
+
+      if (!shareInitData) {
+        downloadImageFile(imageFile);
+        window.alert("Open the app inside Telegram to send the Weekly Review card to the bot. On web, the PNG was downloaded.");
+        return;
+      }
+
+      try {
+        await sendShareImageViaBot(imageFile, shareInitData, weeklyReviewShareText);
+        window.alert("Weekly Review card was sent to your Telegram bot chat.");
+      } catch {
+        downloadImageFile(imageFile);
+        window.alert("Bot delivery failed, so the Weekly Review card was downloaded as PNG.");
+      }
+    } catch {
+      window.alert("Weekly Review sharing is not supported by this browser.");
+    } finally {
+      setWeeklyReviewSharing(false);
+    }
+  }
 
   const monthlyHistoryShareText = [
     "$BROKE Monthly Leak History",
@@ -10521,6 +10890,14 @@ function ChartScreen({
         shareCardRef={historyShareCardRef}
         sharing={historySharing}
         onShare={shareMonthlyHistoryCard}
+      />
+
+      <WeeklyReviewPanel
+        settings={settings}
+        review={weeklyReview}
+        shareCardRef={weeklyReviewShareCardRef}
+        sharing={weeklyReviewSharing}
+        onShare={shareWeeklyReviewCard}
       />
 
       <WalletInsightsPanel insights={walletInsights} compact />
