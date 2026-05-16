@@ -14446,3 +14446,7 @@ html[lang="ru"] .tab-guide-hero p {
     grid-column: 1 / -1;
   }
 }
+
+
+/* ===== V60.9.1 GUIDE COMMA FIX ===== */
+/* Fixes missing commas in Help Guide objects after v60.9 guide text polish. */
