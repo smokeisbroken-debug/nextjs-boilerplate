@@ -253,6 +253,22 @@ type WeeklyReview = {
   days: WeeklyReviewDay[];
 };
 
+type OneFixDifficulty = "easy" | "normal" | "hard";
+
+type OneFixRecommendation = {
+  id: string;
+  category: string;
+  icon: string;
+  title: string;
+  body: string;
+  target: string;
+  estimatedSave: number;
+  difficulty: OneFixDifficulty;
+  difficultyLabel: string;
+  reason: string;
+  source: string;
+};
+
 type Streak = {
   currentStreak: number;
   bestStreak: number;
@@ -2148,6 +2164,29 @@ const ruText: Record<string, string> = {
   "Share weekly review card": "Поделиться недельной карточкой",
   "No repeat": "Нет повтора",
   "No data": "Нет данных",
+  "One Fix Recommendation": "Рекомендация одного фикса",
+  "One clear action. Not ten random tips.": "Одно чёткое действие. Не десять случайных советов.",
+  "Difficulty": "Сложность",
+  "Estimated save": "Оценочная экономия",
+  "signal first": "сначала сигнал",
+  "accepted": "принято",
+  "ignored": "игнор",
+  "ready": "готово",
+  "Fix accepted.": "Фикс принят.",
+  "Next step: track honestly and check whether the pattern changes.": "Следующий шаг: записывай честно и проверь, изменится ли паттерн.",
+  "Ignored for now.": "Пока проигнорировано.",
+  "No problem. The pattern stays visible in Chart when you want to return to it.": "Не проблема. Паттерн останется видимым в Chart, когда захочешь вернуться.",
+  "Accept fix": "Принять фикс",
+  "Make easier": "Сделать легче",
+  "Make harder": "Сделать сложнее",
+  "Track next": "Записать следующее",
+  "Ignore": "Игнор",
+  "Easy": "Легко",
+  "Normal": "Нормально",
+  "Hard": "Сложно",
+  "Starter mode": "Стартовый режим",
+  "Weekly review": "Недельный обзор",
+  "Weekly repeat": "Недельный повтор",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -3918,6 +3957,107 @@ function buildWeeklyReview(expenses: Expense[], settings: Settings): WeeklyRevie
     oneFixBody,
     summary,
     days,
+  };
+}
+
+
+function getDifficultyMultiplier(difficulty: OneFixDifficulty) {
+  if (difficulty === "easy") return 0.15;
+  if (difficulty === "hard") return 0.45;
+  return 0.3;
+}
+
+function getDifficultyLabel(difficulty: OneFixDifficulty) {
+  if (difficulty === "easy") return "Easy";
+  if (difficulty === "hard") return "Hard";
+  return "Normal";
+}
+
+function buildOneFixRecommendation(
+  patterns: LeakPattern[],
+  weeklyReview: WeeklyReview,
+  settings: Settings,
+  difficulty: OneFixDifficulty
+): OneFixRecommendation {
+  const multiplier = getDifficultyMultiplier(difficulty);
+  const difficultyLabel = getDifficultyLabel(difficulty);
+  const topPattern = patterns[0];
+
+  if (topPattern) {
+    const estimatedSave = Math.max(topPattern.total * multiplier, topPattern.average * multiplier);
+    const label = sentenceCase(categoryLabel(topPattern.category));
+    const cutRepeats =
+      topPattern.count >= 6
+        ? Math.max(1, Math.round(topPattern.count * multiplier))
+        : Math.max(1, difficulty === "hard" ? 2 : 1);
+
+    return {
+      id: `${topPattern.id}-${difficulty}`,
+      category: topPattern.category,
+      icon: topPattern.icon,
+      title: `${difficultyLabel} fix: reduce ${label}`,
+      body: topPattern.fix,
+      target:
+        topPattern.count >= 3
+          ? `Skip ${cutRepeats} ${label} repeat${cutRepeats === 1 ? "" : "s"} next week.`
+          : `Pause before the next ${label} purchase.`,
+      estimatedSave,
+      difficulty,
+      difficultyLabel,
+      reason: topPattern.why,
+      source: topPattern.tag,
+    };
+  }
+
+  if (weeklyReview.biggestLeakAmount > 0 && weeklyReview.biggestLeakCategory !== "none") {
+    const estimatedSave = weeklyReview.biggestLeakAmount * multiplier;
+    const label = sentenceCase(categoryLabel(weeklyReview.biggestLeakCategory));
+
+    return {
+      id: `${weeklyReview.biggestLeakCategory}-${difficulty}`,
+      category: weeklyReview.biggestLeakCategory,
+      icon: getCategoryIcon(weeklyReview.biggestLeakCategory),
+      title: `${difficultyLabel} fix: protect next week`,
+      body: `Your biggest weekly leak was ${label}. Reduce this one category before trying to fix everything.`,
+      target: `Cut ${label} by ${Math.round(multiplier * 100)}% next week.`,
+      estimatedSave,
+      difficulty,
+      difficultyLabel,
+      reason: "The biggest weekly leak usually gives the fastest visible improvement.",
+      source: "Weekly review",
+    };
+  }
+
+  if (weeklyReview.mostRepeatedCount > 0 && weeklyReview.mostRepeatedCategory !== "none") {
+    const label = sentenceCase(categoryLabel(weeklyReview.mostRepeatedCategory));
+
+    return {
+      id: `${weeklyReview.mostRepeatedCategory}-repeat-${difficulty}`,
+      category: weeklyReview.mostRepeatedCategory,
+      icon: getCategoryIcon(weeklyReview.mostRepeatedCategory),
+      title: `${difficultyLabel} fix: watch repetition`,
+      body: `${label} repeated ${weeklyReview.mostRepeatedCount} times this week.`,
+      target: `Reduce ${label} by one repeat next week.`,
+      estimatedSave: 0,
+      difficulty,
+      difficultyLabel,
+      reason: "The pattern is still forming. Start by reducing the repeat count.",
+      source: "Weekly repeat",
+    };
+  }
+
+  return {
+    id: `starter-${difficulty}`,
+    category: "Custom",
+    icon: A.walletMascot,
+    title: "Starter fix: create a real signal",
+    body: "The app needs more honest records before it can recommend a precise fix.",
+    target: "Track 3 real expenses over the next 24 hours.",
+    estimatedSave: 0,
+    difficulty,
+    difficultyLabel,
+    reason: "No data means no diagnosis. First build the signal.",
+    source: "Starter mode",
   };
 }
 
@@ -10149,6 +10289,102 @@ function PatternDetectorPanel({
   );
 }
 
+function OneFixRecommendationPanel({
+  settings,
+  recommendation,
+  accepted,
+  ignored,
+  onAccept,
+  onMakeEasier,
+  onMakeHarder,
+  onIgnore,
+  onOpenAdd,
+}: {
+  settings: Settings;
+  recommendation: OneFixRecommendation;
+  accepted: boolean;
+  ignored: boolean;
+  onAccept: () => void;
+  onMakeEasier: () => void;
+  onMakeHarder: () => void;
+  onIgnore: () => void;
+  onOpenAdd: () => void;
+}) {
+  const hasEstimatedSave = recommendation.estimatedSave > 0;
+
+  return (
+    <section className={`one-fix-panel ${accepted ? "accepted" : ""} ${ignored ? "ignored" : ""}`}>
+      <div className="section-title">
+        <span>One Fix Recommendation</span>
+        <small>One clear action. Not ten random tips.</small>
+      </div>
+
+      <div className="one-fix-hero">
+        <img src={recommendation.icon} alt="" />
+        <div>
+          <span>{recommendation.source} · {recommendation.difficultyLabel}</span>
+          <strong>{recommendation.title}</strong>
+          <p>{recommendation.body}</p>
+        </div>
+      </div>
+
+      <div className="one-fix-target">
+        <strong>{recommendation.target}</strong>
+        <p>{recommendation.reason}</p>
+      </div>
+
+      <div className="one-fix-grid">
+        <div>
+          <span>Difficulty</span>
+          <strong>{recommendation.difficultyLabel}</strong>
+        </div>
+        <div>
+          <span>Estimated save</span>
+          <strong>
+            {hasEstimatedSave ? money(recommendation.estimatedSave, settings.currency) : "signal first"}
+          </strong>
+        </div>
+        <div>
+          <span>Status</span>
+          <strong>{accepted ? "accepted" : ignored ? "ignored" : "ready"}</strong>
+        </div>
+      </div>
+
+      {accepted && (
+        <div className="one-fix-state-note accepted">
+          <strong>Fix accepted.</strong>
+          <span>Next step: track honestly and check whether the pattern changes.</span>
+        </div>
+      )}
+
+      {ignored && (
+        <div className="one-fix-state-note ignored">
+          <strong>Ignored for now.</strong>
+          <span>No problem. The pattern stays visible in Chart when you want to return to it.</span>
+        </div>
+      )}
+
+      <div className="one-fix-actions">
+        <button type="button" className="primary" onClick={onAccept}>
+          Accept fix
+        </button>
+        <button type="button" onClick={onMakeEasier}>
+          Make easier
+        </button>
+        <button type="button" onClick={onMakeHarder}>
+          Make harder
+        </button>
+        <button type="button" onClick={onOpenAdd}>
+          Track next
+        </button>
+        <button type="button" onClick={onIgnore}>
+          Ignore
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function WeeklyReviewPanel({
   settings,
   review,
@@ -10517,6 +10753,9 @@ function ChartScreen({
   const [historyMonth, setHistoryMonth] = useState(monthKey(new Date()));
   const [historySharing, setHistorySharing] = useState(false);
   const [weeklyReviewSharing, setWeeklyReviewSharing] = useState(false);
+  const [oneFixDifficulty, setOneFixDifficulty] = useState<OneFixDifficulty>("normal");
+  const [oneFixAccepted, setOneFixAccepted] = useState(false);
+  const [oneFixIgnored, setOneFixIgnored] = useState(false);
   const historyShareCardRef = useRef<HTMLDivElement | null>(null);
   const weeklyReviewShareCardRef = useRef<HTMLDivElement | null>(null);
 
@@ -10537,6 +10776,10 @@ function ChartScreen({
   const leakPatterns = useMemo(
     () => buildLeakPatterns(expenses, settings),
     [expenses, settings]
+  );
+  const oneFixRecommendation = useMemo(
+    () => buildOneFixRecommendation(leakPatterns, weeklyReview, settings, oneFixDifficulty),
+    [leakPatterns, weeklyReview, settings, oneFixDifficulty]
   );
 
   const weeklyReviewShareText = [
@@ -10878,6 +11121,36 @@ function ChartScreen({
       <PatternDetectorPanel
         settings={settings}
         patterns={leakPatterns}
+        onOpenAdd={onOpenAdd}
+      />
+
+      <OneFixRecommendationPanel
+        settings={settings}
+        recommendation={oneFixRecommendation}
+        accepted={oneFixAccepted}
+        ignored={oneFixIgnored}
+        onAccept={() => {
+          triggerHaptic("success");
+          setOneFixAccepted(true);
+          setOneFixIgnored(false);
+        }}
+        onMakeEasier={() => {
+          triggerHaptic("light");
+          setOneFixDifficulty("easy");
+          setOneFixAccepted(false);
+          setOneFixIgnored(false);
+        }}
+        onMakeHarder={() => {
+          triggerHaptic("light");
+          setOneFixDifficulty("hard");
+          setOneFixAccepted(false);
+          setOneFixIgnored(false);
+        }}
+        onIgnore={() => {
+          triggerHaptic("medium");
+          setOneFixIgnored(true);
+          setOneFixAccepted(false);
+        }}
         onOpenAdd={onOpenAdd}
       />
 
