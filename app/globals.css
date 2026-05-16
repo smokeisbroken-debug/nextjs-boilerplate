@@ -13702,3 +13702,170 @@ html[lang="ru"] .tab-guide-hero p {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== V60.5 COMEBACK MODE ===== */
+
+.comeback-mode-card {
+  margin-top: 14px;
+  padding: 15px;
+  border-radius: 25px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 86% 0%, rgba(255, 177, 43, 0.14), transparent 35%),
+    radial-gradient(circle at 0% 100%, rgba(183, 255, 25, 0.10), transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.046), rgba(255, 255, 255, 0.014));
+  border: 1px solid rgba(255, 177, 43, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(183, 255, 25, 0.032), 0 14px 36px rgba(0, 0, 0, 0.24);
+}
+
+.comeback-hero {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 20px;
+  background: rgba(255, 177, 43, 0.055);
+  border: 1px solid rgba(255, 177, 43, 0.14);
+}
+
+.comeback-hero img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  filter: drop-shadow(0 0 12px rgba(255, 177, 43, 0.16));
+}
+
+.comeback-hero span {
+  display: block;
+  color: var(--green);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.34px;
+}
+
+.comeback-hero strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.06;
+  font-weight: 980;
+  letter-spacing: -0.35px;
+}
+
+.comeback-hero p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.34;
+  font-weight: 740;
+}
+
+.comeback-insight {
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(183, 255, 25, 0.06);
+  border: 1px solid rgba(183, 255, 25, 0.12);
+}
+
+.comeback-insight strong {
+  display: block;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.22;
+  font-weight: 950;
+}
+
+.comeback-insight p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.34;
+  font-weight: 740;
+}
+
+.comeback-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.comeback-grid div {
+  min-height: 64px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.comeback-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 820;
+  text-transform: uppercase;
+  letter-spacing: 0.24px;
+}
+
+.comeback-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--green);
+  font-size: 15px;
+  line-height: 1.08;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.comeback-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.comeback-actions button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 15px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 12px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.comeback-actions button.primary {
+  color: #061006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  box-shadow: 0 10px 22px rgba(183, 255, 25, 0.12);
+}
+
+@media (max-width: 430px) {
+  .comeback-hero {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .comeback-hero img {
+    width: 50px;
+    height: 50px;
+  }
+
+  .comeback-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .comeback-actions {
+    grid-template-columns: 1fr;
+  }
+}
