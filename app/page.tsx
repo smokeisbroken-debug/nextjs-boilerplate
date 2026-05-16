@@ -10287,25 +10287,32 @@ function RecentExpenses({
 function ExpenseRow({
   expense,
   settings,
+  currency,
   onDeleteExpense,
 }: {
   expense: Expense;
-  settings: Settings;
+  settings?: Settings;
+  currency?: Currency;
   onDeleteExpense: (id: string) => void;
 }) {
+  const rowCurrency = settings?.currency ?? currency ?? "USD";
+  const rowCategoryLabel = settings
+    ? categoryDisplayName(settings, expense.category)
+    : sentenceCase(categoryLabel(expense.category));
+
   return (
     <div className="expense-row">
       <img src={getCategoryIcon(expense.category)} alt="" />
 
       <div>
-        <strong>{categoryDisplayName(settings, expense.category)}</strong>
+        <strong>{rowCategoryLabel}</strong>
         <span>
           {expense.needType}
           {expense.note ? ` · ${expense.note}` : ""}
         </span>
       </div>
 
-      <b>{money(expense.amount, settings.currency)}</b>
+      <b>{money(expense.amount, rowCurrency)}</b>
 
       <button
         type="button"
