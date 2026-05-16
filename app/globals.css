@@ -14055,3 +14055,7 @@ html[lang="ru"] .tab-guide-hero p {
   line-height: 1.1;
   font-weight: 950;
 }
+
+
+/* ===== V60.7.1 CATEGORY SCOPE FIX ===== */
+/* Fixes categoryDisplayLabel references inside components that do not receive settings. */
