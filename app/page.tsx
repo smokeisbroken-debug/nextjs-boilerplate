@@ -284,6 +284,22 @@ type ComebackState = {
   insight: string;
 };
 
+type LeakStreakItem = {
+  id: string;
+  category: string;
+  label: string;
+  icon: string;
+  daysClean: number;
+  countThisMonth: number;
+  totalThisMonth: number;
+  lastLeakLabel: string;
+  status: "clean" | "broken_today" | "no_history";
+  title: string;
+  detail: string;
+  suggestion: string;
+  tone: "green" | "orange" | "red" | "muted";
+};
+
 type Streak = {
   currentStreak: number;
   bestStreak: number;
@@ -2252,6 +2268,13 @@ const ruText: Record<string, string> = {
   "Labels only": "Только названия",
   "This changes how categories look in the app. Old expenses stay connected to the same category key, so history and patterns do not break.": "Это меняет только отображение категорий. Старые расходы остаются привязаны к тому же ключу, поэтому история и паттерны не ломаются.",
   "Reset category names": "Сбросить названия категорий",
+  "Leak Streaks": "Серии без утечек",
+  "Clean days by category.": "Чистые дни по категориям.",
+  "Best active streak": "Лучшая активная серия",
+  "Streak signal": "Сигнал серии",
+  "Last leak": "Последняя утечка",
+  "Track next decision": "Записать следующее решение",
+  "No history": "Нет истории",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -4207,6 +4230,129 @@ function buildComebackState(expenses: Expense[], settings: Settings): ComebackSt
     body,
     insight,
   };
+}
+
+
+function getDayDifferenceFromToday(date: Date) {
+  const today = getStartOfToday();
+  const target = new Date(date);
+  target.setHours(0, 0, 0, 0);
+
+  return Math.max(0, Math.floor((today.getTime() - target.getTime()) / 86400000));
+}
+
+function formatLastLeakLabel(date: Date | null) {
+  if (!date) return "never";
+
+  return date.toLocaleDateString("en", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function buildLeakStreaks(expenses: Expense[], settings: Settings): LeakStreakItem[] {
+  const leakExpenses = expenses.filter((expense) => expense.needType !== "Needed");
+  const monthExpenses = getCurrentMonthExpenses(leakExpenses);
+  const rows: LeakStreakItem[] = [];
+
+  for (const cat of categories) {
+    const categoryLeaks = leakExpenses
+      .filter((expense) => expense.category === cat.name)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const categoryMonthLeaks = monthExpenses.filter((expense) => expense.category === cat.name);
+    const totalThisMonth = sum(categoryMonthLeaks.map(getExpenseLeakValue));
+    const countThisMonth = categoryMonthLeaks.length;
+    const latestLeak = categoryLeaks[0] || null;
+
+    if (!latestLeak && countThisMonth <= 0) continue;
+
+    const label = categoryDisplayName(settings, cat.name);
+    const latestDate = latestLeak ? new Date(latestLeak.createdAt) : null;
+    const daysClean = latestDate ? getDayDifferenceFromToday(latestDate) : 0;
+    const status: LeakStreakItem["status"] = !latestLeak
+      ? "no_history"
+      : daysClean === 0
+        ? "broken_today"
+        : "clean";
+
+    const tone: LeakStreakItem["tone"] =
+      status === "broken_today"
+        ? "red"
+        : status === "no_history"
+          ? "muted"
+          : daysClean >= 3
+            ? "green"
+            : "orange";
+
+    const title =
+      status === "broken_today"
+        ? `${label} streak broke today`
+        : status === "no_history"
+          ? `No ${label} history yet`
+          : `No ${label} leak: ${daysClean} day${daysClean === 1 ? "" : "s"}`;
+
+    const detail =
+      status === "broken_today"
+        ? `${label} appeared today. Restart the streak with the next 24 hours.`
+        : status === "no_history"
+          ? `No ${label} leak recorded yet. Keep it clean or track honestly if it happens.`
+          : `Last ${label} leak was ${formatLastLeakLabel(latestDate)}. This is a real clean streak.`;
+
+    const suggestion =
+      status === "broken_today"
+        ? `Do not chase perfection. Protect the next decision.`
+        : daysClean >= 3
+          ? `Keep the streak alive for one more day.`
+          : `Push it to 3 days. Short streaks become identity when repeated.`;
+
+    rows.push({
+      id: cat.name,
+      category: cat.name,
+      label,
+      icon: cat.icon,
+      daysClean,
+      countThisMonth,
+      totalThisMonth,
+      lastLeakLabel: formatLastLeakLabel(latestDate),
+      status,
+      title,
+      detail,
+      suggestion,
+      tone,
+    });
+  }
+
+  if (rows.length === 0) {
+    return categories.slice(0, 3).map((cat) => {
+      const label = categoryDisplayName(settings, cat.name);
+
+      return {
+        id: cat.name,
+        category: cat.name,
+        label,
+        icon: cat.icon,
+        daysClean: 0,
+        countThisMonth: 0,
+        totalThisMonth: 0,
+        lastLeakLabel: "never",
+        status: "no_history",
+        title: `No ${label} leak history yet`,
+        detail: `Track expenses honestly and $BROKE will start measuring category streaks.`,
+        suggestion: `Start with one real record or keep this category clean.`,
+        tone: "muted",
+      };
+    });
+  }
+
+  return rows.sort((a, b) => {
+    const statusScore = { clean: 3, broken_today: 2, no_history: 1 };
+    return (
+      statusScore[b.status] - statusScore[a.status] ||
+      b.daysClean - a.daysClean ||
+      b.totalThisMonth - a.totalThisMonth
+    );
+  });
 }
 
 
@@ -10561,6 +10707,79 @@ function PatternDetectorPanel({
   );
 }
 
+function LeakStreaksPanel({
+  settings,
+  streaks,
+  onOpenAdd,
+}: {
+  settings: Settings;
+  streaks: LeakStreakItem[];
+  onOpenAdd: () => void;
+}) {
+  const bestStreak = streaks.find((item) => item.status === "clean") || streaks[0];
+
+  return (
+    <details className="leak-streaks-details">
+      <summary>
+        <div>
+          <span>Leak Streaks</span>
+          <small>Clean days by category.</small>
+        </div>
+        <b>
+          {bestStreak?.status === "clean"
+            ? `${bestStreak.daysClean}d clean`
+            : `${streaks.length} tracked`}
+        </b>
+      </summary>
+
+      <section className="leak-streaks-panel">
+        {bestStreak && (
+          <div className={`leak-streak-hero ${bestStreak.tone}`}>
+            <img src={bestStreak.icon} alt="" />
+            <div>
+              <span>{bestStreak.status === "clean" ? "Best active streak" : "Streak signal"}</span>
+              <strong>{bestStreak.title}</strong>
+              <p>{bestStreak.detail}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="leak-streak-list">
+          {streaks.map((item) => (
+            <article className={`leak-streak-card ${item.tone}`} key={item.id}>
+              <img src={item.icon} alt="" />
+
+              <div>
+                <strong>{item.title}</strong>
+                <span>{item.suggestion}</span>
+
+                <div className="leak-streak-mini">
+                  <div>
+                    <small>This month</small>
+                    <b>{item.countThisMonth}x</b>
+                  </div>
+                  <div>
+                    <small>Leak value</small>
+                    <b>{money(item.totalThisMonth, settings.currency)}</b>
+                  </div>
+                  <div>
+                    <small>Last leak</small>
+                    <b>{item.lastLeakLabel}</b>
+                  </div>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <button type="button" className="leak-streak-action" onClick={onOpenAdd}>
+          Track next decision
+        </button>
+      </section>
+    </details>
+  );
+}
+
 function OneFixRecommendationPanel({
   settings,
   recommendation,
@@ -11053,6 +11272,10 @@ function ChartScreen({
     () => buildOneFixRecommendation(leakPatterns, weeklyReview, settings, oneFixDifficulty),
     [leakPatterns, weeklyReview, settings, oneFixDifficulty]
   );
+  const leakStreaks = useMemo(
+    () => buildLeakStreaks(expenses, settings),
+    [expenses, settings]
+  );
 
   const weeklyReviewShareText = [
     "$BROKE Weekly Review",
@@ -11423,6 +11646,12 @@ function ChartScreen({
           setOneFixIgnored(true);
           setOneFixAccepted(false);
         }}
+        onOpenAdd={onOpenAdd}
+      />
+
+      <LeakStreaksPanel
+        settings={settings}
+        streaks={leakStreaks}
         onOpenAdd={onOpenAdd}
       />
 
