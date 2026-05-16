@@ -1138,7 +1138,7 @@ const ruText: Record<string, string> = {
   "Wallet Survival": "Выживание кошелька",
   "This week": "Эта неделя",
   "Find the leak before it becomes your lifestyle.": "Найди утечку, пока она не стала стилем жизни.",
-  "Find the leak before it becomes lifestyle.": "Найди утечку, пока она не стала образом жизни.",
+  "Public proof without private numbers.": "Найди утечку, пока она не стала образом жизни.",
   "See what drains you, how much it costs, and what to fix next.": "Смотри, что тебя сливает, сколько это стоит и что исправить дальше.",
   "Survival Score": "Оценка выживания",
   "Your weekly wallet score.": "Недельная оценка кошелька.",
@@ -2275,6 +2275,11 @@ const ruText: Record<string, string> = {
   "Last leak": "Последняя утечка",
   "Track next decision": "Записать следующее решение",
   "No history": "Нет истории",
+  "Analysis Lab": "Лаборатория анализа",
+  "Patterns, streaks, and deeper wallet signals.": "Паттерны, серии и глубокие сигналы кошелька.",
+  "More wallet insights": "Ещё инсайты кошелька",
+  "History Archive": "Архив истории",
+  "Weekly review and monthly spending memory.": "Недельный обзор и месячная память расходов.",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -5998,11 +6003,11 @@ function HelpGuideModal({
       eyebrow: "Home Guide",
       title: "Home: Wallet Command Center",
       intro:
-        "Home is the main control room. It shows your Wallet HP, life cost, leaks, daily routine, reports, badges, and the next action to take.",
+        "Home is the daily command center. Use it to track one honest expense, read Wallet HP, follow today’s focus, and continue without digging through every report.",
       icon: "/nav-home.png",
       footerTitle: "Daily Home rule",
       footerBody:
-        "Open Home once per day, read the Next Best Action, then fix one leak instead of trying to change everything at once.",
+        "Home should answer one question: what should I do right now? Track honestly, then move to Chart only when you want analysis.",
       sections: [
         {
           title: "1. Read the four main numbers",
@@ -6115,13 +6120,13 @@ function HelpGuideModal({
     chart: {
       label: "Chart",
       eyebrow: "Chart Guide",
-      title: "$BROKE Chart: Wallet Movement",
+      title: "$BROKE Chart: Analysis Center",
       intro:
-        "Chart turns spending into a visual movement system. It helps users see red days, pressure, spending volume, and the habits that move the wallet down.",
+        "Chart is wallet memory and analysis. It shows movement first, then one fix, Analysis Lab, Leak Streaks, Weekly Review, and Monthly History.",
       icon: "/nav-chart.png",
       footerTitle: "Chart rule",
       footerBody:
-        "Do not only watch crypto charts. Watch your own wallet chart and find the day where the leak started.",
+        "Start with the chart, follow One Fix, then open Analysis Lab or History only when you need deeper detail.",
       sections: [
         {
           title: "1. Choose the right range",
@@ -6152,11 +6157,11 @@ function HelpGuideModal({
           icon: A.leaks,
         },
         {
-          title: "4. Use Wallet Insights",
+          title: "4. Use Analysis Lab"
           body: [
-            "Wallet Insights explain what the chart means in plain language.",
-            "They turn numbers into actions.",
-            "Use them when a user does not know what to fix next.",
+            "Analysis Lab explains patterns, repeated leaks, and category streaks in plain language.",
+            "It turns repeated records into one clear action.",
+            "Use One Fix when you do not know what to fix next.",
           ],
           icon: A.walletMascot,
         },
@@ -6176,11 +6181,11 @@ function HelpGuideModal({
       eyebrow: "Growth Guide",
       title: "Growth Lab: Leak to Growth",
       intro:
-        "Growth Lab shows what could happen if money leaks were redirected into saving, building, or simulated growth. It is a planning tool, not staking and not an investment product.",
+        "Growth Lab shows what repeated leaks could become if redirected. It is a simulator for discipline, not a promise, staking product, or investment tool.",
       icon: "/nav-growth.png",
       footerTitle: "Growth Lab rule",
       footerBody:
-        "Simulation only. No deposits, no custody, no guaranteed returns, and no financial advice.",
+        "Simulation only: no deposits, no custody, no guaranteed returns, and no financial advice.",
       sections: [
         {
           title: "1. Understand what Growth Lab is",
@@ -6235,13 +6240,13 @@ function HelpGuideModal({
     whatif: {
       label: "Save",
       eyebrow: "Save Guide",
-      title: "Save: What If Scenarios",
+      title: "Save: Survival Simulator",
       intro:
-        "Save shows what could be saved if one leak was reduced. It is the practical side of $BROKE: stop one leak, protect Wallet HP, and build proof of progress.",
+        "Save is the survival simulator. It checks payday risk, safe daily budget, current pace, and what changes if leaks are reduced.",
       icon: "/nav-save.png",
       footerTitle: "Save rule",
       footerBody:
-        "Pick one realistic reduction. A small reduction that actually happens is stronger than a perfect plan that nobody follows.",
+        "Set the next payday date, compare safe budget with current pace, and share only safe public proof.",
       sections: [
         {
           title: "1. Read potential savings",
@@ -6295,11 +6300,11 @@ function HelpGuideModal({
       eyebrow: "Settings Guide",
       title: "Settings: Make the App Fit Real Life",
       intro:
-        "Settings controls the life profile behind the calculations. Country, currency, life mode, rent mode, income style, and sync settings make the app realistic for different users.",
+        "Settings controls privacy and personalization. Public Proof Mode protects public cards, and Smart Category Names makes the app feel personal without breaking history.",
       icon: "/nav-settings.png",
       footerTitle: "Settings rule",
       footerBody:
-        "Set the profile once, then update it only when real life changes. Wrong settings create wrong Wallet HP and wrong leak pressure.",
+        "Keep the profile realistic, keep Public Proof Mode on for public sharing, and rename categories only as labels, not new habits.",
       sections: [
         {
           title: "1. Life Profile",
@@ -7494,7 +7499,13 @@ function ComebackModeCard({
       </div>
 
       <div className="comeback-hero">
-        <img src={A.progressFlame} alt="" />
+        <img
+          src={PREMIUM_VISUAL_PACK.comebackModeMascot}
+          alt=""
+          onError={(event) => {
+            event.currentTarget.src = A.progressFlame;
+          }}
+        />
         <div>
           <span>Last active: {comeback.lastActiveLabel}</span>
           <strong>{comeback.title}</strong>
@@ -11613,12 +11624,6 @@ function ChartScreen({
         </div>
       </section>
 
-      <PatternDetectorPanel
-        settings={settings}
-        patterns={leakPatterns}
-        onOpenAdd={onOpenAdd}
-      />
-
       <OneFixRecommendationPanel
         settings={settings}
         recommendation={oneFixRecommendation}
@@ -11649,32 +11654,74 @@ function ChartScreen({
         onOpenAdd={onOpenAdd}
       />
 
-      <LeakStreaksPanel
-        settings={settings}
-        streaks={leakStreaks}
-        onOpenAdd={onOpenAdd}
-      />
+      <details className="chart-premium-details analysis-lab-details" open>
+        <summary>
+          <div>
+            <span>Analysis Lab</span>
+            <small>Patterns, streaks, and deeper wallet signals.</small>
+          </div>
+          <img
+            src={PREMIUM_VISUAL_PACK.analysisLabMascot}
+            alt=""
+            onError={(event) => {
+              event.currentTarget.src = A.chartFrog;
+            }}
+          />
+        </summary>
 
-      <MonthlyLeakHistoryPanel
-        settings={settings}
-        archive={monthlyArchive}
-        monthOptions={historyMonthOptions}
-        selectedMonth={historyMonth}
-        onMonthChange={setHistoryMonth}
-        shareCardRef={historyShareCardRef}
-        sharing={historySharing}
-        onShare={shareMonthlyHistoryCard}
-      />
+        <section className="chart-premium-details-body">
+          <PatternDetectorPanel
+            settings={settings}
+            patterns={leakPatterns}
+            onOpenAdd={onOpenAdd}
+          />
 
-      <WeeklyReviewPanel
-        settings={settings}
-        review={weeklyReview}
-        shareCardRef={weeklyReviewShareCardRef}
-        sharing={weeklyReviewSharing}
-        onShare={shareWeeklyReviewCard}
-      />
+          <LeakStreaksPanel
+            settings={settings}
+            streaks={leakStreaks}
+            onOpenAdd={onOpenAdd}
+          />
 
-      <WalletInsightsPanel insights={walletInsights} compact />
+          <details className="chart-subdetails">
+            <summary>
+              <span>More wallet insights</span>
+              <b>{walletInsights.length}</b>
+            </summary>
+            <WalletInsightsPanel insights={walletInsights} compact />
+          </details>
+        </section>
+      </details>
+
+      <details className="chart-premium-details history-archive-details">
+        <summary>
+          <div>
+            <span>History Archive</span>
+            <small>Weekly review and monthly spending memory.</small>
+          </div>
+          <img src={A.calendar} alt="" />
+        </summary>
+
+        <section className="chart-premium-details-body">
+          <WeeklyReviewPanel
+            settings={settings}
+            review={weeklyReview}
+            shareCardRef={weeklyReviewShareCardRef}
+            sharing={weeklyReviewSharing}
+            onShare={shareWeeklyReviewCard}
+          />
+
+          <MonthlyLeakHistoryPanel
+            settings={settings}
+            archive={monthlyArchive}
+            monthOptions={historyMonthOptions}
+            selectedMonth={historyMonth}
+            onMonthChange={setHistoryMonth}
+            shareCardRef={historyShareCardRef}
+            sharing={historySharing}
+            onShare={shareMonthlyHistoryCard}
+          />
+        </section>
+      </details>
     </div>
   );
 }
@@ -12377,6 +12424,9 @@ const PREMIUM_VISUAL_PACK = {
   growthMascot: "/growth-lab-mascot.png",
   firstLeakMascot: "/first-leak-mascot.png",
   shareCleanBackground: "/share-card-clean-bg.png",
+  analysisLabMascot: "/analysis-lab-mascot.png",
+  publicProofLock: "/public-proof-lock.png",
+  comebackModeMascot: "/comeback-mode-mascot.png",
 };
 
 
@@ -13512,6 +13562,13 @@ function SettingsScreen({
 
         <section className="settings-group public-proof-settings">
           <div className="public-proof-switch-row">
+            <img
+              src={PREMIUM_VISUAL_PACK.publicProofLock}
+              alt=""
+              onError={(event) => {
+                event.currentTarget.src = A.export;
+              }}
+            />
             <div>
               <strong>Public Proof Mode</strong>
               <span>
