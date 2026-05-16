@@ -184,6 +184,35 @@ type CategorySummary = {
   icon: string;
 };
 
+type MonthlyLeakCategory = {
+  category: string;
+  icon: string;
+  total: number;
+  count: number;
+  average: number;
+  neededTotal: number;
+  maybeTotal: number;
+  notNeededTotal: number;
+  leakTotal: number;
+  sharePercent: number;
+  commentTitle: string;
+  commentBody: string;
+  purchases: Expense[];
+};
+
+type MonthlyLeakArchive = {
+  monthKey: string;
+  monthLabel: string;
+  totalSpent: number;
+  totalLeaks: number;
+  totalCount: number;
+  topCategory: MonthlyLeakCategory | null;
+  repeatedCategory: MonthlyLeakCategory | null;
+  biggestExpense: Expense | null;
+  categories: MonthlyLeakCategory[];
+  summaryComment: string;
+};
+
 type Streak = {
   currentStreak: number;
   bestStreak: number;
@@ -1992,6 +2021,26 @@ const ruText: Record<string, string> = {
   "Payday date": "Дата дохода",
   "Survival Mode uses this exact date instead of assuming the 1st of the month.": "Survival Mode использует эту точную дату, а не предполагает 1-е число месяца.",
   "Next payday": "Следующий доход",
+  "Monthly Leak History": "Месячная история утечек",
+  "Grouped from your saved expenses.": "Сгруппировано из сохранённых расходов.",
+  "Total spent": "Всего потрачено",
+  "Total leaks": "Всего утечек",
+  "Records": "Записей",
+  "App comment": "Комментарий app",
+  "$BROKE MONTHLY HISTORY": "$BROKE МЕСЯЧНАЯ ИСТОРИЯ",
+  "No repeated leak yet": "Повторяющейся утечки пока нет",
+  "Small purchases become a lifestyle if you never count them.": "Маленькие покупки становятся стилем жизни, если их не считать.",
+  "Creating history card...": "Создаём карточку истории...",
+  "Share monthly history card": "Поделиться карточкой месячной истории",
+  "No monthly memory yet": "Месячной памяти пока нет",
+  "Track expenses to build history.": "Записывай расходы, чтобы создать историю.",
+  "Once you add expenses, this archive will group them by category, purchase count, average price and leak pattern.": "Когда ты добавишь расходы, архив сгруппирует их по категории, количеству покупок, средней цене и паттерну утечки.",
+  "Leak value": "Значение утечки",
+  "Repeated small leak": "Повторяющаяся маленькая утечка",
+  "High-impact leak": "Сильная точечная утечка",
+  "Silent recurring leak": "Тихая регулярная утечка",
+  "Habit leak": "Утечка привычки",
+  "Monthly pressure": "Месячное давление",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -3264,6 +3313,154 @@ function getCategorySummaries(expenses: Expense[]): CategorySummary[] {
       icon: getCategoryIcon(category),
     }))
     .sort((a, b) => b.amount - a.amount);
+}
+
+function formatMonthTitle(key: string) {
+  const [year, month] = key.split("-").map(Number);
+  const date = new Date(year, (month || 1) - 1, 1);
+
+  return date.toLocaleDateString("en", {
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function getMonthlyHistoryOptions(expenses: Expense[]) {
+  const keys = Array.from(
+    new Set([
+      monthKey(new Date()),
+      ...expenses.map((expense) => monthKey(new Date(expense.createdAt))),
+    ])
+  );
+
+  return keys.sort((a, b) => b.localeCompare(a));
+}
+
+function getExpensesForMonthKey(expenses: Expense[], key: string) {
+  return expenses.filter((expense) => monthKey(new Date(expense.createdAt)) === key);
+}
+
+function getExpenseLeakValue(expense: Expense) {
+  if (expense.needType === "Needed") return 0;
+  if (expense.needType === "Maybe") return expense.amount * 0.5;
+  return expense.amount;
+}
+
+function buildMonthlyCategoryComment(category: string, total: number, count: number, average: number) {
+  const label = categoryLabel(category);
+
+  if (count >= 10 && average <= Math.max(total / count, 1) * 1.25) {
+    return {
+      title: "Repeated small leak",
+      body: `${count} small ${label} purchases became one real monthly leak. This is not one big hit — it is a repeated habit.`,
+    };
+  }
+
+  if (count <= 3 && total > 0) {
+    return {
+      title: "High-impact leak",
+      body: `${label} did not happen often, but each hit was heavy. Cutting even one purchase next month can change the result.`,
+    };
+  }
+
+  if (category === "Subscriptions") {
+    return {
+      title: "Silent recurring leak",
+      body: "This kind of cost is easy to ignore because it repeats quietly. Review it before it becomes part of the lifestyle.",
+    };
+  }
+
+  if (category === "Takeouts" || category === "Coffee" || category === "Smoking") {
+    return {
+      title: "Habit leak",
+      body: `${label} looks normal per purchase, but the monthly total shows the real pressure. Reduce the number of repeats first.`,
+    };
+  }
+
+  return {
+    title: "Monthly pressure",
+    body: `${label} added visible pressure this month. The next step is not perfection — reduce the repeated damage.`,
+  };
+}
+
+function buildMonthlyLeakArchive(expenses: Expense[], selectedMonthKey: string): MonthlyLeakArchive {
+  const totalSpent = sum(expenses.map((expense) => expense.amount));
+  const totalLeaks = sum(expenses.map(getExpenseLeakValue));
+  const totalCount = expenses.length;
+  const map = new Map<string, Expense[]>();
+
+  for (const expense of expenses) {
+    const list = map.get(expense.category) || [];
+    list.push(expense);
+    map.set(expense.category, list);
+  }
+
+  const categories = Array.from(map.entries())
+    .map(([category, purchases]) => {
+      const total = sum(purchases.map((expense) => expense.amount));
+      const count = purchases.length;
+      const average = count > 0 ? total / count : 0;
+      const neededTotal = sum(
+        purchases.filter((expense) => expense.needType === "Needed").map((expense) => expense.amount)
+      );
+      const maybeTotal = sum(
+        purchases.filter((expense) => expense.needType === "Maybe").map((expense) => expense.amount)
+      );
+      const notNeededTotal = sum(
+        purchases.filter((expense) => expense.needType === "Not needed").map((expense) => expense.amount)
+      );
+      const leakTotal = sum(purchases.map(getExpenseLeakValue));
+      const comment = buildMonthlyCategoryComment(category, total, count, average);
+
+      return {
+        category,
+        icon: getCategoryIcon(category),
+        total,
+        count,
+        average,
+        neededTotal,
+        maybeTotal,
+        notNeededTotal,
+        leakTotal,
+        sharePercent: totalSpent > 0 ? Math.round((total / totalSpent) * 100) : 0,
+        commentTitle: comment.title,
+        commentBody: comment.body,
+        purchases: purchases.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        ),
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+
+  const topCategory = categories[0] || null;
+  const repeatedCategory =
+    [...categories].sort((a, b) => b.count - a.count || b.total - a.total)[0] || null;
+  const biggestExpense =
+    [...expenses].sort((a, b) => b.amount - a.amount)[0] || null;
+
+  const summaryComment =
+    totalCount <= 0
+      ? "No spending memory for this month yet. Add expenses and the archive will turn them into patterns."
+      : repeatedCategory && repeatedCategory.count >= 5
+        ? `${repeatedCategory.count} ${categoryLabel(repeatedCategory.category)} purchases became ${Math.round(
+            (repeatedCategory.total / Math.max(totalSpent, 1)) * 100
+          )}% of this month’s tracked spending. This is a pattern, not a random expense.`
+        : topCategory
+          ? `${categoryLabel(topCategory.category)} created the biggest pressure this month. Start by reducing this category first.`
+          : "This month has movement, but no clear leak pattern yet.";
+
+  return {
+    monthKey: selectedMonthKey,
+    monthLabel: formatMonthTitle(selectedMonthKey),
+    totalSpent,
+    totalLeaks,
+    totalCount,
+    topCategory,
+    repeatedCategory,
+    biggestExpense,
+    categories,
+    summaryComment,
+  };
 }
 
 
@@ -4765,6 +4962,7 @@ export default function Home() {
             settings={settings}
             expenses={expenses}
             walletInsights={walletInsights}
+            shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onBack={goHome}
             onExport={openExportHelp}
             onOpenAdd={() => setActiveTab("add")}
@@ -9314,10 +9512,203 @@ function AddExpenseScreen({
 }
 
 // V54.6: Chart tab visual upgrade with pulse, stats, and empty state.
+function MonthlyLeakHistoryPanel({
+  settings,
+  archive,
+  monthOptions,
+  selectedMonth,
+  onMonthChange,
+  shareCardRef,
+  sharing,
+  onShare,
+}: {
+  settings: Settings;
+  archive: MonthlyLeakArchive;
+  monthOptions: string[];
+  selectedMonth: string;
+  onMonthChange: (value: string) => void;
+  shareCardRef: React.RefObject<HTMLDivElement | null>;
+  sharing: boolean;
+  onShare: () => void;
+}) {
+  return (
+    <section className="monthly-leak-history">
+      <div className="section-title">
+        <span>Monthly Leak History</span>
+        <small>Grouped from your saved expenses.</small>
+      </div>
+
+      <div className="monthly-history-control">
+        <label>
+          <span>Month</span>
+          <select value={selectedMonth} onChange={(event) => onMonthChange(event.target.value)}>
+            {monthOptions.map((key) => (
+              <option key={key} value={key}>
+                {formatMonthTitle(key)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="monthly-history-summary">
+        <div>
+          <span>Total spent</span>
+          <strong>{money(archive.totalSpent, settings.currency)}</strong>
+        </div>
+        <div>
+          <span>Total leaks</span>
+          <strong>{money(archive.totalLeaks, settings.currency)}</strong>
+        </div>
+        <div>
+          <span>Records</span>
+          <strong>{archive.totalCount}</strong>
+        </div>
+      </div>
+
+      <div className="monthly-history-comment">
+        <strong>App comment</strong>
+        <p>{archive.summaryComment}</p>
+      </div>
+
+      <div className="monthly-history-share-card premium-share-card" ref={shareCardRef}>
+        <img
+          className="premium-share-card-art"
+          src={PREMIUM_VISUAL_PACK.shareCleanBackground}
+          alt=""
+          onError={(event) => {
+            event.currentTarget.src = SHARE_CARD_PUBLIC_ASSETS.background;
+          }}
+        />
+
+        <div className="monthly-share-top">
+          <div>
+            <span>$BROKE MONTHLY HISTORY</span>
+            <strong>{archive.monthLabel}</strong>
+          </div>
+          <img src={A.chartFrog} alt="" />
+        </div>
+
+        <div className="monthly-share-grid">
+          <div>
+            <span>Total spent</span>
+            <strong>{money(archive.totalSpent, settings.currency)}</strong>
+          </div>
+          <div>
+            <span>Total leaks</span>
+            <strong>{money(archive.totalLeaks, settings.currency)}</strong>
+          </div>
+          <div>
+            <span>Records</span>
+            <strong>{archive.totalCount}</strong>
+          </div>
+          <div>
+            <span>Top category</span>
+            <strong>
+              {archive.topCategory ? categoryLabel(archive.topCategory.category) : "none"}
+            </strong>
+          </div>
+        </div>
+
+        <div className="monthly-share-comment">
+          <strong>
+            {archive.repeatedCategory
+              ? `${archive.repeatedCategory.count}x ${categoryLabel(archive.repeatedCategory.category)}`
+              : "No repeated leak yet"}
+          </strong>
+          <span>{archive.summaryComment}</span>
+        </div>
+
+        <div className="monthly-share-footer">
+          <strong>Small purchases become a lifestyle if you never count them.</strong>
+          <span>$BROKE Life Tracker · Monthly Leak History</span>
+        </div>
+      </div>
+
+      <button type="button" className="monthly-history-share-button" onClick={onShare} disabled={sharing}>
+        {sharing ? "Creating history card..." : "Share monthly history card"}
+      </button>
+
+      {archive.categories.length === 0 ? (
+        <section className="v58-empty-card monthly-history-empty">
+          <div className="v58-empty-head">
+            <img src={A.chartFrog} alt="" />
+            <div>
+              <span>No monthly memory yet</span>
+              <strong>Track expenses to build history.</strong>
+              <p>
+                Once you add expenses, this archive will group them by category,
+                purchase count, average price and leak pattern.
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : (
+        <div className="monthly-category-list">
+          {archive.categories.map((item) => (
+            <details className="monthly-category-card" key={item.category}>
+              <summary>
+                <img src={item.icon} alt="" />
+                <div>
+                  <strong>{sentenceCase(categoryLabel(item.category))}</strong>
+                  <span>
+                    {money(item.total, settings.currency)} · {item.count} purchase{item.count === 1 ? "" : "s"} · avg {money(item.average, settings.currency)}
+                  </span>
+                </div>
+                <b>{item.sharePercent}%</b>
+              </summary>
+
+              <div className="monthly-category-breakdown">
+                <div>
+                  <span>Needed</span>
+                  <strong>{money(item.neededTotal, settings.currency)}</strong>
+                </div>
+                <div>
+                  <span>Maybe</span>
+                  <strong>{money(item.maybeTotal, settings.currency)}</strong>
+                </div>
+                <div>
+                  <span>Not needed</span>
+                  <strong>{money(item.notNeededTotal, settings.currency)}</strong>
+                </div>
+                <div>
+                  <span>Leak value</span>
+                  <strong>{money(item.leakTotal, settings.currency)}</strong>
+                </div>
+              </div>
+
+              <div className="monthly-category-comment">
+                <strong>{item.commentTitle}</strong>
+                <p>{item.commentBody}</p>
+              </div>
+
+              <div className="monthly-purchase-list">
+                {item.purchases.map((expense) => (
+                  <div className="monthly-purchase-row" key={expense.id}>
+                    <div>
+                      <strong>{money(expense.amount, settings.currency)}</strong>
+                      <span>
+                        {new Date(expense.createdAt).toLocaleDateString()} · {expense.needType}
+                      </span>
+                      {expense.note && <small>{expense.note}</small>}
+                    </div>
+                    <b>{expense.needType === "Needed" ? "OK" : "Leak"}</b>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 function ChartScreen({
   settings,
   expenses,
   walletInsights,
+  shareInitData,
   onBack,
   onExport,
   onOpenAdd,
@@ -9325,11 +9716,82 @@ function ChartScreen({
   settings: Settings;
   expenses: Expense[];
   walletInsights: WalletInsight[];
+  shareInitData: string;
   onBack: () => void;
   onExport: () => void;
   onOpenAdd: () => void;
 }) {
   const [range, setRange] = useState<ChartRange>("week");
+  const [historyMonth, setHistoryMonth] = useState(monthKey(new Date()));
+  const [historySharing, setHistorySharing] = useState(false);
+  const historyShareCardRef = useRef<HTMLDivElement | null>(null);
+
+  const historyMonthOptions = useMemo(() => getMonthlyHistoryOptions(expenses), [expenses]);
+  const historyExpenses = useMemo(
+    () => getExpensesForMonthKey(expenses, historyMonth),
+    [expenses, historyMonth]
+  );
+  const monthlyArchive = useMemo(
+    () => buildMonthlyLeakArchive(historyExpenses, historyMonth),
+    [historyExpenses, historyMonth]
+  );
+
+  const monthlyHistoryShareText = [
+    "$BROKE Monthly Leak History",
+    "",
+    `Month: ${monthlyArchive.monthLabel}`,
+    `Total spent: ${money(monthlyArchive.totalSpent, settings.currency)}`,
+    `Total leaks: ${money(monthlyArchive.totalLeaks, settings.currency)}`,
+    `Records: ${monthlyArchive.totalCount}`,
+    `Top category: ${
+      monthlyArchive.topCategory
+        ? `${categoryLabel(monthlyArchive.topCategory.category)} (${money(monthlyArchive.topCategory.total, settings.currency)})`
+        : "none"
+    }`,
+    `Most repeated: ${
+      monthlyArchive.repeatedCategory
+        ? `${categoryLabel(monthlyArchive.repeatedCategory.category)} (${monthlyArchive.repeatedCategory.count}x)`
+        : "none"
+    }`,
+    "",
+    monthlyArchive.summaryComment,
+    "",
+    "Small purchases become a lifestyle if you never count them.",
+    "Smoke is broke.",
+  ].join("\n");
+
+  async function shareMonthlyHistoryCard() {
+    if (!historyShareCardRef.current || historySharing) return;
+
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+    setHistorySharing(true);
+
+    try {
+      const imageFile = await createShareImageFileFromElement(historyShareCardRef.current);
+      const nativeShared = await tryNativeImageShare(imageFile);
+
+      if (nativeShared) return;
+
+      if (!shareInitData) {
+        downloadImageFile(imageFile);
+        window.alert("Open the app inside Telegram to send the Monthly Leak History card to the bot. On web, the PNG was downloaded.");
+        return;
+      }
+
+      try {
+        await sendShareImageViaBot(imageFile, shareInitData, monthlyHistoryShareText);
+        window.alert("Monthly Leak History card was sent to your Telegram bot chat.");
+      } catch {
+        downloadImageFile(imageFile);
+        window.alert("Bot delivery failed, so the Monthly Leak History card was downloaded as PNG.");
+      }
+    } catch {
+      window.alert("Monthly Leak History sharing is not supported by this browser.");
+    } finally {
+      setHistorySharing(false);
+    }
+  }
 
   const chartData = useMemo(() => {
     return buildChartData(range, expenses, settings);
@@ -9551,6 +10013,17 @@ function ChartScreen({
           </span>
         </div>
       </section>
+
+      <MonthlyLeakHistoryPanel
+        settings={settings}
+        archive={monthlyArchive}
+        monthOptions={historyMonthOptions}
+        selectedMonth={historyMonth}
+        onMonthChange={setHistoryMonth}
+        shareCardRef={historyShareCardRef}
+        sharing={historySharing}
+        onShare={shareMonthlyHistoryCard}
+      />
 
       <WalletInsightsPanel insights={walletInsights} compact />
     </div>
