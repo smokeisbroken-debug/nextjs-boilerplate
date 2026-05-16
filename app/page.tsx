@@ -10247,7 +10247,7 @@ function buildShareText({
   ].join("\n");
 }
 
-async async function createShareImageFileFromElement(element: HTMLElement) {
+async function createShareImageFileFromElement(element: HTMLElement) {
   const html2canvasModule = await import("html2canvas");
   const html2canvas = html2canvasModule.default;
   const captureId = `share-capture-${Date.now()}`;
