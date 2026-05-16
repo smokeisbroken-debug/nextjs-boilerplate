@@ -14465,3 +14465,70 @@ html[lang="ru"] .tab-guide-hero p {
 .analysis-lab-details:not([open]) {
   opacity: 0.98;
 }
+
+
+/* ===== V60.9.3 ANDROID SHARE CARD RENDER FIX ===== */
+/* Fixes white pixel/glitch artifacts on some Android WebView devices during html2canvas capture. */
+
+.share-capture-safe,
+.share-capture-safe * {
+  animation: none !important;
+  transition: none !important;
+  text-shadow: none !important;
+  -webkit-font-smoothing: antialiased !important;
+}
+
+.share-capture-safe {
+  isolation: auto !important;
+  transform: translateZ(0) !important;
+  backface-visibility: hidden !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.10), transparent 32%),
+    radial-gradient(circle at 0% 100%, rgba(72, 255, 140, 0.07), transparent 28%),
+    linear-gradient(180deg, rgba(8, 18, 10, 0.99), rgba(2, 4, 2, 1)) !important;
+}
+
+.share-capture-safe::before,
+.share-capture-safe::after {
+  opacity: 0.28 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+.share-capture-safe .premium-share-card-art {
+  opacity: 0.07 !important;
+  mix-blend-mode: normal !important;
+  filter: none !important;
+}
+
+.share-capture-safe img {
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  transform: none !important;
+}
+
+.share-capture-safe .public-share-top img,
+.share-capture-safe .report-public-share-top img,
+.share-capture-safe .mission-public-share-top img,
+.share-capture-safe .weekly-share-top img,
+.share-capture-safe .monthly-share-top img {
+  box-shadow: none !important;
+}
+
+.share-capture-safe .share-preview > div,
+.share-capture-safe .share-preview-social > div,
+.share-capture-safe .survival-share-grid > div,
+.share-capture-safe .weekly-share-grid > div,
+.share-capture-safe .monthly-share-grid > div {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+}
+
+.share-capture-safe .public-share-savings,
+.share-capture-safe .survival-share-status,
+.share-capture-safe .weekly-share-fix,
+.share-capture-safe .monthly-share-comment {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
