@@ -167,6 +167,9 @@ type Settings = {
   survival: {
     nextPaydayDate: string;
   };
+  privacy: {
+    publicProofMode: boolean;
+  };
 };
 
 type ChartPoint = {
@@ -691,6 +694,9 @@ const defaultSettings: Settings = {
   },
   survival: {
     nextPaydayDate: "",
+  },
+  privacy: {
+    publicProofMode: true,
   },
 };
 
@@ -2210,6 +2216,19 @@ const ruText: Record<string, string> = {
   "No shame. But the wallet did not pause while the app was closed.": "Без стыда. Но кошелёк не ставился на паузу, пока app был закрыт.",
   "No problem. Restart with one honest record.": "Не проблема. Начни заново с одной честной записи.",
   "No strong leak estimate yet. Add one missed leak to rebuild the signal.": "Сильной оценки утечки пока нет. Добавь одну пропущенную утечку, чтобы восстановить сигнал.",
+  "Public Proof Mode": "Публичный proof-режим",
+  "Hide sensitive numbers on public cards.": "Скрывает чувствительные числа на публичных карточках.",
+  "When ON, share cards hide exact private numbers like real balance, payday date, safe budget and private savings estimates.": "Когда включено, share-карточки скрывают точные личные числа: реальный баланс, дату дохода, безопасный бюджет и личную экономию.",
+  "Still visible": "Видно",
+  "Status, HP, score, patterns": "Статус, HP, score, паттерны",
+  "Balance, payday, exact private amounts": "Баланс, дата дохода, точные личные суммы",
+  "Exact private numbers hidden by Public Proof Mode.": "Точные личные числа скрыты Public Proof Mode.",
+  "Public Proof Mode is ON. Exact private numbers are hidden.": "Public Proof Mode включён. Точные личные числа скрыты.",
+  "Public Proof Mode: exact private numbers hidden.": "Public Proof Mode: точные личные числа скрыты.",
+  "hidden by Public Proof Mode": "скрыто Public Proof Mode",
+  "hidden": "скрыто",
+  "ON": "ВКЛ",
+  "OFF": "ВЫКЛ",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -2484,6 +2503,10 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
     survival: {
       ...defaultSettings.survival,
       ...(input?.survival || {}),
+    },
+    privacy: {
+      ...defaultSettings.privacy,
+      ...(input?.privacy || {}),
     },
   };
 }
@@ -3239,6 +3262,14 @@ function money(value: number, currency: Currency) {
   const symbol = currencySymbol(currency);
   const abs = Math.abs(Math.round(value)).toLocaleString("en-US");
   return value < 0 ? `-${symbol}${abs}` : `${symbol}${abs}`;
+}
+
+function publicProofValue(settings: Settings, value: string) {
+  return settings.privacy.publicProofMode ? "hidden" : value;
+}
+
+function publicProofMoney(settings: Settings, value: number) {
+  return publicProofValue(settings, money(value, settings.currency));
 }
 
 function safeNumber(value: string) {
@@ -9837,6 +9868,7 @@ function buildShareText({
   identityStats: V2IdentityStats;
 }) {
   const shareStats = getShareLeaderboardStats(leaderboard);
+  const publicProofMode = settings.privacy.publicProofMode;
   const rankLine =
     shareStats.rank || shareStats.publicLeaderboard
       ? `Leaderboard: ${shareStats.rankLabel}`
@@ -9851,17 +9883,21 @@ function buildShareText({
     `Wallet HP: ${walletHp}/100`,
     `Biggest leak: ${
       identityStats.biggestLeakAmount > 0
-        ? `${categoryLabel(identityStats.biggestLeakCategory)} (${money(
-            identityStats.biggestLeakAmount,
-            settings.currency
-          )})`
+        ? publicProofMode
+          ? categoryLabel(identityStats.biggestLeakCategory)
+          : `${categoryLabel(identityStats.biggestLeakCategory)} (${money(
+              identityStats.biggestLeakAmount,
+              settings.currency
+            )})`
         : "none"
     }`,
     `Life hours lost: ${identityStats.lifeHoursLost}h`,
     `$BROKE Score: ${shareStats.xp.toLocaleString("en-US")} XP`,
     rankLine,
     "",
-    `Potential yearly savings: ${money(potentialYearlySavings, settings.currency)}`,
+    `Potential yearly savings: ${
+      publicProofMode ? "hidden by Public Proof Mode" : money(potentialYearlySavings, settings.currency)
+    }`,
     "",
     "Find the leak before it becomes your lifestyle.",
   ].join("\n");
@@ -10112,8 +10148,12 @@ function ShareResultCard({
 
         <div className="public-share-savings">
           <span>Potential yearly savings</span>
-          <strong>{money(potentialYearlySavings, settings.currency)}</strong>
-          <small>Find the leak before it becomes lifestyle.</small>
+          <strong>{publicProofMoney(settings, potentialYearlySavings)}</strong>
+          <small>
+            {settings.privacy.publicProofMode
+              ? "Exact private numbers hidden by Public Proof Mode."
+              : "Find the leak before it becomes lifestyle."}
+          </small>
         </div>
 
         <footer className="public-share-footer">
@@ -10126,7 +10166,11 @@ function ShareResultCard({
       </div>
 
       <div className="share-privacy-note">
-        <span>Public share hides income and real balance.</span>
+        <span>
+          {settings.privacy.publicProofMode
+            ? "Public Proof Mode is ON. Exact private numbers are hidden."
+            : "Public share hides income and real balance."}
+        </span>
       </div>
 
       <div className="share-buttons">
@@ -12646,11 +12690,11 @@ function SurvivalModePanel({
       <div className="survival-main-grid">
         <div>
           <span>Real balance</span>
-          <strong>{money(forecast.realBalance, settings.currency)}</strong>
+          <strong>{publicProofMoney(settings, forecast.realBalance)}</strong>
         </div>
         <div>
           <span>Payday date</span>
-          <strong>{forecast.nextPaydayDate}</strong>
+          <strong>{settings.privacy.publicProofMode ? "hidden" : forecast.nextPaydayDate}</strong>
         </div>
         <div>
           <span>Days until income</span>
@@ -12658,11 +12702,11 @@ function SurvivalModePanel({
         </div>
         <div>
           <span>Safe daily budget</span>
-          <strong>{money(forecast.safeDailyBudget, settings.currency)}/day</strong>
+          <strong>{settings.privacy.publicProofMode ? "hidden" : `${money(forecast.safeDailyBudget, settings.currency)}/day`}</strong>
         </div>
         <div>
           <span>Current pace</span>
-          <strong>{money(forecast.currentDailyPace, settings.currency)}/day</strong>
+          <strong>{settings.privacy.publicProofMode ? "hidden" : `${money(forecast.currentDailyPace, settings.currency)}/day`}</strong>
         </div>
       </div>
 
@@ -12719,7 +12763,7 @@ function SurvivalModePanel({
         <div className="survival-share-grid">
           <div>
             <span>Real balance</span>
-            <strong>{money(forecast.realBalance, settings.currency)}</strong>
+            <strong>{publicProofMoney(settings, forecast.realBalance)}</strong>
           </div>
           <div>
             <span>Days left</span>
@@ -12727,11 +12771,11 @@ function SurvivalModePanel({
           </div>
           <div>
             <span>Safe/day</span>
-            <strong>{money(forecast.safeDailyBudget, settings.currency)}</strong>
+            <strong>{publicProofMoney(settings, forecast.safeDailyBudget)}</strong>
           </div>
           <div>
             <span>Current/day</span>
-            <strong>{money(forecast.currentDailyPace, settings.currency)}</strong>
+            <strong>{publicProofMoney(settings, forecast.currentDailyPace)}</strong>
           </div>
         </div>
 
@@ -12833,14 +12877,14 @@ function WhatIfScreen({
     "$BROKE Survival Mode",
     "",
     `Status: ${survivalForecast.statusLabel}`,
-    `Real balance: ${money(survivalForecast.realBalance, settings.currency)}`,
-    `Next payday: ${survivalForecast.nextPaydayDate}`,
+    `Real balance: ${publicProofMoney(settings, survivalForecast.realBalance)}`,
+    `Next payday: ${settings.privacy.publicProofMode ? "hidden" : survivalForecast.nextPaydayDate}`,
     `Days until income: ${survivalForecast.daysUntilIncome}`,
-    `Safe daily budget: ${money(survivalForecast.safeDailyBudget, settings.currency)}/day`,
-    `Current pace: ${money(survivalForecast.currentDailyPace, settings.currency)}/day`,
+    `Safe daily budget: ${settings.privacy.publicProofMode ? "hidden" : `${money(survivalForecast.safeDailyBudget, settings.currency)}/day`}`,
+    `Current pace: ${settings.privacy.publicProofMode ? "hidden" : `${money(survivalForecast.currentDailyPace, settings.currency)}/day`}`,
     `Forecast: ${survivalForecast.dangerLabel}`,
     "",
-    "Can you survive until payday?",
+    settings.privacy.publicProofMode ? "Public Proof Mode: exact private numbers hidden." : "Can you survive until payday?",
     "Smoke is broke.",
   ].join("\n");
 
@@ -12895,6 +12939,16 @@ function WhatIfScreen({
       survival: {
         ...prev.survival,
         nextPaydayDate: value,
+      },
+    }));
+  }
+
+  function updatePublicProofMode(value: boolean) {
+    setSettings((prev) => ({
+      ...prev,
+      privacy: {
+        ...prev.privacy,
+        publicProofMode: value,
       },
     }));
   }
@@ -13144,6 +13198,47 @@ function SettingsScreen({
       <Header title="Settings" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
       <LifeProfileEditor settings={settings} setSettings={setSettings} />
+
+      <details className="clean-details settings-clean-details" open>
+        <summary>
+          <div>
+            <span>Public Proof Mode</span>
+            <small>Hide sensitive numbers on public cards.</small>
+          </div>
+          <b>{settings.privacy.publicProofMode ? "ON" : "OFF"}</b>
+        </summary>
+
+        <section className="settings-group public-proof-settings">
+          <div className="public-proof-switch-row">
+            <div>
+              <strong>Public Proof Mode</strong>
+              <span>
+                When ON, share cards hide exact private numbers like real balance,
+                payday date, safe budget and private savings estimates.
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className={settings.privacy.publicProofMode ? "active" : ""}
+              onClick={() => updatePublicProofMode(!settings.privacy.publicProofMode)}
+            >
+              {settings.privacy.publicProofMode ? "ON" : "OFF"}
+            </button>
+          </div>
+
+          <div className="public-proof-info-grid">
+            <div>
+              <span>Still visible</span>
+              <strong>Status, HP, score, patterns</strong>
+            </div>
+            <div>
+              <span>Hidden</span>
+              <strong>Balance, payday, exact private amounts</strong>
+            </div>
+          </div>
+        </section>
+      </details>
 
       <details className="clean-details settings-clean-details">
         <summary>
