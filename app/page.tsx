@@ -1148,6 +1148,9 @@ const ruText: Record<string, string> = {
   "Needed": "Нужно",
   "Maybe": "Возможно",
   "Not needed": "Не нужно",
+  "Needed = necessary. It protects accuracy and does not count as a leak.": "Needed = необходимо. Это сохраняет точность и не считается утечкой.",
+  "Maybe = grey zone. $BROKE counts half of it as leak pressure.": "Maybe = серая зона. $BROKE считает половину как давление утечки.",
+  "Not needed = full leak. It lowers Wallet HP and powers Save/Growth insights.": "Not needed = полная утечка. Она снижает Wallet HP и питает инсайты Save/Growth.",
   "Add Expense": "Добавить расход",
   "Add a quick note...": "Добавь короткую заметку...",
   "Track daily leaks. Small leaks sink big wallets.": "Записывай утечки каждый день. Малые утечки топят большие кошельки.",
@@ -2406,6 +2409,8 @@ const ruText: Record<string, string> = {
   "Planner": "Планировщик",
   "Total redirected": "Всего перенаправлено",
   "Projected total": "Прогнозируемая сумма",
+  "Planning only": "Только планирование",
+  "Redirected": "Перенаправлено",
   "Saved plans": "Сохранённые планы",
   "No investment assumptions here. This plan simply redirects monthly leaks toward costs or a saving goal.": "Здесь нет инвестиционных предположений. План просто перенаправляет месячные утечки в расходы или цель накопления.",
   "Growth Lab: Monthly Leak Plan": "Growth Lab: месячный план утечек",
@@ -2811,6 +2816,12 @@ const quickAddPresets = [
   { category: "Takeouts", amount: 15, icon: A.takeouts, label: "Takeout" },
   { category: "Custom", amount: 10, icon: A.custom, label: "Custom" },
 ];
+
+const NEED_TYPE_HELP: Record<NeedType, string> = {
+  Needed: "Needed = necessary. It protects accuracy and does not count as a leak.",
+  Maybe: "Maybe = grey zone. $BROKE counts half of it as leak pressure.",
+  "Not needed": "Not needed = full leak. It lowers Wallet HP and powers Save/Growth insights.",
+};
 
 const defaultChallengeTemplates: ChallengeTemplate[] = [
   {
@@ -10929,6 +10940,7 @@ function AddExpenseScreen({
             </button>
           ))}
         </div>
+        <p className="tiny-note">{NEED_TYPE_HELP[expenseType]}</p>
       </section>
 
       <section className="note-box">
@@ -13402,7 +13414,7 @@ function GrowthLabScreen({
       <section className="growth-form-card">
         <div className="section-title">
           <span>Create leak plan</span>
-          <small>{growthRiskLabel(riskLevel)}</small>
+          <small>Planning only</small>
         </div>
 
         <label className="growth-field">
@@ -13768,8 +13780,8 @@ function GrowthLabScreen({
                     {simulation.durationMonths} months
                   </span>
                   <small>
-                    Final: {money(result.balance, settings.currency)} · Gain:{" "}
-                    {money(result.gain, settings.currency)}
+                    <span>Projected</span>: {money(result.balance, settings.currency)} ·{" "}
+                    <span>Redirected</span>: {money(result.contributed, settings.currency)}
                   </small>
                 </div>
                 <button type="button" onClick={() => deleteSimulation(simulation.id)}>
