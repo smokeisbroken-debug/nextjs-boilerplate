@@ -15302,3 +15302,27 @@ html[lang="ru"] .tab-guide-hero p {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ===== V60.10.7 GROWTH COVERAGE WORDING FIX ===== */
+/* Planned costs now show months/% instead of confusing "1.5x" wording. */
+
+
+/* ===== V60.10.8 GROWTH MONTHLY LEAKS + SAVING SHARE ===== */
+
+.growth-add-cost-bottom {
+  min-height: 44px;
+  width: 100%;
+  border: 0;
+  border-radius: 16px;
+  color: #061006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 970;
+  box-shadow: 0 10px 22px rgba(183, 255, 25, 0.10);
+}
+
+.growth-real-life-targets-head {
+  justify-content: flex-start;
+}
