@@ -121,6 +121,14 @@ type GrowthLifeMeaningItem = {
   coverageLabel: string;
 };
 
+type GrowthMeaningPeriod = "one" | "year";
+
+type GrowthManualTarget = {
+  id: string;
+  name: string;
+  amount: string;
+};
+
 type SurvivalForecast = {
   totalIncome: number;
   fixedCosts: number;
@@ -2331,6 +2339,17 @@ const ruText: Record<string, string> = {
   "Business idea": "Бизнес-идея",
   "Family support": "Поддержка семьи",
   "Personal goal simulation only. No real funds, no custody, no staking, no guaranteed returns.": "Только симуляция личной цели. Нет реальных средств, хранения, стейкинга или гарантированной доходности.",
+  "Insurance": "Страховка",
+  "Mortgage / rent": "Ипотека / аренда",
+  "1 month": "1 месяц",
+  "12 months": "12 месяцев",
+  "Manual targets": "Ручные цели",
+  "Add the things you are actually working toward.": "Добавь то, к чему ты реально идёшь.",
+  "New goal": "Новая цель",
+  "Monthly insurance amount": "Месячная страховка",
+  "Monthly mortgage or rent amount": "Месячная ипотека или аренда",
+  "Set a target amount": "Укажи целевую сумму",
+  "Set a monthly amount": "Укажи месячную сумму",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -12461,6 +12480,30 @@ function formatGoalTime(months: number | null) {
   return `around ${years}y ${rest}m`;
 }
 
+function formatGrowthCoverage(finalValue: number, targetAmount: number) {
+  if (targetAmount <= 0) return "Set a target amount";
+
+  const coverage = finalValue / targetAmount;
+
+  if (coverage >= 1) {
+    return `could cover about ${coverage >= 10 ? Math.floor(coverage) : coverage.toFixed(1)}x`;
+  }
+
+  return `could cover about ${Math.round(coverage * 100)}%`;
+}
+
+function formatGrowthMonthsCovered(finalValue: number, monthlyAmount: number) {
+  if (monthlyAmount <= 0) return "Set a monthly amount";
+
+  const months = finalValue / monthlyAmount;
+
+  if (months >= 1) {
+    return `${months >= 10 ? Math.floor(months) : months.toFixed(1)} months`;
+  }
+
+  return `${Math.round(months * 100)}% of 1 month`;
+}
+
 
 function getGrowthFinal(simulation: GrowthSimulation, annualGrowthOverride?: number) {
   const points = calculateGrowthPoints(simulation, annualGrowthOverride);
@@ -12509,7 +12552,7 @@ function buildGrowthShareText(simulation: GrowthSimulation, settings: Settings) 
     `Estimated final value: ${money(result.balance, settings.currency)}`,
     `Estimated gain: ${money(result.gain, settings.currency)}`,
     "",
-    "Real-life meaning: rent buffer, emergency savings, school fees, phone upgrade, debt payment, family support.",
+    "Real-life meaning: insurance, mortgage/rent, emergency savings, school fees, phone upgrade, debt payment, family support.",
     "Personal goal simulation only. No real funds, no custody, no staking, no guaranteed returns.",
     "Find the leak. Redirect it into something real.",
   ].join("\n");
@@ -12830,6 +12873,17 @@ function GrowthLabScreen({
   const [selectedGoalId, setSelectedGoalId] = useState("emergency");
   const [customGoalName, setCustomGoalName] = useState("Buy a laptop");
   const [customGoalAmount, setCustomGoalAmount] = useState("800");
+  const [meaningPeriod, setMeaningPeriod] = useState<GrowthMeaningPeriod>("one");
+  const [insuranceMonthly, setInsuranceMonthly] = useState("100");
+  const [housingMonthly, setHousingMonthly] = useState(
+    String(settings.fixedCosts.rent > 0 ? settings.fixedCosts.rent : 500)
+  );
+  const [manualTargets, setManualTargets] = useState<GrowthManualTarget[]>([
+    { id: "school-fees", name: "School fees", amount: "300" },
+    { id: "phone-upgrade", name: "Phone upgrade", amount: "800" },
+    { id: "emergency-fund", name: "Emergency fund", amount: "1000" },
+    { id: "debt-payment", name: "Debt payment", amount: "500" },
+  ]);
 
   useEffect(() => {
     return () => {
@@ -12889,6 +12943,26 @@ function GrowthLabScreen({
   const goalMonths = getMonthsToGrowthGoal(activeGoalTarget, monthlyContribution);
   const goalProgress =
     activeGoalTarget > 0 ? clamp((finalPoint.balance / activeGoalTarget) * 100, 0, 100) : 0;
+  const meaningMonths = meaningPeriod === "year" ? 12 : 1;
+  const insuranceTarget = safeNumber(insuranceMonthly) * meaningMonths;
+  const housingTarget = safeNumber(housingMonthly) * meaningMonths;
+
+  function updateManualTarget(id: string, patch: Partial<GrowthManualTarget>) {
+    setManualTargets((current) =>
+      current.map((target) => (target.id === id ? { ...target, ...patch } : target))
+    );
+  }
+
+  function addManualTarget() {
+    setManualTargets((current) => [
+      ...current,
+      { id: uid(), name: "New goal", amount: "500" },
+    ]);
+  }
+
+  function removeManualTarget(id: string) {
+    setManualTargets((current) => current.filter((target) => target.id !== id));
+  }
 
   function useMyLeaks() {
     const weeklyLeak = Math.max(1, Math.round(leakAmount / 4.35));
@@ -13252,7 +13326,66 @@ function GrowthLabScreen({
 
           <p>
             {money(finalPoint.balance, settings.currency)} is not just a number.
-            In real life, this simulated amount could represent:
+            First, compare it with the two real-life pressure lines most people understand:
+          </p>
+
+          <div className="growth-meaning-period-row">
+            <button
+              type="button"
+              className={meaningPeriod === "one" ? "active" : ""}
+              onClick={() => setMeaningPeriod("one")}
+            >
+              1 month
+            </button>
+            <button
+              type="button"
+              className={meaningPeriod === "year" ? "active" : ""}
+              onClick={() => setMeaningPeriod("year")}
+            >
+              12 months
+            </button>
+          </div>
+
+          <div className="growth-priority-lines">
+            <article>
+              <img src={A.walletHp} alt="" />
+              <div>
+                <strong>Insurance</strong>
+                <span>{formatGrowthCoverage(finalPoint.balance, insuranceTarget)}</span>
+                <small>
+                  {formatGrowthMonthsCovered(finalPoint.balance, safeNumber(insuranceMonthly))} at{" "}
+                  {money(safeNumber(insuranceMonthly), settings.currency)}/month
+                </small>
+                <input
+                  inputMode="decimal"
+                  value={insuranceMonthly}
+                  onChange={(event) => setInsuranceMonthly(event.target.value)}
+                  aria-label="Monthly insurance amount"
+                />
+              </div>
+            </article>
+
+            <article>
+              <img src={A.lifeCost} alt="" />
+              <div>
+                <strong>Mortgage / rent</strong>
+                <span>{formatGrowthCoverage(finalPoint.balance, housingTarget)}</span>
+                <small>
+                  {formatGrowthMonthsCovered(finalPoint.balance, safeNumber(housingMonthly))} at{" "}
+                  {money(safeNumber(housingMonthly), settings.currency)}/month
+                </small>
+                <input
+                  inputMode="decimal"
+                  value={housingMonthly}
+                  onChange={(event) => setHousingMonthly(event.target.value)}
+                  aria-label="Monthly mortgage or rent amount"
+                />
+              </div>
+            </article>
+          </div>
+
+          <p>
+            Below are broader examples. They are context, not guaranteed outcomes:
           </p>
 
           <div className="growth-life-meaning-grid">
@@ -13356,6 +13489,67 @@ function GrowthLabScreen({
             If you redirect your leaks into this goal, you could reach it in{" "}
             <strong>{formatGoalTime(goalMonths)}</strong>.
           </p>
+
+          <div className="growth-manual-targets">
+            <div className="growth-manual-targets-head">
+              <div>
+                <strong>Manual targets</strong>
+                <span>Add the things you are actually working toward.</span>
+              </div>
+              <button type="button" onClick={addManualTarget}>
+                + Add
+              </button>
+            </div>
+
+            {manualTargets.map((target) => {
+              const targetAmount = safeNumber(target.amount);
+              const targetMonths = getMonthsToGrowthGoal(targetAmount, monthlyContribution);
+              const targetProgress =
+                targetAmount > 0 ? clamp((finalPoint.balance / targetAmount) * 100, 0, 100) : 0;
+
+              return (
+                <article className="growth-manual-target-row" key={target.id}>
+                  <div className="growth-manual-target-inputs">
+                    <input
+                      value={target.name}
+                      onChange={(event) =>
+                        updateManualTarget(target.id, { name: event.target.value })
+                      }
+                      aria-label="Manual target name"
+                    />
+                    <input
+                      inputMode="decimal"
+                      value={target.amount}
+                      onChange={(event) =>
+                        updateManualTarget(target.id, { amount: event.target.value })
+                      }
+                      aria-label="Manual target amount"
+                    />
+                  </div>
+
+                  <div className="growth-manual-target-result">
+                    <span>{formatGrowthCoverage(finalPoint.balance, targetAmount)}</span>
+                    <strong>{formatGoalTime(targetMonths)}</strong>
+                  </div>
+
+                  <div className="growth-goal-progress">
+                    <i style={{ width: `${targetProgress}%` }} />
+                  </div>
+
+                  {manualTargets.length > 1 && (
+                    <button
+                      type="button"
+                      className="growth-manual-target-remove"
+                      onClick={() => removeManualTarget(target.id)}
+                      aria-label="Remove manual target"
+                    >
+                      ×
+                    </button>
+                  )}
+                </article>
+              );
+            })}
+          </div>
 
           <small className="growth-soft-note">
             This is a personal goal simulation. No real funds are deposited, no custody,
