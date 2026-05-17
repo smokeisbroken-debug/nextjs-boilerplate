@@ -15454,3 +15454,131 @@ html[lang="ru"] .tab-guide-hero p {
   background: rgba(183, 255, 25, 0.055) !important;
   border: 1px solid rgba(183, 255, 25, 0.13) !important;
 }
+
+/* ===== V56.5 MOBILE GROWTH UI POLISH ===== */
+/* Mobile-only Growth layout fix: safe top space, readable leak card, and scroll room above fixed nav. */
+
+.growth-screen {
+  padding-bottom: calc(var(--nav-height) + 128px + env(safe-area-inset-bottom, 0px)) !important;
+  scroll-padding-bottom: calc(var(--nav-height) + 128px + env(safe-area-inset-bottom, 0px));
+}
+
+.growth-screen .screen-header {
+  position: relative;
+  z-index: 2;
+}
+
+@media (max-width: 430px) {
+  .growth-screen {
+    padding-top: calc(18px + env(safe-area-inset-top, 0px)) !important;
+    padding-bottom: calc(var(--nav-height) + 170px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .growth-screen .screen-header {
+    margin-bottom: 18px !important;
+  }
+
+  .growth-screen .growth-hero-card {
+    min-height: auto !important;
+    grid-template-columns: minmax(0, 1fr) 86px !important;
+    gap: 10px !important;
+    padding: 16px !important;
+    overflow: hidden;
+  }
+
+  .growth-screen .growth-hero-card h2 {
+    font-size: 28px !important;
+    line-height: 1.02 !important;
+    letter-spacing: -1px !important;
+  }
+
+  .growth-screen .growth-hero-card p {
+    max-width: 230px;
+    font-size: 12px !important;
+  }
+
+  .growth-screen .growth-hero-card img {
+    width: 86px !important;
+    height: 86px !important;
+    justify-self: end;
+  }
+
+  .growth-screen .growth-asset-strip {
+    gap: 8px !important;
+  }
+
+  .growth-screen .growth-asset-strip img {
+    border-radius: 18px !important;
+  }
+
+  .growth-screen .growth-leak-card {
+    grid-template-columns: 58px minmax(0, 1fr) !important;
+    gap: 12px !important;
+    padding: 16px !important;
+    align-items: center !important;
+  }
+
+  .growth-screen .growth-leak-card > div {
+    min-width: 0;
+  }
+
+  .growth-screen .growth-leak-card > div > span {
+    display: block;
+    max-width: none;
+    font-size: 13px !important;
+    line-height: 1.25 !important;
+    overflow-wrap: normal;
+  }
+
+  .growth-screen .growth-leak-card strong {
+    margin-top: 6px !important;
+    font-size: 42px !important;
+    line-height: 0.95 !important;
+  }
+
+  .growth-screen .growth-leak-card p {
+    margin-top: 5px !important;
+    font-size: 12.5px !important;
+    line-height: 1.25 !important;
+  }
+
+  .growth-screen .growth-leak-asset {
+    width: 58px !important;
+    height: 58px !important;
+    border-radius: 17px !important;
+  }
+
+  .growth-screen .growth-leak-card button {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-height: 52px !important;
+    justify-self: stretch !important;
+    padding: 0 14px !important;
+    font-size: 18px !important;
+    white-space: normal !important;
+  }
+
+  .growth-screen .growth-form-card {
+    margin-top: 16px !important;
+  }
+
+  .growth-screen .growth-field-grid {
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .growth-screen .growth-hero-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .growth-screen .growth-hero-card img {
+    width: 78px !important;
+    height: 78px !important;
+    justify-self: end;
+  }
+
+  .growth-screen .growth-leak-card strong {
+    font-size: 38px !important;
+  }
+}
