@@ -122,6 +122,7 @@ type GrowthLifeMeaningItem = {
 };
 
 type GrowthMeaningPeriod = "one" | "year";
+type GrowthPlannerTab = "costs" | "goal";
 
 type GrowthManualTarget = {
   id: string;
@@ -2382,6 +2383,19 @@ const ruText: Record<string, string> = {
   "Real life monthly amount": "Месячная сумма реальной цели",
   "Remove planned expense": "Удалить плановый расход",
   "Monthly amount": "Месячная сумма",
+  "Real Life Planner": "Планировщик реальной жизни",
+  "Costs first, goal second": "Сначала расходы, потом цель",
+  "Planned costs": "Плановые расходы",
+  "Saving goal": "Цель накопления",
+  "Add bills or planned expenses. Each row has its own 1m / 12m switch.": "Добавь счета или плановые расходы. У каждой строки свой переключатель 1m / 12m.",
+  "+ Add cost": "+ Добавить расход",
+  "Cost name": "Название расхода",
+  "Planned cost name": "Название планового расхода",
+  "Planned cost monthly amount": "Месячная сумма планового расхода",
+  "Remove planned cost": "Удалить плановый расход",
+  "What are you saving for?": "На что ты копишь?",
+  "Choose a name or type your own. The amount is always yours.": "Выбери название или введи своё. Сумму всегда вводишь сам.",
+  "Buy a laptop": "Купить ноутбук",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -12797,11 +12811,11 @@ async function buildGrowthShareCardBlob(
 
   ctx.fillStyle = green;
   ctx.font = "900 28px Arial, sans-serif";
-  ctx.fillText("REAL LIFE PLAN", 94, 908);
+  ctx.fillText("SAVING GOAL", 94, 908);
 
   ctx.fillStyle = text;
   ctx.font = "900 48px Arial, sans-serif";
-  ctx.fillText(context?.activeGoalName || "Add your planned expense", 94, 970);
+  ctx.fillText(context?.activeGoalName || "Add your saving goal", 94, 970);
 
   ctx.fillStyle = muted;
   ctx.font = "700 24px Arial, sans-serif";
@@ -12936,6 +12950,9 @@ function GrowthLabScreen({
   const [growthShareCardUrl, setGrowthShareCardUrl] = useState("");
   const [growthShareText, setGrowthShareText] = useState("");
   const [isBuildingShareCard, setIsBuildingShareCard] = useState(false);
+  const [growthPlannerTab, setGrowthPlannerTab] = useState<GrowthPlannerTab>("costs");
+  const [savingGoalName, setSavingGoalName] = useState("");
+  const [savingGoalAmount, setSavingGoalAmount] = useState("");
   const [realLifeTargets, setRealLifeTargets] = useState<GrowthManualTarget[]>([
     { id: "insurance", name: "Insurance", amount: "", period: "year" },
     { id: "housing", name: "Mortgage / rent", amount: "", period: "one" },
@@ -13008,9 +13025,19 @@ function GrowthLabScreen({
   );
   const primaryRealLifeTarget = completedRealLifeTargets[0] || realLifeTargets[0];
   const secondaryRealLifeTarget = completedRealLifeTargets[1] || realLifeTargets[1] || realLifeTargets[0];
-  const activeGoalName = primaryRealLifeTarget?.name.trim() || "Your real-life plan";
-  const activeGoalTarget = primaryRealLifeTarget ? getRealLifeTargetTotal(primaryRealLifeTarget) : 0;
+  const activeGoalName = savingGoalName.trim() || "Your saving goal";
+  const activeGoalTarget = Math.max(0, safeNumber(savingGoalAmount));
   const goalMonths = getMonthsToGrowthGoal(activeGoalTarget, monthlyContribution);
+  const goalProgress =
+    activeGoalTarget > 0 ? clamp((finalPoint.balance / activeGoalTarget) * 100, 0, 100) : 0;
+  const savingGoalOptions = [
+    "Buy a laptop",
+    "Phone upgrade",
+    "Emergency fund",
+    "Debt payment",
+    "Family support",
+    "Business idea",
+  ];
   const growthShareContext: GrowthShareContext = {
     primaryTargetName: primaryRealLifeTarget?.name.trim() || "Planned expense",
     primaryTargetPeriodLabel: primaryRealLifeTarget
@@ -13420,101 +13447,188 @@ function GrowthLabScreen({
 
         <section className="growth-real-life-plan-card">
           <div className="section-title">
-            <span>Real Life Plan</span>
-            <small>One place for planned expenses and goals</small>
+            <span>Real Life Planner</span>
+            <small>Costs first, goal second</small>
           </div>
 
           <p>
-            {money(finalPoint.balance, settings.currency)} is not just a number.
-            Add the real things you are trying to cover: insurance, rent, school,
-            phone, debt, family support, emergency fund, or anything personal.
+            Use this to translate the simulation into real life. Planned costs are bills
+            or expenses you want to cover. Saving goal is the thing you are collecting toward.
           </p>
 
-          <div className="growth-real-life-targets-head">
-            <div>
-              <strong>Planned expenses / goals</strong>
-              <span>Each row has its own 1 month / 12 months switch.</span>
-            </div>
-            <button type="button" onClick={addRealLifeTarget}>
-              + Add
+          <div className="growth-planner-tabs">
+            <button
+              type="button"
+              className={growthPlannerTab === "costs" ? "active" : ""}
+              onClick={() => setGrowthPlannerTab("costs")}
+            >
+              Planned costs
+            </button>
+            <button
+              type="button"
+              className={growthPlannerTab === "goal" ? "active" : ""}
+              onClick={() => setGrowthPlannerTab("goal")}
+            >
+              Saving goal
             </button>
           </div>
 
-          <div className="growth-real-life-target-list">
-            {realLifeTargets.map((target) => {
-              const targetAmount = safeNumber(target.amount);
-              const targetTotal = getRealLifeTargetTotal(target);
-              const targetMonths = getMonthsToGrowthGoal(targetTotal, monthlyContribution);
-              const targetProgress =
-                targetTotal > 0 ? clamp((finalPoint.balance / targetTotal) * 100, 0, 100) : 0;
+          {growthPlannerTab === "costs" ? (
+            <>
+              <div className="growth-real-life-targets-head">
+                <div>
+                  <strong>Planned costs</strong>
+                  <span>Add bills or planned expenses. Each row has its own 1m / 12m switch.</span>
+                </div>
+                <button type="button" onClick={addRealLifeTarget}>
+                  + Add cost
+                </button>
+              </div>
 
-              return (
-                <article className="growth-real-life-target-row" key={target.id}>
-                  <div className="growth-real-life-target-main">
-                    <input
-                      value={target.name}
-                      placeholder="Goal name"
-                      onChange={(event) =>
-                        updateRealLifeTarget(target.id, { name: event.target.value })
-                      }
-                      aria-label="Real life goal name"
-                    />
+              <div className="growth-real-life-target-list">
+                {realLifeTargets.map((target) => {
+                  const targetAmount = safeNumber(target.amount);
+                  const targetTotal = getRealLifeTargetTotal(target);
+                  const targetMonths = getMonthsToGrowthGoal(targetTotal, monthlyContribution);
+                  const targetProgress =
+                    targetTotal > 0 ? clamp((finalPoint.balance / targetTotal) * 100, 0, 100) : 0;
 
-                    <input
-                      inputMode="decimal"
-                      value={target.amount}
-                      placeholder="Monthly amount"
-                      onChange={(event) =>
-                        updateRealLifeTarget(target.id, { amount: event.target.value })
-                      }
-                      aria-label="Real life monthly amount"
-                    />
+                  return (
+                    <article className="growth-real-life-target-row" key={target.id}>
+                      <div className="growth-real-life-target-main">
+                        <input
+                          value={target.name}
+                          placeholder="Cost name"
+                          onChange={(event) =>
+                            updateRealLifeTarget(target.id, { name: event.target.value })
+                          }
+                          aria-label="Planned cost name"
+                        />
 
-                    <div className="growth-row-period-toggle">
-                      <button
-                        type="button"
-                        className={target.period === "one" ? "active" : ""}
-                        onClick={() => updateRealLifeTarget(target.id, { period: "one" })}
-                      >
-                        1m
-                      </button>
-                      <button
-                        type="button"
-                        className={target.period === "year" ? "active" : ""}
-                        onClick={() => updateRealLifeTarget(target.id, { period: "year" })}
-                      >
-                        12m
-                      </button>
-                    </div>
-                  </div>
+                        <input
+                          inputMode="decimal"
+                          value={target.amount}
+                          placeholder="Monthly amount"
+                          onChange={(event) =>
+                            updateRealLifeTarget(target.id, { amount: event.target.value })
+                          }
+                          aria-label="Planned cost monthly amount"
+                        />
 
-                  <div className="growth-real-life-target-result">
-                    <span>{formatGrowthCoverage(finalPoint.balance, targetTotal)}</span>
-                    <strong>{formatGoalTime(targetMonths)}</strong>
-                    <small>
-                      {formatGrowthMonthsCovered(finalPoint.balance, targetAmount)} at{" "}
-                      {money(targetAmount, settings.currency)}/month
-                    </small>
-                  </div>
+                        <div className="growth-row-period-toggle">
+                          <button
+                            type="button"
+                            className={target.period === "one" ? "active" : ""}
+                            onClick={() => updateRealLifeTarget(target.id, { period: "one" })}
+                          >
+                            1m
+                          </button>
+                          <button
+                            type="button"
+                            className={target.period === "year" ? "active" : ""}
+                            onClick={() => updateRealLifeTarget(target.id, { period: "year" })}
+                          >
+                            12m
+                          </button>
+                        </div>
+                      </div>
 
-                  <div className="growth-goal-progress">
-                    <i style={{ width: `${targetProgress}%` }} />
-                  </div>
+                      <div className="growth-real-life-target-result">
+                        <span>{formatGrowthCoverage(finalPoint.balance, targetTotal)}</span>
+                        <strong>{formatGoalTime(targetMonths)}</strong>
+                        <small>
+                          {formatGrowthMonthsCovered(finalPoint.balance, targetAmount)} at{" "}
+                          {money(targetAmount, settings.currency)}/month
+                        </small>
+                      </div>
 
-                  {realLifeTargets.length > 1 && (
-                    <button
-                      type="button"
-                      className="growth-manual-target-remove"
-                      onClick={() => removeRealLifeTarget(target.id)}
-                      aria-label="Remove planned expense"
-                    >
-                      ×
-                    </button>
-                  )}
-                </article>
-              );
-            })}
-          </div>
+                      <div className="growth-goal-progress">
+                        <i style={{ width: `${targetProgress}%` }} />
+                      </div>
+
+                      {realLifeTargets.length > 1 && (
+                        <button
+                          type="button"
+                          className="growth-manual-target-remove"
+                          onClick={() => removeRealLifeTarget(target.id)}
+                          aria-label="Remove planned cost"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <section className="growth-saving-goal-panel">
+              <div className="growth-saving-goal-head">
+                <div>
+                  <strong>What are you saving for?</strong>
+                  <span>Choose a name or type your own. The amount is always yours.</span>
+                </div>
+              </div>
+
+              <div className="growth-saving-goal-options">
+                {savingGoalOptions.map((option) => (
+                  <button
+                    type="button"
+                    key={option}
+                    className={savingGoalName === option ? "active" : ""}
+                    onClick={() => setSavingGoalName(option)}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+
+              <div className="growth-saving-goal-fields">
+                <label className="growth-field">
+                  <span>Goal name</span>
+                  <input
+                    value={savingGoalName}
+                    placeholder="Example: Buy a laptop"
+                    onChange={(event) => setSavingGoalName(event.target.value)}
+                  />
+                </label>
+
+                <label className="growth-field">
+                  <span>Target amount</span>
+                  <input
+                    inputMode="decimal"
+                    value={savingGoalAmount}
+                    placeholder="Example: 800"
+                    onChange={(event) => setSavingGoalAmount(event.target.value)}
+                  />
+                </label>
+              </div>
+
+              <div className="growth-goal-result">
+                <div>
+                  <span>Goal</span>
+                  <strong>{activeGoalName}</strong>
+                </div>
+                <div>
+                  <span>Target</span>
+                  <strong>{money(activeGoalTarget, settings.currency)}</strong>
+                </div>
+                <div>
+                  <span>Redirected/month</span>
+                  <strong>{money(monthlyContribution, settings.currency)}</strong>
+                </div>
+              </div>
+
+              <div className="growth-goal-progress">
+                <i style={{ width: `${goalProgress}%` }} />
+              </div>
+
+              <p>
+                If you redirect your leaks into this goal, you could reach it in{" "}
+                <strong>{formatGoalTime(goalMonths)}</strong>.
+              </p>
+            </section>
+          )}
 
           <small className="growth-soft-note">
             This is a personal goal simulation. No real funds are deposited, no custody,
