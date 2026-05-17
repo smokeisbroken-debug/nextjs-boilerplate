@@ -2388,7 +2388,6 @@ const ruText: Record<string, string> = {
   "Planned costs": "Плановые расходы",
   "Saving goal": "Цель накопления",
   "Add bills or planned expenses. Each row has its own 1m / 12m switch.": "Добавь счета или плановые расходы. У каждой строки свой переключатель 1m / 12m.",
-  "+ Add cost": "+ Добавить расход",
   "Cost name": "Название расхода",
   "Planned cost name": "Название планового расхода",
   "Planned cost monthly amount": "Месячная сумма планового расхода",
@@ -2396,6 +2395,9 @@ const ruText: Record<string, string> = {
   "What are you saving for?": "На что ты копишь?",
   "Choose a name or type your own. The amount is always yours.": "Выбери название или введи своё. Сумму всегда вводишь сам.",
   "Buy a laptop": "Купить ноутбук",
+  "+ Add planned cost": "+ Добавить плановый расход",
+  "Share Saving Goal card": "Поделиться карточкой цели",
+  "Monthly leaks into a personal saving goal": "Месячные утечки в личную цель накопления",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -12533,6 +12535,51 @@ function formatGrowthCoverage(finalValue: number, targetAmount: number) {
   return `could cover about ${Math.round(coverage * 100)}%`;
 }
 
+function formatCoverageNumber(value: number) {
+  if (!Number.isFinite(value)) return "0";
+
+  if (value >= 10) return String(Math.floor(value));
+
+  return value.toFixed(1).replace(".0", "");
+}
+
+function formatPlannedCostCoverage(
+  finalValue: number,
+  monthlyAmount: number,
+  period: GrowthMeaningPeriod
+) {
+  if (monthlyAmount <= 0) return "Set monthly amount";
+
+  const monthsCovered = finalValue / monthlyAmount;
+
+  if (period === "one") {
+    if (monthsCovered >= 1) {
+      return `could cover about ${formatCoverageNumber(monthsCovered)} month${
+        monthsCovered === 1 ? "" : "s"
+      }`;
+    }
+
+    return `could cover about ${Math.round(monthsCovered * 100)}% of 1 month`;
+  }
+
+  const yearlyTarget = monthlyAmount * 12;
+  const yearCoverage = finalValue / yearlyTarget;
+
+  if (yearCoverage >= 1) {
+    const extraMonths = Math.max(0, Math.floor(monthsCovered - 12));
+
+    if (extraMonths > 0) {
+      return `could cover 12 months + ${extraMonths} extra month${
+        extraMonths === 1 ? "" : "s"
+      }`;
+    }
+
+    return "could cover about 12 months";
+  }
+
+  return `could cover about ${Math.round(yearCoverage * 100)}% of 12 months`;
+}
+
 function formatGrowthMonthsCovered(finalValue: number, monthlyAmount: number) {
   if (monthlyAmount <= 0) return "Set a monthly amount";
 
@@ -12589,26 +12636,20 @@ function buildGrowthShareText(
   return [
     "$BROKE Growth Lab",
     "",
-    `I found a ${money(simulation.contributionAmount, settings.currency)} ${growthFrequencyLabel(
-      simulation.contributionFrequency
-    )} wallet leak.`,
-    `If redirected for ${simulation.durationMonths} months:`,
-    `Estimated final value: ${money(result.balance, settings.currency)}`,
+    `Monthly leaks redirected: ${money(monthlyGrowthContribution(simulation), settings.currency)}/month`,
+    `Future value after ${simulation.durationMonths} months: ${money(result.balance, settings.currency)}`,
     "",
     context
-      ? `${context.primaryTargetName} (${context.primaryTargetPeriodLabel}): ${context.primaryTargetCoverageLabel}`
-      : "Planned expense: add your amount",
+      ? `Saving goal: ${context.activeGoalName}`
+      : "Saving goal: add what you are building toward",
     context
-      ? `${context.secondaryTargetName} (${context.secondaryTargetPeriodLabel}): ${context.secondaryTargetCoverageLabel}`
-      : "Second target: add your amount",
+      ? `Target: ${money(context.activeGoalTarget, settings.currency)}`
+      : "Target: add your own amount",
     context
-      ? `Goal: ${context.activeGoalName} — ${context.activeGoalTimeLabel}`
-      : "Goal: choose what you are building toward",
-    context && context.manualTargetName
-      ? `Manual target: ${context.manualTargetName} — ${context.manualTargetTimeLabel}`
-      : "",
+      ? `Estimated time: ${context.activeGoalTimeLabel}`
+      : "Estimated time: available after target is set",
     "",
-    "Personal goal simulation only. No real funds, no custody, no staking, no guaranteed returns.",
+    "Saving goal simulation only. No real funds, no custody, no staking, no guaranteed returns.",
     "Find the leak. Redirect it into something real.",
   ]
     .filter(Boolean)
@@ -12682,6 +12723,7 @@ async function buildGrowthShareCardBlob(
   context?: GrowthShareContext
 ): Promise<Blob> {
   const result = getGrowthFinal(simulation);
+  const monthlyRedirected = monthlyGrowthContribution(simulation);
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1350;
@@ -12748,106 +12790,87 @@ async function buildGrowthShareCardBlob(
 
   ctx.fillStyle = muted;
   ctx.font = "500 29px Arial, sans-serif";
-  ctx.fillText("Leak to real-life goal simulation", 68, 207);
+  ctx.fillText("Monthly leaks into a personal saving goal", 68, 207);
 
-  growthFillRoundRect(ctx, 62, 255, 956, 178, 34, panel);
-  growthStrokeRoundRect(ctx, 62, 255, 956, 178, 34, "rgba(183,255,25,0.22)", 2);
+  growthFillRoundRect(ctx, 62, 255, 956, 190, 34, panel);
+  growthStrokeRoundRect(ctx, 62, 255, 956, 190, 34, "rgba(183,255,25,0.22)", 2);
 
   ctx.fillStyle = green;
   ctx.font = "900 30px Arial, sans-serif";
-  ctx.fillText("FUTURE VALUE", 94, 312);
+  ctx.fillText("FUTURE VALUE", 94, 315);
 
   ctx.fillStyle = text;
   ctx.font = "900 76px Arial, sans-serif";
-  ctx.fillText(money(result.balance, settings.currency), 94, 396);
+  ctx.fillText(money(result.balance, settings.currency), 94, 400);
 
   ctx.fillStyle = muted;
   ctx.font = "700 25px Arial, sans-serif";
-  ctx.fillText(`${money(simulation.contributionAmount, settings.currency)} ${growthFrequencyLabel(simulation.contributionFrequency)} redirected`, 618, 318);
-  ctx.fillText(`${simulation.durationMonths} months · simulation only`, 618, 362);
+  ctx.fillText(
+    `${money(monthlyRedirected, settings.currency)}/month redirected from monthly leaks`,
+    94,
+    432
+  );
+
+  growthFillRoundRect(ctx, 62, 510, 956, 360, 36, panel2);
+  growthStrokeRoundRect(ctx, 62, 510, 956, 360, 36, "rgba(183,255,25,0.18)", 2);
 
   ctx.fillStyle = green;
-  ctx.font = "900 34px Arial, sans-serif";
-  ctx.fillText("WHAT THIS COULD COVER", 66, 505);
+  ctx.font = "900 30px Arial, sans-serif";
+  ctx.fillText("SAVING GOAL", 94, 575);
 
-  const priorityRows = [
-    {
-      label: context
-        ? `${context.primaryTargetName} (${context.primaryTargetPeriodLabel})`
-        : "Planned expense",
-      value: context?.primaryTargetCoverageLabel || "add amount",
-      detail: context?.primaryTargetMonthsLabel || "customize inside Growth Lab",
-    },
-    {
-      label: context
-        ? `${context.secondaryTargetName} (${context.secondaryTargetPeriodLabel})`
-        : "Second target",
-      value: context?.secondaryTargetCoverageLabel || "add amount",
-      detail: context?.secondaryTargetMonthsLabel || "customize inside Growth Lab",
-    },
-  ];
+  ctx.fillStyle = text;
+  ctx.font = "900 58px Arial, sans-serif";
+  ctx.fillText(context?.activeGoalName || "Add your saving goal", 94, 658);
 
-  priorityRows.forEach((row, index) => {
-    const y = 538 + index * 150;
+  ctx.fillStyle = muted;
+  ctx.font = "800 26px Arial, sans-serif";
+  ctx.fillText("Target", 94, 742);
 
-    growthFillRoundRect(ctx, 62, y, 956, 118, 28, panel2);
-    growthStrokeRoundRect(ctx, 62, y, 956, 118, 28, "rgba(183,255,25,0.14)", 1);
+  ctx.fillStyle = green;
+  ctx.font = "900 46px Arial, sans-serif";
+  ctx.fillText(
+    context ? money(context.activeGoalTarget, settings.currency) : "Set target",
+    94,
+    800
+  );
 
-    ctx.fillStyle = muted;
-    ctx.font = "800 25px Arial, sans-serif";
-    ctx.fillText(row.label, 94, y + 42);
+  ctx.fillStyle = muted;
+  ctx.font = "800 26px Arial, sans-serif";
+  ctx.fillText("Estimated time", 588, 742);
 
-    ctx.fillStyle = green;
-    ctx.font = "900 42px Arial, sans-serif";
-    ctx.fillText(row.value, 94, y + 92);
+  ctx.fillStyle = green;
+  ctx.font = "900 40px Arial, sans-serif";
+  ctx.fillText(context?.activeGoalTimeLabel || "Add target first", 588, 800);
 
-    ctx.fillStyle = muted;
-    ctx.font = "700 23px Arial, sans-serif";
-    ctx.fillText(row.detail, 650, y + 74);
-  });
+  const goalProgress =
+    context && context.activeGoalTarget > 0
+      ? Math.min(result.balance / context.activeGoalTarget, 1)
+      : 0;
 
-  growthFillRoundRect(ctx, 62, 858, 956, 190, 30, "rgba(183,255,25,0.075)");
-  growthStrokeRoundRect(ctx, 62, 858, 956, 190, 30, "rgba(183,255,25,0.18)", 1);
+  growthFillRoundRect(ctx, 94, 825, 860, 24, 999, "rgba(255,255,255,0.10)");
+  growthFillRoundRect(ctx, 94, 825, Math.max(18, 860 * goalProgress), 24, 999, green);
+
+  growthFillRoundRect(ctx, 62, 930, 956, 150, 30, "rgba(183,255,25,0.065)");
+  growthStrokeRoundRect(ctx, 62, 930, 956, 150, 30, "rgba(183,255,25,0.16)", 1);
 
   ctx.fillStyle = green;
   ctx.font = "900 28px Arial, sans-serif";
-  ctx.fillText("SAVING GOAL", 94, 908);
-
-  ctx.fillStyle = text;
-  ctx.font = "900 48px Arial, sans-serif";
-  ctx.fillText(context?.activeGoalName || "Add your saving goal", 94, 970);
+  ctx.fillText("WHAT THIS MEANS", 94, 985);
 
   ctx.fillStyle = muted;
   ctx.font = "700 24px Arial, sans-serif";
-  ctx.fillText(
-    context
-      ? `Target: ${money(context.activeGoalTarget, settings.currency)} · ${context.activeGoalTimeLabel}`
-      : "Target and time will appear here",
-    94,
-    1017
-  );
+  ctx.fillText("Not just “future value”. It shows what your leaks could build toward.", 94, 1035);
 
-  growthFillRoundRect(ctx, 62, 1080, 956, 98, 26, orangePanel);
-  growthStrokeRoundRect(ctx, 62, 1080, 956, 98, 26, "rgba(255,177,43,0.22)", 1);
+  growthFillRoundRect(ctx, 62, 1135, 956, 98, 26, orangePanel);
+  growthStrokeRoundRect(ctx, 62, 1135, 956, 98, 26, "rgba(255,177,43,0.22)", 1);
 
   ctx.fillStyle = "#ffdf8b";
-  ctx.font = "800 24px Arial, sans-serif";
-  ctx.fillText(
-    context?.manualTargetName
-      ? `${context.manualTargetName}: ${context.manualTargetTimeLabel}`
-      : "More targets: school, phone, emergency fund, debt, family support.",
-    94,
-    1139
-  );
-
-  ctx.fillStyle = muted;
-  ctx.font = "700 23px Arial, sans-serif";
-  ctx.fillText("Personal goal simulation only. No real funds, no custody, no staking.", 94, 1234);
-  ctx.fillText("No promised yield. No guaranteed returns. Not financial advice.", 94, 1268);
+  ctx.font = "800 23px Arial, sans-serif";
+  ctx.fillText("Simulation only. No real funds, custody, staking, or guaranteed returns.", 94, 1195);
 
   ctx.fillStyle = green2;
   ctx.font = "900 28px Arial, sans-serif";
-  ctx.fillText("Find the leak. Redirect it into something real.", 66, 1320);
+  ctx.fillText("Find the leak. Redirect it into something real.", 66, 1300);
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -12966,8 +12989,15 @@ function GrowthLabScreen({
     };
   }, [growthShareCardUrl]);
 
-  const leakAmount = useMemo(() => getLeakAmountForGrowth(expenses), [expenses]);
-  const categorySummaries = useMemo(() => getCategorySummaries(expenses), [expenses]);
+  const monthlyLeakExpenses = useMemo(() => getCurrentMonthExpenses(expenses), [expenses]);
+  const leakAmount = useMemo(
+    () => getLeakAmountForGrowth(monthlyLeakExpenses),
+    [monthlyLeakExpenses]
+  );
+  const categorySummaries = useMemo(
+    () => getCategorySummaries(monthlyLeakExpenses),
+    [monthlyLeakExpenses]
+  );
   const topLeak = categorySummaries[0];
 
   const preview = useMemo(
@@ -13044,7 +13074,11 @@ function GrowthLabScreen({
       ? getRealLifeTargetPeriodLabel(primaryRealLifeTarget)
       : "1 month",
     primaryTargetCoverageLabel: primaryRealLifeTarget
-      ? formatGrowthCoverage(finalPoint.balance, getRealLifeTargetTotal(primaryRealLifeTarget))
+      ? formatPlannedCostCoverage(
+          finalPoint.balance,
+          safeNumber(primaryRealLifeTarget.amount),
+          primaryRealLifeTarget.period
+        )
       : "Add amount",
     primaryTargetMonthsLabel: primaryRealLifeTarget
       ? getRealLifeTargetMonthsLabel(primaryRealLifeTarget)
@@ -13054,7 +13088,11 @@ function GrowthLabScreen({
       ? getRealLifeTargetPeriodLabel(secondaryRealLifeTarget)
       : "1 month",
     secondaryTargetCoverageLabel: secondaryRealLifeTarget
-      ? formatGrowthCoverage(finalPoint.balance, getRealLifeTargetTotal(secondaryRealLifeTarget))
+      ? formatPlannedCostCoverage(
+          finalPoint.balance,
+          safeNumber(secondaryRealLifeTarget.amount),
+          secondaryRealLifeTarget.period
+        )
       : "Add amount",
     secondaryTargetMonthsLabel: secondaryRealLifeTarget
       ? getRealLifeTargetMonthsLabel(secondaryRealLifeTarget)
@@ -13092,12 +13130,12 @@ function GrowthLabScreen({
   }
 
   function useMyLeaks() {
-    const weeklyLeak = Math.max(1, Math.round(leakAmount / 4.35));
+    const monthlyLeak = Math.max(1, Math.round(leakAmount));
 
-    setTitle(topLeak ? `${topLeak.category} Leak Plan` : "Leak to Growth Plan");
+    setTitle(topLeak ? `${topLeak.category} Monthly Leak Plan` : "Monthly Leak Plan");
     setStartingAmount("0");
-    setContributionFrequency("weekly");
-    setContributionAmount(String(leakAmount > 0 ? weeklyLeak : 25));
+    setContributionFrequency("monthly");
+    setContributionAmount(String(leakAmount > 0 ? monthlyLeak : 25));
     setDurationMonths("12");
     setExpectedAnnualGrowth("10");
     setRiskLevel("medium");
@@ -13480,9 +13518,6 @@ function GrowthLabScreen({
                   <strong>Planned costs</strong>
                   <span>Add bills or planned expenses. Each row has its own 1m / 12m switch.</span>
                 </div>
-                <button type="button" onClick={addRealLifeTarget}>
-                  + Add cost
-                </button>
               </div>
 
               <div className="growth-real-life-target-list">
@@ -13534,7 +13569,9 @@ function GrowthLabScreen({
                       </div>
 
                       <div className="growth-real-life-target-result">
-                        <span>{formatGrowthCoverage(finalPoint.balance, targetTotal)}</span>
+                        <span>
+                          {formatPlannedCostCoverage(finalPoint.balance, targetAmount, target.period)}
+                        </span>
                         <strong>{formatGoalTime(targetMonths)}</strong>
                         <small>
                           {formatGrowthMonthsCovered(finalPoint.balance, targetAmount)} at{" "}
@@ -13559,6 +13596,14 @@ function GrowthLabScreen({
                     </article>
                   );
                 })}
+
+                <button
+                  type="button"
+                  className="growth-add-cost-bottom"
+                  onClick={addRealLifeTarget}
+                >
+                  + Add planned cost
+                </button>
               </div>
             </>
           ) : (
@@ -13649,7 +13694,7 @@ function GrowthLabScreen({
             disabled={isBuildingShareCard}
             onClick={() => void shareGrowthPlan(preview)}
           >
-            {isBuildingShareCard ? "Sending to bot..." : "Send card to TG bot"}
+            {isBuildingShareCard ? "Sending to bot..." : "Share Saving Goal card"}
           </button>
         </div>
       </section>
