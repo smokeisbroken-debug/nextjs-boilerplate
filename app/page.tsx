@@ -149,6 +149,28 @@ type GrowthShareContext = {
   manualTargetTimeLabel: string;
 };
 
+type DebtRadarKind = "debt" | "bill" | "maintenance";
+type DebtRadarPriority = "low" | "medium" | "high";
+
+type DebtRadarItem = {
+  id: string;
+  name: string;
+  kind: DebtRadarKind;
+  monthlyAmount: string;
+  remainingAmount: string;
+  dueDay: string;
+  priority: DebtRadarPriority;
+};
+
+type DebtRadarTotals = {
+  debtMonthly: number;
+  billMonthly: number;
+  maintenanceMonthly: number;
+  totalMonthly: number;
+  totalRemainingDebt: number;
+  highPriorityCount: number;
+};
+
 type SurvivalForecast = {
   totalIncome: number;
   fixedCosts: number;
@@ -13851,6 +13873,305 @@ function GrowthLabScreen({
 }
 
 
+const DEBT_RADAR_KEY = "broke-debt-bills-radar-v1";
+
+const defaultDebtRadarItems: DebtRadarItem[] = [
+  {
+    id: "debt-main",
+    name: "Credit card / loan",
+    kind: "debt",
+    monthlyAmount: "",
+    remainingAmount: "",
+    dueDay: "",
+    priority: "high",
+  },
+  {
+    id: "subscriptions",
+    name: "Subscriptions",
+    kind: "bill",
+    monthlyAmount: "",
+    remainingAmount: "",
+    dueDay: "",
+    priority: "medium",
+  },
+  {
+    id: "maintenance",
+    name: "Maintenance reserve",
+    kind: "maintenance",
+    monthlyAmount: "",
+    remainingAmount: "",
+    dueDay: "",
+    priority: "medium",
+  },
+];
+
+function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
+  const kind: DebtRadarKind =
+    input.kind === "debt" || input.kind === "bill" || input.kind === "maintenance"
+      ? input.kind
+      : "bill";
+  const priority: DebtRadarPriority =
+    input.priority === "low" || input.priority === "medium" || input.priority === "high"
+      ? input.priority
+      : "medium";
+
+  return {
+    id: input.id || uid(),
+    name: input.name || (kind === "debt" ? "Debt payment" : kind === "maintenance" ? "Maintenance" : "Recurring bill"),
+    kind,
+    monthlyAmount: String(input.monthlyAmount ?? ""),
+    remainingAmount: String(input.remainingAmount ?? ""),
+    dueDay: String(input.dueDay ?? ""),
+    priority,
+  };
+}
+
+function readDebtRadarItems(): DebtRadarItem[] {
+  if (typeof window === "undefined") return defaultDebtRadarItems;
+
+  try {
+    const raw = window.localStorage.getItem(DEBT_RADAR_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Partial<DebtRadarItem>[]) : null;
+
+    if (!Array.isArray(parsed) || parsed.length === 0) return defaultDebtRadarItems;
+
+    return parsed.map(normalizeDebtRadarItem).slice(0, 12);
+  } catch {
+    return defaultDebtRadarItems;
+  }
+}
+
+function writeDebtRadarItems(items: DebtRadarItem[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(DEBT_RADAR_KEY, JSON.stringify(items.slice(0, 12)));
+  } catch {
+    // Debt radar is local-first and optional.
+  }
+}
+
+function getDebtRadarTotals(items: DebtRadarItem[]): DebtRadarTotals {
+  return items.reduce<DebtRadarTotals>(
+    (totals, item) => {
+      const monthlyAmount = Math.max(0, safeNumber(item.monthlyAmount));
+      const remainingAmount = item.kind === "debt" ? Math.max(0, safeNumber(item.remainingAmount)) : 0;
+
+      if (item.kind === "debt") totals.debtMonthly += monthlyAmount;
+      if (item.kind === "bill") totals.billMonthly += monthlyAmount;
+      if (item.kind === "maintenance") totals.maintenanceMonthly += monthlyAmount;
+
+      totals.totalMonthly += monthlyAmount;
+      totals.totalRemainingDebt += remainingAmount;
+      if (item.priority === "high" && monthlyAmount > 0) totals.highPriorityCount += 1;
+
+      return totals;
+    },
+    {
+      debtMonthly: 0,
+      billMonthly: 0,
+      maintenanceMonthly: 0,
+      totalMonthly: 0,
+      totalRemainingDebt: 0,
+      highPriorityCount: 0,
+    }
+  );
+}
+
+function debtRadarKindLabel(kind: DebtRadarKind) {
+  if (kind === "debt") return "Debt";
+  if (kind === "maintenance") return "Maintenance";
+  return "Recurring bill";
+}
+
+function buildDebtRadarItem(kind: DebtRadarKind, name: string): DebtRadarItem {
+  return {
+    id: uid(),
+    name,
+    kind,
+    monthlyAmount: "",
+    remainingAmount: "",
+    dueDay: "",
+    priority: kind === "debt" ? "high" : "medium",
+  };
+}
+
+function DebtBillsRadarPanel({
+  items,
+  totals,
+  settings,
+  onUpdateItem,
+  onAddItem,
+  onRemoveItem,
+}: {
+  items: DebtRadarItem[];
+  totals: DebtRadarTotals;
+  settings: Settings;
+  onUpdateItem: (id: string, patch: Partial<DebtRadarItem>) => void;
+  onAddItem: (kind: DebtRadarKind, name: string) => void;
+  onRemoveItem: (id: string) => void;
+}) {
+  const income = getTotalIncome(settings);
+  const fixedCosts = getFixedCosts(settings);
+  const pressureBase = income > 0 ? income : Math.max(fixedCosts + totals.totalMonthly, 1);
+  const silentPressure = clamp(Math.round((totals.totalMonthly / pressureBase) * 100), 0, 100);
+  const walletHpBeforeDailySpending = clamp(100 - Math.round((totals.totalMonthly / pressureBase) * 70), 0, 100);
+  const quickTargets: { kind: DebtRadarKind; name: string }[] = [
+    { kind: "debt", name: "Credit card" },
+    { kind: "debt", name: "Loan payment" },
+    { kind: "bill", name: "Insurance" },
+    { kind: "bill", name: "Subscriptions" },
+    { kind: "maintenance", name: "Car maintenance" },
+    { kind: "maintenance", name: "Home repair" },
+  ];
+
+  return (
+    <section className="debt-radar-panel">
+      <div className="debt-radar-hero">
+        <div>
+          <span>Silent killers</span>
+          <strong>{money(totals.totalMonthly, settings.currency)}/month</strong>
+          <p>
+            Debt, recurring bills and maintenance hit Wallet HP before daily spending starts.
+          </p>
+        </div>
+        <aside>
+          <b>{walletHpBeforeDailySpending}</b>
+          <small>HP before daily leaks</small>
+        </aside>
+      </div>
+
+      <div className="debt-radar-stats">
+        <div>
+          <span>Debt payments</span>
+          <strong>{money(totals.debtMonthly, settings.currency)}</strong>
+        </div>
+        <div>
+          <span>Recurring bills</span>
+          <strong>{money(totals.billMonthly, settings.currency)}</strong>
+        </div>
+        <div>
+          <span>Maintenance</span>
+          <strong>{money(totals.maintenanceMonthly, settings.currency)}</strong>
+        </div>
+        <div>
+          <span>Silent pressure</span>
+          <strong>{silentPressure}%</strong>
+        </div>
+      </div>
+
+      <div className="debt-radar-warning">
+        <strong>
+          {totals.totalMonthly > 0
+            ? `${money(totals.totalMonthly, settings.currency)} is already waiting every month.`
+            : "Add the silent bills that repeat every month."}
+        </strong>
+        <span>
+          {totals.totalRemainingDebt > 0
+            ? `${money(totals.totalRemainingDebt, settings.currency)} remaining debt tracked. ${totals.highPriorityCount} high-priority item${totals.highPriorityCount === 1 ? "" : "s"}.`
+            : "Use this as a private local log for debt, bills and maintenance. No investment logic."}
+        </span>
+      </div>
+
+      <div className="debt-radar-quick-row">
+        {quickTargets.map((target) => (
+          <button
+            type="button"
+            key={`${target.kind}-${target.name}`}
+            onClick={() => onAddItem(target.kind, target.name)}
+          >
+            + {target.name}
+          </button>
+        ))}
+      </div>
+
+      <div className="debt-radar-list">
+        {items.map((item) => (
+          <article className={`debt-radar-item ${item.kind}`} key={item.id}>
+            <div className="debt-radar-item-head">
+              <div>
+                <span>{debtRadarKindLabel(item.kind)}</span>
+                <input
+                  value={item.name}
+                  placeholder="Name"
+                  onChange={(event) => onUpdateItem(item.id, { name: event.target.value })}
+                />
+              </div>
+              <button type="button" onClick={() => onRemoveItem(item.id)} aria-label={`Remove ${item.name || "item"}`}>
+                ×
+              </button>
+            </div>
+
+            <div className="debt-radar-fields">
+              <label>
+                <span>Type</span>
+                <select
+                  value={item.kind}
+                  onChange={(event) => onUpdateItem(item.id, { kind: event.target.value as DebtRadarKind })}
+                >
+                  <option value="debt">Debt</option>
+                  <option value="bill">Recurring bill</option>
+                  <option value="maintenance">Maintenance</option>
+                </select>
+              </label>
+
+              <label>
+                <span>Monthly hit</span>
+                <input
+                  inputMode="decimal"
+                  value={item.monthlyAmount}
+                  placeholder="0"
+                  onChange={(event) => onUpdateItem(item.id, { monthlyAmount: event.target.value })}
+                />
+              </label>
+
+              <label>
+                <span>Remaining debt</span>
+                <input
+                  inputMode="decimal"
+                  value={item.remainingAmount}
+                  placeholder={item.kind === "debt" ? "0" : "optional"}
+                  onChange={(event) => onUpdateItem(item.id, { remainingAmount: event.target.value })}
+                />
+              </label>
+
+              <label>
+                <span>Due day</span>
+                <input
+                  inputMode="numeric"
+                  value={item.dueDay}
+                  placeholder="1-31"
+                  onChange={(event) => onUpdateItem(item.id, { dueDay: event.target.value })}
+                />
+              </label>
+
+              <label>
+                <span>Priority</span>
+                <select
+                  value={item.priority}
+                  onChange={(event) => onUpdateItem(item.id, { priority: event.target.value as DebtRadarPriority })}
+                >
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                </select>
+              </label>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        className="debt-radar-add"
+        onClick={() => onAddItem("bill", "Custom silent killer")}
+      >
+        + Add custom debt, bill or maintenance log
+      </button>
+    </section>
+  );
+}
+
 function SurvivalModePanel({
   settings,
   forecast,
@@ -14052,6 +14373,9 @@ function WhatIfScreen({
 }) {
   const [reductions, setReductions] = useState<Record<string, number>>({});
   const [survivalSharing, setSurvivalSharing] = useState(false);
+  const [debtRadarItems, setDebtRadarItems] = useState<DebtRadarItem[]>(() =>
+    readDebtRadarItems()
+  );
   const survivalCardRef = useRef<HTMLDivElement | null>(null);
 
   const categorySummaries = useMemo(() => {
@@ -14061,6 +14385,15 @@ function WhatIfScreen({
   }, [expenses]);
 
   const hasRealData = categorySummaries.length > 0;
+
+  useEffect(() => {
+    writeDebtRadarItems(debtRadarItems);
+  }, [debtRadarItems]);
+
+  const debtRadarTotals = useMemo(
+    () => getDebtRadarTotals(debtRadarItems),
+    [debtRadarItems]
+  );
 
   const cards = useMemo<CategorySummary[]>(() => {
     if (hasRealData) return categorySummaries;
@@ -14178,6 +14511,23 @@ function WhatIfScreen({
     }));
   }
 
+  function updateDebtRadarItem(id: string, patch: Partial<DebtRadarItem>) {
+    setDebtRadarItems((current) =>
+      current.map((item) => (item.id === id ? { ...item, ...patch } : item))
+    );
+  }
+
+  function addDebtRadarItem(kind: DebtRadarKind, name: string) {
+    setDebtRadarItems((current) => [buildDebtRadarItem(kind, name), ...current].slice(0, 12));
+    triggerHaptic("light");
+  }
+
+  function removeDebtRadarItem(id: string) {
+    setDebtRadarItems((current) =>
+      current.length <= 1 ? current : current.filter((item) => item.id !== id)
+    );
+  }
+
   return (
     <div className="screen">
       <Header title="Save" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
@@ -14215,6 +14565,24 @@ function WhatIfScreen({
         sharing={survivalSharing}
         onShare={shareSurvivalCard}
       />
+
+      <details className="clean-details debt-radar-details" open>
+        <summary>
+          <div>
+            <span>Debt & Bills Radar</span>
+            <small>Find the ultimate silent leak before daily spending starts.</small>
+          </div>
+          <b>{money(debtRadarTotals.totalMonthly, settings.currency)}/mo</b>
+        </summary>
+        <DebtBillsRadarPanel
+          items={debtRadarItems}
+          totals={debtRadarTotals}
+          settings={settings}
+          onUpdateItem={updateDebtRadarItem}
+          onAddItem={addDebtRadarItem}
+          onRemoveItem={removeDebtRadarItem}
+        />
+      </details>
 
       {!hasRealData && (
         <section className="v58-empty-card v58-save-empty">
