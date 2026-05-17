@@ -2398,7 +2398,7 @@ const ruText: Record<string, string> = {
   "What are you saving for?": "На что ты копишь?",
   "Choose a name or type your own. The amount is always yours.": "Выбери название или введи своё. Сумму всегда вводишь сам.",
   "Buy a laptop": "Купить ноутбук",
-  "+ Add planned cost": "+ Добавить плановый расход",
+  "+ Add custom target": "+ Добавить плановый расход",
   "Share goal card": "Поделиться карточкой цели",
   "Monthly leaks into a personal saving goal": "Месячные утечки в личную цель накопления",
   "Monthly Leak Plan": "Месячный план утечек",
@@ -12612,9 +12612,12 @@ function formatCoverageNumber(value: number) {
 function formatPlannedCostCoverage(
   finalValue: number,
   monthlyAmount: number,
-  period: GrowthMeaningPeriod
+  period: GrowthMeaningPeriod,
+  targetName = "this target"
 ) {
-  if (monthlyAmount <= 0) return "Set monthly amount";
+  const cleanName = targetName.trim() || "this target";
+
+  if (monthlyAmount <= 0) return "Set target amount";
 
   const monthsCovered = finalValue / monthlyAmount;
 
@@ -12622,10 +12625,10 @@ function formatPlannedCostCoverage(
     if (monthsCovered >= 1) {
       return `could cover about ${formatCoverageNumber(monthsCovered)} month${
         monthsCovered === 1 ? "" : "s"
-      }`;
+      } of ${cleanName}`;
     }
 
-    return `could cover about ${Math.round(monthsCovered * 100)}% of 1 month`;
+    return `could cover about ${Math.round(monthsCovered * 100)}% of ${cleanName}`;
   }
 
   const yearlyTarget = monthlyAmount * 12;
@@ -12635,15 +12638,15 @@ function formatPlannedCostCoverage(
     const extraMonths = Math.max(0, Math.floor(monthsCovered - 12));
 
     if (extraMonths > 0) {
-      return `could cover 12 months + ${extraMonths} extra month${
+      return `could cover 12 months of ${cleanName} + ${extraMonths} extra month${
         extraMonths === 1 ? "" : "s"
       }`;
     }
 
-    return "could cover about 12 months";
+    return `could cover about 12 months of ${cleanName}`;
   }
 
-  return `could cover about ${Math.round(yearCoverage * 100)}% of 12 months`;
+  return `could cover about ${Math.round(yearCoverage * 100)}% of yearly ${cleanName}`;
 }
 
 function formatGrowthMonthsCovered(finalValue: number, monthlyAmount: number) {
@@ -12706,8 +12709,8 @@ function buildGrowthShareText(
     `Projected total after ${simulation.durationMonths} months: ${money(result.balance, settings.currency)}`,
     "",
     context
-      ? `Saving goal: ${context.activeGoalName}`
-      : "Saving goal: add what you are building toward",
+      ? `Personal goal: ${context.activeGoalName}`
+      : "Personal goal: add what you are building toward",
     context
       ? `Target: ${money(context.activeGoalTarget, settings.currency)}`
       : "Target: add your own amount",
@@ -12882,7 +12885,7 @@ async function buildGrowthShareCardBlob(
 
   ctx.fillStyle = green;
   ctx.font = "900 30px Arial, sans-serif";
-  ctx.fillText("SAVING GOAL", 94, 575);
+  ctx.fillText("PERSONAL GOAL", 94, 575);
 
   ctx.fillStyle = text;
   ctx.font = "900 58px Arial, sans-serif";
@@ -13043,8 +13046,8 @@ function GrowthLabScreen({
   const [savingGoalName, setSavingGoalName] = useState("");
   const [savingGoalAmount, setSavingGoalAmount] = useState("");
   const [realLifeTargets, setRealLifeTargets] = useState<GrowthManualTarget[]>([
-    { id: "housing", name: "Rent / housing", amount: "", period: "one" },
-    { id: "internet", name: "Internet / data", amount: "", period: "year" },
+    { id: "insurance", name: "Insurance", amount: "", period: "one" },
+    { id: "housing", name: "Mortgage / rent", amount: "", period: "one" },
   ]);
 
   useEffect(() => {
@@ -13127,12 +13130,19 @@ function GrowthLabScreen({
   const goalProgress =
     activeGoalTarget > 0 ? clamp((finalPoint.balance / activeGoalTarget) * 100, 0, 100) : 0;
   const savingGoalOptions = [
-    "Buy a laptop",
+    "School fees",
     "Phone upgrade",
     "Emergency fund",
     "Debt payment",
     "Family support",
     "Business idea",
+  ];
+  const targetCoverageSuggestions = [
+    "School fees",
+    "Phone upgrade",
+    "Emergency fund",
+    "Debt payment",
+    "Family support",
   ];
   const growthShareContext: GrowthShareContext = {
     primaryTargetName: primaryRealLifeTarget?.name.trim() || "Planned expense",
@@ -13143,7 +13153,8 @@ function GrowthLabScreen({
       ? formatPlannedCostCoverage(
           finalPoint.balance,
           safeNumber(primaryRealLifeTarget.amount),
-          primaryRealLifeTarget.period
+          primaryRealLifeTarget.period,
+          primaryRealLifeTarget.name
         )
       : "Add amount",
     primaryTargetMonthsLabel: primaryRealLifeTarget
@@ -13157,7 +13168,8 @@ function GrowthLabScreen({
       ? formatPlannedCostCoverage(
           finalPoint.balance,
           safeNumber(secondaryRealLifeTarget.amount),
-          secondaryRealLifeTarget.period
+          secondaryRealLifeTarget.period,
+          secondaryRealLifeTarget.name
         )
       : "Add amount",
     secondaryTargetMonthsLabel: secondaryRealLifeTarget
@@ -13187,6 +13199,31 @@ function GrowthLabScreen({
       ...current,
       { id: uid(), name: "", amount: "", period: "one" },
     ]);
+  }
+
+  function addSuggestedCoverageTarget(name: string) {
+    setRealLifeTargets((current) => {
+      const alreadyExists = current.some(
+        (target) => target.name.trim().toLowerCase() === name.toLowerCase()
+      );
+
+      if (alreadyExists) return current;
+
+      const emptyIndex = current.findIndex(
+        (target) => !target.name.trim() && !target.amount.trim()
+      );
+
+      if (emptyIndex >= 0) {
+        return current.map((target, index) =>
+          index === emptyIndex ? { ...target, name, period: "one" } : target
+        );
+      }
+
+      return [...current, { id: uid(), name, amount: "", period: "one" }];
+    });
+
+    setGrowthPlannerTab("costs");
+    triggerHaptic("light");
   }
 
   function removeRealLifeTarget(id: string) {
@@ -13507,13 +13544,13 @@ function GrowthLabScreen({
 
         <section className="growth-real-life-plan-card">
           <div className="section-title">
-            <span>Real Life Planner</span>
-            <small>Costs first, goal second</small>
+            <span>Target Coverage</span>
+            <small>1m / 12m view</small>
           </div>
 
           <p>
-            Use this to translate the simulation into real life. Planned costs are bills
-            or expenses you want to cover. Saving goal is the thing you are collecting toward.
+            Turn the projected total into something concrete: insurance, mortgage/rent,
+            school fees, phone upgrade, emergency fund, debt, family support, or any target you add.
           </p>
 
           <div className="growth-planner-tabs">
@@ -13522,14 +13559,14 @@ function GrowthLabScreen({
               className={growthPlannerTab === "costs" ? "active" : ""}
               onClick={() => setGrowthPlannerTab("costs")}
             >
-              Planned costs
+              Coverage lines
             </button>
             <button
               type="button"
               className={growthPlannerTab === "goal" ? "active" : ""}
               onClick={() => setGrowthPlannerTab("goal")}
             >
-              Saving goal
+              Personal goal
             </button>
           </div>
 
@@ -13537,9 +13574,21 @@ function GrowthLabScreen({
             <>
               <div className="growth-real-life-targets-head">
                 <div>
-                  <strong>Planned costs</strong>
-                  <span>Add bills or planned expenses. Use 1m for monthly costs and 12m for yearly costs.</span>
+                  <strong>Main coverage lines</strong>
+                  <span>Start with Insurance and Mortgage / rent. Use 1m for one month or 12m for a yearly view.</span>
                 </div>
+              </div>
+
+              <div className="growth-target-suggestion-row" aria-label="Add custom target suggestions">
+                {targetCoverageSuggestions.map((suggestion) => (
+                  <button
+                    type="button"
+                    key={suggestion}
+                    onClick={() => addSuggestedCoverageTarget(suggestion)}
+                  >
+                    + {suggestion}
+                  </button>
+                ))}
               </div>
 
               <div className="growth-real-life-target-list">
@@ -13592,7 +13641,12 @@ function GrowthLabScreen({
 
                       <div className="growth-real-life-target-result">
                         <span>
-                          {formatPlannedCostCoverage(finalPoint.balance, targetAmount, target.period)}
+                          {formatPlannedCostCoverage(
+                            finalPoint.balance,
+                            targetAmount,
+                            target.period,
+                            target.name
+                          )}
                         </span>
                         <strong>{formatGoalTime(targetMonths)}</strong>
                         <small>
@@ -13624,7 +13678,7 @@ function GrowthLabScreen({
                   className="growth-add-cost-bottom"
                   onClick={addRealLifeTarget}
                 >
-                  + Add planned cost
+                  + Add custom target
                 </button>
               </div>
             </>
@@ -13632,8 +13686,8 @@ function GrowthLabScreen({
             <section className="growth-saving-goal-panel">
               <div className="growth-saving-goal-head">
                 <div>
-                  <strong>What are you saving for?</strong>
-                  <span>Choose a name or type your own. The amount is always yours.</span>
+                  <strong>What are you actually working toward?</strong>
+                  <span>Choose a common target or type your own. The amount stays private unless you share it.</span>
                 </div>
               </div>
 
@@ -13655,7 +13709,7 @@ function GrowthLabScreen({
                   <span>Goal name</span>
                   <input
                     value={savingGoalName}
-                    placeholder="Example: Buy a laptop"
+                    placeholder="Example: Emergency fund"
                     onChange={(event) => setSavingGoalName(event.target.value)}
                   />
                 </label>

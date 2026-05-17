@@ -15582,3 +15582,48 @@ html[lang="ru"] .tab-guide-hero p {
     font-size: 38px !important;
   }
 }
+
+/* ===== V56.7 GROWTH TARGET COVERAGE ===== */
+/* Adds quick custom target chips for Target Coverage without changing Growth logic/API. */
+
+.growth-target-suggestion-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.growth-target-suggestion-row button {
+  min-height: 34px;
+  border: 1px solid rgba(183, 255, 25, 0.10);
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0 10px;
+  font-size: 11px;
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.growth-target-suggestion-row button:active {
+  transform: translateY(1px);
+}
+
+.growth-screen .growth-target-suggestion-row button {
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text) !important;
+  background: rgba(255, 255, 255, 0.045) !important;
+  border-color: rgba(183, 255, 25, 0.12) !important;
+}
+
+@media (max-width: 430px) {
+  .growth-target-suggestion-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .growth-target-suggestion-row button {
+    min-height: 40px;
+    white-space: normal;
+  }
+}
