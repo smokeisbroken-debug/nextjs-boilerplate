@@ -130,9 +130,10 @@ type GrowthManualTarget = {
 };
 
 type GrowthShareContext = {
-  meaningPeriodLabel: string;
+  insurancePeriodLabel: string;
   insuranceCoverageLabel: string;
   insuranceMonthsLabel: string;
+  housingPeriodLabel: string;
   housingCoverageLabel: string;
   housingMonthsLabel: string;
   activeGoalName: string;
@@ -12349,64 +12350,59 @@ function calculateGrowthPoints(
 }
 
 function getGrowthGoalPresets(settings: Settings): GrowthGoalPreset[] {
-  const monthlyLifeCost = Math.max(1, sum(Object.values(settings.fixedCosts)));
-  const rentTarget = Math.max(settings.fixedCosts.rent || monthlyLifeCost * 0.35, 500);
-  const schoolTarget = Math.max(settings.fixedCosts.education || 300, 300);
-  const phoneTarget = settings.currency === "USD" ? 800 : settings.currency === "EUR" ? 750 : 800;
-  const emergencyTarget = Math.max(monthlyLifeCost, rentTarget);
-
   return [
     {
       id: "rent",
       label: "Rent buffer",
-      targetAmount: rentTarget,
+      targetAmount: 0,
       icon: A.lifeCost,
-      description: "A simple real-life buffer for housing pressure.",
+      description: "Housing pressure target. Enter your real amount.",
     },
     {
       id: "emergency",
       label: "Emergency fund",
-      targetAmount: emergencyTarget,
+      targetAmount: 0,
       icon: A.walletHp,
-      description: "One month of basic life cost, shown as an example.",
+      description: "Emergency buffer. Enter what feels real for you.",
     },
     {
       id: "school",
       label: "School fees",
-      targetAmount: schoolTarget,
+      targetAmount: 0,
       icon: A.categories,
-      description: "A practical education/payment target.",
+      description: "Education/payment target. Enter your own number.",
     },
     {
       id: "phone",
       label: "Phone upgrade",
-      targetAmount: phoneTarget,
+      targetAmount: 0,
       icon: A.currency,
-      description: "A common visible goal for redirected leaks.",
+      description: "Device goal. Enter the price you actually need.",
     },
     {
       id: "debt",
       label: "Debt payment",
-      targetAmount: Math.max(monthlyLifeCost * 0.5, 400),
+      targetAmount: 0,
       icon: A.balance,
-      description: "A pressure-reduction target, not financial advice.",
+      description: "Debt pressure target. Enter your own amount.",
     },
     {
       id: "business",
       label: "Business idea",
-      targetAmount: Math.max(monthlyLifeCost * 0.75, 600),
+      targetAmount: 0,
       icon: GROWTH_PUBLIC_ASSETS.trophy,
-      description: "A small project/startup budget example.",
+      description: "Project budget. Enter your real target.",
     },
     {
       id: "family",
       label: "Family support",
-      targetAmount: Math.max(monthlyLifeCost * 0.4, 300),
+      targetAmount: 0,
       icon: A.walletMascot,
-      description: "A personal support goal example.",
+      description: "Support goal. Enter the amount you want to build toward.",
     },
   ];
 }
+
 
 function buildGrowthLifeMeaning(
   finalValue: number,
@@ -12575,10 +12571,10 @@ function buildGrowthShareText(
     `Estimated final value: ${money(result.balance, settings.currency)}`,
     "",
     context
-      ? `Insurance (${context.meaningPeriodLabel}): ${context.insuranceCoverageLabel}`
+      ? `Insurance (${context.insurancePeriodLabel}): ${context.insuranceCoverageLabel}`
       : "Insurance: add your monthly amount",
     context
-      ? `Mortgage / rent (${context.meaningPeriodLabel}): ${context.housingCoverageLabel}`
+      ? `Mortgage / rent (${context.housingPeriodLabel}): ${context.housingCoverageLabel}`
       : "Mortgage / rent: add your monthly amount",
     context
       ? `Goal: ${context.activeGoalName} — ${context.activeGoalTimeLabel}`
@@ -12751,12 +12747,12 @@ async function buildGrowthShareCardBlob(
 
   const priorityRows = [
     {
-      label: "Insurance",
+      label: `Insurance${context ? ` (${context.insurancePeriodLabel})` : ""}`,
       value: context?.insuranceCoverageLabel || "add monthly amount",
       detail: context?.insuranceMonthsLabel || "customize inside Growth Lab",
     },
     {
-      label: "Mortgage / rent",
+      label: `Mortgage / rent${context ? ` (${context.housingPeriodLabel})` : ""}`,
       value: context?.housingCoverageLabel || "add monthly amount",
       detail: context?.housingMonthsLabel || "customize inside Growth Lab",
     },
@@ -12929,11 +12925,11 @@ function GrowthLabScreen({
   const [selectedGoalId, setSelectedGoalId] = useState("emergency");
   const [customGoalName, setCustomGoalName] = useState("");
   const [customGoalAmount, setCustomGoalAmount] = useState("");
-  const [meaningPeriod, setMeaningPeriod] = useState<GrowthMeaningPeriod>("one");
-  const [insuranceMonthly, setInsuranceMonthly] = useState("100");
-  const [housingMonthly, setHousingMonthly] = useState(
-    String(settings.fixedCosts.rent > 0 ? settings.fixedCosts.rent : 500)
-  );
+  const [insurancePeriod, setInsurancePeriod] = useState<GrowthMeaningPeriod>("year");
+  const [housingPeriod, setHousingPeriod] = useState<GrowthMeaningPeriod>("one");
+  const [insuranceMonthly, setInsuranceMonthly] = useState("");
+  const [housingMonthly, setHousingMonthly] = useState("");
+  const [commonGoalAmounts, setCommonGoalAmounts] = useState<Record<string, string>>({});
   const [manualTargets, setManualTargets] = useState<GrowthManualTarget[]>([]);
 
   useEffect(() => {
@@ -12990,13 +12986,14 @@ function GrowthLabScreen({
   const activeGoalTarget =
     growthGoalMode === "custom"
       ? Math.max(0, safeNumber(customGoalAmount))
-      : selectedGoal.targetAmount;
+      : Math.max(0, safeNumber(commonGoalAmounts[selectedGoalId] || ""));
   const goalMonths = getMonthsToGrowthGoal(activeGoalTarget, monthlyContribution);
   const goalProgress =
     activeGoalTarget > 0 ? clamp((finalPoint.balance / activeGoalTarget) * 100, 0, 100) : 0;
-  const meaningMonths = meaningPeriod === "year" ? 12 : 1;
-  const insuranceTarget = safeNumber(insuranceMonthly) * meaningMonths;
-  const housingTarget = safeNumber(housingMonthly) * meaningMonths;
+  const insuranceMonths = insurancePeriod === "year" ? 12 : 1;
+  const housingMonths = housingPeriod === "year" ? 12 : 1;
+  const insuranceTarget = safeNumber(insuranceMonthly) * insuranceMonths;
+  const housingTarget = safeNumber(housingMonthly) * housingMonths;
   const featuredManualTarget = manualTargets.find(
     (target) => target.name.trim() && safeNumber(target.amount) > 0
   );
@@ -13006,12 +13003,13 @@ function GrowthLabScreen({
     monthlyContribution
   );
   const growthShareContext: GrowthShareContext = {
-    meaningPeriodLabel: meaningPeriod === "year" ? "12 months" : "1 month",
+    insurancePeriodLabel: insurancePeriod === "year" ? "12 months" : "1 month",
     insuranceCoverageLabel: formatGrowthCoverage(finalPoint.balance, insuranceTarget),
     insuranceMonthsLabel: `${formatGrowthMonthsCovered(
       finalPoint.balance,
       safeNumber(insuranceMonthly)
     )} at ${money(safeNumber(insuranceMonthly), settings.currency)}/month`,
+    housingPeriodLabel: housingPeriod === "year" ? "12 months" : "1 month",
     housingCoverageLabel: formatGrowthCoverage(finalPoint.balance, housingTarget),
     housingMonthsLabel: `${formatGrowthMonthsCovered(
       finalPoint.balance,
@@ -13025,6 +13023,13 @@ function GrowthLabScreen({
     manualTargetAmount: featuredManualTargetAmount,
     manualTargetTimeLabel: formatGoalTime(featuredManualTargetMonths),
   };
+
+  function updateCommonGoalAmount(id: string, value: string) {
+    setCommonGoalAmounts((current) => ({
+      ...current,
+      [id]: value,
+    }));
+  }
 
   function updateManualTarget(id: string, patch: Partial<GrowthManualTarget>) {
     setManualTargets((current) =>
@@ -13408,28 +13413,29 @@ function GrowthLabScreen({
             First, compare it with the two real-life pressure lines most people understand:
           </p>
 
-          <div className="growth-meaning-period-row">
-            <button
-              type="button"
-              className={meaningPeriod === "one" ? "active" : ""}
-              onClick={() => setMeaningPeriod("one")}
-            >
-              1 month
-            </button>
-            <button
-              type="button"
-              className={meaningPeriod === "year" ? "active" : ""}
-              onClick={() => setMeaningPeriod("year")}
-            >
-              12 months
-            </button>
-          </div>
-
           <div className="growth-priority-lines">
             <article>
               <img src={A.walletHp} alt="" />
               <div>
-                <strong>Insurance</strong>
+                <div className="growth-priority-line-head">
+                  <strong>Insurance</strong>
+                  <div className="growth-row-period-toggle">
+                    <button
+                      type="button"
+                      className={insurancePeriod === "one" ? "active" : ""}
+                      onClick={() => setInsurancePeriod("one")}
+                    >
+                      1m
+                    </button>
+                    <button
+                      type="button"
+                      className={insurancePeriod === "year" ? "active" : ""}
+                      onClick={() => setInsurancePeriod("year")}
+                    >
+                      12m
+                    </button>
+                  </div>
+                </div>
                 <span>{formatGrowthCoverage(finalPoint.balance, insuranceTarget)}</span>
                 <small>
                   {formatGrowthMonthsCovered(finalPoint.balance, safeNumber(insuranceMonthly))} at{" "}
@@ -13438,6 +13444,7 @@ function GrowthLabScreen({
                 <input
                   inputMode="decimal"
                   value={insuranceMonthly}
+                  placeholder="Monthly insurance amount"
                   onChange={(event) => setInsuranceMonthly(event.target.value)}
                   aria-label="Monthly insurance amount"
                 />
@@ -13447,7 +13454,25 @@ function GrowthLabScreen({
             <article>
               <img src={A.lifeCost} alt="" />
               <div>
-                <strong>Mortgage / rent</strong>
+                <div className="growth-priority-line-head">
+                  <strong>Mortgage / rent</strong>
+                  <div className="growth-row-period-toggle">
+                    <button
+                      type="button"
+                      className={housingPeriod === "one" ? "active" : ""}
+                      onClick={() => setHousingPeriod("one")}
+                    >
+                      1m
+                    </button>
+                    <button
+                      type="button"
+                      className={housingPeriod === "year" ? "active" : ""}
+                      onClick={() => setHousingPeriod("year")}
+                    >
+                      12m
+                    </button>
+                  </div>
+                </div>
                 <span>{formatGrowthCoverage(finalPoint.balance, housingTarget)}</span>
                 <small>
                   {formatGrowthMonthsCovered(finalPoint.balance, safeNumber(housingMonthly))} at{" "}
@@ -13456,6 +13481,7 @@ function GrowthLabScreen({
                 <input
                   inputMode="decimal"
                   value={housingMonthly}
+                  placeholder="Monthly mortgage / rent amount"
                   onChange={(event) => setHousingMonthly(event.target.value)}
                   aria-label="Monthly mortgage or rent amount"
                 />
@@ -13512,16 +13538,30 @@ function GrowthLabScreen({
           {growthGoalMode === "common" ? (
             <div className="growth-goal-preset-grid">
               {growthGoalPresets.map((goal) => (
-                <button
-                  type="button"
+                <article
                   key={goal.id}
                   className={selectedGoalId === goal.id ? "active" : ""}
-                  onClick={() => setSelectedGoalId(goal.id)}
                 >
-                  <img src={goal.icon} alt="" />
-                  <span>{goal.label}</span>
-                  <strong>{money(goal.targetAmount, settings.currency)}</strong>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedGoalId(goal.id)}
+                  >
+                    <img src={goal.icon} alt="" />
+                    <span>{goal.label}</span>
+                    <small>{goal.description}</small>
+                  </button>
+
+                  <input
+                    inputMode="decimal"
+                    value={commonGoalAmounts[goal.id] || ""}
+                    placeholder="Target amount"
+                    onChange={(event) => {
+                      setSelectedGoalId(goal.id);
+                      updateCommonGoalAmount(goal.id, event.target.value);
+                    }}
+                    aria-label={`${goal.label} target amount`}
+                  />
+                </article>
               ))}
             </div>
           ) : (
