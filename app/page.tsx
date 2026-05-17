@@ -103,6 +103,24 @@ type GrowthPoint = {
   gain: number;
 };
 
+type GrowthGoalMode = "common" | "custom";
+
+type GrowthGoalPreset = {
+  id: string;
+  label: string;
+  targetAmount: number;
+  icon: string;
+  description: string;
+};
+
+type GrowthLifeMeaningItem = {
+  id: string;
+  label: string;
+  detail: string;
+  icon: string;
+  coverageLabel: string;
+};
+
 type SurvivalForecast = {
   totalIncome: number;
   fixedCosts: number;
@@ -2293,6 +2311,26 @@ const ruText: Record<string, string> = {
   "Micro-leak tax": "Налог мелких утечек",
   "Subscription audit": "Аудит подписок",
   "Life cost is not the enemy": "Стоимость жизни — не враг",
+  "Real Life Meaning": "Реальный смысл",
+  "Examples, not promises": "Примеры, не обещания",
+  "is not just a number.": "это не просто число.",
+  "Custom Goal": "Личная цель",
+  "What are you building toward?": "К чему ты реально идёшь?",
+  "Common goals": "Готовые цели",
+  "Custom goal": "Своя цель",
+  "Goal name": "Название цели",
+  "Target amount": "Целевая сумма",
+  "Goal": "Цель",
+  "Redirected/month": "Перенаправлено/месяц",
+  "Rent buffer": "Буфер аренды",
+  "Emergency fund": "Резерв",
+  "Emergency savings": "Экстренные накопления",
+  "School fees": "Учёба",
+  "Phone upgrade": "Новый телефон",
+  "Debt payment": "Платёж по долгу",
+  "Business idea": "Бизнес-идея",
+  "Family support": "Поддержка семьи",
+  "Personal goal simulation only. No real funds, no custody, no staking, no guaranteed returns.": "Только симуляция личной цели. Нет реальных средств, хранения, стейкинга или гарантированной доходности.",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -6375,9 +6413,9 @@ function HelpGuideModal({
           icon: GROWTH_PUBLIC_ASSETS.market,
         },
         {
-          title: "5. Share the Growth card",
+          title: "5. Use Real Life Meaning",
           body: [
-            "Send card to TG bot generates a clean PNG card.",
+            "Real Life Meaning explains what the simulated amount could represent in practical life.",
             "The bot sends it to the user chat, and the user can forward it anywhere.",
             "The card is designed for public sharing and does not show private income.",
           ],
@@ -12271,6 +12309,159 @@ function calculateGrowthPoints(
   return points;
 }
 
+function getGrowthGoalPresets(settings: Settings): GrowthGoalPreset[] {
+  const monthlyLifeCost = Math.max(1, sum(Object.values(settings.fixedCosts)));
+  const rentTarget = Math.max(settings.fixedCosts.rent || monthlyLifeCost * 0.35, 500);
+  const schoolTarget = Math.max(settings.fixedCosts.education || 300, 300);
+  const phoneTarget = settings.currency === "USD" ? 800 : settings.currency === "EUR" ? 750 : 800;
+  const emergencyTarget = Math.max(monthlyLifeCost, rentTarget);
+
+  return [
+    {
+      id: "rent",
+      label: "Rent buffer",
+      targetAmount: rentTarget,
+      icon: A.lifeCost,
+      description: "A simple real-life buffer for housing pressure.",
+    },
+    {
+      id: "emergency",
+      label: "Emergency fund",
+      targetAmount: emergencyTarget,
+      icon: A.walletHp,
+      description: "One month of basic life cost, shown as an example.",
+    },
+    {
+      id: "school",
+      label: "School fees",
+      targetAmount: schoolTarget,
+      icon: A.categories,
+      description: "A practical education/payment target.",
+    },
+    {
+      id: "phone",
+      label: "Phone upgrade",
+      targetAmount: phoneTarget,
+      icon: A.currency,
+      description: "A common visible goal for redirected leaks.",
+    },
+    {
+      id: "debt",
+      label: "Debt payment",
+      targetAmount: Math.max(monthlyLifeCost * 0.5, 400),
+      icon: A.balance,
+      description: "A pressure-reduction target, not financial advice.",
+    },
+    {
+      id: "business",
+      label: "Business idea",
+      targetAmount: Math.max(monthlyLifeCost * 0.75, 600),
+      icon: GROWTH_PUBLIC_ASSETS.trophy,
+      description: "A small project/startup budget example.",
+    },
+    {
+      id: "family",
+      label: "Family support",
+      targetAmount: Math.max(monthlyLifeCost * 0.4, 300),
+      icon: A.walletMascot,
+      description: "A personal support goal example.",
+    },
+  ];
+}
+
+function buildGrowthLifeMeaning(
+  finalValue: number,
+  settings: Settings
+): GrowthLifeMeaningItem[] {
+  const monthlyLifeCost = Math.max(1, sum(Object.values(settings.fixedCosts)));
+  const rent = Math.max(settings.fixedCosts.rent || monthlyLifeCost * 0.35, 1);
+  const school = Math.max(settings.fixedCosts.education || 300, 1);
+  const phone = settings.currency === "USD" ? 800 : settings.currency === "EUR" ? 750 : 800;
+  const emergency = Math.max(monthlyLifeCost, rent);
+  const familySupport = Math.max(monthlyLifeCost * 0.25, 150);
+  const debtPayment = Math.max(monthlyLifeCost * 0.5, 250);
+
+  const items = [
+    {
+      id: "rent",
+      label: "Rent buffer",
+      target: rent,
+      icon: A.lifeCost,
+      detail: "example housing buffer",
+    },
+    {
+      id: "emergency",
+      label: "Emergency savings",
+      target: emergency,
+      icon: A.walletHp,
+      detail: "example basic life-cost buffer",
+    },
+    {
+      id: "school",
+      label: "School fees",
+      target: school,
+      icon: A.categories,
+      detail: "example education payment",
+    },
+    {
+      id: "phone",
+      label: "Phone upgrade",
+      target: phone,
+      icon: A.currency,
+      detail: "example device goal",
+    },
+    {
+      id: "debt",
+      label: "Debt payment",
+      target: debtPayment,
+      icon: A.balance,
+      detail: "example pressure reduction",
+    },
+    {
+      id: "family",
+      label: "Family support",
+      target: familySupport,
+      icon: A.walletMascot,
+      detail: "example support budget",
+    },
+  ];
+
+  return items.map((item) => {
+    const coverage = finalValue / item.target;
+
+    return {
+      id: item.id,
+      label: item.label,
+      detail: item.detail,
+      icon: item.icon,
+      coverageLabel:
+        coverage >= 1
+          ? `Could cover about ${Math.floor(coverage)}x`
+          : `Could cover about ${Math.round(coverage * 100)}%`,
+    };
+  });
+}
+
+function getMonthsToGrowthGoal(targetAmount: number, monthlyContribution: number) {
+  if (targetAmount <= 0 || monthlyContribution <= 0) return null;
+
+  return Math.max(1, Math.ceil(targetAmount / monthlyContribution));
+}
+
+function formatGoalTime(months: number | null) {
+  if (!months) return "Add a target and redirected leak amount first.";
+  if (months < 2) return "around 1 month";
+  if (months < 12) return `around ${months} months`;
+
+  const years = Math.floor(months / 12);
+  const rest = months % 12;
+
+  if (rest === 0) return `around ${years} year${years === 1 ? "" : "s"}`;
+
+  return `around ${years}y ${rest}m`;
+}
+
+
 function getGrowthFinal(simulation: GrowthSimulation, annualGrowthOverride?: number) {
   const points = calculateGrowthPoints(simulation, annualGrowthOverride);
 
@@ -12318,8 +12509,9 @@ function buildGrowthShareText(simulation: GrowthSimulation, settings: Settings) 
     `Estimated final value: ${money(result.balance, settings.currency)}`,
     `Estimated gain: ${money(result.gain, settings.currency)}`,
     "",
-    "Simulation only. No guaranteed returns.",
-    "Find the leak. Redirect it into growth.",
+    "Real-life meaning: rent buffer, emergency savings, school fees, phone upgrade, debt payment, family support.",
+    "Personal goal simulation only. No real funds, no custody, no staking, no guaranteed returns.",
+    "Find the leak. Redirect it into something real.",
   ].join("\n");
 }
 
@@ -12634,6 +12826,10 @@ function GrowthLabScreen({
   const [growthShareCardUrl, setGrowthShareCardUrl] = useState("");
   const [growthShareText, setGrowthShareText] = useState("");
   const [isBuildingShareCard, setIsBuildingShareCard] = useState(false);
+  const [growthGoalMode, setGrowthGoalMode] = useState<GrowthGoalMode>("common");
+  const [selectedGoalId, setSelectedGoalId] = useState("emergency");
+  const [customGoalName, setCustomGoalName] = useState("Buy a laptop");
+  const [customGoalAmount, setCustomGoalAmount] = useState("800");
 
   useEffect(() => {
     return () => {
@@ -12677,6 +12873,22 @@ function GrowthLabScreen({
   const monthlyContribution = monthlyGrowthContribution(preview);
   const bars = points.filter((point) => point.month > 0).slice(-6);
   const maxBar = Math.max(...bars.map((point) => point.balance), 1);
+  const lifeMeaningItems = useMemo(
+    () => buildGrowthLifeMeaning(finalPoint.balance, settings),
+    [finalPoint.balance, settings]
+  );
+  const growthGoalPresets = useMemo(() => getGrowthGoalPresets(settings), [settings]);
+  const selectedGoal =
+    growthGoalPresets.find((goal) => goal.id === selectedGoalId) || growthGoalPresets[0];
+  const activeGoalName =
+    growthGoalMode === "custom" ? customGoalName.trim() || "Custom goal" : selectedGoal.label;
+  const activeGoalTarget =
+    growthGoalMode === "custom"
+      ? Math.max(0, safeNumber(customGoalAmount))
+      : selectedGoal.targetAmount;
+  const goalMonths = getMonthsToGrowthGoal(activeGoalTarget, monthlyContribution);
+  const goalProgress =
+    activeGoalTarget > 0 ? clamp((finalPoint.balance / activeGoalTarget) * 100, 0, 100) : 0;
 
   function useMyLeaks() {
     const weeklyLeak = Math.max(1, Math.round(leakAmount / 4.35));
@@ -13031,6 +13243,125 @@ function GrowthLabScreen({
             <strong>{money(cases.best.balance, settings.currency)}</strong>
           </div>
         </div>
+
+        <section className="growth-life-meaning-card">
+          <div className="section-title">
+            <span>Real Life Meaning</span>
+            <small>Examples, not promises</small>
+          </div>
+
+          <p>
+            {money(finalPoint.balance, settings.currency)} is not just a number.
+            In real life, this simulated amount could represent:
+          </p>
+
+          <div className="growth-life-meaning-grid">
+            {lifeMeaningItems.map((item) => (
+              <article key={item.id}>
+                <img src={item.icon} alt="" />
+                <div>
+                  <strong>{item.label}</strong>
+                  <span>{item.coverageLabel}</span>
+                  <small>{item.detail}</small>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <small className="growth-soft-note">
+            Country/region costs are examples based on your app settings where available.
+            They are not exact local pricing and not financial advice.
+          </small>
+        </section>
+
+        <section className="growth-goal-card">
+          <div className="section-title">
+            <span>Custom Goal</span>
+            <small>What are you building toward?</small>
+          </div>
+
+          <div className="growth-goal-tabs">
+            <button
+              type="button"
+              className={growthGoalMode === "common" ? "active" : ""}
+              onClick={() => setGrowthGoalMode("common")}
+            >
+              Common goals
+            </button>
+            <button
+              type="button"
+              className={growthGoalMode === "custom" ? "active" : ""}
+              onClick={() => setGrowthGoalMode("custom")}
+            >
+              Custom goal
+            </button>
+          </div>
+
+          {growthGoalMode === "common" ? (
+            <div className="growth-goal-preset-grid">
+              {growthGoalPresets.map((goal) => (
+                <button
+                  type="button"
+                  key={goal.id}
+                  className={selectedGoalId === goal.id ? "active" : ""}
+                  onClick={() => setSelectedGoalId(goal.id)}
+                >
+                  <img src={goal.icon} alt="" />
+                  <span>{goal.label}</span>
+                  <strong>{money(goal.targetAmount, settings.currency)}</strong>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="growth-custom-goal-fields">
+              <label className="growth-field">
+                <span>Goal name</span>
+                <input
+                  value={customGoalName}
+                  onChange={(event) => setCustomGoalName(event.target.value)}
+                />
+              </label>
+
+              <label className="growth-field">
+                <span>Target amount</span>
+                <input
+                  inputMode="decimal"
+                  value={customGoalAmount}
+                  onChange={(event) => setCustomGoalAmount(event.target.value)}
+                />
+              </label>
+            </div>
+          )}
+
+          <div className="growth-goal-result">
+            <div>
+              <span>Goal</span>
+              <strong>{activeGoalName}</strong>
+            </div>
+            <div>
+              <span>Target</span>
+              <strong>{money(activeGoalTarget, settings.currency)}</strong>
+            </div>
+            <div>
+              <span>Redirected/month</span>
+              <strong>{money(monthlyContribution, settings.currency)}</strong>
+            </div>
+          </div>
+
+          <div className="growth-goal-progress">
+            <i style={{ width: `${goalProgress}%` }} />
+          </div>
+
+          <p>
+            If you redirect your leaks into this goal, you could reach it in{" "}
+            <strong>{formatGoalTime(goalMonths)}</strong>.
+          </p>
+
+          <small className="growth-soft-note">
+            This is a personal goal simulation. No real funds are deposited, no custody,
+            no staking, and no promised yield.
+          </small>
+        </section>
 
         <p className="growth-disclaimer">
           This is only a simulation. It is not financial advice and does not guarantee returns.
