@@ -1828,7 +1828,7 @@ const ruText: Record<string, string> = {
   "$BROKE Growth Lab": "$BROKE Growth Lab",
   "Leak to Growth": "Утечка в рост",
   "Turn money leaks into future value.": "Превращай денежные утечки в будущую ценность.",
-  "Simulation only. No real funds are deposited, no custody, and no guaranteed returns.": "Только симуляция. Реальные средства не вносятся, хранения денег нет, доход не гарантируется.",
+  "Planning only. No real funds, no custody, no staking, and no investments.": "Только симуляция. Реальные средства не вносятся, хранения денег нет, доход не гарантируется.",
   "This month’s detected leaks": "Найденные утечки за месяц",
   "This month's detected leaks": "Найденные утечки за месяц",
   "No leaks yet. Add expenses to create a real plan.": "Утечек пока нет. Добавь расходы, чтобы создать реальный план.",
@@ -1854,12 +1854,12 @@ const ruText: Record<string, string> = {
   "Worst case": "Худший сценарий",
   "Base case": "Базовый сценарий",
   "Best case": "Лучший сценарий",
-  "This is only a simulation. It is not financial advice and does not guarantee returns.": "Это только симуляция. Это не финансовый совет и не гарантия дохода.",
-  "Save simulation": "Сохранить симуляцию",
+  "This is only a personal planning simulation. It is not investing, staking, custody, or financial advice.": "Это только симуляция. Это не финансовый совет и не гарантия дохода.",
+  "Save plan": "Сохранить симуляцию",
   "Share growth card": "Поделиться карточкой роста",
   "Saved simulations": "Сохранённые симуляции",
   "No saved plans yet.": "Сохранённых планов пока нет.",
-  "Create one simulation and save it here.": "Создай симуляцию и сохрани её здесь.",
+  "Create one monthly leak plan and save it here.": "Создай симуляцию и сохрани её здесь.",
   "Growth card saved. Share text copied.": "Карточка роста сохранена. Текст скопирован.",
   "Growth plan copied.": "План роста скопирован.",
   "Leak to Growth Plan": "План утечки в рост",
@@ -1867,8 +1867,8 @@ const ruText: Record<string, string> = {
   "Find the leak. Redirect it into growth.": "Найди утечку. Перенаправь её в рост.",
   "Generate share card": "Создать карточку",
   "Creating card...": "Создаём карточку...",
-  "Growth card ready": "Карточка роста готова",
-  "Growth share card preview": "Предпросмотр карточки роста",
+  "Saving goal card ready": "Карточка роста готова",
+  "Saving goal share card preview": "Предпросмотр карточки роста",
   "In Telegram WebView, direct file share can be blocked. Use Download card, copy the text, or long-press the image preview.": "В Telegram WebView прямая отправка файла может блокироваться. Нажми Download card, скопируй текст или удержи изображение предпросмотра.",
   "Download card": "Скачать карточку",
   "Share text copied.": "Текст скопирован.",
@@ -2398,6 +2398,43 @@ const ruText: Record<string, string> = {
   "+ Add planned cost": "+ Добавить плановый расход",
   "Share Saving Goal card": "Поделиться карточкой цели",
   "Monthly leaks into a personal saving goal": "Месячные утечки в личную цель накопления",
+  "Monthly Leak Plan": "Месячный план утечек",
+  "Turn this month’s leaks into a real goal plan.": "Преврати утечки этого месяца в реальный план цели.",
+  "Create monthly leak plan": "Создать месячный план утечек",
+  "Plan name": "Название плана",
+  "Redirected amount": "Перенаправленная сумма",
+  "Planner": "Планировщик",
+  "Total redirected": "Всего перенаправлено",
+  "Plan value": "Сумма плана",
+  "Saved plans": "Сохранённые планы",
+  "No investment assumptions here. This plan simply redirects monthly leaks toward costs or a saving goal.": "Здесь нет инвестиционных предположений. План просто перенаправляет месячные утечки в расходы или цель накопления.",
+  "Growth Lab: Monthly Leak Plan": "Growth Lab: месячный план утечек",
+  "Growth Lab uses Monthly leaks from the current month and turns them into a simple plan. It does not talk about investing. It does not hold money. It only shows what monthly leaks could cover or help you save toward.": "Growth Lab берёт утечки этого месяца и превращает их в простой план. Он не про инвестиции и не хранит деньги. Он показывает, что месячные утечки могли бы покрыть или к какой цели помочь двигаться.",
+  "This is planning only: no deposits, no custody, no staking, no investments, no guaranteed returns, and no financial advice.": "Это только планирование: без депозитов, хранения средств, стейкинга, инвестиций, гарантированной доходности и финансового совета.",
+  "1. Use Monthly leaks": "1. Используй месячные утечки",
+  "Growth Lab reads the current month’s Not needed and Maybe expenses.": "Growth Lab читает расходы Not needed и Maybe за текущий месяц.",
+  "Use my leaks turns the monthly leak amount into a monthly redirected amount.": "Use my leaks превращает сумму месячных утечек в месячную перенаправленную сумму.",
+  "This keeps the plan connected to real tracked app data, not random numbers.": "Так план связан с реальными данными приложения, а не случайными цифрами.",
+  "2. Planned costs": "2. Плановые расходы",
+  "Planned costs are bills or future expenses the user wants to cover.": "Плановые расходы — это счета или будущие траты, которые пользователь хочет покрыть.",
+  "Examples: insurance, rent, school fees, repairs, family support, or any planned cost.": "Примеры: страховка, аренда, учёба, ремонт, поддержка семьи или любой плановый расход.",
+  "Each row has its own 1m / 12m switch because some costs are monthly and some are yearly.": "У каждой строки свой переключатель 1m / 12m, потому что одни расходы месячные, а другие годовые.",
+  "3. Saving goal": "3. Цель накопления",
+  "Saving goal is the thing the user is actually building toward.": "Цель накопления — это то, к чему пользователь реально идёт.",
+  "The user can choose a quick name or type their own goal.": "Пользователь может выбрать быстрое название или ввести свою цель.",
+  "The target amount is always entered manually by the user.": "Целевая сумма всегда вводится пользователем вручную.",
+  "The app shows how long it may take if monthly leaks are redirected into that goal.": "Приложение показывает, сколько времени может занять цель, если перенаправить месячные утечки.",
+  "4. Share Saving Goal card": "4. Поделись карточкой цели",
+  "The share card is only for the Saving goal.": "Share-карточка только для цели накопления.",
+  "Planned costs stay inside the app for personal planning.": "Плановые расходы остаются внутри приложения для личного планирования.",
+  "The card shows the goal, target, estimated time, and redirected monthly leak amount.": "Карточка показывает цель, сумму, примерный срок и месячную перенаправленную утечку.",
+  "It does not show private income or full personal budget details.": "Она не показывает личный доход или полные детали бюджета.",
+  "5. What Growth Lab is not": "5. Чем Growth Lab не является",
+  "It is not investing.": "Это не инвестиции.",
+  "It is not staking.": "Это не стейкинг.",
+  "It is not custody.": "Это не хранение средств.",
+  "It does not move real funds.": "Он не перемещает реальные деньги.",
+  "It is a personal planner that shows what leaks could become if the user changes habits.": "Это личный планировщик, который показывает, чем могут стать утечки, если пользователь изменит привычки.",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -6432,61 +6469,62 @@ function HelpGuideModal({
     growth: {
       label: "Growth",
       eyebrow: "Growth Guide",
-      title: "Growth Lab: Leak to Growth",
+      title: "Growth Lab: Monthly Leak Plan",
       intro:
-        "Growth Lab shows what repeated leaks could become if redirected. It is a simulator for discipline, not a promise, staking product, or investment tool.",
+        "Growth Lab uses Monthly leaks from the current month and turns them into a simple plan. It does not talk about investing. It does not hold money. It only shows what monthly leaks could cover or help you save toward.",
       icon: "/nav-growth.png",
       footerTitle: "Growth Lab rule",
       footerBody:
-        "Simulation only: no deposits, no custody, no guaranteed returns, and no financial advice.",
+        "This is planning only: no deposits, no custody, no staking, no investments, no guaranteed returns, and no financial advice.",
       sections: [
         {
-          title: "1. Understand what Growth Lab is",
+          title: "1. Use Monthly leaks",
           body: [
-            "Growth Lab is a simulator.",
-            "It does not hold user funds.",
-            "It does not promise income.",
-            "It shows possible outcomes if repeated leaks are redirected into a plan.",
-          ],
-          icon: GROWTH_PUBLIC_ASSETS.hero,
-        },
-        {
-          title: "2. Use my leaks",
-          body: [
-            "Use my leaks reads the tracked Not needed and Maybe expenses.",
-            "It converts the leak into a weekly contribution idea.",
-            "This connects the real app data to a simple growth scenario.",
+            "Growth Lab reads the current month’s Not needed and Maybe expenses.",
+            "Use my leaks turns the monthly leak amount into a monthly redirected amount.",
+            "This keeps the plan connected to real tracked app data, not random numbers.",
           ],
           icon: GROWTH_PUBLIC_ASSETS.leak,
         },
         {
-          title: "3. Manual simulation",
+          title: "2. Planned costs",
           body: [
-            "Starting amount is the amount the user begins with.",
-            "Contribution is the amount added daily, weekly, or monthly.",
-            "Duration controls how long the simulation runs.",
-            "Yearly growth is only a user-selected assumption.",
+            "Planned costs are bills or future expenses the user wants to cover.",
+            "Examples: insurance, rent, school fees, repairs, family support, or any planned cost.",
+            "Each row has its own 1m / 12m switch because some costs are monthly and some are yearly.",
           ],
           icon: GROWTH_PUBLIC_ASSETS.lab,
         },
         {
-          title: "4. Read Worst / Base / Best case",
+          title: "3. Saving goal",
           body: [
-            "Worst case shows a conservative outcome.",
-            "Base case uses the selected assumption.",
-            "Best case shows a more optimistic path.",
-            "These are scenarios, not predictions.",
-          ],
-          icon: GROWTH_PUBLIC_ASSETS.market,
-        },
-        {
-          title: "5. Use Real Life Meaning",
-          body: [
-            "Real Life Meaning explains what the simulated amount could represent in practical life.",
-            "The bot sends it to the user chat, and the user can forward it anywhere.",
-            "The card is designed for public sharing and does not show private income.",
+            "Saving goal is the thing the user is actually building toward.",
+            "The user can choose a quick name or type their own goal.",
+            "The target amount is always entered manually by the user.",
+            "The app shows how long it may take if monthly leaks are redirected into that goal.",
           ],
           icon: GROWTH_PUBLIC_ASSETS.trophy,
+        },
+        {
+          title: "4. Share Saving Goal card",
+          body: [
+            "The share card is only for the Saving goal.",
+            "Planned costs stay inside the app for personal planning.",
+            "The card shows the goal, target, estimated time, and redirected monthly leak amount.",
+            "It does not show private income or full personal budget details.",
+          ],
+          icon: SHARE_CARD_PUBLIC_ASSETS.growth,
+        },
+        {
+          title: "5. What Growth Lab is not",
+          body: [
+            "It is not investing.",
+            "It is not staking.",
+            "It is not custody.",
+            "It does not move real funds.",
+            "It is a personal planner that shows what leaks could become if the user changes habits.",
+          ],
+          icon: GROWTH_PUBLIC_ASSETS.market,
         },
       ],
     },
@@ -12637,7 +12675,7 @@ function buildGrowthShareText(
     "$BROKE Growth Lab",
     "",
     `Monthly leaks redirected: ${money(monthlyGrowthContribution(simulation), settings.currency)}/month`,
-    `Future value after ${simulation.durationMonths} months: ${money(result.balance, settings.currency)}`,
+    `Plan value after ${simulation.durationMonths} months: ${money(result.balance, settings.currency)}`,
     "",
     context
       ? `Saving goal: ${context.activeGoalName}`
@@ -12790,14 +12828,14 @@ async function buildGrowthShareCardBlob(
 
   ctx.fillStyle = muted;
   ctx.font = "500 29px Arial, sans-serif";
-  ctx.fillText("Monthly leaks into a personal saving goal", 68, 207);
+  ctx.fillText("Monthly leak plan into a personal saving goal", 68, 207);
 
   growthFillRoundRect(ctx, 62, 255, 956, 190, 34, panel);
   growthStrokeRoundRect(ctx, 62, 255, 956, 190, 34, "rgba(183,255,25,0.22)", 2);
 
   ctx.fillStyle = green;
   ctx.font = "900 30px Arial, sans-serif";
-  ctx.fillText("FUTURE VALUE", 94, 315);
+  ctx.fillText("PLAN VALUE", 94, 315);
 
   ctx.fillStyle = text;
   ctx.font = "900 76px Arial, sans-serif";
@@ -12859,14 +12897,14 @@ async function buildGrowthShareCardBlob(
 
   ctx.fillStyle = muted;
   ctx.font = "700 24px Arial, sans-serif";
-  ctx.fillText("Not just “future value”. It shows what your leaks could build toward.", 94, 1035);
+  ctx.fillText("Not investments. Just monthly leaks redirected toward a real goal.", 94, 1035);
 
   growthFillRoundRect(ctx, 62, 1135, 956, 98, 26, orangePanel);
   growthStrokeRoundRect(ctx, 62, 1135, 956, 98, 26, "rgba(255,177,43,0.22)", 1);
 
   ctx.fillStyle = "#ffdf8b";
   ctx.font = "800 23px Arial, sans-serif";
-  ctx.fillText("Simulation only. No real funds, custody, staking, or guaranteed returns.", 94, 1195);
+  ctx.fillText("Planning only. No real funds, custody, staking, investments, or guarantees.", 94, 1195);
 
   ctx.fillStyle = green2;
   ctx.font = "900 28px Arial, sans-serif";
@@ -12962,14 +13000,14 @@ function GrowthLabScreen({
   const [savedSimulations, setSavedSimulations] = useState<GrowthSimulation[]>(() =>
     readGrowthSimulations()
   );
-  const [title, setTitle] = useState("Leak to Growth Plan");
+  const [title, setTitle] = useState("Monthly Leak Plan");
   const [startingAmount, setStartingAmount] = useState("0");
   const [contributionAmount, setContributionAmount] = useState("25");
   const [contributionFrequency, setContributionFrequency] = useState<GrowthFrequency>("weekly");
   const [durationMonths, setDurationMonths] = useState("12");
-  const [expectedAnnualGrowth, setExpectedAnnualGrowth] = useState("10");
-  const [riskLevel, setRiskLevel] = useState<GrowthRisk>("medium");
-  const [reinvest, setReinvest] = useState(true);
+  const [expectedAnnualGrowth, setExpectedAnnualGrowth] = useState("0");
+  const [riskLevel, setRiskLevel] = useState<GrowthRisk>("low");
+  const [reinvest, setReinvest] = useState(false);
   const [growthShareCardUrl, setGrowthShareCardUrl] = useState("");
   const [growthShareText, setGrowthShareText] = useState("");
   const [isBuildingShareCard, setIsBuildingShareCard] = useState(false);
@@ -13137,9 +13175,9 @@ function GrowthLabScreen({
     setContributionFrequency("monthly");
     setContributionAmount(String(leakAmount > 0 ? monthlyLeak : 25));
     setDurationMonths("12");
-    setExpectedAnnualGrowth("10");
-    setRiskLevel("medium");
-    setReinvest(true);
+    setExpectedAnnualGrowth("0");
+    setRiskLevel("low");
+    setReinvest(false);
     triggerHaptic("success");
   }
 
@@ -13256,10 +13294,10 @@ function GrowthLabScreen({
 
       <section className="growth-hero-card">
         <div>
-          <span>Leak to Growth</span>
-          <h2>Turn money leaks into future value.</h2>
+          <span>Monthly Leak Plan</span>
+          <h2>Turn this month’s leaks into a real goal plan.</h2>
           <p>
-            Simulation only. No real funds are deposited, no custody, and no guaranteed returns.
+            Planning only. No real funds, no custody, no staking, and no investments.
           </p>
         </div>
         <img
@@ -13347,12 +13385,12 @@ function GrowthLabScreen({
 
       <section className="growth-form-card">
         <div className="section-title">
-          <span>Create simulation</span>
+          <span>Create monthly leak plan</span>
           <small>{growthRiskLabel(riskLevel)}</small>
         </div>
 
         <label className="growth-field">
-          <span>Simulation name</span>
+          <span>Plan name</span>
           <input value={title} onChange={(event) => setTitle(event.target.value)} />
         </label>
 
@@ -13367,7 +13405,7 @@ function GrowthLabScreen({
           </label>
 
           <label className="growth-field">
-            <span>Contribution</span>
+            <span>Redirected amount</span>
             <input
               inputMode="decimal"
               value={contributionAmount}
@@ -13389,7 +13427,7 @@ function GrowthLabScreen({
           ))}
         </div>
 
-        <div className="growth-field-grid">
+        <div className="growth-field-grid single">
           <label className="growth-field">
             <span>Duration</span>
             <input
@@ -13399,62 +13437,31 @@ function GrowthLabScreen({
             />
             <small>months</small>
           </label>
-
-          <label className="growth-field">
-            <span>Yearly growth</span>
-            <input
-              inputMode="decimal"
-              value={expectedAnnualGrowth}
-              onChange={(event) => setExpectedAnnualGrowth(event.target.value)}
-            />
-            <small>% simulated</small>
-          </label>
         </div>
 
-        <div className="growth-choice-row">
-          {(["low", "medium", "high"] as GrowthRisk[]).map((risk) => (
-            <button
-              type="button"
-              key={risk}
-              className={riskLevel === risk ? "active" : ""}
-              onClick={() => setRiskLevel(risk)}
-            >
-              {risk === "low" ? "Low" : risk === "medium" ? "Medium" : "High"}
-            </button>
-          ))}
-        </div>
-
-        <button
-          type="button"
-          className={reinvest ? "growth-toggle active" : "growth-toggle"}
-          onClick={() => setReinvest((current) => !current)}
-        >
-          <span>Reinvest simulated gains</span>
-          <strong>{reinvest ? "Yes" : "No"}</strong>
-        </button>
+        <p className="growth-plan-note">
+          No investment assumptions here. This plan simply redirects monthly leaks toward costs or a saving goal.
+        </p>
       </section>
 
       <section className="growth-result-card">
         <div className="section-title">
-          <span>Your Growth Simulation</span>
-          <small>Projected</small>
+          <span>Monthly Leak Plan</span>
+          <small>Planner</small>
         </div>
 
         <div className="growth-result-grid">
           <div>
-            <span>Total contributed</span>
+            <span>Total redirected</span>
             <strong>{money(finalPoint.contributed, settings.currency)}</strong>
           </div>
           <div>
-            <span>Final value</span>
+            <span>Plan value</span>
             <strong>{money(finalPoint.balance, settings.currency)}</strong>
           </div>
+
           <div>
-            <span>Estimated gain</span>
-            <strong>{money(finalPoint.gain, settings.currency)}</strong>
-          </div>
-          <div>
-            <span>Monthly redirected</span>
+            <span>Redirected/month</span>
             <strong>{money(monthlyContribution, settings.currency)}</strong>
           </div>
         </div>
@@ -13468,20 +13475,7 @@ function GrowthLabScreen({
           ))}
         </div>
 
-        <div className="growth-case-grid">
-          <div>
-            <span>Worst case</span>
-            <strong>{money(cases.worst.balance, settings.currency)}</strong>
-          </div>
-          <div>
-            <span>Base case</span>
-            <strong>{money(cases.base.balance, settings.currency)}</strong>
-          </div>
-          <div>
-            <span>Best case</span>
-            <strong>{money(cases.best.balance, settings.currency)}</strong>
-          </div>
-        </div>
+
 
         <section className="growth-real-life-plan-card">
           <div className="section-title">
@@ -13682,12 +13676,12 @@ function GrowthLabScreen({
         </section>
 
         <p className="growth-disclaimer">
-          This is only a simulation. It is not financial advice and does not guarantee returns.
+          This is only a personal planning simulation. It is not investing, staking, custody, or financial advice.
         </p>
 
         <div className="growth-actions">
           <button type="button" onClick={saveSimulation}>
-            Save simulation
+            Save plan
           </button>
           <button
             type="button"
@@ -13707,11 +13701,11 @@ function GrowthLabScreen({
             alt=""
           />
           <div className="section-title">
-            <span>Growth card ready</span>
+            <span>Saving goal card ready</span>
             <small>PNG</small>
           </div>
 
-          <img src={growthShareCardUrl} alt="Growth share card preview" />
+          <img src={growthShareCardUrl} alt="Saving goal share card preview" />
 
           <p>
             The main flow sends this PNG to your Telegram bot chat. If Telegram blocks
@@ -13731,7 +13725,7 @@ function GrowthLabScreen({
 
       <section className="growth-result-card">
         <div className="section-title">
-          <span>Saved simulations</span>
+          <span>Saved plans</span>
           <small>{savedSimulations.length}/8</small>
         </div>
 
@@ -13739,7 +13733,7 @@ function GrowthLabScreen({
           <div className="growth-empty">
             <img src={A.challengeTrophy} alt="" />
             <strong>No saved plans yet.</strong>
-            <span>Create one simulation and save it here.</span>
+            <span>Create one monthly leak plan and save it here.</span>
           </div>
         )}
 
