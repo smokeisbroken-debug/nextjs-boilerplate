@@ -14925,3 +14925,34 @@ html[lang="ru"] .tab-guide-hero p {
     text-align: left;
   }
 }
+
+
+/* ===== V60.10.2 GROWTH SHARE CARD GOAL FIX ===== */
+/* Growth share cards now show Real Life Meaning, Insurance, Mortgage/Rent, and the selected personal goal. */
+
+
+/* ===== V60.10.3 CUSTOM GOAL CLEAN START ===== */
+
+.growth-manual-target-empty {
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(183, 255, 25, 0.055);
+  border: 1px dashed rgba(183, 255, 25, 0.18);
+}
+
+.growth-manual-target-empty strong {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.1;
+  font-weight: 950;
+}
+
+.growth-manual-target-empty span {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.32;
+  font-weight: 740;
+}
