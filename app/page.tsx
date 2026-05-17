@@ -7722,7 +7722,7 @@ function DashboardScreen({
 
           <div className="damage-card">
             <div>
-              <small>Today's Damage</small>
+              <small>Today&apos;s Damage</small>
               <strong>
                 {summary.todaySpent > 0
                   ? `-${money(summary.todaySpent, settings.currency)}`
@@ -7874,8 +7874,12 @@ function SmartHomeFocusCard({
   const [goal, setGoal] = useState<ReturnHookGoal | null>(() => readReturnHookGoal());
 
   useEffect(() => {
-    setRoutineActions(readDailyRoutineActions());
-    setGoal(readReturnHookGoal());
+    const timeout = window.setTimeout(() => {
+      setRoutineActions(readDailyRoutineActions());
+      setGoal(readReturnHookGoal());
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, [summary.todaySpent, summary.totalLeaks, summary.streak.currentStreak, allExpenses.length]);
 
   const todayKey = dayKey(new Date());
@@ -8147,7 +8151,11 @@ function FirstThreeDayJourneyCard({
   );
 
   useEffect(() => {
-    setRoutineActions(readDailyRoutineActions());
+    const timeout = window.setTimeout(() => {
+      setRoutineActions(readDailyRoutineActions());
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, [summary.todaySpent, identityStats.biggestLeakAmount, summary.streak.currentStreak]);
 
   const day1Done = allExpenses.length > 0 || summary.todaySpent > 0;
@@ -8310,8 +8318,12 @@ function DailyReturnHookCard({
   const [goal, setGoal] = useState<ReturnHookGoal | null>(() => readReturnHookGoal());
 
   useEffect(() => {
-    setRoutineActions(readDailyRoutineActions());
-    setGoal(readReturnHookGoal());
+    const timeout = window.setTimeout(() => {
+      setRoutineActions(readDailyRoutineActions());
+      setGoal(readReturnHookGoal());
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, [summary.todaySpent, summary.streak.currentStreak, allExpenses.length]);
 
   const todayKey = dayKey(new Date());
@@ -10031,7 +10043,11 @@ function WalletInsightsPanel({
   }, [safeInsights.length, expanded]);
 
   useEffect(() => {
-    setIndex(0);
+    const timeout = window.setTimeout(() => {
+      setIndex(0);
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, [safeInsights.length]);
 
   return (
@@ -14817,9 +14833,13 @@ function EditableMoneyLine({
   const [focused, setFocused] = useState(false);
 
   useEffect(() => {
-    if (!focused) {
-      setDraftValue(String(value));
-    }
+    const timeout = window.setTimeout(() => {
+      if (!focused) {
+        setDraftValue(String(value));
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
   }, [focused, value]);
 
   return (
