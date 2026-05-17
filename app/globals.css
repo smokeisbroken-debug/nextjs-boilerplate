@@ -1178,7 +1178,8 @@ img {
 }
 
 .debt-radar-stats span,
-.debt-radar-warning span {
+.debt-radar-warning span,
+.debt-radar-note {
   display: block;
   color: var(--muted);
   font-size: 10px;
@@ -1205,6 +1206,14 @@ img {
   margin-bottom: 4px;
   color: #dce5d6;
   font-size: 13px;
+}
+
+.debt-radar-note {
+  margin: -4px 0 0;
+  padding: 9px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .debt-radar-quick-row {
@@ -1265,6 +1274,14 @@ img {
   letter-spacing: 0.3px;
 }
 
+.debt-radar-item-meta {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
 .debt-radar-item-head input,
 .debt-radar-fields input,
 .debt-radar-fields select {
@@ -1304,8 +1321,17 @@ img {
 }
 
 @media (max-width: 430px) {
+  .debt-radar-panel {
+    gap: 10px;
+  }
+
   .debt-radar-hero {
     grid-template-columns: 1fr;
+    padding: 12px;
+  }
+
+  .debt-radar-hero strong {
+    font-size: 24px;
   }
 
   .debt-radar-hero aside {
@@ -1319,8 +1345,46 @@ img {
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .debt-radar-stats div {
+    min-height: 58px;
+    padding: 9px;
+  }
+
+  .debt-radar-quick-row {
+    margin-inline: -2px;
+    padding: 0 2px 3px;
+  }
+
+  .debt-radar-item {
+    padding: 11px;
+  }
+
+  .debt-radar-item-head {
+    grid-template-columns: minmax(0, 1fr) 30px;
+  }
+
+  .debt-radar-item-head button {
+    width: 30px;
+    height: 30px;
+  }
+
+  .debt-radar-item-head input,
+  .debt-radar-fields input,
+  .debt-radar-fields select {
+    min-height: 40px;
+    font-size: 16px;
+  }
+
   .debt-radar-fields {
     grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .debt-radar-add {
+    min-height: 42px;
+    white-space: normal;
+    line-height: 1.25;
+    padding: 8px 12px;
   }
 }
 
