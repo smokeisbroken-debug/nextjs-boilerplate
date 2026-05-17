@@ -1,6 +1,6 @@
 # $BROKE / SmokeIsBroke Telegram Mini App
 
-Current stable checkpoint: **v56.2**.
+Current stable checkpoint: **v56.6**.
 
 This is the working Next.js app for the $BROKE / SmokeIsBroke ecosystem.
 
@@ -27,7 +27,16 @@ app/api/auth/telegram     Website Telegram login
 ```bash
 npm run dev
 npm run typecheck
-npm run check
+npm run lint:quiet
+npm run build
+npm run verify
+```
+
+Use `npm run verify` before deploy. It runs:
+
+```bash
+npm run typecheck
+npm run lint:quiet
 npm run build
 ```
 
@@ -37,7 +46,7 @@ Copy `.env.example` into Vercel Environment Variables. Do not commit real secret
 
 ## v56.2 Settings Sync Fix
 
-v56.2 adds full settings sync support through a JSONB column:
+v56.2 added full settings sync support through a JSONB column:
 
 ```sql
 alter table public.broke_settings
@@ -51,3 +60,12 @@ supabase/migrations/20260517_v56_2_settings_payload.sql
 ```
 
 The app is backward-compatible. If this column is not created yet, legacy settings still save and the app does not crash. For full website ↔ Telegram sync of language, region, life mode, survival, privacy, custom category names, data cost, and education cost, run the migration in Supabase SQL Editor.
+
+## v56.6 Cleanup/Testing
+
+v56.6 does not add product mechanics. It updates project maintenance only:
+
+- adds `lint:quiet` and `verify` scripts;
+- reduces expected `<img>` lint noise, because the app intentionally uses local static PNG assets and share-card-friendly image tags;
+- removes several unused API variables/functions;
+- adds `TESTING.md` for manual checks after deploy.

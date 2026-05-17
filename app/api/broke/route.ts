@@ -1674,7 +1674,6 @@ async function buildBadgeMetrics(
 
 function shouldUnlockBadge(badgeId: string, metrics: BadgeMetrics) {
   const {
-    monthExpenses,
     totalExpenses,
     totalLeaks,
     availableAfterLifeCost,

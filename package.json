@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm run lint"
+    "check": "npm run typecheck && npm run lint",
+    "lint:quiet": "eslint --quiet",
+    "verify": "npm run typecheck && npm run lint:quiet && npm run build"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",

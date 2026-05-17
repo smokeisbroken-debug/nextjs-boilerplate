@@ -136,7 +136,7 @@ function getAuthenticatedUser(request: NextRequest, initData: string) {
   throw new Error("Login with Telegram first.");
 }
 
-function shortCaption(caption: string, user: TelegramUser) {
+function shortCaption() {
   return "";
 }
 
@@ -172,7 +172,6 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const image = formData.get("image");
-    const caption = String(formData.get("caption") || "");
     const initData = String(formData.get("initData") || "");
     const target = String(formData.get("target") || "user");
 
@@ -189,7 +188,7 @@ export async function POST(request: NextRequest) {
         ? process.env.TELEGRAM_GROUP_ID
         : user.id;
 
-    await sendPhotoToTelegram(chatId, image, shortCaption(caption, user));
+    await sendPhotoToTelegram(chatId, image, shortCaption());
 
     return NextResponse.json({
       ok: true,
