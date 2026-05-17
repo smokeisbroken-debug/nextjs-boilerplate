@@ -127,15 +127,18 @@ type GrowthManualTarget = {
   id: string;
   name: string;
   amount: string;
+  period: GrowthMeaningPeriod;
 };
 
 type GrowthShareContext = {
-  insurancePeriodLabel: string;
-  insuranceCoverageLabel: string;
-  insuranceMonthsLabel: string;
-  housingPeriodLabel: string;
-  housingCoverageLabel: string;
-  housingMonthsLabel: string;
+  primaryTargetName: string;
+  primaryTargetPeriodLabel: string;
+  primaryTargetCoverageLabel: string;
+  primaryTargetMonthsLabel: string;
+  secondaryTargetName: string;
+  secondaryTargetPeriodLabel: string;
+  secondaryTargetCoverageLabel: string;
+  secondaryTargetMonthsLabel: string;
   activeGoalName: string;
   activeGoalTarget: number;
   activeGoalTimeLabel: string;
@@ -2371,6 +2374,14 @@ const ruText: Record<string, string> = {
   "Add your own target: school fees, phone upgrade, emergency fund, debt, rent, family support, or anything personal.": "Добавь свою цель: учёба, телефон, резерв, долг, аренда, поддержка семьи или что-то личное.",
   "Example: Buy a laptop": "Пример: купить ноутбук",
   "Example: 800": "Пример: 800",
+  "Real Life Plan": "Реальный план",
+  "One place for planned expenses and goals": "Одно место для плановых расходов и целей",
+  "Planned expenses / goals": "Плановые расходы / цели",
+  "Each row has its own 1 month / 12 months switch.": "У каждой строки свой переключатель 1 месяц / 12 месяцев.",
+  "Real life goal name": "Название реальной цели",
+  "Real life monthly amount": "Месячная сумма реальной цели",
+  "Remove planned expense": "Удалить плановый расход",
+  "Monthly amount": "Месячная сумма",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -12571,11 +12582,11 @@ function buildGrowthShareText(
     `Estimated final value: ${money(result.balance, settings.currency)}`,
     "",
     context
-      ? `Insurance (${context.insurancePeriodLabel}): ${context.insuranceCoverageLabel}`
-      : "Insurance: add your monthly amount",
+      ? `${context.primaryTargetName} (${context.primaryTargetPeriodLabel}): ${context.primaryTargetCoverageLabel}`
+      : "Planned expense: add your amount",
     context
-      ? `Mortgage / rent (${context.housingPeriodLabel}): ${context.housingCoverageLabel}`
-      : "Mortgage / rent: add your monthly amount",
+      ? `${context.secondaryTargetName} (${context.secondaryTargetPeriodLabel}): ${context.secondaryTargetCoverageLabel}`
+      : "Second target: add your amount",
     context
       ? `Goal: ${context.activeGoalName} — ${context.activeGoalTimeLabel}`
       : "Goal: choose what you are building toward",
@@ -12747,14 +12758,18 @@ async function buildGrowthShareCardBlob(
 
   const priorityRows = [
     {
-      label: `Insurance${context ? ` (${context.insurancePeriodLabel})` : ""}`,
-      value: context?.insuranceCoverageLabel || "add monthly amount",
-      detail: context?.insuranceMonthsLabel || "customize inside Growth Lab",
+      label: context
+        ? `${context.primaryTargetName} (${context.primaryTargetPeriodLabel})`
+        : "Planned expense",
+      value: context?.primaryTargetCoverageLabel || "add amount",
+      detail: context?.primaryTargetMonthsLabel || "customize inside Growth Lab",
     },
     {
-      label: `Mortgage / rent${context ? ` (${context.housingPeriodLabel})` : ""}`,
-      value: context?.housingCoverageLabel || "add monthly amount",
-      detail: context?.housingMonthsLabel || "customize inside Growth Lab",
+      label: context
+        ? `${context.secondaryTargetName} (${context.secondaryTargetPeriodLabel})`
+        : "Second target",
+      value: context?.secondaryTargetCoverageLabel || "add amount",
+      detail: context?.secondaryTargetMonthsLabel || "customize inside Growth Lab",
     },
   ];
 
@@ -12782,11 +12797,11 @@ async function buildGrowthShareCardBlob(
 
   ctx.fillStyle = green;
   ctx.font = "900 28px Arial, sans-serif";
-  ctx.fillText("PERSONAL GOAL", 94, 908);
+  ctx.fillText("REAL LIFE PLAN", 94, 908);
 
   ctx.fillStyle = text;
   ctx.font = "900 48px Arial, sans-serif";
-  ctx.fillText(context?.activeGoalName || "Choose your real goal", 94, 970);
+  ctx.fillText(context?.activeGoalName || "Add your planned expense", 94, 970);
 
   ctx.fillStyle = muted;
   ctx.font = "700 24px Arial, sans-serif";
@@ -12806,7 +12821,7 @@ async function buildGrowthShareCardBlob(
   ctx.fillText(
     context?.manualTargetName
       ? `${context.manualTargetName}: ${context.manualTargetTimeLabel}`
-      : "Manual targets: school, phone, emergency fund, debt, family support.",
+      : "More targets: school, phone, emergency fund, debt, family support.",
     94,
     1139
   );
@@ -12921,16 +12936,10 @@ function GrowthLabScreen({
   const [growthShareCardUrl, setGrowthShareCardUrl] = useState("");
   const [growthShareText, setGrowthShareText] = useState("");
   const [isBuildingShareCard, setIsBuildingShareCard] = useState(false);
-  const [growthGoalMode, setGrowthGoalMode] = useState<GrowthGoalMode>("common");
-  const [selectedGoalId, setSelectedGoalId] = useState("emergency");
-  const [customGoalName, setCustomGoalName] = useState("");
-  const [customGoalAmount, setCustomGoalAmount] = useState("");
-  const [insurancePeriod, setInsurancePeriod] = useState<GrowthMeaningPeriod>("year");
-  const [housingPeriod, setHousingPeriod] = useState<GrowthMeaningPeriod>("one");
-  const [insuranceMonthly, setInsuranceMonthly] = useState("");
-  const [housingMonthly, setHousingMonthly] = useState("");
-  const [commonGoalAmounts, setCommonGoalAmounts] = useState<Record<string, string>>({});
-  const [manualTargets, setManualTargets] = useState<GrowthManualTarget[]>([]);
+  const [realLifeTargets, setRealLifeTargets] = useState<GrowthManualTarget[]>([
+    { id: "insurance", name: "Insurance", amount: "", period: "year" },
+    { id: "housing", name: "Mortgage / rent", amount: "", period: "one" },
+  ]);
 
   useEffect(() => {
     return () => {
@@ -12978,74 +12987,81 @@ function GrowthLabScreen({
     () => buildGrowthLifeMeaning(finalPoint.balance, settings),
     [finalPoint.balance, settings]
   );
-  const growthGoalPresets = useMemo(() => getGrowthGoalPresets(settings), [settings]);
-  const selectedGoal =
-    growthGoalPresets.find((goal) => goal.id === selectedGoalId) || growthGoalPresets[0];
-  const activeGoalName =
-    growthGoalMode === "custom" ? customGoalName.trim() || "Your custom goal" : selectedGoal.label;
-  const activeGoalTarget =
-    growthGoalMode === "custom"
-      ? Math.max(0, safeNumber(customGoalAmount))
-      : Math.max(0, safeNumber(commonGoalAmounts[selectedGoalId] || ""));
-  const goalMonths = getMonthsToGrowthGoal(activeGoalTarget, monthlyContribution);
-  const goalProgress =
-    activeGoalTarget > 0 ? clamp((finalPoint.balance / activeGoalTarget) * 100, 0, 100) : 0;
-  const insuranceMonths = insurancePeriod === "year" ? 12 : 1;
-  const housingMonths = housingPeriod === "year" ? 12 : 1;
-  const insuranceTarget = safeNumber(insuranceMonthly) * insuranceMonths;
-  const housingTarget = safeNumber(housingMonthly) * housingMonths;
-  const featuredManualTarget = manualTargets.find(
+  function getRealLifeTargetTotal(target: GrowthManualTarget) {
+    const periodMonths = target.period === "year" ? 12 : 1;
+    return safeNumber(target.amount) * periodMonths;
+  }
+
+  function getRealLifeTargetPeriodLabel(target: GrowthManualTarget) {
+    return target.period === "year" ? "12 months" : "1 month";
+  }
+
+  function getRealLifeTargetMonthsLabel(target: GrowthManualTarget) {
+    return `${formatGrowthMonthsCovered(finalPoint.balance, safeNumber(target.amount))} at ${money(
+      safeNumber(target.amount),
+      settings.currency
+    )}/month`;
+  }
+
+  const completedRealLifeTargets = realLifeTargets.filter(
     (target) => target.name.trim() && safeNumber(target.amount) > 0
   );
-  const featuredManualTargetAmount = featuredManualTarget ? safeNumber(featuredManualTarget.amount) : 0;
-  const featuredManualTargetMonths = getMonthsToGrowthGoal(
-    featuredManualTargetAmount,
-    monthlyContribution
-  );
+  const primaryRealLifeTarget = completedRealLifeTargets[0] || realLifeTargets[0];
+  const secondaryRealLifeTarget = completedRealLifeTargets[1] || realLifeTargets[1] || realLifeTargets[0];
+  const activeGoalName = primaryRealLifeTarget?.name.trim() || "Your real-life plan";
+  const activeGoalTarget = primaryRealLifeTarget ? getRealLifeTargetTotal(primaryRealLifeTarget) : 0;
+  const goalMonths = getMonthsToGrowthGoal(activeGoalTarget, monthlyContribution);
   const growthShareContext: GrowthShareContext = {
-    insurancePeriodLabel: insurancePeriod === "year" ? "12 months" : "1 month",
-    insuranceCoverageLabel: formatGrowthCoverage(finalPoint.balance, insuranceTarget),
-    insuranceMonthsLabel: `${formatGrowthMonthsCovered(
-      finalPoint.balance,
-      safeNumber(insuranceMonthly)
-    )} at ${money(safeNumber(insuranceMonthly), settings.currency)}/month`,
-    housingPeriodLabel: housingPeriod === "year" ? "12 months" : "1 month",
-    housingCoverageLabel: formatGrowthCoverage(finalPoint.balance, housingTarget),
-    housingMonthsLabel: `${formatGrowthMonthsCovered(
-      finalPoint.balance,
-      safeNumber(housingMonthly)
-    )} at ${money(safeNumber(housingMonthly), settings.currency)}/month`,
+    primaryTargetName: primaryRealLifeTarget?.name.trim() || "Planned expense",
+    primaryTargetPeriodLabel: primaryRealLifeTarget
+      ? getRealLifeTargetPeriodLabel(primaryRealLifeTarget)
+      : "1 month",
+    primaryTargetCoverageLabel: primaryRealLifeTarget
+      ? formatGrowthCoverage(finalPoint.balance, getRealLifeTargetTotal(primaryRealLifeTarget))
+      : "Add amount",
+    primaryTargetMonthsLabel: primaryRealLifeTarget
+      ? getRealLifeTargetMonthsLabel(primaryRealLifeTarget)
+      : "Add planned amount",
+    secondaryTargetName: secondaryRealLifeTarget?.name.trim() || "Second target",
+    secondaryTargetPeriodLabel: secondaryRealLifeTarget
+      ? getRealLifeTargetPeriodLabel(secondaryRealLifeTarget)
+      : "1 month",
+    secondaryTargetCoverageLabel: secondaryRealLifeTarget
+      ? formatGrowthCoverage(finalPoint.balance, getRealLifeTargetTotal(secondaryRealLifeTarget))
+      : "Add amount",
+    secondaryTargetMonthsLabel: secondaryRealLifeTarget
+      ? getRealLifeTargetMonthsLabel(secondaryRealLifeTarget)
+      : "Add planned amount",
     activeGoalName,
     activeGoalTarget,
     activeGoalTimeLabel: formatGoalTime(goalMonths),
     monthlyContribution,
-    manualTargetName: featuredManualTarget?.name || "",
-    manualTargetAmount: featuredManualTargetAmount,
-    manualTargetTimeLabel: formatGoalTime(featuredManualTargetMonths),
+    manualTargetName: completedRealLifeTargets[2]?.name || "",
+    manualTargetAmount: completedRealLifeTargets[2]
+      ? getRealLifeTargetTotal(completedRealLifeTargets[2])
+      : 0,
+    manualTargetTimeLabel: completedRealLifeTargets[2]
+      ? formatGoalTime(getMonthsToGrowthGoal(getRealLifeTargetTotal(completedRealLifeTargets[2]), monthlyContribution))
+      : "",
   };
 
-  function updateCommonGoalAmount(id: string, value: string) {
-    setCommonGoalAmounts((current) => ({
-      ...current,
-      [id]: value,
-    }));
-  }
-
-  function updateManualTarget(id: string, patch: Partial<GrowthManualTarget>) {
-    setManualTargets((current) =>
+  function updateRealLifeTarget(id: string, patch: Partial<GrowthManualTarget>) {
+    setRealLifeTargets((current) =>
       current.map((target) => (target.id === id ? { ...target, ...patch } : target))
     );
   }
 
-  function addManualTarget() {
-    setManualTargets((current) => [
+  function addRealLifeTarget() {
+    setRealLifeTargets((current) => [
       ...current,
-      { id: uid(), name: "", amount: "" },
+      { id: uid(), name: "", amount: "", period: "one" },
     ]);
   }
 
-  function removeManualTarget(id: string) {
-    setManualTargets((current) => current.filter((target) => target.id !== id));
+  function removeRealLifeTarget(id: string) {
+    setRealLifeTargets((current) =>
+      current.length <= 1 ? current : current.filter((target) => target.id !== id)
+    );
   }
 
   function useMyLeaks() {
@@ -13402,278 +13418,99 @@ function GrowthLabScreen({
           </div>
         </div>
 
-        <section className="growth-life-meaning-card">
+        <section className="growth-real-life-plan-card">
           <div className="section-title">
-            <span>Real Life Meaning</span>
-            <small>Examples, not promises</small>
+            <span>Real Life Plan</span>
+            <small>One place for planned expenses and goals</small>
           </div>
 
           <p>
             {money(finalPoint.balance, settings.currency)} is not just a number.
-            First, compare it with the two real-life pressure lines most people understand:
+            Add the real things you are trying to cover: insurance, rent, school,
+            phone, debt, family support, emergency fund, or anything personal.
           </p>
 
-          <div className="growth-priority-lines">
-            <article>
-              <img src={A.walletHp} alt="" />
-              <div>
-                <div className="growth-priority-line-head">
-                  <strong>Insurance</strong>
-                  <div className="growth-row-period-toggle">
-                    <button
-                      type="button"
-                      className={insurancePeriod === "one" ? "active" : ""}
-                      onClick={() => setInsurancePeriod("one")}
-                    >
-                      1m
-                    </button>
-                    <button
-                      type="button"
-                      className={insurancePeriod === "year" ? "active" : ""}
-                      onClick={() => setInsurancePeriod("year")}
-                    >
-                      12m
-                    </button>
-                  </div>
-                </div>
-                <span>{formatGrowthCoverage(finalPoint.balance, insuranceTarget)}</span>
-                <small>
-                  {formatGrowthMonthsCovered(finalPoint.balance, safeNumber(insuranceMonthly))} at{" "}
-                  {money(safeNumber(insuranceMonthly), settings.currency)}/month
-                </small>
-                <input
-                  inputMode="decimal"
-                  value={insuranceMonthly}
-                  placeholder="Monthly insurance amount"
-                  onChange={(event) => setInsuranceMonthly(event.target.value)}
-                  aria-label="Monthly insurance amount"
-                />
-              </div>
-            </article>
-
-            <article>
-              <img src={A.lifeCost} alt="" />
-              <div>
-                <div className="growth-priority-line-head">
-                  <strong>Mortgage / rent</strong>
-                  <div className="growth-row-period-toggle">
-                    <button
-                      type="button"
-                      className={housingPeriod === "one" ? "active" : ""}
-                      onClick={() => setHousingPeriod("one")}
-                    >
-                      1m
-                    </button>
-                    <button
-                      type="button"
-                      className={housingPeriod === "year" ? "active" : ""}
-                      onClick={() => setHousingPeriod("year")}
-                    >
-                      12m
-                    </button>
-                  </div>
-                </div>
-                <span>{formatGrowthCoverage(finalPoint.balance, housingTarget)}</span>
-                <small>
-                  {formatGrowthMonthsCovered(finalPoint.balance, safeNumber(housingMonthly))} at{" "}
-                  {money(safeNumber(housingMonthly), settings.currency)}/month
-                </small>
-                <input
-                  inputMode="decimal"
-                  value={housingMonthly}
-                  placeholder="Monthly mortgage / rent amount"
-                  onChange={(event) => setHousingMonthly(event.target.value)}
-                  aria-label="Monthly mortgage or rent amount"
-                />
-              </div>
-            </article>
-          </div>
-
-          <p>
-            Below are broader examples. They are context, not guaranteed outcomes:
-          </p>
-
-          <div className="growth-life-meaning-grid">
-            {lifeMeaningItems.map((item) => (
-              <article key={item.id}>
-                <img src={item.icon} alt="" />
-                <div>
-                  <strong>{item.label}</strong>
-                  <span>{item.coverageLabel}</span>
-                  <small>{item.detail}</small>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          <small className="growth-soft-note">
-            Country/region costs are examples based on your app settings where available.
-            They are not exact local pricing and not financial advice.
-          </small>
-        </section>
-
-        <section className="growth-goal-card">
-          <div className="section-title">
-            <span>Custom Goal</span>
-            <small>What are you building toward?</small>
-          </div>
-
-          <div className="growth-goal-tabs">
-            <button
-              type="button"
-              className={growthGoalMode === "common" ? "active" : ""}
-              onClick={() => setGrowthGoalMode("common")}
-            >
-              Common goals
-            </button>
-            <button
-              type="button"
-              className={growthGoalMode === "custom" ? "active" : ""}
-              onClick={() => setGrowthGoalMode("custom")}
-            >
-              Custom goal
+          <div className="growth-real-life-targets-head">
+            <div>
+              <strong>Planned expenses / goals</strong>
+              <span>Each row has its own 1 month / 12 months switch.</span>
+            </div>
+            <button type="button" onClick={addRealLifeTarget}>
+              + Add
             </button>
           </div>
 
-          {growthGoalMode === "common" ? (
-            <div className="growth-goal-preset-grid">
-              {growthGoalPresets.map((goal) => (
-                <article
-                  key={goal.id}
-                  className={selectedGoalId === goal.id ? "active" : ""}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedGoalId(goal.id)}
-                  >
-                    <img src={goal.icon} alt="" />
-                    <span>{goal.label}</span>
-                    <small>{goal.description}</small>
-                  </button>
-
-                  <input
-                    inputMode="decimal"
-                    value={commonGoalAmounts[goal.id] || ""}
-                    placeholder="Target amount"
-                    onChange={(event) => {
-                      setSelectedGoalId(goal.id);
-                      updateCommonGoalAmount(goal.id, event.target.value);
-                    }}
-                    aria-label={`${goal.label} target amount`}
-                  />
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="growth-custom-goal-fields">
-              <label className="growth-field">
-                <span>Goal name</span>
-                <input
-                  value={customGoalName}
-                  placeholder="Example: Buy a laptop"
-                  onChange={(event) => setCustomGoalName(event.target.value)}
-                />
-              </label>
-
-              <label className="growth-field">
-                <span>Target amount</span>
-                <input
-                  inputMode="decimal"
-                  value={customGoalAmount}
-                  placeholder="Example: 800"
-                  onChange={(event) => setCustomGoalAmount(event.target.value)}
-                />
-              </label>
-            </div>
-          )}
-
-          <div className="growth-goal-result">
-            <div>
-              <span>Goal</span>
-              <strong>{activeGoalName}</strong>
-            </div>
-            <div>
-              <span>Target</span>
-              <strong>{money(activeGoalTarget, settings.currency)}</strong>
-            </div>
-            <div>
-              <span>Redirected/month</span>
-              <strong>{money(monthlyContribution, settings.currency)}</strong>
-            </div>
-          </div>
-
-          <div className="growth-goal-progress">
-            <i style={{ width: `${goalProgress}%` }} />
-          </div>
-
-          <p>
-            If you redirect your leaks into this goal, you could reach it in{" "}
-            <strong>{formatGoalTime(goalMonths)}</strong>.
-          </p>
-
-          <div className="growth-manual-targets">
-            <div className="growth-manual-targets-head">
-              <div>
-                <strong>Manual targets</strong>
-                <span>Add the things you are actually working toward.</span>
-              </div>
-              <button type="button" onClick={addManualTarget}>
-                + Add
-              </button>
-            </div>
-
-            {manualTargets.length === 0 && (
-              <div className="growth-manual-target-empty">
-                <strong>No manual targets yet.</strong>
-                <span>Add your own target: school fees, phone upgrade, emergency fund, debt, rent, family support, or anything personal.</span>
-              </div>
-            )}
-
-            {manualTargets.map((target) => {
+          <div className="growth-real-life-target-list">
+            {realLifeTargets.map((target) => {
               const targetAmount = safeNumber(target.amount);
-              const targetMonths = getMonthsToGrowthGoal(targetAmount, monthlyContribution);
+              const targetTotal = getRealLifeTargetTotal(target);
+              const targetMonths = getMonthsToGrowthGoal(targetTotal, monthlyContribution);
               const targetProgress =
-                targetAmount > 0 ? clamp((finalPoint.balance / targetAmount) * 100, 0, 100) : 0;
+                targetTotal > 0 ? clamp((finalPoint.balance / targetTotal) * 100, 0, 100) : 0;
 
               return (
-                <article className="growth-manual-target-row" key={target.id}>
-                  <div className="growth-manual-target-inputs">
+                <article className="growth-real-life-target-row" key={target.id}>
+                  <div className="growth-real-life-target-main">
                     <input
                       value={target.name}
                       placeholder="Goal name"
                       onChange={(event) =>
-                        updateManualTarget(target.id, { name: event.target.value })
+                        updateRealLifeTarget(target.id, { name: event.target.value })
                       }
-                      aria-label="Manual target name"
+                      aria-label="Real life goal name"
                     />
+
                     <input
                       inputMode="decimal"
                       value={target.amount}
-                      placeholder="Target amount"
+                      placeholder="Monthly amount"
                       onChange={(event) =>
-                        updateManualTarget(target.id, { amount: event.target.value })
+                        updateRealLifeTarget(target.id, { amount: event.target.value })
                       }
-                      aria-label="Manual target amount"
+                      aria-label="Real life monthly amount"
                     />
+
+                    <div className="growth-row-period-toggle">
+                      <button
+                        type="button"
+                        className={target.period === "one" ? "active" : ""}
+                        onClick={() => updateRealLifeTarget(target.id, { period: "one" })}
+                      >
+                        1m
+                      </button>
+                      <button
+                        type="button"
+                        className={target.period === "year" ? "active" : ""}
+                        onClick={() => updateRealLifeTarget(target.id, { period: "year" })}
+                      >
+                        12m
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="growth-manual-target-result">
-                    <span>{formatGrowthCoverage(finalPoint.balance, targetAmount)}</span>
+                  <div className="growth-real-life-target-result">
+                    <span>{formatGrowthCoverage(finalPoint.balance, targetTotal)}</span>
                     <strong>{formatGoalTime(targetMonths)}</strong>
+                    <small>
+                      {formatGrowthMonthsCovered(finalPoint.balance, targetAmount)} at{" "}
+                      {money(targetAmount, settings.currency)}/month
+                    </small>
                   </div>
 
                   <div className="growth-goal-progress">
                     <i style={{ width: `${targetProgress}%` }} />
                   </div>
 
-                  <button
-                    type="button"
-                    className="growth-manual-target-remove"
-                    onClick={() => removeManualTarget(target.id)}
-                    aria-label="Remove manual target"
-                  >
-                    ×
-                  </button>
+                  {realLifeTargets.length > 1 && (
+                    <button
+                      type="button"
+                      className="growth-manual-target-remove"
+                      onClick={() => removeRealLifeTarget(target.id)}
+                      aria-label="Remove planned expense"
+                    >
+                      ×
+                    </button>
+                  )}
                 </article>
               );
             })}
@@ -13681,7 +13518,7 @@ function GrowthLabScreen({
 
           <small className="growth-soft-note">
             This is a personal goal simulation. No real funds are deposited, no custody,
-            no staking, and no promised yield.
+            no staking, no promised yield, and no guaranteed returns.
           </small>
         </section>
 
