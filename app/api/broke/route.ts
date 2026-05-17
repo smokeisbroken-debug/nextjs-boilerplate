@@ -3,13 +3,94 @@ import crypto from "crypto";
 
 export const runtime = "nodejs";
 
-type Currency = "USD" | "EUR" | "MDL";
+type Language = "en" | "ru";
+type Currency =
+  | "USD"
+  | "EUR"
+  | "MDL"
+  | "NGN"
+  | "PKR"
+  | "GBP"
+  | "INR"
+  | "CAD"
+  | "AUD"
+  | "NZD"
+  | "ZAR"
+  | "GHS"
+  | "KES"
+  | "UGX"
+  | "TZS"
+  | "XAF"
+  | "XOF"
+  | "EGP"
+  | "MAD"
+  | "TRY"
+  | "AED"
+  | "SAR"
+  | "PHP"
+  | "IDR"
+  | "VND"
+  | "THB"
+  | "MYR"
+  | "SGD"
+  | "BDT"
+  | "LKR"
+  | "NPR"
+  | "BRL"
+  | "MXN"
+  | "UAH"
+  | "PLN"
+  | "RON"
+  | "GEL"
+  | "KZT";
 type NeedType = "Needed" | "Not needed" | "Maybe";
+type RegionPreset =
+  | "Global"
+  | "Custom"
+  | "Nigeria"
+  | "Ghana"
+  | "Kenya"
+  | "South Africa"
+  | "Pakistan"
+  | "India"
+  | "Bangladesh"
+  | "Philippines"
+  | "Indonesia"
+  | "Vietnam"
+  | "Thailand"
+  | "Malaysia"
+  | "Brazil"
+  | "Mexico"
+  | "Turkey"
+  | "Egypt"
+  | "Morocco"
+  | "UAE"
+  | "Saudi Arabia"
+  | "United Kingdom"
+  | "Canada"
+  | "Australia"
+  | "Moldova"
+  | "Romania"
+  | "Ukraine"
+  | "Poland"
+  | "Europe"
+  | "United States";
+type LifeMode = "Student" | "Worker" | "Freelancer" | "Living with family" | "No stable income";
+type IncomeStyle = "Monthly" | "Weekly" | "Daily" | "Allowance" | "Irregular";
 
 type Settings = {
   currency: Currency;
+  language: Language;
   dailyReminder: boolean;
   onboardingCompleted?: boolean;
+  profile: {
+    region: RegionPreset;
+    country: string;
+    lifeMode: LifeMode;
+    incomeStyle: IncomeStyle;
+    hasRent: boolean;
+    workHoursPerMonth: number;
+  };
   income: {
     salary: number;
     side: number;
@@ -21,7 +102,16 @@ type Settings = {
     food: number;
     transport: number;
     phone: number;
+    data: number;
+    education: number;
   };
+  survival: {
+    nextPaydayDate: string;
+  };
+  privacy: {
+    publicProofMode: boolean;
+  };
+  categoryNames: Record<string, string>;
 };
 
 type Expense = {
@@ -171,10 +261,34 @@ type WebAuthSession = {
 
 const WEB_AUTH_COOKIE = "broke_tg_session";
 
+const defaultCategoryNames: Record<string, string> = {
+  Coffee: "Coffee",
+  Smoking: "Smoking",
+  Takeouts: "Takeouts",
+  Shopping: "Shopping",
+  Subscriptions: "Subscriptions",
+  Taxi: "Taxi",
+  Data: "Data",
+  School: "School",
+  Snacks: "Snacks",
+  Gaming: "Gaming",
+  Family: "Family",
+  Custom: "Custom",
+};
+
 const defaultSettings: Settings = {
   currency: "USD",
+  language: "en",
   dailyReminder: true,
   onboardingCompleted: false,
+  profile: {
+    region: "Global",
+    country: "Global",
+    lifeMode: "Worker",
+    incomeStyle: "Monthly",
+    hasRent: true,
+    workHoursPerMonth: 160,
+  },
   income: {
     salary: 2800,
     side: 600,
@@ -186,7 +300,16 @@ const defaultSettings: Settings = {
     food: 350,
     transport: 150,
     phone: 80,
+    data: 0,
+    education: 0,
   },
+  survival: {
+    nextPaydayDate: "",
+  },
+  privacy: {
+    publicProofMode: true,
+  },
+  categoryNames: defaultCategoryNames,
 };
 
 const emptyStreak: Streak = {
@@ -679,6 +802,130 @@ function parseWebAuthCookie(request: NextRequest): TelegramUser | null {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function toNumber(value: unknown, fallback: number) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function toBoolean(value: unknown, fallback: boolean) {
+  if (value === null || value === undefined) return fallback;
+  return Boolean(value);
+}
+
+function parseSettingsPayload(value: unknown): Partial<Settings> | null {
+  if (isRecord(value)) return value as Partial<Settings>;
+
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return isRecord(parsed) ? (parsed as Partial<Settings>) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function normalizeSettings(input?: Partial<Settings> | null): Settings {
+  return {
+    ...defaultSettings,
+    ...(input || {}),
+    profile: {
+      ...defaultSettings.profile,
+      ...(input?.profile || {}),
+    },
+    income: {
+      ...defaultSettings.income,
+      ...(input?.income || {}),
+    },
+    fixedCosts: {
+      ...defaultSettings.fixedCosts,
+      ...(input?.fixedCosts || {}),
+    },
+    survival: {
+      ...defaultSettings.survival,
+      ...(input?.survival || {}),
+    },
+    privacy: {
+      ...defaultSettings.privacy,
+      ...(input?.privacy || {}),
+    },
+    categoryNames: {
+      ...defaultCategoryNames,
+      ...(input?.categoryNames || {}),
+    },
+  };
+}
+
+function legacySettingsFromDb(row: Record<string, unknown>): Partial<Settings> {
+  return {
+    currency: (row.currency as Currency) || defaultSettings.currency,
+    dailyReminder: toBoolean(row.daily_reminder, defaultSettings.dailyReminder),
+    onboardingCompleted: toBoolean(row.onboarding_completed, Boolean(defaultSettings.onboardingCompleted)),
+    income: {
+      salary: toNumber(row.income_salary, defaultSettings.income.salary),
+      side: toNumber(row.income_side, defaultSettings.income.side),
+      other: toNumber(row.income_other, defaultSettings.income.other),
+    },
+    fixedCosts: {
+      rent: toNumber(row.fixed_rent, defaultSettings.fixedCosts.rent),
+      utilities: toNumber(row.fixed_utilities, defaultSettings.fixedCosts.utilities),
+      food: toNumber(row.fixed_food, defaultSettings.fixedCosts.food),
+      transport: toNumber(row.fixed_transport, defaultSettings.fixedCosts.transport),
+      phone: toNumber(row.fixed_phone, defaultSettings.fixedCosts.phone),
+      data: defaultSettings.fixedCosts.data,
+      education: defaultSettings.fixedCosts.education,
+    },
+  };
+}
+
+function mergeLegacyAndExtendedSettings(
+  legacy: Partial<Settings>,
+  extended?: Partial<Settings> | null
+): Settings {
+  const normalizedLegacy = normalizeSettings(legacy);
+  const normalizedExtended = extended ? normalizeSettings(extended) : null;
+
+  if (!normalizedExtended) {
+    return normalizedLegacy;
+  }
+
+  return normalizeSettings({
+    ...normalizedExtended,
+    currency: legacy.currency || normalizedExtended.currency,
+    dailyReminder:
+      legacy.dailyReminder === undefined ? normalizedExtended.dailyReminder : legacy.dailyReminder,
+    onboardingCompleted: Boolean(legacy.onboardingCompleted || normalizedExtended.onboardingCompleted),
+    income: {
+      ...normalizedExtended.income,
+      ...(legacy.income || {}),
+    },
+    fixedCosts: {
+      ...normalizedExtended.fixedCosts,
+      ...(legacy.fixedCosts || {}),
+      data: normalizedExtended.fixedCosts.data,
+      education: normalizedExtended.fixedCosts.education,
+    },
+  });
+}
+
+function isMissingSettingsPayloadColumnError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return (
+    message.includes("settings_payload") &&
+    (message.includes("Could not find") ||
+      message.includes("column") ||
+      message.includes("PGRST204") ||
+      message.includes("schema cache"))
+  );
+}
+
 function getAuthenticatedTelegramUser(request: NextRequest, body: Record<string, unknown>) {
   const initData = String(body.initData || "");
 
@@ -697,8 +944,9 @@ function getAuthenticatedTelegramUser(request: NextRequest, body: Record<string,
 
 
 
-function settingsToDb(telegramId: number, settings: Settings) {
-  return {
+function settingsToDb(telegramId: number, input: Settings, includeExtendedPayload = true) {
+  const settings = normalizeSettings(input);
+  const row: Record<string, unknown> = {
     telegram_id: telegramId,
     currency: settings.currency,
     daily_reminder: settings.dailyReminder,
@@ -713,26 +961,44 @@ function settingsToDb(telegramId: number, settings: Settings) {
     fixed_phone: settings.fixedCosts.phone,
     updated_at: new Date().toISOString(),
   };
+
+  if (includeExtendedPayload) {
+    row.settings_payload = settings;
+  }
+
+  return row;
 }
 
-function dbToSettings(row: Record<string, unknown>): Settings {
-  return {
-    currency: (row.currency as Currency) || "USD",
-    dailyReminder: Boolean(row.daily_reminder),
-    onboardingCompleted: Boolean(row.onboarding_completed),
-    income: {
-      salary: Number(row.income_salary ?? 0),
-      side: Number(row.income_side ?? 0),
-      other: Number(row.income_other ?? 0),
-    },
-    fixedCosts: {
-      rent: Number(row.fixed_rent ?? 0),
-      utilities: Number(row.fixed_utilities ?? 0),
-      food: Number(row.fixed_food ?? 0),
-      transport: Number(row.fixed_transport ?? 0),
-      phone: Number(row.fixed_phone ?? 0),
-    },
-  };
+function dbToSettings(row: Record<string, unknown>, localFallback?: Partial<Settings> | null): Settings {
+  const legacy = legacySettingsFromDb(row);
+  const payload = parseSettingsPayload(row.settings_payload);
+
+  if (payload) {
+    return mergeLegacyAndExtendedSettings(legacy, payload);
+  }
+
+  if (localFallback) {
+    const fallback = normalizeSettings(localFallback);
+
+    return normalizeSettings({
+      ...fallback,
+      currency: legacy.currency || fallback.currency,
+      dailyReminder: legacy.dailyReminder ?? fallback.dailyReminder,
+      onboardingCompleted: Boolean(legacy.onboardingCompleted || fallback.onboardingCompleted),
+      income: {
+        ...fallback.income,
+        ...(legacy.income || {}),
+      },
+      fixedCosts: {
+        ...fallback.fixedCosts,
+        ...(legacy.fixedCosts || {}),
+        data: fallback.fixedCosts.data,
+        education: fallback.fixedCosts.education,
+      },
+    });
+  }
+
+  return normalizeSettings(legacy);
 }
 
 function dbToExpense(row: Record<string, unknown>): Expense {
@@ -1612,27 +1878,50 @@ async function upsertUser(user: TelegramUser) {
   });
 }
 
-async function getSettings(telegramId: number) {
+async function getSettings(telegramId: number, localFallback?: Partial<Settings> | null) {
   const rows = (await supabaseFetch(
     `broke_settings?telegram_id=eq.${telegramId}&select=*`
   )) as Record<string, unknown>[];
 
   if (rows.length > 0) {
-    return dbToSettings(rows[0]);
+    const settings = dbToSettings(rows[0], localFallback);
+
+    if (localFallback && !parseSettingsPayload(rows[0].settings_payload)) {
+      await saveSettings(telegramId, settings);
+    }
+
+    return settings;
   }
 
-  await saveSettings(telegramId, defaultSettings);
-  return defaultSettings;
+  const settings = normalizeSettings(localFallback || defaultSettings);
+  await saveSettings(telegramId, settings);
+  return settings;
 }
 
-async function saveSettings(telegramId: number, settings: Settings) {
-  await supabaseFetch("broke_settings?on_conflict=telegram_id", {
+async function saveSettings(telegramId: number, input: Settings) {
+  const settings = normalizeSettings(input);
+  const baseOptions = {
     method: "POST",
     headers: {
       Prefer: "resolution=merge-duplicates",
     },
-    body: JSON.stringify(settingsToDb(telegramId, settings)),
-  });
+  };
+
+  try {
+    await supabaseFetch("broke_settings?on_conflict=telegram_id", {
+      ...baseOptions,
+      body: JSON.stringify(settingsToDb(telegramId, settings, true)),
+    });
+  } catch (error) {
+    if (!isMissingSettingsPayloadColumnError(error)) {
+      throw error;
+    }
+
+    await supabaseFetch("broke_settings?on_conflict=telegram_id", {
+      ...baseOptions,
+      body: JSON.stringify(settingsToDb(telegramId, settings, false)),
+    });
+  }
 }
 
 async function getExpenses(telegramId: number) {
@@ -2014,7 +2303,7 @@ export async function POST(request: NextRequest) {
         | { settings?: Settings; expenses?: Expense[] }
         | undefined;
 
-      const settings = await getSettings(telegramId);
+      const settings = await getSettings(telegramId, localData?.settings);
 
       if (localData?.expenses?.length) {
         await importLocalExpensesIfEmpty(telegramId, localData.expenses);
@@ -2161,7 +2450,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === "saveSettings") {
-      const settings = body.settings as Settings;
+      const settings = normalizeSettings(body.settings as Settings);
       await saveSettings(telegramId, settings);
       const expenses = await getExpenses(telegramId);
       const streak = await getAndUpdateStreak(telegramId, expenses);
@@ -2170,6 +2459,7 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         ok: true,
+        settings,
         badges,
         leaderboard,
       });

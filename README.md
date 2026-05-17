@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# $BROKE / SmokeIsBroke Telegram Mini App
 
-## Getting Started
+Current stable checkpoint: **v56.2**.
 
-First, run the development server:
+This is the working Next.js app for the $BROKE / SmokeIsBroke ecosystem.
+
+## Stack
+
+- Next.js 16.2.4
+- React 19.2.4
+- Tailwind CSS v4
+- Supabase
+- Telegram Mini App / Telegram Bot
+
+## Main files
+
+```txt
+app/page.tsx              Main UI and client logic
+app/globals.css           Main design system
+app/api/broke/route.ts    Main Supabase/API logic
+app/api/telegram/route.ts Telegram webhook
+app/api/auth/telegram     Website Telegram login
+```
+
+## Useful commands
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run typecheck
+npm run check
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Copy `.env.example` into Vercel Environment Variables. Do not commit real secrets.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## v56.2 Settings Sync Fix
 
-## Learn More
+v56.2 adds full settings sync support through a JSONB column:
 
-To learn more about Next.js, take a look at the following resources:
+```sql
+alter table public.broke_settings
+  add column if not exists settings_payload jsonb;
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The migration file is here:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```txt
+supabase/migrations/20260517_v56_2_settings_payload.sql
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The app is backward-compatible. If this column is not created yet, legacy settings still save and the app does not crash. For full website ↔ Telegram sync of language, region, life mode, survival, privacy, custom category names, data cost, and education cost, run the migration in Supabase SQL Editor.
