@@ -1278,10 +1278,10 @@ const ruText: Record<string, string> = {
   "You watch crypto charts every day.": "Ты каждый день смотришь crypto-чарты.",
   "But do you watch your own": "Но смотришь ли ты свой",
   "But do you watch your own $BROKE Chart?": "Но смотришь ли ты свой $BROKE Chart?",
-  "Small changes.": "Маленькие изменения.",
-  "Big wins.": "Большая разница.",
-  "Potential savings": "Потенциальная экономия",
-  "Total Potential Savings": "Общая потенциальная экономия",
+  "Cut one leak.": "Урежь одну утечку.",
+  "Survive better.": "Выживай увереннее.",
+  "Potential leak cut": "Потенциальное сокращение утечек",
+  "Yearly leak reduction": "Годовое сокращение утечек",
   "Potential Saved": "Потенциальная экономия",
   "Based on your tracked expenses this month.": "На основе твоих расходов за месяц.",
   "Demo mode. Add expenses to get real scenarios.": "Демо-режим. Добавь расходы, чтобы увидеть реальные сценарии.",
@@ -1417,7 +1417,7 @@ const ruText: Record<string, string> = {
   "Start param": "Start param",
   "Version": "Версия",
   "Platform": "Платформа",
-  "Connection details": "Детали подключения",
+  "Sync & connection details": "Синхронизация и детали подключения",
   "Syncing...": "Синхронизация...",
   "Checking...": "Проверка...",
   "Sync error": "Ошибка синхронизации",
@@ -1769,7 +1769,7 @@ const ruText: Record<string, string> = {
   "Active": "Активно",
   "Choose": "Выбрать",
   "Optional": "Опционально",
-  "What If Scenarios": "Сценарии What If",
+  "Leak Cut Scenarios": "Сценарии сокращения утечек",
   "ideas": "идей",
   "Income Setup": "Настройка дохода",
   "month": "месяц",
@@ -1832,7 +1832,7 @@ const ruText: Record<string, string> = {
   "This month’s detected leaks": "Найденные утечки за месяц",
   "This month's detected leaks": "Найденные утечки за месяц",
   "No leaks yet. Add expenses to create a real plan.": "Утечек пока нет. Добавь расходы, чтобы создать реальный план.",
-  "Use my leaks": "Использовать мои утечки",
+  "Use detected leaks": "Использовать найденные утечки",
   "Create simulation": "Создать симуляцию",
   "Simulation name": "Название симуляции",
   "Starting amount": "Стартовая сумма",
@@ -1859,7 +1859,7 @@ const ruText: Record<string, string> = {
   "Share growth card": "Поделиться карточкой роста",
   "Saved simulations": "Сохранённые симуляции",
   "No saved plans yet.": "Сохранённых планов пока нет.",
-  "Create one monthly leak plan and save it here.": "Создай симуляцию и сохрани её здесь.",
+  "Create one leak plan and save it here.": "Создай один план утечек и сохрани его здесь.",
   "Growth card saved. Share text copied.": "Карточка роста сохранена. Текст скопирован.",
   "Growth plan copied.": "План роста скопирован.",
   "Leak to Growth Plan": "План утечки в рост",
@@ -1867,7 +1867,7 @@ const ruText: Record<string, string> = {
   "Find the leak. Redirect it into growth.": "Найди утечку. Перенаправь её в рост.",
   "Generate share card": "Создать карточку",
   "Creating card...": "Создаём карточку...",
-  "Saving goal card ready": "Карточка роста готова",
+  "Goal card ready": "Карточка цели готова",
   "Saving goal share card preview": "Предпросмотр карточки роста",
   "In Telegram WebView, direct file share can be blocked. Use Download card, copy the text, or long-press the image preview.": "В Telegram WebView прямая отправка файла может блокироваться. Нажми Download card, скопируй текст или удержи изображение предпросмотра.",
   "Download card": "Скачать карточку",
@@ -1971,8 +1971,8 @@ const ruText: Record<string, string> = {
   "It does not hold user funds.": "Он не хранит деньги пользователей.",
   "It does not promise income.": "Он не обещает доход.",
   "It shows possible outcomes if repeated leaks are redirected into a plan.": "Он показывает возможные сценарии, если повторяющиеся утечки перенаправить в план.",
-  "2. Use my leaks": "2. Используй Use my leaks",
-  "Use my leaks reads the tracked Not needed and Maybe expenses.": "Use my leaks берёт записанные расходы Not needed и Maybe.",
+  "2. Use detected leaks": "2. Используй найденные утечки",
+  "Use detected leaks reads the tracked Not needed and Maybe expenses.": "Use detected leaks берёт записанные расходы Not needed и Maybe.",
   "It converts the leak into a weekly contribution idea.": "Он превращает утечку в идею еженедельного пополнения.",
   "This connects the real app data to a simple growth scenario.": "Так реальные данные приложения связываются с простым сценарием роста.",
   "3. Manual simulation": "3. Ручная симуляция",
@@ -1990,12 +1990,12 @@ const ruText: Record<string, string> = {
   "The bot sends it to the user chat, and the user can forward it anywhere.": "Бот отправляет её пользователю в чат, а пользователь может переслать её куда нужно.",
   "The card is designed for public sharing and does not show private income.": "Карточка создана для публичного share и не показывает личный доход.",
   "Save Guide": "Гайд Save",
-  "Save: What If Scenarios": "Save: сценарии What If",
+  "Save: Leak Cut Scenarios": "Save: сценарии сокращения утечек",
   "Save shows what could be saved if one leak was reduced. It is the practical side of $BROKE: stop one leak, protect Wallet HP, and build proof of progress.": "Save показывает, сколько можно сохранить, если уменьшить одну утечку. Это практическая часть $BROKE: остановить утечку, защитить Wallet HP и создать proof of progress.",
   "Save rule": "Правило Save",
   "Pick one realistic reduction. A small reduction that actually happens is stronger than a perfect plan that nobody follows.": "Выбери одно реалистичное сокращение. Маленькое сокращение, которое реально выполняется, сильнее идеального плана, которого никто не придерживается.",
-  "1. Read potential savings": "1. Читай potential savings",
-  "Potential savings shows how much could be protected if spending is reduced.": "Potential savings показывает, сколько можно защитить, если уменьшить расходы.",
+  "1. Read potential leak cut": "1. Читай potential leak cut",
+  "Potential leak cut shows how much could be protected if spending is reduced.": "Potential leak cut показывает, сколько можно защитить, если уменьшить расходы.",
   "It is based on tracked expenses and selected reduction levels.": "Это основано на записанных расходах и выбранных уровнях сокращения.",
   "If there is no real data, the app can show demo scenarios until expenses are added.": "Если реальных данных нет, app может показывать demo-сценарии до добавления расходов.",
   "2. Adjust reduction levels": "2. Настраивай reduction levels",
@@ -2099,9 +2099,9 @@ const ruText: Record<string, string> = {
   "No wallet movement yet.": "Пока нет движения кошелька.",
   "Track one expense to create the first candle, spending volume and leak pressure.": "Запиши один расход, чтобы создать первую свечу, spending volume и leak pressure.",
   "Track first expense": "Записать первый расход",
-  "Growth Lab needs a real leak": "Growth Lab нужна реальная утечка",
+  "Growth Lab needs one real leak": "Growth Lab нужна одна реальная утечка",
   "No leaks detected yet.": "Утечки пока не найдены.",
-  "Add one Not needed or Maybe expense first. Then Growth Lab can turn that leak into a realistic simulation.": "Сначала добавь один расход Not needed или Maybe. Затем Growth Lab сможет превратить эту утечку в реалистичную симуляцию.",
+  "Add one Not needed or Maybe expense first. Then Growth Lab can turn that leak into a realistic plan.": "Сначала добавь один расход Not needed или Maybe. Затем Growth Lab сможет превратить эту утечку в реалистичный план.",
   "Add first leak": "Добавить первую утечку",
   "Save is in demo mode": "Save в демо-режиме",
   "No real scenarios yet.": "Пока нет реальных сценариев.",
@@ -2387,25 +2387,25 @@ const ruText: Record<string, string> = {
   "Costs first, goal second": "Сначала расходы, потом цель",
   "Planned costs": "Плановые расходы",
   "Saving goal": "Цель накопления",
-  "Add bills or planned expenses. Each row has its own 1m / 12m switch.": "Добавь счета или плановые расходы. У каждой строки свой переключатель 1m / 12m.",
+  "Add bills or planned expenses. Use 1m for monthly costs and 12m for yearly costs.": "Добавь счета или плановые расходы. Используй 1m для месячных расходов и 12m для годовых.",
   "Cost name": "Название расхода",
   "Planned cost name": "Название планового расхода",
-  "Planned cost monthly amount": "Месячная сумма планового расхода",
+  "Planned cost amount": "Сумма планового расхода",
   "Remove planned cost": "Удалить плановый расход",
   "What are you saving for?": "На что ты копишь?",
   "Choose a name or type your own. The amount is always yours.": "Выбери название или введи своё. Сумму всегда вводишь сам.",
   "Buy a laptop": "Купить ноутбук",
   "+ Add planned cost": "+ Добавить плановый расход",
-  "Share Saving Goal card": "Поделиться карточкой цели",
+  "Share goal card": "Поделиться карточкой цели",
   "Monthly leaks into a personal saving goal": "Месячные утечки в личную цель накопления",
   "Monthly Leak Plan": "Месячный план утечек",
   "Turn this month’s leaks into a real goal plan.": "Преврати утечки этого месяца в реальный план цели.",
-  "Create monthly leak plan": "Создать месячный план утечек",
+  "Create leak plan": "Создать план утечек",
   "Plan name": "Название плана",
   "Redirected amount": "Перенаправленная сумма",
   "Planner": "Планировщик",
   "Total redirected": "Всего перенаправлено",
-  "Plan value": "Сумма плана",
+  "Projected total": "Прогнозируемая сумма",
   "Saved plans": "Сохранённые планы",
   "No investment assumptions here. This plan simply redirects monthly leaks toward costs or a saving goal.": "Здесь нет инвестиционных предположений. План просто перенаправляет месячные утечки в расходы или цель накопления.",
   "Growth Lab: Monthly Leak Plan": "Growth Lab: месячный план утечек",
@@ -2413,18 +2413,18 @@ const ruText: Record<string, string> = {
   "This is planning only: no deposits, no custody, no staking, no investments, no guaranteed returns, and no financial advice.": "Это только планирование: без депозитов, хранения средств, стейкинга, инвестиций, гарантированной доходности и финансового совета.",
   "1. Use Monthly leaks": "1. Используй месячные утечки",
   "Growth Lab reads the current month’s Not needed and Maybe expenses.": "Growth Lab читает расходы Not needed и Maybe за текущий месяц.",
-  "Use my leaks turns the monthly leak amount into a monthly redirected amount.": "Use my leaks превращает сумму месячных утечек в месячную перенаправленную сумму.",
+  "Use detected leaks turns the monthly leak amount into a monthly redirected amount.": "Use detected leaks превращает сумму месячных утечек в месячную перенаправленную сумму.",
   "This keeps the plan connected to real tracked app data, not random numbers.": "Так план связан с реальными данными приложения, а не случайными цифрами.",
   "2. Planned costs": "2. Плановые расходы",
   "Planned costs are bills or future expenses the user wants to cover.": "Плановые расходы — это счета или будущие траты, которые пользователь хочет покрыть.",
   "Examples: insurance, rent, school fees, repairs, family support, or any planned cost.": "Примеры: страховка, аренда, учёба, ремонт, поддержка семьи или любой плановый расход.",
-  "Each row has its own 1m / 12m switch because some costs are monthly and some are yearly.": "У каждой строки свой переключатель 1m / 12m, потому что одни расходы месячные, а другие годовые.",
+  "Use 1m for monthly costs and 12m for yearly costs.": "Используй 1m для месячных расходов и 12m для годовых.",
   "3. Saving goal": "3. Цель накопления",
   "Saving goal is the thing the user is actually building toward.": "Цель накопления — это то, к чему пользователь реально идёт.",
   "The user can choose a quick name or type their own goal.": "Пользователь может выбрать быстрое название или ввести свою цель.",
   "The target amount is always entered manually by the user.": "Целевая сумма всегда вводится пользователем вручную.",
   "The app shows how long it may take if monthly leaks are redirected into that goal.": "Приложение показывает, сколько времени может занять цель, если перенаправить месячные утечки.",
-  "4. Share Saving Goal card": "4. Поделись карточкой цели",
+  "4. Share goal card": "4. Поделись карточкой цели",
   "The share card is only for the Saving goal.": "Share-карточка только для цели накопления.",
   "Planned costs stay inside the app for personal planning.": "Плановые расходы остаются внутри приложения для личного планирования.",
   "The card shows the goal, target, estimated time, and redirected monthly leak amount.": "Карточка показывает цель, сумму, примерный срок и месячную перенаправленную утечку.",
@@ -6481,7 +6481,7 @@ function HelpGuideModal({
           title: "1. Use Monthly leaks",
           body: [
             "Growth Lab reads the current month’s Not needed and Maybe expenses.",
-            "Use my leaks turns the monthly leak amount into a monthly redirected amount.",
+            "Use detected leaks turns the monthly leak amount into a monthly redirected amount.",
             "This keeps the plan connected to real tracked app data, not random numbers.",
           ],
           icon: GROWTH_PUBLIC_ASSETS.leak,
@@ -6491,7 +6491,7 @@ function HelpGuideModal({
           body: [
             "Planned costs are bills or future expenses the user wants to cover.",
             "Examples: insurance, rent, school fees, repairs, family support, or any planned cost.",
-            "Each row has its own 1m / 12m switch because some costs are monthly and some are yearly.",
+            "Use 1m for monthly costs and 12m for yearly costs.",
           ],
           icon: GROWTH_PUBLIC_ASSETS.lab,
         },
@@ -6506,7 +6506,7 @@ function HelpGuideModal({
           icon: GROWTH_PUBLIC_ASSETS.trophy,
         },
         {
-          title: "4. Share Saving Goal card",
+          title: "4. Share goal card",
           body: [
             "The share card is only for the Saving goal.",
             "Planned costs stay inside the app for personal planning.",
@@ -6540,9 +6540,9 @@ function HelpGuideModal({
         "Set the next payday date, compare safe budget with current pace, and share only safe public proof.",
       sections: [
         {
-          title: "1. Read potential savings",
+          title: "1. Read potential leak cut",
           body: [
-            "Potential savings shows how much could be protected if spending is reduced.",
+            "Potential leak cut shows how much could be protected if spending is reduced.",
             "It is based on tracked expenses and selected reduction levels.",
             "If there is no real data, the app can show demo scenarios until expenses are added.",
           ],
@@ -12691,7 +12691,7 @@ function buildGrowthShareText(
     "$BROKE Growth Lab",
     "",
     `Monthly leaks redirected: ${money(monthlyGrowthContribution(simulation), settings.currency)}/month`,
-    `Plan value after ${simulation.durationMonths} months: ${money(result.balance, settings.currency)}`,
+    `Projected total after ${simulation.durationMonths} months: ${money(result.balance, settings.currency)}`,
     "",
     context
       ? `Saving goal: ${context.activeGoalName}`
@@ -13031,8 +13031,8 @@ function GrowthLabScreen({
   const [savingGoalName, setSavingGoalName] = useState("");
   const [savingGoalAmount, setSavingGoalAmount] = useState("");
   const [realLifeTargets, setRealLifeTargets] = useState<GrowthManualTarget[]>([
-    { id: "insurance", name: "Insurance", amount: "", period: "year" },
-    { id: "housing", name: "Mortgage / rent", amount: "", period: "one" },
+    { id: "housing", name: "Rent / housing", amount: "", period: "one" },
+    { id: "internet", name: "Internet / data", amount: "", period: "year" },
   ]);
 
   useEffect(() => {
@@ -13370,7 +13370,7 @@ function GrowthLabScreen({
         </div>
 
         <button type="button" onClick={leakAmount > 0 ? useMyLeaks : onOpenAdd}>
-          {leakAmount > 0 ? "Use my leaks" : "Track first leak"}
+          {leakAmount > 0 ? "Use detected leaks" : "Track first leak"}
         </button>
       </section>
 
@@ -13385,11 +13385,11 @@ function GrowthLabScreen({
               }}
             />
             <div>
-              <span>Growth Lab needs a real leak</span>
+              <span>Growth Lab needs one real leak</span>
               <strong>No leaks detected yet.</strong>
               <p>
                 Add one Not needed or Maybe expense first. Then Growth Lab can turn
-                that leak into a realistic simulation.
+                that leak into a realistic plan.
               </p>
             </div>
           </div>
@@ -13401,7 +13401,7 @@ function GrowthLabScreen({
 
       <section className="growth-form-card">
         <div className="section-title">
-          <span>Create monthly leak plan</span>
+          <span>Create leak plan</span>
           <small>{growthRiskLabel(riskLevel)}</small>
         </div>
 
@@ -13472,7 +13472,7 @@ function GrowthLabScreen({
             <strong>{money(finalPoint.contributed, settings.currency)}</strong>
           </div>
           <div>
-            <span>Plan value</span>
+            <span>Projected total</span>
             <strong>{money(finalPoint.balance, settings.currency)}</strong>
           </div>
 
@@ -13526,7 +13526,7 @@ function GrowthLabScreen({
               <div className="growth-real-life-targets-head">
                 <div>
                   <strong>Planned costs</strong>
-                  <span>Add bills or planned expenses. Each row has its own 1m / 12m switch.</span>
+                  <span>Add bills or planned expenses. Use 1m for monthly costs and 12m for yearly costs.</span>
                 </div>
               </div>
 
@@ -13553,11 +13553,11 @@ function GrowthLabScreen({
                         <input
                           inputMode="decimal"
                           value={target.amount}
-                          placeholder="Monthly amount"
+                          placeholder="Amount"
                           onChange={(event) =>
                             updateRealLifeTarget(target.id, { amount: event.target.value })
                           }
-                          aria-label="Planned cost monthly amount"
+                          aria-label="Planned cost amount"
                         />
 
                         <div className="growth-row-period-toggle">
@@ -13704,7 +13704,7 @@ function GrowthLabScreen({
             disabled={isBuildingShareCard}
             onClick={() => void shareGrowthPlan(preview)}
           >
-            {isBuildingShareCard ? "Sending to bot..." : "Share Saving Goal card"}
+            {isBuildingShareCard ? "Creating card..." : "Share goal card"}
           </button>
         </div>
       </section>
@@ -13717,15 +13717,15 @@ function GrowthLabScreen({
             alt=""
           />
           <div className="section-title">
-            <span>Saving goal card ready</span>
+            <span>Goal card ready</span>
             <small>PNG</small>
           </div>
 
           <img src={growthShareCardUrl} alt="Saving goal share card preview" />
 
           <p>
-            The main flow sends this PNG to your Telegram bot chat. If Telegram blocks
-            delivery, you can still download the card, copy the text, or long-press the preview.
+            The card is sent to your Telegram bot chat when possible. If Telegram blocks
+            delivery, download it, copy the text, or long-press the preview.
           </p>
 
           <div className="growth-actions">
@@ -13749,7 +13749,7 @@ function GrowthLabScreen({
           <div className="growth-empty">
             <img src={A.challengeTrophy} alt="" />
             <strong>No saved plans yet.</strong>
-            <span>Create one monthly leak plan and save it here.</span>
+            <span>Create one leak plan and save it here.</span>
           </div>
         )}
 
@@ -14119,8 +14119,8 @@ function WhatIfScreen({
       <section className="whatif-hero">
         <img src={A.whatIfFrog} alt="" />
         <div>
-          <h2>Small changes.</h2>
-          <h2>Big wins.</h2>
+          <h2>Cut one leak.</h2>
+          <h2>Survive better.</h2>
           <p>
             {hasRealData
               ? "Based on your tracked expenses this month."
@@ -14130,7 +14130,7 @@ function WhatIfScreen({
       </section>
 
       <section className="whatif-total-card">
-        <span>Potential savings</span>
+        <span>Potential leak cut</span>
         <strong>{money(totalMonthlySavings, settings.currency)}</strong>
         <small>
           /month · {money(totalMonthlySavings * 12, settings.currency)}/year
@@ -14205,8 +14205,8 @@ function WhatIfScreen({
       <details className="clean-details" open>
         <summary>
           <div>
-            <span>What If Scenarios</span>
-            <small>Test how much you could save by reducing leaks.</small>
+            <span>Leak Cut Scenarios</span>
+            <small>Test what changes if you reduce one real leak.</small>
           </div>
           <b>{cards.length} ideas</b>
         </summary>
@@ -14265,7 +14265,7 @@ function WhatIfScreen({
       <section className="savings-card">
         <img src={A.walletMascot} alt="" />
         <div>
-          <span>Total Potential Savings</span>
+          <span>Yearly leak reduction</span>
           <strong>{money(totalMonthlySavings * 12, settings.currency)}</strong>
           <small>/year</small>
         </div>
@@ -14737,7 +14737,7 @@ function SettingsScreen({
       </details>
 
       <details className="tech-details">
-        <summary>Connection details</summary>
+        <summary>Sync & connection details</summary>
         <TelegramMiniStatus
           telegram={telegram}
           webAuth={webAuth}
