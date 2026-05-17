@@ -14956,3 +14956,111 @@ html[lang="ru"] .tab-guide-hero p {
   line-height: 1.32;
   font-weight: 740;
 }
+
+
+/* ===== V60.10.4 GROWTH MANUAL COMMON GOALS ===== */
+
+.growth-priority-line-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.growth-row-period-toggle {
+  display: inline-grid;
+  grid-template-columns: repeat(2, 34px);
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.growth-row-period-toggle button {
+  min-height: 28px;
+  border: 1px solid rgba(183, 255, 25, 0.12);
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 950;
+}
+
+.growth-row-period-toggle button.active {
+  color: #061006;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  border-color: transparent;
+}
+
+.growth-goal-preset-grid article {
+  min-height: 132px;
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(183, 255, 25, 0.10);
+}
+
+.growth-goal-preset-grid article.active {
+  border-color: rgba(183, 255, 25, 0.32);
+  box-shadow: inset 0 0 0 1px rgba(183, 255, 25, 0.08);
+}
+
+.growth-goal-preset-grid article > button {
+  min-height: auto;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  justify-items: start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  background: transparent;
+  text-align: left;
+}
+
+.growth-goal-preset-grid article.active > button {
+  color: var(--text);
+  background: transparent;
+}
+
+.growth-goal-preset-grid article > button img {
+  grid-row: span 2;
+}
+
+.growth-goal-preset-grid article > button span {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.growth-goal-preset-grid article > button small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.24;
+  font-weight: 720;
+}
+
+.growth-goal-preset-grid article > input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(183, 255, 25, 0.10);
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.20);
+  color: var(--text);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+@media (max-width: 430px) {
+  .growth-priority-line-head {
+    align-items: flex-start;
+  }
+
+  .growth-row-period-toggle {
+    grid-template-columns: repeat(2, 32px);
+  }
+}
