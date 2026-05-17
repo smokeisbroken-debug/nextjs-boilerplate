@@ -13984,6 +13984,19 @@ function debtRadarKindLabel(kind: DebtRadarKind) {
   return "Recurring bill";
 }
 
+function debtRadarPriorityLabel(priority: DebtRadarPriority) {
+  if (priority === "high") return "High";
+  if (priority === "low") return "Low";
+  return "Medium";
+}
+
+function normalizeDebtRadarDueDay(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 2);
+  if (!digits) return "";
+
+  return String(clamp(Number(digits), 1, 31));
+}
+
 function buildDebtRadarItem(kind: DebtRadarKind, name: string): DebtRadarItem {
   return {
     id: uid(),
@@ -14019,7 +14032,9 @@ function DebtBillsRadarPanel({
   const quickTargets: { kind: DebtRadarKind; name: string }[] = [
     { kind: "debt", name: "Credit card" },
     { kind: "debt", name: "Loan payment" },
+    { kind: "bill", name: "Rent / mortgage" },
     { kind: "bill", name: "Insurance" },
+    { kind: "bill", name: "Phone / internet" },
     { kind: "bill", name: "Subscriptions" },
     { kind: "maintenance", name: "Car maintenance" },
     { kind: "maintenance", name: "Home repair" },
@@ -14073,6 +14088,10 @@ function DebtBillsRadarPanel({
         </span>
       </div>
 
+      <p className="debt-radar-note">
+        Fill Monthly hit first. Remaining debt is counted only for Debt items.
+      </p>
+
       <div className="debt-radar-quick-row">
         {quickTargets.map((target) => (
           <button
@@ -14086,79 +14105,91 @@ function DebtBillsRadarPanel({
       </div>
 
       <div className="debt-radar-list">
-        {items.map((item) => (
-          <article className={`debt-radar-item ${item.kind}`} key={item.id}>
-            <div className="debt-radar-item-head">
-              <div>
-                <span>{debtRadarKindLabel(item.kind)}</span>
-                <input
-                  value={item.name}
-                  placeholder="Name"
-                  onChange={(event) => onUpdateItem(item.id, { name: event.target.value })}
-                />
+        {items.map((item) => {
+          const monthlyAmount = Math.max(0, safeNumber(item.monthlyAmount));
+          const itemMeta = [
+            monthlyAmount > 0 ? `${money(monthlyAmount, settings.currency)}/mo` : "No monthly hit yet",
+            item.dueDay ? `Due day ${item.dueDay}` : "No due day",
+            `${debtRadarPriorityLabel(item.priority)} priority`,
+          ].join(" · ");
+
+          return (
+            <article className={`debt-radar-item ${item.kind}`} key={item.id}>
+              <div className="debt-radar-item-head">
+                <div>
+                  <span>{debtRadarKindLabel(item.kind)}</span>
+                  <input
+                    value={item.name}
+                    placeholder="Name"
+                    onChange={(event) => onUpdateItem(item.id, { name: event.target.value })}
+                  />
+                  <small className="debt-radar-item-meta">{itemMeta}</small>
+                </div>
+                <button type="button" onClick={() => onRemoveItem(item.id)} aria-label={`Remove ${item.name || "item"}`}>
+                  ×
+                </button>
               </div>
-              <button type="button" onClick={() => onRemoveItem(item.id)} aria-label={`Remove ${item.name || "item"}`}>
-                ×
-              </button>
-            </div>
 
-            <div className="debt-radar-fields">
-              <label>
-                <span>Type</span>
-                <select
-                  value={item.kind}
-                  onChange={(event) => onUpdateItem(item.id, { kind: event.target.value as DebtRadarKind })}
-                >
-                  <option value="debt">Debt</option>
-                  <option value="bill">Recurring bill</option>
-                  <option value="maintenance">Maintenance</option>
-                </select>
-              </label>
+              <div className="debt-radar-fields">
+                <label>
+                  <span>Type</span>
+                  <select
+                    value={item.kind}
+                    onChange={(event) => onUpdateItem(item.id, { kind: event.target.value as DebtRadarKind })}
+                  >
+                    <option value="debt">Debt</option>
+                    <option value="bill">Recurring bill</option>
+                    <option value="maintenance">Maintenance</option>
+                  </select>
+                </label>
 
-              <label>
-                <span>Monthly hit</span>
-                <input
-                  inputMode="decimal"
-                  value={item.monthlyAmount}
-                  placeholder="0"
-                  onChange={(event) => onUpdateItem(item.id, { monthlyAmount: event.target.value })}
-                />
-              </label>
+                <label>
+                  <span>Monthly hit</span>
+                  <input
+                    inputMode="decimal"
+                    value={item.monthlyAmount}
+                    placeholder="0"
+                    onChange={(event) => onUpdateItem(item.id, { monthlyAmount: event.target.value })}
+                  />
+                </label>
 
-              <label>
-                <span>Remaining debt</span>
-                <input
-                  inputMode="decimal"
-                  value={item.remainingAmount}
-                  placeholder={item.kind === "debt" ? "0" : "optional"}
-                  onChange={(event) => onUpdateItem(item.id, { remainingAmount: event.target.value })}
-                />
-              </label>
+                {item.kind === "debt" && (
+                  <label>
+                    <span>Remaining debt</span>
+                    <input
+                      inputMode="decimal"
+                      value={item.remainingAmount}
+                      placeholder="0"
+                      onChange={(event) => onUpdateItem(item.id, { remainingAmount: event.target.value })}
+                    />
+                  </label>
+                )}
 
-              <label>
-                <span>Due day</span>
-                <input
-                  inputMode="numeric"
-                  value={item.dueDay}
-                  placeholder="1-31"
-                  onChange={(event) => onUpdateItem(item.id, { dueDay: event.target.value })}
-                />
-              </label>
+                <label>
+                  <span>Due day</span>
+                  <input
+                    inputMode="numeric"
+                    value={item.dueDay}
+                    placeholder="1-31"
+                    onChange={(event) => onUpdateItem(item.id, { dueDay: normalizeDebtRadarDueDay(event.target.value) })}
+                  />
+                </label>
 
-              <label>
-                <span>Priority</span>
-                <select
-                  value={item.priority}
-                  onChange={(event) => onUpdateItem(item.id, { priority: event.target.value as DebtRadarPriority })}
-                >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                </select>
-              </label>
-            </div>
-          </article>
-        ))}
+                <label>
+                  <span>Priority</span>
+                  <select
+                    value={item.priority}
+                    onChange={(event) => onUpdateItem(item.id, { priority: event.target.value as DebtRadarPriority })}
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </label>
+              </div>
+            </article>
+          );
+        })}
       </div>
 
       <button
@@ -14166,7 +14197,7 @@ function DebtBillsRadarPanel({
         className="debt-radar-add"
         onClick={() => onAddItem("bill", "Custom silent killer")}
       >
-        + Add custom debt, bill or maintenance log
+        + Add custom silent killer
       </button>
     </section>
   );
