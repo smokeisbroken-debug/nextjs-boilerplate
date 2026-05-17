@@ -129,6 +129,21 @@ type GrowthManualTarget = {
   amount: string;
 };
 
+type GrowthShareContext = {
+  meaningPeriodLabel: string;
+  insuranceCoverageLabel: string;
+  insuranceMonthsLabel: string;
+  housingCoverageLabel: string;
+  housingMonthsLabel: string;
+  activeGoalName: string;
+  activeGoalTarget: number;
+  activeGoalTimeLabel: string;
+  monthlyContribution: number;
+  manualTargetName: string;
+  manualTargetAmount: number;
+  manualTargetTimeLabel: string;
+};
+
 type SurvivalForecast = {
   totalIncome: number;
   fixedCosts: number;
@@ -2350,6 +2365,11 @@ const ruText: Record<string, string> = {
   "Monthly mortgage or rent amount": "Месячная ипотека или аренда",
   "Set a target amount": "Укажи целевую сумму",
   "Set a monthly amount": "Укажи месячную сумму",
+  "Your custom goal": "Твоя личная цель",
+  "No manual targets yet.": "Ручных целей пока нет.",
+  "Add your own target: school fees, phone upgrade, emergency fund, debt, rent, family support, or anything personal.": "Добавь свою цель: учёба, телефон, резерв, долг, аренда, поддержка семьи или что-то личное.",
+  "Example: Buy a laptop": "Пример: купить ноутбук",
+  "Example: 800": "Пример: 800",
 };
 
 // V54.1: mission result translation rules are included inside applyRussianDynamicRules.
@@ -12538,7 +12558,11 @@ function getLeakAmountForGrowth(expenses: Expense[]) {
   }, 0);
 }
 
-function buildGrowthShareText(simulation: GrowthSimulation, settings: Settings) {
+function buildGrowthShareText(
+  simulation: GrowthSimulation,
+  settings: Settings,
+  context?: GrowthShareContext
+) {
   const result = getGrowthFinal(simulation);
 
   return [
@@ -12548,15 +12572,28 @@ function buildGrowthShareText(simulation: GrowthSimulation, settings: Settings) 
       simulation.contributionFrequency
     )} wallet leak.`,
     `If redirected for ${simulation.durationMonths} months:`,
-    `Total contributed: ${money(result.contributed, settings.currency)}`,
     `Estimated final value: ${money(result.balance, settings.currency)}`,
-    `Estimated gain: ${money(result.gain, settings.currency)}`,
     "",
-    "Real-life meaning: insurance, mortgage/rent, emergency savings, school fees, phone upgrade, debt payment, family support.",
+    context
+      ? `Insurance (${context.meaningPeriodLabel}): ${context.insuranceCoverageLabel}`
+      : "Insurance: add your monthly amount",
+    context
+      ? `Mortgage / rent (${context.meaningPeriodLabel}): ${context.housingCoverageLabel}`
+      : "Mortgage / rent: add your monthly amount",
+    context
+      ? `Goal: ${context.activeGoalName} — ${context.activeGoalTimeLabel}`
+      : "Goal: choose what you are building toward",
+    context && context.manualTargetName
+      ? `Manual target: ${context.manualTargetName} — ${context.manualTargetTimeLabel}`
+      : "",
+    "",
     "Personal goal simulation only. No real funds, no custody, no staking, no guaranteed returns.",
     "Find the leak. Redirect it into something real.",
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
+
 
 function growthRoundRect(
   ctx: CanvasRenderingContext2D,
@@ -12620,10 +12657,10 @@ function loadShareCardImage(src: string): Promise<HTMLImageElement> {
 
 async function buildGrowthShareCardBlob(
   simulation: GrowthSimulation,
-  settings: Settings
+  settings: Settings,
+  context?: GrowthShareContext
 ): Promise<Blob> {
   const result = getGrowthFinal(simulation);
-  const cases = getGrowthCases(simulation);
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1350;
@@ -12638,6 +12675,7 @@ async function buildGrowthShareCardBlob(
   const muted = "rgba(244,247,240,0.68)";
   const panel = "rgba(9, 20, 14, 0.92)";
   const panel2 = "rgba(16, 35, 19, 0.92)";
+  const orangePanel = "rgba(255,177,43,0.085)";
 
   ctx.fillStyle = "#020402";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -12645,18 +12683,18 @@ async function buildGrowthShareCardBlob(
   try {
     const premiumBackground = await loadShareCardImage(PREMIUM_VISUAL_PACK.shareCleanBackground);
     ctx.save();
-    ctx.globalAlpha = 0.16;
+    ctx.globalAlpha = 0.13;
     ctx.drawImage(premiumBackground, 0, 0, canvas.width, canvas.height);
     ctx.restore();
 
-    ctx.fillStyle = "rgba(2, 4, 2, 0.62)";
+    ctx.fillStyle = "rgba(2, 4, 2, 0.66)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   } catch {
     // Public asset is optional. The canvas still renders with the built-in layout.
   }
 
   for (let x = 0; x < canvas.width; x += 82) {
-    ctx.strokeStyle = "rgba(183,255,25,0.045)";
+    ctx.strokeStyle = "rgba(183,255,25,0.04)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(x, 0);
@@ -12665,7 +12703,7 @@ async function buildGrowthShareCardBlob(
   }
 
   for (let y = 0; y < canvas.height; y += 82) {
-    ctx.strokeStyle = "rgba(183,255,25,0.04)";
+    ctx.strokeStyle = "rgba(183,255,25,0.035)";
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, y);
@@ -12674,7 +12712,7 @@ async function buildGrowthShareCardBlob(
   }
 
   const glow = ctx.createRadialGradient(165, 125, 0, 165, 125, 360);
-  glow.addColorStop(0, "rgba(183,255,25,0.28)");
+  glow.addColorStop(0, "rgba(183,255,25,0.26)");
   glow.addColorStop(1, "rgba(183,255,25,0)");
   ctx.fillStyle = glow;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -12684,90 +12722,107 @@ async function buildGrowthShareCardBlob(
   ctx.fillText("$BROKE", 66, 86);
 
   ctx.fillStyle = text;
-  ctx.font = "900 80px Arial, sans-serif";
-  ctx.fillText("GROWTH LAB", 64, 164);
+  ctx.font = "900 70px Arial, sans-serif";
+  ctx.fillText("GROWTH LAB", 64, 160);
 
   ctx.fillStyle = muted;
-  ctx.font = "500 30px Arial, sans-serif";
-  ctx.fillText("Leak to Growth simulation card", 68, 210);
+  ctx.font = "500 29px Arial, sans-serif";
+  ctx.fillText("Leak to real-life goal simulation", 68, 207);
 
-  growthFillRoundRect(ctx, 62, 265, 956, 244, 34, panel);
-  growthStrokeRoundRect(ctx, 62, 265, 956, 244, 34, "rgba(183,255,25,0.22)", 2);
+  growthFillRoundRect(ctx, 62, 255, 956, 178, 34, panel);
+  growthStrokeRoundRect(ctx, 62, 255, 956, 178, 34, "rgba(183,255,25,0.22)", 2);
 
   ctx.fillStyle = green;
-  ctx.font = "900 36px Arial, sans-serif";
-  ctx.fillText("I found a wallet leak.", 94, 326);
+  ctx.font = "900 30px Arial, sans-serif";
+  ctx.fillText("FUTURE VALUE", 94, 312);
 
   ctx.fillStyle = text;
   ctx.font = "900 76px Arial, sans-serif";
-  ctx.fillText(money(simulation.contributionAmount, settings.currency), 94, 410);
+  ctx.fillText(money(result.balance, settings.currency), 94, 396);
 
   ctx.fillStyle = muted;
-  ctx.font = "700 28px Arial, sans-serif";
-  ctx.fillText(`${growthFrequencyLabel(simulation.contributionFrequency)} redirected`, 94, 452);
+  ctx.font = "700 25px Arial, sans-serif";
+  ctx.fillText(`${money(simulation.contributionAmount, settings.currency)} ${growthFrequencyLabel(simulation.contributionFrequency)} redirected`, 618, 318);
+  ctx.fillText(`${simulation.durationMonths} months · simulation only`, 618, 362);
 
-  growthFillRoundRect(ctx, 690, 314, 270, 118, 28, "rgba(183,255,25,0.10)");
-  growthStrokeRoundRect(ctx, 690, 314, 270, 118, 28, "rgba(183,255,25,0.24)", 2);
-  ctx.fillStyle = muted;
-  ctx.font = "700 24px Arial, sans-serif";
-  ctx.fillText("Duration", 724, 356);
   ctx.fillStyle = green;
-  ctx.font = "900 44px Arial, sans-serif";
-  ctx.fillText(`${simulation.durationMonths} months`, 724, 408);
+  ctx.font = "900 34px Arial, sans-serif";
+  ctx.fillText("WHAT THIS COULD COVER", 66, 505);
 
-  const metrics = [
-    ["Total contributed", money(result.contributed, settings.currency)],
-    ["Estimated final value", money(result.balance, settings.currency)],
-    ["Estimated gain", money(result.gain, settings.currency)],
-    ["Simulated annual growth", `${simulation.expectedAnnualGrowth}%`],
+  const priorityRows = [
+    {
+      label: "Insurance",
+      value: context?.insuranceCoverageLabel || "add monthly amount",
+      detail: context?.insuranceMonthsLabel || "customize inside Growth Lab",
+    },
+    {
+      label: "Mortgage / rent",
+      value: context?.housingCoverageLabel || "add monthly amount",
+      detail: context?.housingMonthsLabel || "customize inside Growth Lab",
+    },
   ];
 
-  metrics.forEach((metric, index) => {
-    const col = index % 2;
-    const row = Math.floor(index / 2);
-    const x = 62 + col * 500;
-    const y = 548 + row * 194;
+  priorityRows.forEach((row, index) => {
+    const y = 538 + index * 150;
 
-    growthFillRoundRect(ctx, x, y, 456, 164, 28, panel2);
-    growthStrokeRoundRect(ctx, x, y, 456, 164, 28, "rgba(255,255,255,0.075)", 1);
+    growthFillRoundRect(ctx, 62, y, 956, 118, 28, panel2);
+    growthStrokeRoundRect(ctx, 62, y, 956, 118, 28, "rgba(183,255,25,0.14)", 1);
 
     ctx.fillStyle = muted;
-    ctx.font = "700 24px Arial, sans-serif";
-    ctx.fillText(metric[0], x + 30, y + 48);
+    ctx.font = "800 25px Arial, sans-serif";
+    ctx.fillText(row.label, 94, y + 42);
 
     ctx.fillStyle = green;
-    ctx.font = "900 46px Arial, sans-serif";
-    ctx.fillText(metric[1], x + 30, y + 108);
-  });
-
-  growthFillRoundRect(ctx, 62, 942, 956, 166, 30, "rgba(0,0,0,0.25)");
-  growthStrokeRoundRect(ctx, 62, 942, 956, 166, 30, "rgba(183,255,25,0.14)", 1);
-
-  [
-    ["Worst", cases.worst.balance],
-    ["Base", cases.base.balance],
-    ["Best", cases.best.balance],
-  ].forEach((item, index) => {
-    const x = 98 + index * 310;
+    ctx.font = "900 42px Arial, sans-serif";
+    ctx.fillText(row.value, 94, y + 92);
 
     ctx.fillStyle = muted;
-    ctx.font = "700 24px Arial, sans-serif";
-    ctx.fillText(`${item[0]} case`, x, 996);
-
-    ctx.fillStyle = index === 1 ? green : text;
-    ctx.font = "900 42px Arial, sans-serif";
-    ctx.fillText(money(Number(item[1]), settings.currency), x, 1052);
+    ctx.font = "700 23px Arial, sans-serif";
+    ctx.fillText(row.detail, 650, y + 74);
   });
 
-  growthFillRoundRect(ctx, 62, 1152, 956, 98, 26, "rgba(255,177,43,0.085)");
-  growthStrokeRoundRect(ctx, 62, 1152, 956, 98, 26, "rgba(255,177,43,0.22)", 1);
+  growthFillRoundRect(ctx, 62, 858, 956, 190, 30, "rgba(183,255,25,0.075)");
+  growthStrokeRoundRect(ctx, 62, 858, 956, 190, 30, "rgba(183,255,25,0.18)", 1);
+
+  ctx.fillStyle = green;
+  ctx.font = "900 28px Arial, sans-serif";
+  ctx.fillText("PERSONAL GOAL", 94, 908);
+
+  ctx.fillStyle = text;
+  ctx.font = "900 48px Arial, sans-serif";
+  ctx.fillText(context?.activeGoalName || "Choose your real goal", 94, 970);
+
+  ctx.fillStyle = muted;
+  ctx.font = "700 24px Arial, sans-serif";
+  ctx.fillText(
+    context
+      ? `Target: ${money(context.activeGoalTarget, settings.currency)} · ${context.activeGoalTimeLabel}`
+      : "Target and time will appear here",
+    94,
+    1017
+  );
+
+  growthFillRoundRect(ctx, 62, 1080, 956, 98, 26, orangePanel);
+  growthStrokeRoundRect(ctx, 62, 1080, 956, 98, 26, "rgba(255,177,43,0.22)", 1);
+
   ctx.fillStyle = "#ffdf8b";
   ctx.font = "800 24px Arial, sans-serif";
-  ctx.fillText("Simulation only. No guaranteed returns. Not financial advice.", 94, 1211);
+  ctx.fillText(
+    context?.manualTargetName
+      ? `${context.manualTargetName}: ${context.manualTargetTimeLabel}`
+      : "Manual targets: school, phone, emergency fund, debt, family support.",
+    94,
+    1139
+  );
+
+  ctx.fillStyle = muted;
+  ctx.font = "700 23px Arial, sans-serif";
+  ctx.fillText("Personal goal simulation only. No real funds, no custody, no staking.", 94, 1234);
+  ctx.fillText("No promised yield. No guaranteed returns. Not financial advice.", 94, 1268);
 
   ctx.fillStyle = green2;
   ctx.font = "900 28px Arial, sans-serif";
-  ctx.fillText("Find the leak. Redirect it into growth.", 66, 1300);
+  ctx.fillText("Find the leak. Redirect it into something real.", 66, 1320);
 
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
@@ -12784,6 +12839,7 @@ async function buildGrowthShareCardBlob(
     );
   });
 }
+
 
 async function downloadGrowthShareCard(blob: Blob) {
   const url = URL.createObjectURL(blob);
@@ -12871,19 +12927,14 @@ function GrowthLabScreen({
   const [isBuildingShareCard, setIsBuildingShareCard] = useState(false);
   const [growthGoalMode, setGrowthGoalMode] = useState<GrowthGoalMode>("common");
   const [selectedGoalId, setSelectedGoalId] = useState("emergency");
-  const [customGoalName, setCustomGoalName] = useState("Buy a laptop");
-  const [customGoalAmount, setCustomGoalAmount] = useState("800");
+  const [customGoalName, setCustomGoalName] = useState("");
+  const [customGoalAmount, setCustomGoalAmount] = useState("");
   const [meaningPeriod, setMeaningPeriod] = useState<GrowthMeaningPeriod>("one");
   const [insuranceMonthly, setInsuranceMonthly] = useState("100");
   const [housingMonthly, setHousingMonthly] = useState(
     String(settings.fixedCosts.rent > 0 ? settings.fixedCosts.rent : 500)
   );
-  const [manualTargets, setManualTargets] = useState<GrowthManualTarget[]>([
-    { id: "school-fees", name: "School fees", amount: "300" },
-    { id: "phone-upgrade", name: "Phone upgrade", amount: "800" },
-    { id: "emergency-fund", name: "Emergency fund", amount: "1000" },
-    { id: "debt-payment", name: "Debt payment", amount: "500" },
-  ]);
+  const [manualTargets, setManualTargets] = useState<GrowthManualTarget[]>([]);
 
   useEffect(() => {
     return () => {
@@ -12935,7 +12986,7 @@ function GrowthLabScreen({
   const selectedGoal =
     growthGoalPresets.find((goal) => goal.id === selectedGoalId) || growthGoalPresets[0];
   const activeGoalName =
-    growthGoalMode === "custom" ? customGoalName.trim() || "Custom goal" : selectedGoal.label;
+    growthGoalMode === "custom" ? customGoalName.trim() || "Your custom goal" : selectedGoal.label;
   const activeGoalTarget =
     growthGoalMode === "custom"
       ? Math.max(0, safeNumber(customGoalAmount))
@@ -12946,6 +12997,34 @@ function GrowthLabScreen({
   const meaningMonths = meaningPeriod === "year" ? 12 : 1;
   const insuranceTarget = safeNumber(insuranceMonthly) * meaningMonths;
   const housingTarget = safeNumber(housingMonthly) * meaningMonths;
+  const featuredManualTarget = manualTargets.find(
+    (target) => target.name.trim() && safeNumber(target.amount) > 0
+  );
+  const featuredManualTargetAmount = featuredManualTarget ? safeNumber(featuredManualTarget.amount) : 0;
+  const featuredManualTargetMonths = getMonthsToGrowthGoal(
+    featuredManualTargetAmount,
+    monthlyContribution
+  );
+  const growthShareContext: GrowthShareContext = {
+    meaningPeriodLabel: meaningPeriod === "year" ? "12 months" : "1 month",
+    insuranceCoverageLabel: formatGrowthCoverage(finalPoint.balance, insuranceTarget),
+    insuranceMonthsLabel: `${formatGrowthMonthsCovered(
+      finalPoint.balance,
+      safeNumber(insuranceMonthly)
+    )} at ${money(safeNumber(insuranceMonthly), settings.currency)}/month`,
+    housingCoverageLabel: formatGrowthCoverage(finalPoint.balance, housingTarget),
+    housingMonthsLabel: `${formatGrowthMonthsCovered(
+      finalPoint.balance,
+      safeNumber(housingMonthly)
+    )} at ${money(safeNumber(housingMonthly), settings.currency)}/month`,
+    activeGoalName,
+    activeGoalTarget,
+    activeGoalTimeLabel: formatGoalTime(goalMonths),
+    monthlyContribution,
+    manualTargetName: featuredManualTarget?.name || "",
+    manualTargetAmount: featuredManualTargetAmount,
+    manualTargetTimeLabel: formatGoalTime(featuredManualTargetMonths),
+  };
 
   function updateManualTarget(id: string, patch: Partial<GrowthManualTarget>) {
     setManualTargets((current) =>
@@ -12956,7 +13035,7 @@ function GrowthLabScreen({
   function addManualTarget() {
     setManualTargets((current) => [
       ...current,
-      { id: uid(), name: "New goal", amount: "500" },
+      { id: uid(), name: "", amount: "" },
     ]);
   }
 
@@ -12999,7 +13078,7 @@ function GrowthLabScreen({
     triggerHaptic("light");
   }
 
-  async function copyGrowthShareText(text = growthShareText || buildGrowthShareText(preview, settings)) {
+  async function copyGrowthShareText(text = growthShareText || buildGrowthShareText(preview, settings, growthShareContext)) {
     try {
       if (navigator.clipboard) {
         await navigator.clipboard.writeText(text);
@@ -13011,12 +13090,12 @@ function GrowthLabScreen({
   }
 
   async function shareGrowthPlan(simulation = preview) {
-    const text = buildGrowthShareText(simulation, settings);
+    const text = buildGrowthShareText(simulation, settings, growthShareContext);
 
     setIsBuildingShareCard(true);
 
     try {
-      const blob = await buildGrowthShareCardBlob(simulation, settings);
+      const blob = await buildGrowthShareCardBlob(simulation, settings, growthShareContext);
       const cardUrl = URL.createObjectURL(blob);
 
       setGrowthShareText(text);
@@ -13058,7 +13137,7 @@ function GrowthLabScreen({
       triggerHaptic("success");
     } catch {
       try {
-        const blob = await buildGrowthShareCardBlob(simulation, settings);
+        const blob = await buildGrowthShareCardBlob(simulation, settings, growthShareContext);
         const file = new File([blob], "broke-growth-plan.png", {
           type: "image/png",
         });
@@ -13451,6 +13530,7 @@ function GrowthLabScreen({
                 <span>Goal name</span>
                 <input
                   value={customGoalName}
+                  placeholder="Example: Buy a laptop"
                   onChange={(event) => setCustomGoalName(event.target.value)}
                 />
               </label>
@@ -13460,6 +13540,7 @@ function GrowthLabScreen({
                 <input
                   inputMode="decimal"
                   value={customGoalAmount}
+                  placeholder="Example: 800"
                   onChange={(event) => setCustomGoalAmount(event.target.value)}
                 />
               </label>
@@ -13501,6 +13582,13 @@ function GrowthLabScreen({
               </button>
             </div>
 
+            {manualTargets.length === 0 && (
+              <div className="growth-manual-target-empty">
+                <strong>No manual targets yet.</strong>
+                <span>Add your own target: school fees, phone upgrade, emergency fund, debt, rent, family support, or anything personal.</span>
+              </div>
+            )}
+
             {manualTargets.map((target) => {
               const targetAmount = safeNumber(target.amount);
               const targetMonths = getMonthsToGrowthGoal(targetAmount, monthlyContribution);
@@ -13512,6 +13600,7 @@ function GrowthLabScreen({
                   <div className="growth-manual-target-inputs">
                     <input
                       value={target.name}
+                      placeholder="Goal name"
                       onChange={(event) =>
                         updateManualTarget(target.id, { name: event.target.value })
                       }
@@ -13520,6 +13609,7 @@ function GrowthLabScreen({
                     <input
                       inputMode="decimal"
                       value={target.amount}
+                      placeholder="Target amount"
                       onChange={(event) =>
                         updateManualTarget(target.id, { amount: event.target.value })
                       }
@@ -13536,16 +13626,14 @@ function GrowthLabScreen({
                     <i style={{ width: `${targetProgress}%` }} />
                   </div>
 
-                  {manualTargets.length > 1 && (
-                    <button
-                      type="button"
-                      className="growth-manual-target-remove"
-                      onClick={() => removeManualTarget(target.id)}
-                      aria-label="Remove manual target"
-                    >
-                      ×
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className="growth-manual-target-remove"
+                    onClick={() => removeManualTarget(target.id)}
+                    aria-label="Remove manual target"
+                  >
+                    ×
+                  </button>
                 </article>
               );
             })}
