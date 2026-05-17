@@ -123,6 +123,57 @@ type Expense = {
   createdAt: string;
 };
 
+type GrowthFrequency = "daily" | "weekly" | "monthly";
+type GrowthRisk = "low" | "medium" | "high";
+type GrowthMeaningPeriod = "one" | "year";
+
+type GrowthSimulation = {
+  id: string;
+  title: string;
+  startingAmount: number;
+  contributionAmount: number;
+  contributionFrequency: GrowthFrequency;
+  durationMonths: number;
+  expectedAnnualGrowth: number;
+  riskLevel: GrowthRisk;
+  reinvest: boolean;
+  createdAt: string;
+};
+
+type GrowthManualTarget = {
+  id: string;
+  name: string;
+  amount: string;
+  period: GrowthMeaningPeriod;
+};
+
+type GrowthPlannerState = {
+  realLifeTargets: GrowthManualTarget[];
+  savingGoalName: string;
+  savingGoalAmount: string;
+  updatedAt?: string;
+};
+
+type DebtRadarKind = "debt" | "bill" | "maintenance";
+type DebtRadarPriority = "low" | "medium" | "high";
+
+type DebtRadarItem = {
+  id: string;
+  name: string;
+  kind: DebtRadarKind;
+  monthlyAmount: string;
+  remainingAmount: string;
+  dueDay: string;
+  priority: DebtRadarPriority;
+};
+
+type AppState = {
+  growthSimulations: GrowthSimulation[];
+  growthPlanner: GrowthPlannerState;
+  debtRadarItems: DebtRadarItem[];
+  updatedAt?: string;
+};
+
 type Streak = {
   currentStreak: number;
   bestStreak: number;
@@ -317,6 +368,51 @@ const emptyStreak: Streak = {
   bestStreak: 0,
   lastActiveDate: null,
   updatedAt: null,
+};
+
+const defaultGrowthPlannerState: GrowthPlannerState = {
+  realLifeTargets: [
+    { id: "insurance", name: "Insurance", amount: "", period: "one" },
+    { id: "housing", name: "Mortgage / rent", amount: "", period: "one" },
+  ],
+  savingGoalName: "",
+  savingGoalAmount: "",
+};
+
+const defaultDebtRadarItems: DebtRadarItem[] = [
+  {
+    id: "debt-main",
+    name: "Credit card / loan",
+    kind: "debt",
+    monthlyAmount: "",
+    remainingAmount: "",
+    dueDay: "",
+    priority: "high",
+  },
+  {
+    id: "subscriptions",
+    name: "Subscriptions",
+    kind: "bill",
+    monthlyAmount: "",
+    remainingAmount: "",
+    dueDay: "",
+    priority: "medium",
+  },
+  {
+    id: "maintenance",
+    name: "Maintenance reserve",
+    kind: "maintenance",
+    monthlyAmount: "",
+    remainingAmount: "",
+    dueDay: "",
+    priority: "medium",
+  },
+];
+
+const defaultAppState: AppState = {
+  growthSimulations: [],
+  growthPlanner: defaultGrowthPlannerState,
+  debtRadarItems: defaultDebtRadarItems,
 };
 
 const defaultChallengeTemplates: ChallengeTemplate[] = [
@@ -831,6 +927,107 @@ function parseSettingsPayload(value: unknown): Partial<Settings> | null {
   return null;
 }
 
+function parseAppStatePayload(value: unknown): Partial<AppState> | null {
+  if (isRecord(value)) return value as Partial<AppState>;
+
+  if (typeof value === "string" && value.trim()) {
+    try {
+      const parsed = JSON.parse(value);
+      return isRecord(parsed) ? (parsed as Partial<AppState>) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function newId() {
+  return crypto.randomUUID();
+}
+
+function normalizeGrowthSimulation(input: Partial<GrowthSimulation>): GrowthSimulation {
+  const frequency: GrowthFrequency =
+    input.contributionFrequency === "daily" ||
+    input.contributionFrequency === "weekly" ||
+    input.contributionFrequency === "monthly"
+      ? input.contributionFrequency
+      : "weekly";
+  const risk: GrowthRisk =
+    input.riskLevel === "low" || input.riskLevel === "medium" || input.riskLevel === "high"
+      ? input.riskLevel
+      : "medium";
+
+  return {
+    id: input.id || newId(),
+    title: String(input.title || "Leak to Growth Plan"),
+    startingAmount: toNumber(input.startingAmount, 0),
+    contributionAmount: toNumber(input.contributionAmount, 0),
+    contributionFrequency: frequency,
+    durationMonths: Math.max(1, Math.min(Math.round(toNumber(input.durationMonths, 12)), 60)),
+    expectedAnnualGrowth: Math.max(0, Math.min(toNumber(input.expectedAnnualGrowth, 0), 100)),
+    riskLevel: risk,
+    reinvest: input.reinvest !== false,
+    createdAt: String(input.createdAt || new Date().toISOString()),
+  };
+}
+
+function normalizeGrowthManualTarget(input: Partial<GrowthManualTarget>): GrowthManualTarget {
+  return {
+    id: input.id || newId(),
+    name: String(input.name ?? ""),
+    amount: String(input.amount ?? ""),
+    period: input.period === "year" ? "year" : "one",
+  };
+}
+
+function normalizeGrowthPlannerState(input?: Partial<GrowthPlannerState> | null): GrowthPlannerState {
+  const realLifeTargets = Array.isArray(input?.realLifeTargets)
+    ? input.realLifeTargets.map(normalizeGrowthManualTarget).slice(0, 12)
+    : defaultGrowthPlannerState.realLifeTargets;
+
+  return {
+    realLifeTargets: realLifeTargets.length ? realLifeTargets : defaultGrowthPlannerState.realLifeTargets,
+    savingGoalName: String(input?.savingGoalName ?? ""),
+    savingGoalAmount: String(input?.savingGoalAmount ?? ""),
+    updatedAt: input?.updatedAt,
+  };
+}
+
+function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
+  const kind: DebtRadarKind =
+    input.kind === "debt" || input.kind === "bill" || input.kind === "maintenance"
+      ? input.kind
+      : "bill";
+  const priority: DebtRadarPriority =
+    input.priority === "low" || input.priority === "medium" || input.priority === "high"
+      ? input.priority
+      : "medium";
+
+  return {
+    id: input.id || newId(),
+    name: String(input.name || (kind === "debt" ? "Debt payment" : kind === "maintenance" ? "Maintenance" : "Recurring bill")),
+    kind,
+    monthlyAmount: String(input.monthlyAmount ?? ""),
+    remainingAmount: String(input.remainingAmount ?? ""),
+    dueDay: String(input.dueDay ?? ""),
+    priority,
+  };
+}
+
+function normalizeAppState(input?: Partial<AppState> | null): AppState {
+  return {
+    growthSimulations: Array.isArray(input?.growthSimulations)
+      ? input.growthSimulations.map(normalizeGrowthSimulation).slice(0, 8)
+      : [],
+    growthPlanner: normalizeGrowthPlannerState(input?.growthPlanner),
+    debtRadarItems: Array.isArray(input?.debtRadarItems)
+      ? input.debtRadarItems.map(normalizeDebtRadarItem).slice(0, 12)
+      : defaultDebtRadarItems,
+    updatedAt: input?.updatedAt || new Date().toISOString(),
+  };
+}
+
 function normalizeSettings(input?: Partial<Settings> | null): Settings {
   return {
     ...defaultSettings,
@@ -919,6 +1116,19 @@ function isMissingSettingsPayloadColumnError(error: unknown) {
 
   return (
     message.includes("settings_payload") &&
+    (message.includes("Could not find") ||
+      message.includes("column") ||
+      message.includes("PGRST204") ||
+      message.includes("schema cache"))
+  );
+}
+
+
+function isMissingAppStatePayloadColumnError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return (
+    message.includes("app_state_payload") &&
     (message.includes("Could not find") ||
       message.includes("column") ||
       message.includes("PGRST204") ||
@@ -1923,6 +2133,59 @@ async function saveSettings(telegramId: number, input: Settings) {
   }
 }
 
+async function getAppState(telegramId: number, localFallback?: Partial<AppState> | null) {
+  const rows = (await supabaseFetch(
+    `broke_settings?telegram_id=eq.${telegramId}&select=*`
+  )) as Record<string, unknown>[];
+
+  if (rows.length > 0) {
+    const payload = parseAppStatePayload(rows[0].app_state_payload);
+
+    if (payload) {
+      return normalizeAppState(payload);
+    }
+
+    if (localFallback) {
+      const appState = normalizeAppState(localFallback);
+      await saveAppState(telegramId, appState);
+      return appState;
+    }
+  }
+
+  const appState = normalizeAppState(localFallback || defaultAppState);
+  await saveAppState(telegramId, appState);
+  return appState;
+}
+
+async function saveAppState(telegramId: number, input: Partial<AppState>) {
+  const appState = normalizeAppState({
+    ...input,
+    updatedAt: new Date().toISOString(),
+  });
+
+  try {
+    await supabaseFetch("broke_settings?on_conflict=telegram_id", {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify({
+        telegram_id: telegramId,
+        app_state_payload: appState,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+
+    return true;
+  } catch (error) {
+    if (isMissingAppStatePayloadColumnError(error)) {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
 async function getExpenses(telegramId: number) {
   const rows = (await supabaseFetch(
     `broke_expenses?telegram_id=eq.${telegramId}&select=*&order=created_at.desc&limit=500`
@@ -2018,6 +2281,7 @@ async function resetData(telegramId: number) {
   }
 
   await saveSettings(telegramId, defaultSettings);
+  await saveAppState(telegramId, defaultAppState);
 }
 
 
@@ -2299,10 +2563,11 @@ export async function POST(request: NextRequest) {
 
     if (action === "sync") {
       const localData = body.localData as
-        | { settings?: Settings; expenses?: Expense[] }
+        | { settings?: Settings; expenses?: Expense[]; appState?: AppState }
         | undefined;
 
       const settings = await getSettings(telegramId, localData?.settings);
+      const appState = await getAppState(telegramId, localData?.appState);
 
       if (localData?.expenses?.length) {
         await importLocalExpensesIfEmpty(telegramId, localData.expenses);
@@ -2327,6 +2592,7 @@ export async function POST(request: NextRequest) {
         streak,
         badges,
         leaderboard,
+        appState,
         ...challengeState,
       });
     }
@@ -2464,6 +2730,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    if (action === "saveAppState") {
+      const appState = normalizeAppState(body.appState as AppState);
+      const appStateCloudSync = await saveAppState(telegramId, appState);
+
+      return NextResponse.json({
+        ok: true,
+        appState,
+        appStateCloudSync,
+      });
+    }
+
     if (action === "reset") {
       await resetData(telegramId);
       const streak = await resetStreak(telegramId);
@@ -2479,6 +2756,7 @@ export async function POST(request: NextRequest) {
         ok: true,
         settings: defaultSettings,
         expenses: [],
+        appState: defaultAppState,
         streak,
         badges,
         leaderboard,

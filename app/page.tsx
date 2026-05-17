@@ -171,6 +171,20 @@ type DebtRadarTotals = {
   highPriorityCount: number;
 };
 
+type GrowthPlannerState = {
+  realLifeTargets: GrowthManualTarget[];
+  savingGoalName: string;
+  savingGoalAmount: string;
+  updatedAt?: string;
+};
+
+type CloudAppState = {
+  growthSimulations: GrowthSimulation[];
+  growthPlanner: GrowthPlannerState;
+  debtRadarItems: DebtRadarItem[];
+  updatedAt?: string;
+};
+
 type SurvivalForecast = {
   totalIncome: number;
   fixedCosts: number;
@@ -581,6 +595,8 @@ type BrokeApiResponse = {
   challengeProgress?: ChallengeProgress | null;
   badges?: BadgeItem[];
   leaderboard?: LeaderboardState;
+  appState?: CloudAppState;
+  appStateCloudSync?: boolean;
   xpAwarded?: number;
   error?: string;
 };
@@ -5427,6 +5443,7 @@ export default function Home() {
   const openAppTrackedRef = useRef(false);
   const badgesReadyRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
+  const appStateSyncTimerRef = useRef<number | null>(null);
 
   const [amount, setAmount] = useState("25.00");
   const [note, setNote] = useState("");
@@ -5484,6 +5501,30 @@ export default function Home() {
     }
   }
 
+
+  function queueCloudAppStateSync() {
+    if (!loaded || cloudStatus !== "cloud" || !cloudAuthReady) return;
+
+    if (appStateSyncTimerRef.current) {
+      window.clearTimeout(appStateSyncTimerRef.current);
+    }
+
+    appStateSyncTimerRef.current = window.setTimeout(async () => {
+      try {
+        const data = await callBrokeApi(cloudInitData, "saveAppState", {
+          appState: readLocalCloudAppState(),
+        });
+
+        if (data.appState) {
+          writeLocalCloudAppState(data.appState);
+        }
+      } catch (error) {
+        setCloudStatus("error");
+        setCloudError(error instanceof Error ? error.message : "App state cloud save failed");
+      }
+    }, 800);
+  }
+
   useEffect(() => {
     function applyTelegramWebApp() {
       const webApp = getTelegramWebApp();
@@ -5539,6 +5580,10 @@ export default function Home() {
     return () => {
       if (toastTimerRef.current) {
         window.clearTimeout(toastTimerRef.current);
+      }
+
+      if (appStateSyncTimerRef.current) {
+        window.clearTimeout(appStateSyncTimerRef.current);
       }
     };
   }, []);
@@ -5633,6 +5678,7 @@ export default function Home() {
           localData: {
             settings,
             expenses,
+            appState: readLocalCloudAppState(),
           },
         });
 
@@ -5646,6 +5692,7 @@ export default function Home() {
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
         if (data.leaderboard) setLeaderboard(data.leaderboard);
         if (data.badges) applyBadges(data.badges, true);
+        if (data.appState) writeLocalCloudAppState(data.appState);
 
         const cloudOnboardingCompleted =
           data.settings?.onboardingCompleted === true ||
@@ -6217,6 +6264,7 @@ export default function Home() {
             onBack={goHome}
             onHelp={openHelp}
             onOpenAdd={() => setActiveTab("add")}
+            onAppStateChange={queueCloudAppStateSync}
           />
         )}
 
@@ -6237,6 +6285,7 @@ export default function Home() {
             onBack={goHome}
             onHelp={openHelp}
             onOpenAdd={() => setActiveTab("add")}
+            onAppStateChange={queueCloudAppStateSync}
           />
         )}
 
@@ -12348,6 +12397,17 @@ function ActiveChallengeCard({
 
 
 const GROWTH_SIMULATIONS_KEY = "broke-growth-simulations-v2";
+const GROWTH_PLANNER_KEY = "broke-growth-planner-v1";
+const CLOUD_APP_STATE_SYNC_EVENT = "broke-cloud-app-state-sync";
+
+const defaultGrowthPlannerState: GrowthPlannerState = {
+  realLifeTargets: [
+    { id: "insurance", name: "Insurance", amount: "", period: "one" },
+    { id: "housing", name: "Mortgage / rent", amount: "", period: "one" },
+  ],
+  savingGoalName: "",
+  savingGoalAmount: "",
+};
 
 function growthFrequencyMultiplier(frequency: GrowthFrequency) {
   if (frequency === "daily") return 30;
@@ -12407,6 +12467,56 @@ function writeGrowthSimulations(simulations: GrowthSimulation[]) {
     );
   } catch {
     // Local saved simulations are optional.
+  }
+}
+
+function normalizeGrowthManualTarget(input: Partial<GrowthManualTarget>): GrowthManualTarget {
+  return {
+    id: input.id || uid(),
+    name: String(input.name ?? ""),
+    amount: String(input.amount ?? ""),
+    period: input.period === "year" ? "year" : "one",
+  };
+}
+
+function normalizeGrowthPlannerState(input?: Partial<GrowthPlannerState> | null): GrowthPlannerState {
+  const realLifeTargets = Array.isArray(input?.realLifeTargets)
+    ? input.realLifeTargets.map(normalizeGrowthManualTarget).slice(0, 12)
+    : defaultGrowthPlannerState.realLifeTargets;
+
+  return {
+    realLifeTargets: realLifeTargets.length ? realLifeTargets : defaultGrowthPlannerState.realLifeTargets,
+    savingGoalName: String(input?.savingGoalName ?? ""),
+    savingGoalAmount: String(input?.savingGoalAmount ?? ""),
+    updatedAt: input?.updatedAt,
+  };
+}
+
+function readGrowthPlannerState(): GrowthPlannerState {
+  if (typeof window === "undefined") return defaultGrowthPlannerState;
+
+  try {
+    const raw = window.localStorage.getItem(GROWTH_PLANNER_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Partial<GrowthPlannerState>) : null;
+    return normalizeGrowthPlannerState(parsed);
+  } catch {
+    return defaultGrowthPlannerState;
+  }
+}
+
+function writeGrowthPlannerState(planner: GrowthPlannerState) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      GROWTH_PLANNER_KEY,
+      JSON.stringify({
+        ...normalizeGrowthPlannerState(planner),
+        updatedAt: new Date().toISOString(),
+      })
+    );
+  } catch {
+    // Growth planner is local-first and optional.
   }
 }
 
@@ -13042,6 +13152,7 @@ function GrowthLabScreen({
   onBack,
   onHelp,
   onOpenAdd,
+  onAppStateChange,
 }: {
   settings: Settings;
   expenses: Expense[];
@@ -13049,6 +13160,7 @@ function GrowthLabScreen({
   onBack: () => void;
   onHelp: () => void;
   onOpenAdd: () => void;
+  onAppStateChange?: () => void;
 }) {
   const [savedSimulations, setSavedSimulations] = useState<GrowthSimulation[]>(() =>
     readGrowthSimulations()
@@ -13065,12 +13177,11 @@ function GrowthLabScreen({
   const [growthShareText, setGrowthShareText] = useState("");
   const [isBuildingShareCard, setIsBuildingShareCard] = useState(false);
   const [growthPlannerTab, setGrowthPlannerTab] = useState<GrowthPlannerTab>("costs");
-  const [savingGoalName, setSavingGoalName] = useState("");
-  const [savingGoalAmount, setSavingGoalAmount] = useState("");
-  const [realLifeTargets, setRealLifeTargets] = useState<GrowthManualTarget[]>([
-    { id: "insurance", name: "Insurance", amount: "", period: "one" },
-    { id: "housing", name: "Mortgage / rent", amount: "", period: "one" },
-  ]);
+  const [savingGoalName, setSavingGoalName] = useState(() => readGrowthPlannerState().savingGoalName);
+  const [savingGoalAmount, setSavingGoalAmount] = useState(() => readGrowthPlannerState().savingGoalAmount);
+  const [realLifeTargets, setRealLifeTargets] = useState<GrowthManualTarget[]>(() =>
+    readGrowthPlannerState().realLifeTargets
+  );
 
   useEffect(() => {
     return () => {
@@ -13079,6 +13190,37 @@ function GrowthLabScreen({
       }
     };
   }, [growthShareCardUrl]);
+
+
+  useEffect(() => {
+    writeGrowthSimulations(savedSimulations);
+    onAppStateChange?.();
+  }, [savedSimulations]);
+
+  useEffect(() => {
+    writeGrowthPlannerState({
+      realLifeTargets,
+      savingGoalName,
+      savingGoalAmount,
+    });
+    onAppStateChange?.();
+  }, [realLifeTargets, savingGoalName, savingGoalAmount]);
+
+  useEffect(() => {
+    function applySyncedAppState() {
+      setSavedSimulations(readGrowthSimulations());
+      const planner = readGrowthPlannerState();
+      setRealLifeTargets(planner.realLifeTargets);
+      setSavingGoalName(planner.savingGoalName);
+      setSavingGoalAmount(planner.savingGoalAmount);
+    }
+
+    window.addEventListener(CLOUD_APP_STATE_SYNC_EVENT, applySyncedAppState);
+
+    return () => {
+      window.removeEventListener(CLOUD_APP_STATE_SYNC_EVENT, applySyncedAppState);
+    };
+  }, []);
 
   const monthlyLeakExpenses = useMemo(() => getCurrentMonthExpenses(expenses), [expenses]);
   const leakAmount = useMemo(
@@ -13951,6 +14093,38 @@ function writeDebtRadarItems(items: DebtRadarItem[]) {
   }
 }
 
+function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudAppState {
+  return {
+    growthSimulations: Array.isArray(input?.growthSimulations)
+      ? input.growthSimulations.map(normalizeGrowthSimulation).slice(0, 8)
+      : [],
+    growthPlanner: normalizeGrowthPlannerState(input?.growthPlanner),
+    debtRadarItems: Array.isArray(input?.debtRadarItems)
+      ? input.debtRadarItems.map(normalizeDebtRadarItem).slice(0, 12)
+      : defaultDebtRadarItems,
+    updatedAt: input?.updatedAt,
+  };
+}
+
+function readLocalCloudAppState(): CloudAppState {
+  return normalizeCloudAppState({
+    growthSimulations: readGrowthSimulations(),
+    growthPlanner: readGrowthPlannerState(),
+    debtRadarItems: readDebtRadarItems(),
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+function writeLocalCloudAppState(input: Partial<CloudAppState>) {
+  if (typeof window === "undefined") return;
+
+  const appState = normalizeCloudAppState(input);
+  writeGrowthSimulations(appState.growthSimulations);
+  writeGrowthPlannerState(appState.growthPlanner);
+  writeDebtRadarItems(appState.debtRadarItems);
+  window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
+}
+
 function getDebtRadarTotals(items: DebtRadarItem[]): DebtRadarTotals {
   return items.reduce<DebtRadarTotals>(
     (totals, item) => {
@@ -14385,6 +14559,7 @@ function WhatIfScreen({
   onBack,
   onHelp,
   onOpenAdd,
+  onAppStateChange,
 }: {
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
@@ -14401,6 +14576,7 @@ function WhatIfScreen({
   onBack: () => void;
   onHelp: () => void;
   onOpenAdd: () => void;
+  onAppStateChange?: () => void;
 }) {
   const [reductions, setReductions] = useState<Record<string, number>>({});
   const [survivalSharing, setSurvivalSharing] = useState(false);
@@ -14419,7 +14595,20 @@ function WhatIfScreen({
 
   useEffect(() => {
     writeDebtRadarItems(debtRadarItems);
+    onAppStateChange?.();
   }, [debtRadarItems]);
+
+  useEffect(() => {
+    function applySyncedAppState() {
+      setDebtRadarItems(readDebtRadarItems());
+    }
+
+    window.addEventListener(CLOUD_APP_STATE_SYNC_EVENT, applySyncedAppState);
+
+    return () => {
+      window.removeEventListener(CLOUD_APP_STATE_SYNC_EVENT, applySyncedAppState);
+    };
+  }, []);
 
   const debtRadarTotals = useMemo(
     () => getDebtRadarTotals(debtRadarItems),
