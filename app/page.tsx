@@ -45,6 +45,53 @@ type Currency =
   | "RON"
   | "GEL"
   | "KZT";
+
+const supportedCurrencies: Currency[] = [
+  "USD",
+  "EUR",
+  "MDL",
+  "NGN",
+  "PKR",
+  "GBP",
+  "INR",
+  "CAD",
+  "AUD",
+  "NZD",
+  "ZAR",
+  "GHS",
+  "KES",
+  "UGX",
+  "TZS",
+  "XAF",
+  "XOF",
+  "EGP",
+  "MAD",
+  "TRY",
+  "AED",
+  "SAR",
+  "PHP",
+  "IDR",
+  "VND",
+  "THB",
+  "MYR",
+  "SGD",
+  "BDT",
+  "LKR",
+  "NPR",
+  "BRL",
+  "MXN",
+  "UAH",
+  "PLN",
+  "RON",
+  "GEL",
+  "KZT",
+];
+
+const defaultCurrency: Currency = "USD";
+
+type MoneyFormatOptions = {
+  includeCode?: boolean;
+};
 type ChartRange = "day" | "week" | "month";
 type RegionPreset =
   | "Global"
@@ -129,6 +176,7 @@ type GrowthManualTarget = {
   name: string;
   amount: string;
   period: GrowthMeaningPeriod;
+  currency?: Currency;
 };
 
 type GrowthShareContext = {
@@ -160,6 +208,8 @@ type DebtRadarItem = {
   remainingAmount: string;
   dueDay: string;
   priority: DebtRadarPriority;
+  currency?: Currency;
+  remainingCurrency?: Currency;
 };
 
 type DebtRadarTotals = {
@@ -175,6 +225,7 @@ type GrowthPlannerState = {
   realLifeTargets: GrowthManualTarget[];
   savingGoalName: string;
   savingGoalAmount: string;
+  savingGoalCurrency?: Currency;
   updatedAt?: string;
 };
 
@@ -210,6 +261,7 @@ type Expense = {
   needType: NeedType;
   note: string;
   createdAt: string;
+  currency?: Currency;
 };
 
 type OnboardingStarterExpense = {
@@ -782,7 +834,7 @@ const defaultCategoryNames: Record<string, string> = {
 };
 
 const defaultSettings: Settings = {
-  currency: "USD",
+  currency: defaultCurrency,
   language: "en",
   dailyReminder: true,
   onboardingCompleted: false,
@@ -2737,6 +2789,7 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
   return {
     ...defaultSettings,
     ...(input || {}),
+    currency: normalizeCurrency(input?.currency, defaultSettings.currency),
     profile: {
       ...defaultSettings.profile,
       ...(input?.profile || {}),
@@ -2785,7 +2838,7 @@ function applyRegionPreset(settings: Settings, region: RegionPreset): Settings {
 
   return {
     ...settings,
-    currency: preset.currency,
+    currency: normalizeCurrency(preset.currency, settings.currency),
     profile: {
       ...settings.profile,
       region,
@@ -3472,7 +3525,22 @@ function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true) {
 }
 
 
-function currencySymbol(currency: Currency) {
+function normalizeCurrency(value: unknown, fallback: Currency = defaultCurrency): Currency {
+  const candidate = String(value || "").trim().toUpperCase();
+
+  return supportedCurrencies.includes(candidate as Currency) ? (candidate as Currency) : fallback;
+}
+
+function normalizeOptionalCurrency(value: unknown): Currency | undefined {
+  if (!value) return undefined;
+
+  const candidate = String(value).trim().toUpperCase();
+
+  return supportedCurrencies.includes(candidate as Currency) ? (candidate as Currency) : undefined;
+}
+
+function getCurrencySymbol(currencyInput: Currency | string | undefined) {
+  const currency = normalizeCurrency(currencyInput);
   const symbols: Record<Currency, string> = {
     USD: "$",
     EUR: "€",
@@ -3517,10 +3585,23 @@ function currencySymbol(currency: Currency) {
   return symbols[currency] || currency;
 }
 
+function currencySymbol(currency: Currency) {
+  return getCurrencySymbol(currency);
+}
+
+function formatMoney(value: number, currencyInput: Currency | string | undefined, options: MoneyFormatOptions = {}) {
+  const currency = normalizeCurrency(currencyInput);
+  const symbol = getCurrencySymbol(currency);
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const abs = Math.abs(Math.round(safeValue)).toLocaleString("en-US");
+  const prefix = safeValue < 0 ? "-" : "";
+  const suffix = options.includeCode ? ` ${currency}` : "";
+
+  return `${prefix}${symbol}${abs}${suffix}`;
+}
+
 function money(value: number, currency: Currency) {
-  const symbol = currencySymbol(currency);
-  const abs = Math.abs(Math.round(value)).toLocaleString("en-US");
-  return value < 0 ? `-${symbol}${abs}` : `${symbol}${abs}`;
+  return formatMoney(value, currency);
 }
 
 function publicProofValue(settings: Settings, value: string) {
@@ -8733,7 +8814,7 @@ function LifeProfileEditor({
           onChange={(event) =>
             setSettings((prev) => ({
               ...prev,
-              currency: event.target.value as Currency,
+              currency: normalizeCurrency(event.target.value, prev.currency),
             }))
           }
         >
@@ -8743,6 +8824,9 @@ function LifeProfileEditor({
             </option>
           ))}
         </select>
+        <small className="currency-foundation-note">
+          Currency currently changes display only. Real conversion is being prepared step by step.
+        </small>
       </div>
 
       <div className="profile-block">
@@ -12471,11 +12555,14 @@ function writeGrowthSimulations(simulations: GrowthSimulation[]) {
 }
 
 function normalizeGrowthManualTarget(input: Partial<GrowthManualTarget>): GrowthManualTarget {
+  const currency = normalizeOptionalCurrency(input.currency);
+
   return {
     id: input.id || uid(),
     name: String(input.name ?? ""),
     amount: String(input.amount ?? ""),
     period: input.period === "year" ? "year" : "one",
+    ...(currency ? { currency } : {}),
   };
 }
 
@@ -12488,6 +12575,9 @@ function normalizeGrowthPlannerState(input?: Partial<GrowthPlannerState> | null)
     realLifeTargets: realLifeTargets.length ? realLifeTargets : defaultGrowthPlannerState.realLifeTargets,
     savingGoalName: String(input?.savingGoalName ?? ""),
     savingGoalAmount: String(input?.savingGoalAmount ?? ""),
+    ...(normalizeOptionalCurrency(input?.savingGoalCurrency)
+      ? { savingGoalCurrency: normalizeOptionalCurrency(input?.savingGoalCurrency) }
+      : {}),
     updatedAt: input?.updatedAt,
   };
 }
@@ -14056,6 +14146,8 @@ function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
     input.priority === "low" || input.priority === "medium" || input.priority === "high"
       ? input.priority
       : "medium";
+  const currency = normalizeOptionalCurrency(input.currency);
+  const remainingCurrency = normalizeOptionalCurrency(input.remainingCurrency);
 
   return {
     id: input.id || uid(),
@@ -14065,6 +14157,8 @@ function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
     remainingAmount: String(input.remainingAmount ?? ""),
     dueDay: String(input.dueDay ?? ""),
     priority,
+    ...(currency ? { currency } : {}),
+    ...(remainingCurrency ? { remainingCurrency } : {}),
   };
 }
 

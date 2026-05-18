@@ -43,6 +43,49 @@ type Currency =
   | "RON"
   | "GEL"
   | "KZT";
+
+const supportedCurrencies: Currency[] = [
+  "USD",
+  "EUR",
+  "MDL",
+  "NGN",
+  "PKR",
+  "GBP",
+  "INR",
+  "CAD",
+  "AUD",
+  "NZD",
+  "ZAR",
+  "GHS",
+  "KES",
+  "UGX",
+  "TZS",
+  "XAF",
+  "XOF",
+  "EGP",
+  "MAD",
+  "TRY",
+  "AED",
+  "SAR",
+  "PHP",
+  "IDR",
+  "VND",
+  "THB",
+  "MYR",
+  "SGD",
+  "BDT",
+  "LKR",
+  "NPR",
+  "BRL",
+  "MXN",
+  "UAH",
+  "PLN",
+  "RON",
+  "GEL",
+  "KZT",
+];
+
+const defaultCurrency: Currency = "USD";
 type NeedType = "Needed" | "Not needed" | "Maybe";
 type RegionPreset =
   | "Global"
@@ -121,6 +164,7 @@ type Expense = {
   needType: NeedType;
   note: string;
   createdAt: string;
+  currency?: Currency;
 };
 
 type GrowthFrequency = "daily" | "weekly" | "monthly";
@@ -145,12 +189,14 @@ type GrowthManualTarget = {
   name: string;
   amount: string;
   period: GrowthMeaningPeriod;
+  currency?: Currency;
 };
 
 type GrowthPlannerState = {
   realLifeTargets: GrowthManualTarget[];
   savingGoalName: string;
   savingGoalAmount: string;
+  savingGoalCurrency?: Currency;
   updatedAt?: string;
 };
 
@@ -165,6 +211,8 @@ type DebtRadarItem = {
   remainingAmount: string;
   dueDay: string;
   priority: DebtRadarPriority;
+  currency?: Currency;
+  remainingCurrency?: Currency;
 };
 
 type AppState = {
@@ -328,7 +376,7 @@ const defaultCategoryNames: Record<string, string> = {
 };
 
 const defaultSettings: Settings = {
-  currency: "USD",
+  currency: defaultCurrency,
   language: "en",
   dailyReminder: true,
   onboardingCompleted: false,
@@ -946,6 +994,20 @@ function newId() {
   return crypto.randomUUID();
 }
 
+function normalizeCurrency(value: unknown, fallback: Currency = defaultCurrency): Currency {
+  const candidate = String(value || "").trim().toUpperCase();
+
+  return supportedCurrencies.includes(candidate as Currency) ? (candidate as Currency) : fallback;
+}
+
+function normalizeOptionalCurrency(value: unknown): Currency | undefined {
+  if (!value) return undefined;
+
+  const candidate = String(value).trim().toUpperCase();
+
+  return supportedCurrencies.includes(candidate as Currency) ? (candidate as Currency) : undefined;
+}
+
 function normalizeGrowthSimulation(input: Partial<GrowthSimulation>): GrowthSimulation {
   const frequency: GrowthFrequency =
     input.contributionFrequency === "daily" ||
@@ -973,11 +1035,14 @@ function normalizeGrowthSimulation(input: Partial<GrowthSimulation>): GrowthSimu
 }
 
 function normalizeGrowthManualTarget(input: Partial<GrowthManualTarget>): GrowthManualTarget {
+  const currency = normalizeOptionalCurrency(input.currency);
+
   return {
     id: input.id || newId(),
     name: String(input.name ?? ""),
     amount: String(input.amount ?? ""),
     period: input.period === "year" ? "year" : "one",
+    ...(currency ? { currency } : {}),
   };
 }
 
@@ -990,6 +1055,9 @@ function normalizeGrowthPlannerState(input?: Partial<GrowthPlannerState> | null)
     realLifeTargets: realLifeTargets.length ? realLifeTargets : defaultGrowthPlannerState.realLifeTargets,
     savingGoalName: String(input?.savingGoalName ?? ""),
     savingGoalAmount: String(input?.savingGoalAmount ?? ""),
+    ...(normalizeOptionalCurrency(input?.savingGoalCurrency)
+      ? { savingGoalCurrency: normalizeOptionalCurrency(input?.savingGoalCurrency) }
+      : {}),
     updatedAt: input?.updatedAt,
   };
 }
@@ -1003,6 +1071,8 @@ function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
     input.priority === "low" || input.priority === "medium" || input.priority === "high"
       ? input.priority
       : "medium";
+  const currency = normalizeOptionalCurrency(input.currency);
+  const remainingCurrency = normalizeOptionalCurrency(input.remainingCurrency);
 
   return {
     id: input.id || newId(),
@@ -1012,6 +1082,8 @@ function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
     remainingAmount: String(input.remainingAmount ?? ""),
     dueDay: String(input.dueDay ?? ""),
     priority,
+    ...(currency ? { currency } : {}),
+    ...(remainingCurrency ? { remainingCurrency } : {}),
   };
 }
 
@@ -1032,6 +1104,7 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
   return {
     ...defaultSettings,
     ...(input || {}),
+    currency: normalizeCurrency(input?.currency, defaultSettings.currency),
     profile: {
       ...defaultSettings.profile,
       ...(input?.profile || {}),
@@ -1061,7 +1134,7 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
 
 function legacySettingsFromDb(row: Record<string, unknown>): Partial<Settings> {
   return {
-    currency: (row.currency as Currency) || defaultSettings.currency,
+    currency: normalizeCurrency(row.currency, defaultSettings.currency),
     dailyReminder: toBoolean(row.daily_reminder, defaultSettings.dailyReminder),
     onboardingCompleted: toBoolean(row.onboarding_completed, Boolean(defaultSettings.onboardingCompleted)),
     income: {
@@ -1158,7 +1231,7 @@ function settingsToDb(telegramId: number, input: Settings, includeExtendedPayloa
   const settings = normalizeSettings(input);
   const row: Record<string, unknown> = {
     telegram_id: telegramId,
-    currency: settings.currency,
+    currency: normalizeCurrency(settings.currency, defaultSettings.currency),
     daily_reminder: settings.dailyReminder,
     onboarding_completed: Boolean(settings.onboardingCompleted),
     income_salary: settings.income.salary,
@@ -1212,6 +1285,8 @@ function dbToSettings(row: Record<string, unknown>, localFallback?: Partial<Sett
 }
 
 function dbToExpense(row: Record<string, unknown>): Expense {
+  const currency = normalizeOptionalCurrency(row.currency);
+
   return {
     id: String(row.id),
     amount: Number(row.amount ?? 0),
@@ -1219,6 +1294,7 @@ function dbToExpense(row: Record<string, unknown>): Expense {
     needType: String(row.need_type ?? "Needed") as NeedType,
     note: String(row.note ?? ""),
     createdAt: String(row.created_at ?? new Date().toISOString()),
+    ...(currency ? { currency } : {}),
   };
 }
 

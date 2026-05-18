@@ -8411,6 +8411,15 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
   border: 1px solid rgba(183, 255, 25, 0.16) !important;
 }
 
+
+.currency-foundation-note {
+  grid-column: 1 / -1;
+  margin-top: -2px;
+  color: rgba(244, 247, 240, 0.54) !important;
+  font-size: 10.5px;
+  line-height: 1.35;
+}
+
 .profile-block {
   padding: 11px 0 4px;
 }
