@@ -141,6 +141,11 @@ type Settings = {
     side: number;
     other: number;
   };
+  incomeCurrencies: {
+    salary?: Currency;
+    side?: Currency;
+    other?: Currency;
+  };
   fixedCosts: {
     rent: number;
     utilities: number;
@@ -149,6 +154,15 @@ type Settings = {
     phone: number;
     data: number;
     education: number;
+  };
+  fixedCostCurrencies: {
+    rent?: Currency;
+    utilities?: Currency;
+    food?: Currency;
+    transport?: Currency;
+    phone?: Currency;
+    data?: Currency;
+    education?: Currency;
   };
   survival: {
     nextPaydayDate: string;
@@ -396,6 +410,11 @@ const defaultSettings: Settings = {
     side: 600,
     other: 450,
   },
+  incomeCurrencies: {
+    salary: defaultCurrency,
+    side: defaultCurrency,
+    other: defaultCurrency,
+  },
   fixedCosts: {
     rent: 1200,
     utilities: 200,
@@ -405,6 +424,15 @@ const defaultSettings: Settings = {
     data: 0,
     education: 0,
   },
+  fixedCostCurrencies: {
+    rent: defaultCurrency,
+    utilities: defaultCurrency,
+    food: defaultCurrency,
+    transport: defaultCurrency,
+    phone: defaultCurrency,
+    data: defaultCurrency,
+    education: defaultCurrency,
+  },
   survival: {
     nextPaydayDate: "",
   },
@@ -413,6 +441,22 @@ const defaultSettings: Settings = {
   },
   categoryNames: defaultCategoryNames,
 };
+
+const incomeKeys = ["salary", "side", "other"] as const;
+const fixedCostKeys = ["rent", "utilities", "food", "transport", "phone", "data", "education"] as const;
+
+function normalizeCurrencyRecord<T extends readonly string[]>(
+  input: unknown,
+  keys: T,
+  fallbackCurrency: Currency
+) {
+  const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+
+  return keys.reduce((acc, key) => {
+    acc[key as T[number]] = normalizeCurrency(source[key], fallbackCurrency);
+    return acc;
+  }, {} as Record<T[number], Currency>);
+}
 
 const emptyStreak: Streak = {
   currentStreak: 0,
@@ -1121,10 +1165,20 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
       ...defaultSettings.income,
       ...(input?.income || {}),
     },
+    incomeCurrencies: normalizeCurrencyRecord(
+      input?.incomeCurrencies,
+      incomeKeys,
+      normalizeCurrency(input?.currency, defaultSettings.currency)
+    ),
     fixedCosts: {
       ...defaultSettings.fixedCosts,
       ...(input?.fixedCosts || {}),
     },
+    fixedCostCurrencies: normalizeCurrencyRecord(
+      input?.fixedCostCurrencies,
+      fixedCostKeys,
+      normalizeCurrency(input?.currency, defaultSettings.currency)
+    ),
     survival: {
       ...defaultSettings.survival,
       ...(input?.survival || {}),

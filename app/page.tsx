@@ -329,6 +329,11 @@ type Settings = {
     side: number;
     other: number;
   };
+  incomeCurrencies: {
+    salary?: Currency;
+    side?: Currency;
+    other?: Currency;
+  };
   fixedCosts: {
     rent: number;
     utilities: number;
@@ -337,6 +342,15 @@ type Settings = {
     phone: number;
     data: number;
     education: number;
+  };
+  fixedCostCurrencies: {
+    rent?: Currency;
+    utilities?: Currency;
+    food?: Currency;
+    transport?: Currency;
+    phone?: Currency;
+    data?: Currency;
+    education?: Currency;
   };
   survival: {
     nextPaydayDate: string;
@@ -892,6 +906,11 @@ const defaultSettings: Settings = {
     side: 600,
     other: 450,
   },
+  incomeCurrencies: {
+    salary: defaultCurrency,
+    side: defaultCurrency,
+    other: defaultCurrency,
+  },
   fixedCosts: {
     rent: 1200,
     utilities: 200,
@@ -900,6 +919,15 @@ const defaultSettings: Settings = {
     phone: 80,
     data: 0,
     education: 0,
+  },
+  fixedCostCurrencies: {
+    rent: defaultCurrency,
+    utilities: defaultCurrency,
+    food: defaultCurrency,
+    transport: defaultCurrency,
+    phone: defaultCurrency,
+    data: defaultCurrency,
+    education: defaultCurrency,
   },
   survival: {
     nextPaydayDate: "",
@@ -919,6 +947,19 @@ const emptyCosts: Settings["fixedCosts"] = {
   data: 0,
   education: 0,
 };
+
+const incomeKeys = ["salary", "side", "other"] as const;
+const fixedCostKeys = ["rent", "utilities", "food", "transport", "phone", "data", "education"] as const;
+
+type IncomeKey = (typeof incomeKeys)[number];
+type FixedCostKey = (typeof fixedCostKeys)[number];
+
+function currencyMapForKeys<T extends readonly string[]>(keys: T, currency: Currency) {
+  return keys.reduce((acc, key) => {
+    acc[key as T[number]] = currency;
+    return acc;
+  }, {} as Record<T[number], Currency>);
+}
 
 const regionPresets: Record<
   RegionPreset,
@@ -1287,7 +1328,7 @@ const ruText: Record<string, string> = {
   "Currency currently changes display only. New entries remember this currency for future conversion.": "Валюта пока меняет только отображение. Новые записи запоминают эту валюту для будущей конвертации.",
   "Exchange-rate cache is now prepared server-side. Real conversion stays off until Currency Mode is added.": "Серверный кэш курсов уже подготовлен. Реальная конвертация остаётся выключенной до добавления Currency Mode.",
   "Convert mode now uses cached exchange rates for entries with original currency metadata.": "Convert mode теперь использует кэш курсов для записей с исходной валютой.",
-  "Converted display is live for entries that remember their original currency. Income and fixed costs still use the selected currency directly.": "Конвертированное отображение включено для записей, которые запомнили исходную валюту. Доходы и фиксированные расходы пока используют выбранную валюту напрямую.",
+  "Converted display is live for expenses, income, fixed costs, Growth targets, and Debt Radar values that remember their original currency.": "Конвертированное отображение включено для записей, которые запомнили исходную валюту. Доходы и фиксированные расходы пока используют выбранную валюту напрямую.",
   "Currency Mode": "Режим валюты",
   "Display only": "Только отображение",
   "Convert values": "Конвертировать значения",
@@ -2857,10 +2898,20 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
       ...defaultSettings.income,
       ...(input?.income || {}),
     },
+    incomeCurrencies: normalizeCurrencyRecord(
+      input?.incomeCurrencies,
+      incomeKeys,
+      normalizeCurrency(input?.currency, defaultSettings.currency)
+    ),
     fixedCosts: {
       ...defaultSettings.fixedCosts,
       ...(input?.fixedCosts || {}),
     },
+    fixedCostCurrencies: normalizeCurrencyRecord(
+      input?.fixedCostCurrencies,
+      fixedCostKeys,
+      normalizeCurrency(input?.currency, defaultSettings.currency)
+    ),
     survival: {
       ...defaultSettings.survival,
       ...(input?.survival || {}),
@@ -2909,6 +2960,7 @@ function applyRegionPreset(settings: Settings, region: RegionPreset): Settings {
       ...preset.fixedCosts,
       rent: hasRent ? preset.fixedCosts.rent : 0,
     },
+    fixedCostCurrencies: currencyMapForKeys(fixedCostKeys, normalizeCurrency(preset.currency, settings.currency)),
   };
 }
 
@@ -2933,6 +2985,10 @@ function applyLifeMode(settings: Settings, lifeMode: LifeMode): Settings {
     fixedCosts: {
       ...settings.fixedCosts,
       rent: studentLike ? 0 : settings.fixedCosts.rent,
+    },
+    fixedCostCurrencies: {
+      ...settings.fixedCostCurrencies,
+      rent: studentLike ? settings.currency : settings.fixedCostCurrencies.rent,
     },
   };
 }
@@ -3600,6 +3656,50 @@ function normalizeOptionalCurrency(value: unknown): Currency | undefined {
   const candidate = String(value).trim().toUpperCase();
 
   return supportedCurrencies.includes(candidate as Currency) ? (candidate as Currency) : undefined;
+}
+
+function normalizeCurrencyRecord<T extends readonly string[]>(
+  input: unknown,
+  keys: T,
+  fallbackCurrency: Currency
+) {
+  const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+
+  return keys.reduce((acc, key) => {
+    acc[key as T[number]] = normalizeCurrency(source[key], fallbackCurrency);
+    return acc;
+  }, {} as Record<T[number], Currency>);
+}
+
+function getSettingsMoneySources(settings: Settings) {
+  return [
+    ...incomeKeys.map((key) => settings.incomeCurrencies[key]),
+    ...fixedCostKeys.map((key) => settings.fixedCostCurrencies[key]),
+  ];
+}
+
+function displaySettingsForMoney(settings: Settings, rates: ExchangeRateMap): Settings {
+  if (settings.currencyMode !== "convert") return settings;
+
+  const income = incomeKeys.reduce((acc, key) => {
+    const display = getDisplayAmount(settings.income[key], settings.incomeCurrencies[key], settings, rates);
+    acc[key] = display.amount;
+    return acc;
+  }, {} as Settings["income"]);
+
+  const fixedCosts = fixedCostKeys.reduce((acc, key) => {
+    const display = getDisplayAmount(settings.fixedCosts[key], settings.fixedCostCurrencies[key], settings, rates);
+    acc[key] = display.amount;
+    return acc;
+  }, {} as Settings["fixedCosts"]);
+
+  return {
+    ...settings,
+    income,
+    incomeCurrencies: currencyMapForKeys(incomeKeys, settings.currency),
+    fixedCosts,
+    fixedCostCurrencies: currencyMapForKeys(fixedCostKeys, settings.currency),
+  };
 }
 
 function getCurrencySymbol(currencyInput: Currency | string | undefined) {
@@ -6164,17 +6264,29 @@ export default function Home() {
     () => expenses.map((expense) => expense.currency),
     [expenses]
   );
-  const expenseRateState = useExchangeRates(settings, expenseCurrencySources);
+  const settingsCurrencySources = useMemo(
+    () => getSettingsMoneySources(settings),
+    [settings]
+  );
+  const appCurrencySources = useMemo(
+    () => [...expenseCurrencySources, ...settingsCurrencySources],
+    [expenseCurrencySources, settingsCurrencySources]
+  );
+  const appRateState = useExchangeRates(settings, appCurrencySources);
   const displayExpenses = useMemo(
-    () => expenses.map((expense) => expenseToDisplayExpense(expense, settings, expenseRateState.rates)),
-    [expenses, settings, expenseRateState.rates]
+    () => expenses.map((expense) => expenseToDisplayExpense(expense, settings, appRateState.rates)),
+    [expenses, settings, appRateState.rates]
+  );
+  const displaySettings = useMemo(
+    () => displaySettingsForMoney(settings, appRateState.rates),
+    [settings, appRateState.rates]
   );
   const currentMonthExpenses = useMemo(() => {
     return getCurrentMonthExpenses(displayExpenses);
   }, [displayExpenses]);
 
-  const totalIncome = getTotalIncome(settings);
-  const fixedCosts = getFixedCosts(settings);
+  const totalIncome = getTotalIncome(displaySettings);
+  const fixedCosts = getFixedCosts(displaySettings);
   const spentThisMonth = sum(currentMonthExpenses.map((e) => e.amount));
 
   const moneyLeaks = sum(
@@ -6210,8 +6322,8 @@ export default function Home() {
   }, [displayExpenses]);
 
   const chartDays = useMemo(() => {
-    return buildChartData("week", displayExpenses, settings);
-  }, [displayExpenses, settings]);
+    return buildChartData("week", displayExpenses, displaySettings);
+  }, [displayExpenses, displaySettings]);
 
   const localStreak = useMemo(() => {
     return calculateStreakFromExpenses(expenses);
@@ -6220,8 +6332,8 @@ export default function Home() {
   const activeStreak = cloudAuthReady && cloudStatus === "cloud" ? streak : localStreak;
 
   const walletInsights = useMemo(() => {
-    return buildWalletInsights(displayExpenses, settings);
-  }, [displayExpenses, settings]);
+    return buildWalletInsights(displayExpenses, displaySettings);
+  }, [displayExpenses, displaySettings]);
 
   async function addExpense() {
     const value = safeNumber(amount);
@@ -6583,7 +6695,7 @@ export default function Home() {
 
         {loaded && onboardingCompleted && activeTab === "home" && (
           <DashboardScreen
-            settings={settings}
+            settings={displaySettings}
             summary={summary}
             badges={badges}
             walletInsights={walletInsights}
@@ -6633,7 +6745,7 @@ export default function Home() {
 
         {loaded && onboardingCompleted && activeTab === "chart" && (
           <ChartScreen
-            settings={settings}
+            settings={displaySettings}
             expenses={displayExpenses}
             walletInsights={walletInsights}
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
@@ -6645,7 +6757,7 @@ export default function Home() {
 
         {loaded && onboardingCompleted && activeTab === "growth" && (
           <GrowthLabScreen
-            settings={settings}
+            settings={displaySettings}
             expenses={currentMonthExpenses}
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onBack={goHome}
@@ -6657,7 +6769,7 @@ export default function Home() {
 
         {loaded && onboardingCompleted && activeTab === "whatif" && (
           <WhatIfScreen
-            settings={settings}
+            settings={displaySettings}
             setSettings={setSettings}
             expenses={currentMonthExpenses}
             challengeTemplates={challengeTemplates}
@@ -6682,9 +6794,10 @@ export default function Home() {
             setSettings={setSettings}
             expenses={displayExpenses}
             currentMonthExpenses={currentMonthExpenses}
-            exchangeRateStatus={expenseRateState.status}
-            exchangeRateError={expenseRateState.error}
-            conversionSourceCount={getUniqueCurrencies(expenseCurrencySources, settings.currency).filter((currency) => currency !== settings.currency).length}
+            exchangeRateStatus={appRateState.status}
+            exchangeRateError={appRateState.error}
+            exchangeRates={appRateState.rates}
+            conversionSourceCount={getUniqueCurrencies(appCurrencySources, settings.currency).filter((currency) => currency !== settings.currency).length}
             onReset={resetData}
             onDeleteExpense={deleteExpense}
             telegram={telegram}
@@ -7454,6 +7567,10 @@ function OnboardingScreen({
         ...prev.income,
         [key]: safeNumber(value),
       },
+      incomeCurrencies: {
+        ...prev.incomeCurrencies,
+        [key]: prev.currency,
+      },
     }));
   }
 
@@ -7463,6 +7580,10 @@ function OnboardingScreen({
       fixedCosts: {
         ...prev.fixedCosts,
         [key]: safeNumber(value),
+      },
+      fixedCostCurrencies: {
+        ...prev.fixedCostCurrencies,
+        [key]: prev.currency,
       },
     }));
   }
@@ -7604,21 +7725,21 @@ function OnboardingScreen({
             <EditableMoneyLine
               label={getPrimaryIncomeLabel(draft)}
               value={draft.income.salary}
-              currency={draft.currency}
+              currency={draft.incomeCurrencies.salary || draft.currency}
               onChange={(value) => updateIncome("salary", value)}
             />
 
             <EditableMoneyLine
               label="Side hustle / extra"
               value={draft.income.side}
-              currency={draft.currency}
+              currency={draft.incomeCurrencies.side || draft.currency}
               onChange={(value) => updateIncome("side", value)}
             />
 
             <EditableMoneyLine
               label="Other / support"
               value={draft.income.other}
-              currency={draft.currency}
+              currency={draft.incomeCurrencies.other || draft.currency}
               onChange={(value) => updateIncome("other", value)}
             />
           </div>
@@ -7657,7 +7778,7 @@ function OnboardingScreen({
               <EditableMoneyLine
                 label="Rent"
                 value={draft.fixedCosts.rent}
-                currency={draft.currency}
+                currency={draft.fixedCostCurrencies.rent || draft.currency}
                 onChange={(value) => updateFixedCost("rent", value)}
               />
             )}
@@ -7665,28 +7786,28 @@ function OnboardingScreen({
             <EditableMoneyLine
               label="Food basics"
               value={draft.fixedCosts.food}
-              currency={draft.currency}
+              currency={draft.fixedCostCurrencies.food || draft.currency}
               onChange={(value) => updateFixedCost("food", value)}
             />
 
             <EditableMoneyLine
               label="Transport"
               value={draft.fixedCosts.transport}
-              currency={draft.currency}
+              currency={draft.fixedCostCurrencies.transport || draft.currency}
               onChange={(value) => updateFixedCost("transport", value)}
             />
 
             <EditableMoneyLine
               label="Data / Internet"
               value={draft.fixedCosts.data}
-              currency={draft.currency}
+              currency={draft.fixedCostCurrencies.data || draft.currency}
               onChange={(value) => updateFixedCost("data", value)}
             />
 
             <EditableMoneyLine
               label="School / study"
               value={draft.fixedCosts.education}
-              currency={draft.currency}
+              currency={draft.fixedCostCurrencies.education || draft.currency}
               onChange={(value) => updateFixedCost("education", value)}
             />
           </div>
@@ -9169,7 +9290,7 @@ function LifeProfileEditor({
         </div>
         <small className="currency-foundation-note">
           {settings.currencyMode === "convert"
-            ? "Converted display is live for entries that remember their original currency. Income and fixed costs still use the selected currency directly."
+            ? "Converted display is live for expenses, income, fixed costs, Growth targets, and Debt Radar values that remember their original currency."
             : "Display-only keeps the old behavior: symbol changes, stored amounts do not."}
         </small>
         {settings.currencyMode === "convert" && (
@@ -15529,6 +15650,7 @@ function SettingsScreen({
   currentMonthExpenses,
   exchangeRateStatus,
   exchangeRateError,
+  exchangeRates,
   conversionSourceCount,
   onReset,
   onDeleteExpense,
@@ -15550,6 +15672,7 @@ function SettingsScreen({
   currentMonthExpenses: Expense[];
   exchangeRateStatus: ExchangeRateStatus;
   exchangeRateError: string;
+  exchangeRates: ExchangeRateMap;
   conversionSourceCount: number;
   onReset: () => void;
   onDeleteExpense: (id: string) => void;
@@ -15565,8 +15688,12 @@ function SettingsScreen({
   onBack: () => void;
   onHelp: () => void;
 }) {
-  const totalIncome = getTotalIncome(settings);
-  const fixedCosts = getFixedCosts(settings);
+  const displaySettings = useMemo(
+    () => displaySettingsForMoney(settings, exchangeRates),
+    [settings, exchangeRates]
+  );
+  const totalIncome = getTotalIncome(displaySettings);
+  const fixedCosts = getFixedCosts(displaySettings);
   const monthSpent = sum(currentMonthExpenses.map((item) => item.amount));
   const categorySummaries = getCategorySummaries(currentMonthExpenses);
   const latestExpenses = expenses.slice(0, 8);
@@ -15579,6 +15706,10 @@ function SettingsScreen({
         ...prev.income,
         [key]: safeNumber(value),
       },
+      incomeCurrencies: {
+        ...prev.incomeCurrencies,
+        [key]: prev.currency,
+      },
     }));
   }
 
@@ -15588,6 +15719,10 @@ function SettingsScreen({
       fixedCosts: {
         ...prev.fixedCosts,
         [key]: safeNumber(value),
+      },
+      fixedCostCurrencies: {
+        ...prev.fixedCostCurrencies,
+        [key]: prev.currency,
       },
     }));
   }
@@ -15743,21 +15878,21 @@ function SettingsScreen({
         <EditableMoneyLine
           label={getPrimaryIncomeLabel(settings)}
           value={settings.income.salary}
-          currency={settings.currency}
+          currency={settings.incomeCurrencies.salary || settings.currency}
           onChange={(value) => updateIncome("salary", value)}
         />
 
         <EditableMoneyLine
           label="Side hustle / extra"
           value={settings.income.side}
-          currency={settings.currency}
+          currency={settings.incomeCurrencies.side || settings.currency}
           onChange={(value) => updateIncome("side", value)}
         />
 
         <EditableMoneyLine
           label="Other / support"
           value={settings.income.other}
-          currency={settings.currency}
+          currency={settings.incomeCurrencies.other || settings.currency}
           onChange={(value) => updateIncome("other", value)}
         />
 
@@ -15795,7 +15930,7 @@ function SettingsScreen({
           <EditableMoneyLine
             label="Rent"
             value={settings.fixedCosts.rent}
-            currency={settings.currency}
+            currency={settings.fixedCostCurrencies.rent || settings.currency}
             onChange={(value) => updateFixedCost("rent", value)}
           />
         )}
@@ -15803,42 +15938,42 @@ function SettingsScreen({
         <EditableMoneyLine
           label="Utilities"
           value={settings.fixedCosts.utilities}
-          currency={settings.currency}
+          currency={settings.fixedCostCurrencies.utilities || settings.currency}
           onChange={(value) => updateFixedCost("utilities", value)}
         />
 
         <EditableMoneyLine
           label="Food basics"
           value={settings.fixedCosts.food}
-          currency={settings.currency}
+          currency={settings.fixedCostCurrencies.food || settings.currency}
           onChange={(value) => updateFixedCost("food", value)}
         />
 
         <EditableMoneyLine
           label="Transport"
           value={settings.fixedCosts.transport}
-          currency={settings.currency}
+          currency={settings.fixedCostCurrencies.transport || settings.currency}
           onChange={(value) => updateFixedCost("transport", value)}
         />
 
         <EditableMoneyLine
           label="Phone"
           value={settings.fixedCosts.phone}
-          currency={settings.currency}
+          currency={settings.fixedCostCurrencies.phone || settings.currency}
           onChange={(value) => updateFixedCost("phone", value)}
         />
 
         <EditableMoneyLine
           label="Data / Internet"
           value={settings.fixedCosts.data}
-          currency={settings.currency}
+          currency={settings.fixedCostCurrencies.data || settings.currency}
           onChange={(value) => updateFixedCost("data", value)}
         />
 
         <EditableMoneyLine
           label="School / study"
           value={settings.fixedCosts.education}
-          currency={settings.currency}
+          currency={settings.fixedCostCurrencies.education || settings.currency}
           onChange={(value) => updateFixedCost("education", value)}
         />
 
