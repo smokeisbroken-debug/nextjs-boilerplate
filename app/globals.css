@@ -16051,6 +16051,20 @@ html[lang="ru"] .tab-guide-hero p {
   line-height: 1.35;
 }
 
+.currency-conversion-status-card.warning {
+  border-color: rgba(255, 202, 87, 0.24);
+  background: rgba(255, 202, 87, 0.075);
+}
+
+.currency-conversion-status-card.warning strong {
+  color: #ffe29a;
+}
+
+.currency-edge-note {
+  color: rgba(199, 255, 74, 0.68) !important;
+  font-weight: 750;
+}
+
 .expense-row b {
   display: grid;
   justify-items: end;

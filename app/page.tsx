@@ -107,6 +107,7 @@ const currencyModeOptions: { value: CurrencyMode; label: string; helper: string 
 
 type MoneyFormatOptions = {
   includeCode?: boolean;
+  precision?: "whole" | "auto";
 };
 
 type ExchangeRateSnapshot = {
@@ -3831,11 +3832,18 @@ function formatMoney(value: number, currencyInput: Currency | string | undefined
   const currency = normalizeCurrency(currencyInput);
   const symbol = getCurrencySymbol(currency);
   const safeValue = Number.isFinite(value) ? value : 0;
-  const abs = Math.abs(Math.round(safeValue)).toLocaleString("en-US");
-  const prefix = safeValue < 0 ? "-" : "";
+  const absoluteValue = Math.abs(safeValue);
+  const precision = options.precision || "whole";
+  const minimumFractionDigits = precision === "auto" && absoluteValue > 0 && absoluteValue < 10 ? 2 : 0;
+  const maximumFractionDigits = precision === "auto" && absoluteValue > 0 && absoluteValue < 100 ? 2 : 0;
+  const displayValue = absoluteValue.toLocaleString("en-US", {
+    minimumFractionDigits,
+    maximumFractionDigits,
+  });
+  const prefix = safeValue < 0 && absoluteValue > 0 ? "-" : "";
   const suffix = options.includeCode ? ` ${currency}` : "";
 
-  return `${prefix}${symbol}${abs}${suffix}`;
+  return `${prefix}${symbol}${displayValue}${suffix}`;
 }
 
 function money(value: number, currency: Currency) {
@@ -4011,7 +4019,7 @@ function usdReferenceNote(
 
   if (!reference || sourceCurrency === usdReferenceCurrency) return "";
 
-  return `≈ ${formatMoney(reference.amount, usdReferenceCurrency, { includeCode: true })}`;
+  return `≈ ${formatMoney(reference.amount, usdReferenceCurrency, { includeCode: true, precision: "auto" })}`;
 }
 
 function usdReferenceNoteFromDisplay(
@@ -9394,13 +9402,39 @@ function LifeProfileEditor({
   exchangeRateStatus = "idle",
   exchangeRateError = "",
   conversionSourceCount = 0,
+  oldCurrencyRepairCount = 0,
 }: {
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
   exchangeRateStatus?: ExchangeRateStatus;
   exchangeRateError?: string;
   conversionSourceCount?: number;
+  oldCurrencyRepairCount?: number;
 }) {
+  const hasOldCurrencyRepairCandidates = oldCurrencyRepairCount > 0;
+  const currencyStatusClassName = `currency-conversion-status-card${hasOldCurrencyRepairCandidates ? " warning" : ""}`;
+  const currencyStatusLabel =
+    exchangeRateStatus === "loading"
+      ? "Loading rates"
+      : exchangeRateStatus === "ready"
+        ? hasOldCurrencyRepairCandidates
+          ? "Rates ready · repair old data"
+          : "Rates ready"
+        : exchangeRateStatus === "partial"
+          ? "Some rates unavailable"
+          : exchangeRateStatus === "error"
+            ? "Rate unavailable"
+            : conversionSourceCount > 0
+              ? "Waiting for entries"
+              : "No mixed currencies yet";
+  const currencyStatusDescription =
+    exchangeRateError ||
+    (hasOldCurrencyRepairCandidates
+      ? `${oldCurrencyRepairCount} old expense row${oldCurrencyRepairCount === 1 ? "" : "s"} do not remember original currency yet. Use Old Data Currency Repair before judging converted totals.`
+      : conversionSourceCount > 0
+        ? `${conversionSourceCount} source currenc${conversionSourceCount === 1 ? "y" : "ies"} checked against ${settings.currency} and USD reference.`
+        : "New entries remember currency automatically. Old entries can be marked with Old Data Currency Repair if needed.");
+
   function updateProfile<K extends keyof Settings["profile"]>(
     key: K,
     value: Settings["profile"][K]
@@ -9535,27 +9569,15 @@ function LifeProfileEditor({
             : "Display-only keeps the old behavior: symbol changes, stored amounts do not."}
         </small>
         {settings.currencyMode === "convert" && (
-          <div className="currency-conversion-status-card">
+          <div className={currencyStatusClassName}>
             <span>Exchange-rate status</span>
-            <strong>
-              {exchangeRateStatus === "loading"
-                ? "Loading rates"
-                : exchangeRateStatus === "ready"
-                  ? "Rates ready"
-                  : exchangeRateStatus === "partial"
-                    ? "Partially ready"
-                    : exchangeRateStatus === "error"
-                      ? "Rate error"
-                      : conversionSourceCount > 0
-                        ? "Waiting for entries"
-                        : "No mixed currencies yet"}
-            </strong>
-            <small>
-              {exchangeRateError ||
-                (conversionSourceCount > 0
-                  ? `${conversionSourceCount} source currenc${conversionSourceCount === 1 ? "y" : "ies"} checked against ${settings.currency} and USD reference.`
-                  : "Add entries in another currency, then switch display currency to see converted values.")}
-            </small>
+            <strong>{currencyStatusLabel}</strong>
+            <small>{currencyStatusDescription}</small>
+            {settings.currency !== usdReferenceCurrency && (
+              <small className="currency-edge-note">
+                Main values use {settings.currency}. The USD line is only an approximate global reference.
+              </small>
+            )}
           </div>
         )}
       </div>
@@ -11738,7 +11760,7 @@ function ExpenseRow({
           rowCurrency !== usdReferenceCurrency &&
           Number.isFinite(expense.usdReferenceAmount) && (
             <small className="converted-original-note">
-              ≈ {formatMoney(expense.usdReferenceAmount, expense.usdReferenceCurrency, { includeCode: true })}
+              ≈ {formatMoney(expense.usdReferenceAmount, expense.usdReferenceCurrency, { includeCode: true, precision: "auto" })}
             </small>
           )}
         {(expense.usdReferenceAmount === undefined || rowCurrency === usdReferenceCurrency) &&
@@ -16280,6 +16302,7 @@ function SettingsScreen({
         exchangeRateStatus={exchangeRateStatus}
         exchangeRateError={exchangeRateError}
         conversionSourceCount={conversionSourceCount}
+        oldCurrencyRepairCount={oldExpenseCount}
       />
 
       <details className="clean-details settings-clean-details" open>
