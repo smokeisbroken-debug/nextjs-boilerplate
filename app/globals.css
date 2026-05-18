@@ -16083,3 +16083,31 @@ html[lang="ru"] .tab-guide-hero p {
   color: rgba(199, 255, 74, 0.68);
   font-size: 0.68rem;
 }
+
+/* v57.8 USD Reference in Share Cards */
+.share-usd-reference-note {
+  display: block;
+  margin-top: 3px;
+  color: rgba(199, 255, 74, 0.72);
+  font-size: 0.62rem;
+  font-weight: 850;
+  line-height: 1.12;
+  overflow-wrap: anywhere;
+}
+
+.report-public-share-grid .share-usd-reference-note,
+.weekly-share-grid .share-usd-reference-note,
+.monthly-share-grid .share-usd-reference-note,
+.survival-share-grid .share-usd-reference-note,
+.public-share-savings .share-usd-reference-note {
+  color: rgba(199, 255, 74, 0.76);
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+@media (max-width: 430px) {
+  .share-usd-reference-note {
+    font-size: 0.6rem;
+  }
+}

@@ -6845,6 +6845,7 @@ export default function Home() {
             settings={displaySettings}
             expenses={displayExpenses}
             walletInsights={walletInsights}
+            exchangeRates={appRateState.rates}
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onBack={goHome}
             onExport={openExportHelp}
@@ -8357,6 +8358,7 @@ function DashboardScreen({
           summary={summary}
           expenses={allExpenses}
           identityStats={identityStats}
+          exchangeRates={exchangeRates}
           shareInitData={telegram.isTelegram ? telegram.initData : ""}
         />
       </details>
@@ -8396,6 +8398,7 @@ function DashboardScreen({
           potentialYearlySavings={summary.totalLeaks * 12}
           leaderboard={leaderboard}
           identityStats={identityStats}
+          exchangeRates={exchangeRates}
           shareInitData={telegram.isTelegram ? telegram.initData : ""}
         />
       </details>
@@ -9647,6 +9650,7 @@ function ReportsPanel({
   summary,
   expenses,
   identityStats,
+  exchangeRates,
   shareInitData,
 }: {
   settings: Settings;
@@ -9662,6 +9666,7 @@ function ReportsPanel({
   };
   expenses: Expense[];
   identityStats: V2IdentityStats;
+  exchangeRates: ExchangeRateMap;
   shareInitData: string;
 }) {
   const [reportSharing, setReportSharing] = useState<"daily" | "weekly" | null>(null);
@@ -9699,6 +9704,10 @@ function ReportsPanel({
 
   const weeklyStatus = identityStats.status;
   const dailyScore = clamp(100 - Math.round((todayLeakAmount / Math.max(summary.totalIncome - summary.fixedCosts, 1)) * 100), 0, 100);
+  const dailySpentUsdNote = usdReferenceNote(summary.todaySpent, settings.currency, settings, exchangeRates);
+  const dailyLeaksUsdNote = usdReferenceNote(todayLeakAmount, settings.currency, settings, exchangeRates);
+  const weeklyLeaksUsdNote = usdReferenceNote(weeklyLeakAmount, settings.currency, settings, exchangeRates);
+  const weeklyBiggestLeakUsdNote = usdReferenceNote(identityStats.biggestLeakAmount, settings.currency, settings, exchangeRates);
 
   const dailyReportText = [
     "$BROKE Daily Wallet Report",
@@ -9707,12 +9716,15 @@ function ReportsPanel({
     `Wallet HP: ${summary.walletHp}/100`,
     `Spent today: ${money(summary.todaySpent, settings.currency)}`,
     `Leaks today: ${money(todayLeakAmount, settings.currency)}`,
+    dailySpentUsdNote || dailyLeaksUsdNote
+      ? `USD reference: ${[dailySpentUsdNote && `spent ${dailySpentUsdNote}`, dailyLeaksUsdNote && `leaks ${dailyLeaksUsdNote}`].filter(Boolean).join(" · ")}`
+      : "",
     `Top category: ${todayTopCategory ? categoryLabel(todayTopCategory.category) : "none"}`,
     `Daily score: ${dailyScore}/100`,
     "",
     "Find the leak before it becomes your lifestyle.",
     "Smoke is broke.",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   const weeklyReportText = [
     "$BROKE Weekly Wallet Report",
@@ -9726,11 +9738,14 @@ function ReportsPanel({
         ? `${categoryDisplayLabel(settings, identityStats.biggestLeakCategory)} (${money(identityStats.biggestLeakAmount, settings.currency)})`
         : "none"
     }`,
+    weeklyLeaksUsdNote || weeklyBiggestLeakUsdNote
+      ? `USD reference: ${[weeklyLeaksUsdNote && `weekly leaks ${weeklyLeaksUsdNote}`, weeklyBiggestLeakUsdNote && identityStats.biggestLeakAmount > 0 && `biggest leak ${weeklyBiggestLeakUsdNote}`].filter(Boolean).join(" · ")}`
+      : "",
     `Life hours lost: ${identityStats.lifeHoursLost}h`,
     "",
     "Find the leak before it becomes your lifestyle.",
     "Smoke is broke.",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   async function copyReportText(text: string) {
     try {
@@ -9807,10 +9822,12 @@ function ReportsPanel({
             <div>
               <span>Spent</span>
               <strong>{money(summary.todaySpent, settings.currency)}</strong>
+              {dailySpentUsdNote && <small className="share-usd-reference-note">{dailySpentUsdNote}</small>}
             </div>
             <div>
               <span>Leaks</span>
               <strong>{money(todayLeakAmount, settings.currency)}</strong>
+              {dailyLeaksUsdNote && <small className="share-usd-reference-note">{dailyLeaksUsdNote}</small>}
             </div>
             <div>
               <span>Score</span>
@@ -9843,10 +9860,12 @@ function ReportsPanel({
               <div>
                 <span>Spent</span>
                 <strong>{money(summary.todaySpent, settings.currency)}</strong>
+                {dailySpentUsdNote && <small className="share-usd-reference-note">{dailySpentUsdNote}</small>}
               </div>
               <div>
                 <span>Leaks</span>
                 <strong>{money(todayLeakAmount, settings.currency)}</strong>
+                {dailyLeaksUsdNote && <small className="share-usd-reference-note">{dailyLeaksUsdNote}</small>}
               </div>
               <div>
                 <span>Score</span>
@@ -9898,6 +9917,7 @@ function ReportsPanel({
             <div>
               <span>Leaks</span>
               <strong>{money(weeklyLeakAmount, settings.currency)}</strong>
+              {weeklyLeaksUsdNote && <small className="share-usd-reference-note">{weeklyLeaksUsdNote}</small>}
             </div>
             <div>
               <span>Hours lost</span>
@@ -9934,6 +9954,7 @@ function ReportsPanel({
               <div>
                 <span>Leaks</span>
                 <strong>{money(weeklyLeakAmount, settings.currency)}</strong>
+                {weeklyLeaksUsdNote && <small className="share-usd-reference-note">{weeklyLeaksUsdNote}</small>}
               </div>
               <div>
                 <span>Hours lost</span>
@@ -11121,6 +11142,7 @@ function buildShareText({
   potentialYearlySavings,
   leaderboard,
   identityStats,
+  exchangeRates,
 }: {
   settings: Settings;
   walletHp: number;
@@ -11128,6 +11150,7 @@ function buildShareText({
   potentialYearlySavings: number;
   leaderboard: LeaderboardState | null;
   identityStats: V2IdentityStats;
+  exchangeRates?: ExchangeRateMap;
 }) {
   const shareStats = getShareLeaderboardStats(leaderboard);
   const publicProofMode = settings.privacy.publicProofMode;
@@ -11135,6 +11158,9 @@ function buildShareText({
     shareStats.rank || shareStats.publicLeaderboard
       ? `Leaderboard: ${shareStats.rankLabel}`
       : "Leaderboard: private";
+  const potentialSavingsUsdNote = exchangeRates
+    ? usdReferenceNote(potentialYearlySavings, settings.currency, settings, exchangeRates)
+    : "";
 
   return [
     "My wallet is not broken.",
@@ -11160,9 +11186,10 @@ function buildShareText({
     `Potential yearly savings: ${
       publicProofMode ? "hidden by Public Proof Mode" : money(potentialYearlySavings, settings.currency)
     }`,
+    !publicProofMode && potentialSavingsUsdNote ? `USD reference: ${potentialSavingsUsdNote}` : "",
     "",
     "Find the leak before it becomes your lifestyle.",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 }
 
 async function createShareImageFileFromElement(element: HTMLElement) {
@@ -11274,6 +11301,7 @@ function ShareResultCard({
   potentialYearlySavings,
   leaderboard,
   identityStats,
+  exchangeRates,
   shareInitData,
 }: {
   settings: Settings;
@@ -11283,6 +11311,7 @@ function ShareResultCard({
   potentialYearlySavings: number;
   leaderboard: LeaderboardState | null;
   identityStats: V2IdentityStats;
+  exchangeRates: ExchangeRateMap;
   shareInitData: string;
 }) {
   const [copied, setCopied] = useState(false);
@@ -11299,6 +11328,9 @@ function ShareResultCard({
   const [imageSharing, setImageSharing] = useState(false);
   const shareCardRef = useRef<HTMLDivElement | null>(null);
   const shareStats = getShareLeaderboardStats(leaderboard);
+  const potentialYearlySavingsUsdNote = settings.privacy.publicProofMode
+    ? ""
+    : usdReferenceNote(potentialYearlySavings, settings.currency, settings, exchangeRates);
 
   const shareText = buildShareText({
     settings,
@@ -11307,6 +11339,7 @@ function ShareResultCard({
     potentialYearlySavings,
     leaderboard,
     identityStats,
+    exchangeRates,
   });
 
   function openXShare() {
@@ -11438,6 +11471,7 @@ function ShareResultCard({
         <div className="public-share-savings">
           <span>Potential yearly savings</span>
           <strong>{publicProofMoney(settings, potentialYearlySavings)}</strong>
+          {potentialYearlySavingsUsdNote && <small className="share-usd-reference-note">{potentialYearlySavingsUsdNote}</small>}
           <small>
             {settings.privacy.publicProofMode
               ? "Exact private numbers hidden by Public Proof Mode."
@@ -12010,16 +12044,21 @@ function OneFixRecommendationPanel({
 function WeeklyReviewPanel({
   settings,
   review,
+  exchangeRates,
   shareCardRef,
   sharing,
   onShare,
 }: {
   settings: Settings;
   review: WeeklyReview;
+  exchangeRates: ExchangeRateMap;
   shareCardRef: React.RefObject<HTMLDivElement | null>;
   sharing: boolean;
   onShare: () => void;
 }) {
+  const spentUsdNote = usdReferenceNote(review.totalSpent, settings.currency, settings, exchangeRates);
+  const leaksUsdNote = usdReferenceNote(review.totalLeaks, settings.currency, settings, exchangeRates);
+
   return (
     <details className="weekly-review-details">
       <summary>
@@ -12035,10 +12074,12 @@ function WeeklyReviewPanel({
           <div>
             <span>Spent this week</span>
             <strong>{money(review.totalSpent, settings.currency)}</strong>
+            {spentUsdNote && <small className="share-usd-reference-note">{spentUsdNote}</small>}
           </div>
           <div>
             <span>Leaks this week</span>
             <strong>{money(review.totalLeaks, settings.currency)}</strong>
+            {leaksUsdNote && <small className="share-usd-reference-note">{leaksUsdNote}</small>}
           </div>
           <div>
             <span>Leak pressure</span>
@@ -12128,10 +12169,12 @@ function WeeklyReviewPanel({
             <div>
               <span>Spent</span>
               <strong>{money(review.totalSpent, settings.currency)}</strong>
+              {spentUsdNote && <small className="share-usd-reference-note">{spentUsdNote}</small>}
             </div>
             <div>
               <span>Leaks</span>
               <strong>{money(review.totalLeaks, settings.currency)}</strong>
+              {leaksUsdNote && <small className="share-usd-reference-note">{leaksUsdNote}</small>}
             </div>
             <div>
               <span>Pressure</span>
@@ -12165,6 +12208,7 @@ function WeeklyReviewPanel({
 function MonthlyLeakHistoryPanel({
   settings,
   archive,
+  exchangeRates,
   monthOptions,
   selectedMonth,
   onMonthChange,
@@ -12174,6 +12218,7 @@ function MonthlyLeakHistoryPanel({
 }: {
   settings: Settings;
   archive: MonthlyLeakArchive;
+  exchangeRates: ExchangeRateMap;
   monthOptions: string[];
   selectedMonth: string;
   onMonthChange: (value: string) => void;
@@ -12181,6 +12226,9 @@ function MonthlyLeakHistoryPanel({
   sharing: boolean;
   onShare: () => void;
 }) {
+  const totalSpentUsdNote = usdReferenceNote(archive.totalSpent, settings.currency, settings, exchangeRates);
+  const totalLeaksUsdNote = usdReferenceNote(archive.totalLeaks, settings.currency, settings, exchangeRates);
+
   return (
     <section className="monthly-leak-history">
       <div className="section-title">
@@ -12205,10 +12253,12 @@ function MonthlyLeakHistoryPanel({
         <div>
           <span>Total spent</span>
           <strong>{money(archive.totalSpent, settings.currency)}</strong>
+          {totalSpentUsdNote && <small className="share-usd-reference-note">{totalSpentUsdNote}</small>}
         </div>
         <div>
           <span>Total leaks</span>
           <strong>{money(archive.totalLeaks, settings.currency)}</strong>
+          {totalLeaksUsdNote && <small className="share-usd-reference-note">{totalLeaksUsdNote}</small>}
         </div>
         <div>
           <span>Records</span>
@@ -12243,10 +12293,12 @@ function MonthlyLeakHistoryPanel({
           <div>
             <span>Total spent</span>
             <strong>{money(archive.totalSpent, settings.currency)}</strong>
+            {totalSpentUsdNote && <small className="share-usd-reference-note">{totalSpentUsdNote}</small>}
           </div>
           <div>
             <span>Total leaks</span>
             <strong>{money(archive.totalLeaks, settings.currency)}</strong>
+            {totalLeaksUsdNote && <small className="share-usd-reference-note">{totalLeaksUsdNote}</small>}
           </div>
           <div>
             <span>Records</span>
@@ -12358,6 +12410,7 @@ function ChartScreen({
   settings,
   expenses,
   walletInsights,
+  exchangeRates,
   shareInitData,
   onBack,
   onExport,
@@ -12366,6 +12419,7 @@ function ChartScreen({
   settings: Settings;
   expenses: Expense[];
   walletInsights: WalletInsight[];
+  exchangeRates: ExchangeRateMap;
   shareInitData: string;
   onBack: () => void;
   onExport: () => void;
@@ -12407,12 +12461,21 @@ function ChartScreen({
     () => buildLeakStreaks(expenses, settings),
     [expenses, settings]
   );
+  const weeklyReviewSpentUsdNote = usdReferenceNote(weeklyReview.totalSpent, settings.currency, settings, exchangeRates);
+  const weeklyReviewLeaksUsdNote = usdReferenceNote(weeklyReview.totalLeaks, settings.currency, settings, exchangeRates);
+  const weeklyReviewBiggestUsdNote = usdReferenceNote(weeklyReview.biggestLeakAmount, settings.currency, settings, exchangeRates);
+  const monthlySpentUsdNote = usdReferenceNote(monthlyArchive.totalSpent, settings.currency, settings, exchangeRates);
+  const monthlyLeaksUsdNote = usdReferenceNote(monthlyArchive.totalLeaks, settings.currency, settings, exchangeRates);
+  const monthlyTopUsdNote = usdReferenceNote(monthlyArchive.topCategory?.total ?? 0, settings.currency, settings, exchangeRates);
 
   const weeklyReviewShareText = [
     "$BROKE Weekly Review",
     "",
     `Spent this week: ${money(weeklyReview.totalSpent, settings.currency)}`,
     `Leaks this week: ${money(weeklyReview.totalLeaks, settings.currency)}`,
+    weeklyReviewSpentUsdNote || weeklyReviewLeaksUsdNote
+      ? `USD reference: ${[weeklyReviewSpentUsdNote && `spent ${weeklyReviewSpentUsdNote}`, weeklyReviewLeaksUsdNote && `leaks ${weeklyReviewLeaksUsdNote}`].filter(Boolean).join(" · ")}`
+      : "",
     `Records: ${weeklyReview.totalCount}`,
     `Leak pressure: ${weeklyReview.leakPressure}%`,
     `Biggest leak: ${
@@ -12420,6 +12483,7 @@ function ChartScreen({
         ? `${categoryDisplayLabel(settings, weeklyReview.biggestLeakCategory)} (${money(weeklyReview.biggestLeakAmount, settings.currency)})`
         : "none"
     }`,
+    weeklyReview.biggestLeakAmount > 0 && weeklyReviewBiggestUsdNote ? `Biggest leak USD: ${weeklyReviewBiggestUsdNote}` : "",
     `Most repeated: ${
       weeklyReview.mostRepeatedCount > 0
         ? `${categoryDisplayLabel(settings, weeklyReview.mostRepeatedCategory)} (${weeklyReview.mostRepeatedCount}x)`
@@ -12431,7 +12495,7 @@ function ChartScreen({
     "",
     "One week shows the pattern. One fix changes next week.",
     "Smoke is broke.",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   async function shareWeeklyReviewCard() {
     if (!weeklyReviewShareCardRef.current || weeklyReviewSharing) return;
@@ -12472,12 +12536,16 @@ function ChartScreen({
     `Month: ${monthlyArchive.monthLabel}`,
     `Total spent: ${money(monthlyArchive.totalSpent, settings.currency)}`,
     `Total leaks: ${money(monthlyArchive.totalLeaks, settings.currency)}`,
+    monthlySpentUsdNote || monthlyLeaksUsdNote
+      ? `USD reference: ${[monthlySpentUsdNote && `spent ${monthlySpentUsdNote}`, monthlyLeaksUsdNote && `leaks ${monthlyLeaksUsdNote}`].filter(Boolean).join(" · ")}`
+      : "",
     `Records: ${monthlyArchive.totalCount}`,
     `Top category: ${
       monthlyArchive.topCategory
         ? `${categoryDisplayLabel(settings, monthlyArchive.topCategory.category)} (${money(monthlyArchive.topCategory.total, settings.currency)})`
         : "none"
     }`,
+    monthlyArchive.topCategory && monthlyTopUsdNote ? `Top category USD: ${monthlyTopUsdNote}` : "",
     `Most repeated: ${
       monthlyArchive.repeatedCategory
         ? `${categoryDisplayLabel(settings, monthlyArchive.repeatedCategory.category)} (${monthlyArchive.repeatedCategory.count}x)`
@@ -12488,7 +12556,7 @@ function ChartScreen({
     "",
     "Small purchases become a lifestyle if you never count them.",
     "Smoke is broke.",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   async function shareMonthlyHistoryCard() {
     if (!historyShareCardRef.current || historySharing) return;
@@ -12825,6 +12893,7 @@ function ChartScreen({
           <WeeklyReviewPanel
             settings={settings}
             review={weeklyReview}
+            exchangeRates={exchangeRates}
             shareCardRef={weeklyReviewShareCardRef}
             sharing={weeklyReviewSharing}
             onShare={shareWeeklyReviewCard}
@@ -12833,6 +12902,7 @@ function ChartScreen({
           <MonthlyLeakHistoryPanel
             settings={settings}
             archive={monthlyArchive}
+            exchangeRates={exchangeRates}
             monthOptions={historyMonthOptions}
             selectedMonth={historyMonth}
             onMonthChange={setHistoryMonth}
@@ -13539,21 +13609,28 @@ function getLeakAmountForGrowth(expenses: Expense[]) {
 function buildGrowthShareText(
   simulation: GrowthSimulation,
   settings: Settings,
-  context?: GrowthShareContext
+  context?: GrowthShareContext,
+  rates: ExchangeRateMap = {}
 ) {
   const result = getGrowthFinal(simulation);
+  const resultUsdNote = usdReferenceNote(result.balance, settings.currency, settings, rates);
+  const monthlyUsdNote = usdReferenceNote(monthlyGrowthContribution(simulation), settings.currency, settings, rates);
+  const targetUsdNote = context
+    ? usdReferenceNote(context.activeGoalTarget, settings.currency, settings, rates)
+    : "";
 
   return [
     "$BROKE Growth Lab",
     "",
-    `Monthly leaks redirected: ${money(monthlyGrowthContribution(simulation), settings.currency)}/month`,
+    `Monthly leaks redirected: ${money(monthlyGrowthContribution(simulation), settings.currency)}/month${monthlyUsdNote ? ` (${monthlyUsdNote})` : ""}`,
     `Projected total after ${simulation.durationMonths} months: ${money(result.balance, settings.currency)}`,
+    resultUsdNote ? `Projected USD reference: ${resultUsdNote}` : "",
     "",
     context
       ? `Personal goal: ${context.activeGoalName}`
       : "Personal goal: add what you are building toward",
     context
-      ? `Target: ${money(context.activeGoalTarget, settings.currency)}`
+      ? `Target: ${money(context.activeGoalTarget, settings.currency)}${targetUsdNote ? ` (${targetUsdNote})` : ""}`
       : "Target: add your own amount",
     context
       ? `Estimated time: ${context.activeGoalTimeLabel}`
@@ -13630,10 +13707,16 @@ function loadShareCardImage(src: string): Promise<HTMLImageElement> {
 async function buildGrowthShareCardBlob(
   simulation: GrowthSimulation,
   settings: Settings,
-  context?: GrowthShareContext
+  context?: GrowthShareContext,
+  rates: ExchangeRateMap = {}
 ): Promise<Blob> {
   const result = getGrowthFinal(simulation);
   const monthlyRedirected = monthlyGrowthContribution(simulation);
+  const resultUsdNote = usdReferenceNote(result.balance, settings.currency, settings, rates);
+  const monthlyUsdNote = usdReferenceNote(monthlyRedirected, settings.currency, settings, rates);
+  const goalUsdNote = context
+    ? usdReferenceNote(context.activeGoalTarget, settings.currency, settings, rates)
+    : "";
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1350;
@@ -13716,10 +13799,20 @@ async function buildGrowthShareCardBlob(
   ctx.fillStyle = muted;
   ctx.font = "700 25px Arial, sans-serif";
   ctx.fillText(
-    `${money(monthlyRedirected, settings.currency)}/month redirected from monthly leaks`,
+    resultUsdNote || `${money(monthlyRedirected, settings.currency)}/month redirected from monthly leaks`,
     94,
     432
   );
+
+  if (resultUsdNote) {
+    ctx.fillStyle = "rgba(199,255,74,0.72)";
+    ctx.font = "800 22px Arial, sans-serif";
+    ctx.fillText(
+      `${money(monthlyRedirected, settings.currency)}/month${monthlyUsdNote ? ` · ${monthlyUsdNote}/month` : ""}`,
+      94,
+      465
+    );
+  }
 
   growthFillRoundRect(ctx, 62, 510, 956, 360, 36, panel2);
   growthStrokeRoundRect(ctx, 62, 510, 956, 360, 36, "rgba(183,255,25,0.18)", 2);
@@ -13743,6 +13836,12 @@ async function buildGrowthShareCardBlob(
     94,
     800
   );
+
+  if (goalUsdNote) {
+    ctx.fillStyle = "rgba(199,255,74,0.76)";
+    ctx.font = "800 22px Arial, sans-serif";
+    ctx.fillText(goalUsdNote, 94, 833);
+  }
 
   ctx.fillStyle = muted;
   ctx.font = "800 26px Arial, sans-serif";
@@ -14182,7 +14281,7 @@ function GrowthLabScreen({
     triggerHaptic("light");
   }
 
-  async function copyGrowthShareText(text = growthShareText || buildGrowthShareText(preview, settings, growthShareContext)) {
+  async function copyGrowthShareText(text = growthShareText || buildGrowthShareText(preview, settings, growthShareContext, growthRateState.rates)) {
     try {
       if (navigator.clipboard) {
         await navigator.clipboard.writeText(text);
@@ -14194,12 +14293,12 @@ function GrowthLabScreen({
   }
 
   async function shareGrowthPlan(simulation = preview) {
-    const text = buildGrowthShareText(simulation, settings, growthShareContext);
+    const text = buildGrowthShareText(simulation, settings, growthShareContext, growthRateState.rates);
 
     setIsBuildingShareCard(true);
 
     try {
-      const blob = await buildGrowthShareCardBlob(simulation, settings, growthShareContext);
+      const blob = await buildGrowthShareCardBlob(simulation, settings, growthShareContext, growthRateState.rates);
       const cardUrl = URL.createObjectURL(blob);
 
       setGrowthShareText(text);
@@ -14241,7 +14340,7 @@ function GrowthLabScreen({
       triggerHaptic("success");
     } catch {
       try {
-        const blob = await buildGrowthShareCardBlob(simulation, settings, growthShareContext);
+        const blob = await buildGrowthShareCardBlob(simulation, settings, growthShareContext, growthRateState.rates);
         const file = new File([blob], "broke-growth-plan.png", {
           type: "image/png",
         });
@@ -15201,6 +15300,7 @@ function DebtBillsRadarPanel({
 function SurvivalModePanel({
   settings,
   forecast,
+  exchangeRates,
   adjustedDailyPace,
   daysSaved,
   totalMonthlySavings,
@@ -15212,6 +15312,7 @@ function SurvivalModePanel({
 }: {
   settings: Settings;
   forecast: SurvivalForecast;
+  exchangeRates: ExchangeRateMap;
   adjustedDailyPace: number;
   daysSaved: number;
   totalMonthlySavings: number;
@@ -15221,6 +15322,17 @@ function SurvivalModePanel({
   sharing: boolean;
   onShare: () => void;
 }) {
+  const realBalanceUsdNote = settings.privacy.publicProofMode
+    ? ""
+    : usdReferenceNote(forecast.realBalance, settings.currency, settings, exchangeRates);
+  const safeDailyUsdNote = settings.privacy.publicProofMode
+    ? ""
+    : usdReferenceNote(forecast.safeDailyBudget, settings.currency, settings, exchangeRates);
+  const currentPaceUsdNote = settings.privacy.publicProofMode
+    ? ""
+    : usdReferenceNote(forecast.currentDailyPace, settings.currency, settings, exchangeRates);
+  const totalSavingsUsdNote = usdReferenceNote(totalMonthlySavings, settings.currency, settings, exchangeRates);
+  const adjustedPaceUsdNote = usdReferenceNote(adjustedDailyPace, settings.currency, settings, exchangeRates);
   const statusClass =
     forecast.status === "surviving"
       ? "surviving"
@@ -15263,6 +15375,7 @@ function SurvivalModePanel({
         <div>
           <span>Real balance</span>
           <strong>{publicProofMoney(settings, forecast.realBalance)}</strong>
+          {realBalanceUsdNote && <small className="share-usd-reference-note">{realBalanceUsdNote}</small>}
         </div>
         <div>
           <span>Payday date</span>
@@ -15275,10 +15388,12 @@ function SurvivalModePanel({
         <div>
           <span>Safe daily budget</span>
           <strong>{settings.privacy.publicProofMode ? "hidden" : `${money(forecast.safeDailyBudget, settings.currency)}/day`}</strong>
+          {safeDailyUsdNote && <small className="share-usd-reference-note">{safeDailyUsdNote}/day</small>}
         </div>
         <div>
           <span>Current pace</span>
           <strong>{settings.privacy.publicProofMode ? "hidden" : `${money(forecast.currentDailyPace, settings.currency)}/day`}</strong>
+          {currentPaceUsdNote && <small className="share-usd-reference-note">{currentPaceUsdNote}/day</small>}
         </div>
       </div>
 
@@ -15298,8 +15413,8 @@ function SurvivalModePanel({
             : "Safe at current pace"}
         </strong>
         <p>
-          If you reduce leaks by {money(totalMonthlySavings, settings.currency)}/month,
-          your pace could become {money(adjustedDailyPace, settings.currency)}/day.
+          If you reduce leaks by {money(totalMonthlySavings, settings.currency)}/month{totalSavingsUsdNote ? ` (${totalSavingsUsdNote}/month)` : ""},
+          your pace could become {money(adjustedDailyPace, settings.currency)}/day{adjustedPaceUsdNote ? ` (${adjustedPaceUsdNote}/day)` : ""}.
           {daysSaved > 0 ? ` That may save about ${daysSaved} day${daysSaved === 1 ? "" : "s"}.` : ""}
         </p>
       </div>
@@ -15336,6 +15451,7 @@ function SurvivalModePanel({
           <div>
             <span>Real balance</span>
             <strong>{publicProofMoney(settings, forecast.realBalance)}</strong>
+            {realBalanceUsdNote && <small className="share-usd-reference-note">{realBalanceUsdNote}</small>}
           </div>
           <div>
             <span>Days left</span>
@@ -15344,10 +15460,12 @@ function SurvivalModePanel({
           <div>
             <span>Safe/day</span>
             <strong>{publicProofMoney(settings, forecast.safeDailyBudget)}</strong>
+            {safeDailyUsdNote && <small className="share-usd-reference-note">{safeDailyUsdNote}/day</small>}
           </div>
           <div>
             <span>Current/day</span>
             <strong>{publicProofMoney(settings, forecast.currentDailyPace)}</strong>
+            {currentPaceUsdNote && <small className="share-usd-reference-note">{currentPaceUsdNote}/day</small>}
           </div>
         </div>
 
@@ -15476,21 +15594,33 @@ function WhatIfScreen({
     survivalAdjustedDays - survivalForecast.surviveDays,
     0
   );
+  const survivalRealBalanceUsdNote = settings.privacy.publicProofMode
+    ? ""
+    : usdReferenceNote(survivalForecast.realBalance, settings.currency, settings, debtRadarRateState.rates);
+  const survivalSafeDailyUsdNote = settings.privacy.publicProofMode
+    ? ""
+    : usdReferenceNote(survivalForecast.safeDailyBudget, settings.currency, settings, debtRadarRateState.rates);
+  const survivalCurrentPaceUsdNote = settings.privacy.publicProofMode
+    ? ""
+    : usdReferenceNote(survivalForecast.currentDailyPace, settings.currency, settings, debtRadarRateState.rates);
 
   const survivalShareText = [
     "$BROKE Survival Mode",
     "",
     `Status: ${survivalForecast.statusLabel}`,
     `Real balance: ${publicProofMoney(settings, survivalForecast.realBalance)}`,
+    survivalRealBalanceUsdNote ? `Real balance USD reference: ${survivalRealBalanceUsdNote}` : "",
     `Next payday: ${settings.privacy.publicProofMode ? "hidden" : survivalForecast.nextPaydayDate}`,
     `Days until income: ${survivalForecast.daysUntilIncome}`,
     `Safe daily budget: ${settings.privacy.publicProofMode ? "hidden" : `${money(survivalForecast.safeDailyBudget, settings.currency)}/day`}`,
+    survivalSafeDailyUsdNote ? `Safe daily USD reference: ${survivalSafeDailyUsdNote}/day` : "",
     `Current pace: ${settings.privacy.publicProofMode ? "hidden" : `${money(survivalForecast.currentDailyPace, settings.currency)}/day`}`,
+    survivalCurrentPaceUsdNote ? `Current pace USD reference: ${survivalCurrentPaceUsdNote}/day` : "",
     `Forecast: ${survivalForecast.dangerLabel}`,
     "",
     settings.privacy.publicProofMode ? "Public Proof Mode: exact private numbers hidden." : "Can you survive until payday?",
     "Smoke is broke.",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   async function shareSurvivalCard() {
     if (!survivalCardRef.current || survivalSharing) return;
@@ -15618,6 +15748,7 @@ function WhatIfScreen({
       <SurvivalModePanel
         settings={settings}
         forecast={survivalForecast}
+        exchangeRates={debtRadarRateState.rates}
         adjustedDailyPace={survivalAdjustedPace}
         daysSaved={survivalDaysSaved}
         totalMonthlySavings={totalMonthlySavings}
