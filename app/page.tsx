@@ -1356,7 +1356,7 @@ const ruText: Record<string, string> = {
   "Currency currently changes display only. New entries remember this currency for future conversion.": "Валюта пока меняет только отображение. Новые записи запоминают эту валюту для будущей конвертации.",
   "Exchange-rate cache is now prepared server-side. Real conversion stays off until Currency Mode is added.": "Серверный кэш курсов уже подготовлен. Реальная конвертация остаётся выключенной до добавления Currency Mode.",
   "Convert mode now uses cached exchange rates for entries with original currency metadata.": "Convert mode теперь использует кэш курсов для записей с исходной валютой.",
-  "Converted display is live across expenses, income, fixed costs, Growth targets, and Debt Radar. Non-USD views also show an approximate USD reference where available.": "Конвертированное отображение включено для расходов, доходов, фиксированных расходов, Growth targets и Debt Radar. Non-USD виды также показывают примерный USD-ориентир, где он доступен.",
+  "Convert mode shows remembered amounts through exchange rates. Inputs still show the currency the number is stored in, so saved values stay safe.": "Конвертированное отображение включено для расходов, доходов, фиксированных расходов, Growth targets и Debt Radar. Non-USD виды также показывают примерный USD-ориентир, где он доступен.",
   "Currency Mode": "Режим валюты",
   "Display only": "Только отображение",
   "Convert values": "Конвертировать значения",
@@ -3991,6 +3991,35 @@ function displayMoney(
 function originalMoneyNote(display: ReturnType<typeof getDisplayAmount>) {
   if (!display.converted) return "";
   return `≈ ${formatMoney(display.originalAmount, display.originalCurrency, { includeCode: true })}`;
+}
+
+function settingsMoneyClarityNote(
+  value: number,
+  sourceCurrency: Currency | undefined,
+  settings: Settings,
+  rates: ExchangeRateMap
+) {
+  const storedCurrency = normalizeCurrency(sourceCurrency, settings.currency);
+  const storedLabel = formatMoney(value, storedCurrency, { includeCode: true, precision: "auto" });
+
+  if (settings.currencyMode !== "convert") {
+    return `Stored as ${storedLabel}. Display-only mode changes the app label, not the saved number.`;
+  }
+
+  const display = getDisplayAmount(value, storedCurrency, settings, rates);
+
+  if (!display.ready) {
+    return `Stored as ${storedLabel}. Rate to ${settings.currency} is not ready yet.`;
+  }
+
+  if (!display.converted) {
+    return `Stored as ${storedLabel}. Same as display currency.`;
+  }
+
+  return `Stored as ${storedLabel} · Displayed as ${formatMoney(display.amount, display.currency, {
+    includeCode: true,
+    precision: "auto",
+  })}`;
 }
 
 function getUsdReferenceAmount(
@@ -9624,7 +9653,7 @@ function LifeProfileEditor({
       </div>
 
       <div className="profile-field">
-        <span>Currency</span>
+        <span>Display currency</span>
         <select
           className="settings-select profile-select"
           value={settings.currency}
@@ -9642,7 +9671,7 @@ function LifeProfileEditor({
           ))}
         </select>
         <small className="currency-foundation-note">
-          Convert mode uses exchange-rate cache for remembered currencies and shows an approximate USD reference where available.
+          Display currency controls how totals are shown. It does not rewrite saved income, fixed costs, expenses, Growth targets, or Debt Radar amounts.
         </small>
       </div>
 
@@ -9672,7 +9701,7 @@ function LifeProfileEditor({
         <small className="currency-foundation-note">
           {settings.currencyMode === "convert"
             ? "Converted display is live across expenses, income, fixed costs, Growth targets, and Debt Radar. Non-USD views also show an approximate USD reference where available."
-            : "Display-only keeps the old behavior: symbol changes, stored amounts do not."}
+            : "Display-only keeps old behavior: app labels change, but stored numbers are not converted or rewritten."}
         </small>
         {settings.currencyMode === "convert" && (
           <div className={currencyStatusClassName}>
@@ -16276,6 +16305,30 @@ function SettingsScreen({
     setRepairCurrency(settings.currency);
   }, [settings.currency]);
 
+  function incomeClarityNote(key: keyof Settings["income"]) {
+    return settingsMoneyClarityNote(
+      settings.income[key],
+      settings.incomeCurrencies[key] || settings.currency,
+      settings,
+      exchangeRates
+    );
+  }
+
+  function fixedCostClarityNote(key: keyof Settings["fixedCosts"]) {
+    return settingsMoneyClarityNote(
+      settings.fixedCosts[key],
+      settings.fixedCostCurrencies[key] || settings.currency,
+      settings,
+      exchangeRates
+    );
+  }
+
+  function settingsTotalClarityNote(label: string) {
+    return settings.currencyMode === "convert"
+      ? `${label} total uses converted display values. Field inputs show the stored/original currency and are not rewritten.`
+      : `${label} total uses stored numbers. Display-only mode does not convert saved values.`;
+  }
+
   function updateIncome(key: keyof Settings["income"], value: string) {
     setSettings((prev) => ({
       ...prev,
@@ -16483,11 +16536,19 @@ function SettingsScreen({
         </summary>
         <section className="settings-group">
           <h3>{getIncomePeriodLabel(settings)}</h3>
+          <div className="currency-repair-warning">
+            <strong>Stored value vs converted display</strong>
+            <span>
+              The input number stays in the currency shown inside the field.
+              Changing display currency only changes converted totals and previews.
+            </span>
+          </div>
 
         <EditableMoneyLine
           label={getPrimaryIncomeLabel(settings)}
           value={settings.income.salary}
           currency={settings.incomeCurrencies.salary || settings.currency}
+          helper={incomeClarityNote("salary")}
           onChange={(value) => updateIncome("salary", value)}
         />
 
@@ -16495,6 +16556,7 @@ function SettingsScreen({
           label="Side hustle / extra"
           value={settings.income.side}
           currency={settings.incomeCurrencies.side || settings.currency}
+          helper={incomeClarityNote("side")}
           onChange={(value) => updateIncome("side", value)}
         />
 
@@ -16502,6 +16564,7 @@ function SettingsScreen({
           label="Other / support"
           value={settings.income.other}
           currency={settings.incomeCurrencies.other || settings.currency}
+          helper={incomeClarityNote("other")}
           onChange={(value) => updateIncome("other", value)}
         />
 
@@ -16511,6 +16574,9 @@ function SettingsScreen({
           strong
           good
         />
+        <small className="currency-foundation-note">
+          {settingsTotalClarityNote("Income")}
+        </small>
 
         <label className="settings-date-field">
           <span>Next payday date</span>
@@ -16534,12 +16600,20 @@ function SettingsScreen({
         </summary>
         <section className="settings-group">
           <h3>Fixed Life Costs</h3>
+          <div className="currency-repair-warning">
+            <strong>These are stored as original values.</strong>
+            <span>
+              Convert mode shows their display value, but it does not replace the
+              rent, food, transport, phone, data, or school numbers you entered.
+            </span>
+          </div>
 
         {settings.profile.hasRent && (
           <EditableMoneyLine
             label="Rent"
             value={settings.fixedCosts.rent}
             currency={settings.fixedCostCurrencies.rent || settings.currency}
+            helper={fixedCostClarityNote("rent")}
             onChange={(value) => updateFixedCost("rent", value)}
           />
         )}
@@ -16548,6 +16622,7 @@ function SettingsScreen({
           label="Utilities"
           value={settings.fixedCosts.utilities}
           currency={settings.fixedCostCurrencies.utilities || settings.currency}
+          helper={fixedCostClarityNote("utilities")}
           onChange={(value) => updateFixedCost("utilities", value)}
         />
 
@@ -16555,6 +16630,7 @@ function SettingsScreen({
           label="Food basics"
           value={settings.fixedCosts.food}
           currency={settings.fixedCostCurrencies.food || settings.currency}
+          helper={fixedCostClarityNote("food")}
           onChange={(value) => updateFixedCost("food", value)}
         />
 
@@ -16562,6 +16638,7 @@ function SettingsScreen({
           label="Transport"
           value={settings.fixedCosts.transport}
           currency={settings.fixedCostCurrencies.transport || settings.currency}
+          helper={fixedCostClarityNote("transport")}
           onChange={(value) => updateFixedCost("transport", value)}
         />
 
@@ -16569,6 +16646,7 @@ function SettingsScreen({
           label="Phone"
           value={settings.fixedCosts.phone}
           currency={settings.fixedCostCurrencies.phone || settings.currency}
+          helper={fixedCostClarityNote("phone")}
           onChange={(value) => updateFixedCost("phone", value)}
         />
 
@@ -16576,6 +16654,7 @@ function SettingsScreen({
           label="Data / Internet"
           value={settings.fixedCosts.data}
           currency={settings.fixedCostCurrencies.data || settings.currency}
+          helper={fixedCostClarityNote("data")}
           onChange={(value) => updateFixedCost("data", value)}
         />
 
@@ -16583,6 +16662,7 @@ function SettingsScreen({
           label="School / study"
           value={settings.fixedCosts.education}
           currency={settings.fixedCostCurrencies.education || settings.currency}
+          helper={fixedCostClarityNote("education")}
           onChange={(value) => updateFixedCost("education", value)}
         />
 
@@ -16592,6 +16672,9 @@ function SettingsScreen({
           strong
           bad
         />
+        <small className="currency-foundation-note">
+          {settingsTotalClarityNote("Fixed costs")}
+        </small>
         </section>
       </details>
 
@@ -16599,7 +16682,7 @@ function SettingsScreen({
         <div className="menu-line">
           <img src={A.currency} alt="" />
           <div>
-            <strong>Currency</strong>
+            <strong>Display Currency</strong>
             <select
               className="settings-select"
               value={settings.currency}
@@ -16610,13 +16693,11 @@ function SettingsScreen({
                 }))
               }
             >
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="MDL">MDL (L)</option>
-              <option value="NGN">NGN (₦)</option>
-              <option value="PKR">PKR (Rs)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="INR">INR (₹)</option>
+              {currencyOptions.map((currency) => (
+                <option key={currency.value} value={currency.value}>
+                  {currency.label}
+                </option>
+              ))}
             </select>
           </div>
           <b>›</b>
@@ -16887,12 +16968,14 @@ function EditableMoneyLine({
   currency,
   onChange,
   plainNumber = false,
+  helper = "",
 }: {
   label: string;
   value: number;
   currency: Currency;
   onChange: (value: string) => void;
   plainNumber?: boolean;
+  helper?: string;
 }) {
   const [draftValue, setDraftValue] = useState(String(value));
   const [focused, setFocused] = useState(false);
@@ -16937,6 +17020,11 @@ function EditableMoneyLine({
           }}
         />
       </div>
+      {helper && (
+        <small className="currency-foundation-note" style={{ gridColumn: "1 / -1" }}>
+          {helper}
+        </small>
+      )}
     </div>
   );
 }
