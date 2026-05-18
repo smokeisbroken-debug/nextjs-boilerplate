@@ -375,12 +375,20 @@ type Settings = {
   categoryNames: Record<string, string>;
 };
 
+type ChartPressureStatus = "safe" | "warning" | "danger" | "quiet";
+
 type ChartPoint = {
   label: string;
   key: string;
   spent: number;
+  leakAmount: number;
+  count: number;
   open: number;
   close: number;
+  pressure: number;
+  status: ChartPressureStatus;
+  biggestLeakCategory: string;
+  isCycleStart?: boolean;
 };
 
 type CategorySummary = {
@@ -1693,7 +1701,7 @@ const ruText: Record<string, string> = {
   "Needed does not count as a leak. Maybe counts as half. Not needed counts as a full wallet leak.": "Нужно не считается утечкой. Возможно считается наполовину. Не нужно считается полной утечкой.",
   "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check chart, check Save, and share public proof.": "Выполни 7 реальных действий в день: открыть app, записать расход, отметить утечку, добавить контекст, проверить график, проверить экономию и поделиться безопасным прогрессом.",
   "Survival Score, Biggest Leak, Hours Lost, Status and Doomspending Alert show what is draining your wallet this week.": "Оценка выживания, главная утечка, потерянные часы, статус и тревога импульсивных трат показывают, что сливает кошелёк на этой неделе.",
-  "The chart shows how your balance moves like a trading chart. Green days are controlled. Red days show damage.": "График показывает движение баланса как торговый chart. Зелёные дни — контроль. Красные — урон.",
+  "The chart shows Wallet Pressure, not fake profit candles. Green days are controlled. Red days mean leak danger.": "График показывает Wallet Pressure, а не fake profit свечи. Зелёные дни — контроль. Красные — опасная утечка.",
   "Simple rule:": "Простое правило:",
   "Track honestly. Fix one leak at a time. Protect Wallet HP.": "Записывай честно. Закрывай одну утечку за раз. Защищай Wallet HP.",
   "No clear leak yet": "Явной утечки пока нет",
@@ -1975,7 +1983,7 @@ const ruText: Record<string, string> = {
   "Avg/day": "Среднее/день",
   "daily pace": "дневной темп",
   "No chart data yet": "Пока нет данных для графика",
-  "Add one expense and this screen turns into your wallet movement chart.": "Добавь один расход, и этот экран превратится в график движения кошелька.",
+  "Add one expense and this screen turns into your Wallet Pressure Chart.": "Добавь один расход, и экран станет Wallet Pressure Chart.",
   "Wallet Survival Report": "Отчёт выживания кошелька",
   "Wallet Insights": "Инсайты кошелька",
   "View": "Смотреть",
@@ -2156,8 +2164,8 @@ const ruText: Record<string, string> = {
   "It is fast, but the amount should still be checked.": "Это быстро, но сумму всё равно нужно проверять.",
   "If the quick amount is wrong, edit it before saving the record.": "Если быстрая сумма неправильная, измени её перед сохранением.",
   "Chart Guide": "Гайд Chart",
-  "$BROKE Chart: Wallet Movement": "$BROKE Chart: движение кошелька",
-  "Chart turns spending into a visual movement system. It helps users see red days, pressure, spending volume, and the habits that move the wallet down.": "Chart превращает расходы в визуальное движение. Он помогает видеть красные дни, давление, объём расходов и привычки, которые тянут кошелёк вниз.",
+  "$BROKE Chart: Wallet Pressure": "$BROKE Chart: давление кошелька",
+  "Chart turns spending into daily pressure candles. It helps users see controlled days, leak danger days, and the habits that hurt Wallet HP.": "Chart превращает расходы в дневные свечи давления. Он помогает видеть контролируемые дни, опасные дни утечек и привычки, которые бьют по Wallet HP.",
   "Chart rule": "Правило Chart",
   "Do not only watch crypto charts. Watch your own wallet chart and find the day where the leak started.": "Смотри не только crypto-чарты. Смотри свой график кошелька и находи день, где началась утечка.",
   "1. Choose the right range": "1. Выбери правильный период",
@@ -2165,7 +2173,7 @@ const ruText: Record<string, string> = {
   "Week shows the last seven days and is best for habits.": "Week показывает последние семь дней и лучше всего подходит для привычек.",
   "Month shows the larger pressure across the current month.": "Month показывает большее давление за текущий месяц.",
   "Switch ranges to understand whether a leak is temporary or becoming normal.": "Переключай периоды, чтобы понять, утечка временная или уже становится нормой.",
-  "2. Read spending volume": "2. Читай spending volume",
+  "2. Read leak pressure": "2. Читай leak pressure",
   "Spending volume shows how heavy the outgoing money was.": "Spending volume показывает, насколько тяжёлым был отток денег.",
   "A high volume day is not always bad if it was needed.": "День с большим объёмом не всегда плохой, если траты были нужными.",
   "A high volume day with Not needed or Maybe expenses is a warning signal.": "День с большим объёмом и Not needed / Maybe — это сигнал тревоги.",
@@ -2317,7 +2325,7 @@ const ruText: Record<string, string> = {
   "Add your first expense to make Wallet HP, Chart and Growth Lab real.": "Добавь первый расход, чтобы Wallet HP, Chart и Growth Lab стали реальными.",
   "$BROKE Chart is waiting": "$BROKE Chart ждёт",
   "No wallet movement yet.": "Пока нет движения кошелька.",
-  "Track one expense to create the first candle, spending volume and leak pressure.": "Запиши один расход, чтобы создать первую свечу, spending volume и leak pressure.",
+  "Track one expense to create today’s pressure candle.": "Запиши один расход, чтобы создать сегодняшнюю свечу давления.",
   "Track first expense": "Записать первый расход",
   "Growth Lab needs one real leak": "Growth Lab нужна одна реальная утечка",
   "No leaks detected yet.": "Утечки пока не найдены.",
@@ -6062,6 +6070,135 @@ function buildV2IdentityStats(
 }
 
 
+function getChartCycleDayCount(settings: Settings) {
+  if (settings.profile.incomeStyle === "Daily") return 1;
+  if (settings.profile.incomeStyle === "Weekly") return 7;
+  if (settings.profile.incomeStyle === "Irregular") return 14;
+  return getDaysInCurrentMonth();
+}
+
+function getChartDailyLeakBudget(settings: Settings) {
+  const freeMoney = Math.max(getTotalIncome(settings) - getFixedCosts(settings), 0);
+  return Math.max(freeMoney / Math.max(getChartCycleDayCount(settings), 1), 1);
+}
+
+function getChartPressureStatus(
+  leakAmount: number,
+  trackedAmount: number,
+  dailyLeakBudget: number
+): ChartPressureStatus {
+  if (trackedAmount <= 0) return "quiet";
+  if (leakAmount <= 0) return "safe";
+
+  const pressure = (leakAmount / Math.max(dailyLeakBudget, 1)) * 100;
+
+  if (pressure >= 80) return "danger";
+  if (pressure >= 35) return "warning";
+  return "safe";
+}
+
+function getChartPointPressure(leakAmount: number, dailyLeakBudget: number) {
+  return clamp(Math.round((leakAmount / Math.max(dailyLeakBudget, 1)) * 100), 0, 999);
+}
+
+function getChartPointClassName(point: ChartPoint) {
+  if (point.status === "danger") return "red";
+  return "green";
+}
+
+function getChartPointStatusLabel(point: ChartPoint) {
+  if (point.status === "quiet") return "Quiet day";
+  if (point.status === "danger") return "Danger leak day";
+  if (point.status === "warning") return "Warning leak day";
+  return "Controlled day";
+}
+
+function getCycleStartKey(settings: Settings) {
+  const payday = parseDateInputValue(getNextPaydayDate(settings));
+
+  if (payday) {
+    const start = new Date(payday);
+
+    if (settings.profile.incomeStyle === "Daily") {
+      start.setDate(start.getDate() - 1);
+    } else if (settings.profile.incomeStyle === "Weekly") {
+      start.setDate(start.getDate() - 7);
+    } else if (settings.profile.incomeStyle === "Irregular") {
+      start.setDate(start.getDate() - 14);
+    } else {
+      start.setMonth(start.getMonth() - 1);
+    }
+
+    return dayKey(start);
+  }
+
+  const now = new Date();
+  return dayKey(new Date(now.getFullYear(), now.getMonth(), 1));
+}
+
+function getChartDatesForRange(range: ChartRange) {
+  const now = new Date();
+  const dates: Date[] = [];
+
+  if (range === "day") {
+    dates.push(now);
+    return dates;
+  }
+
+  if (range === "week") {
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      dates.push(date);
+    }
+    return dates;
+  }
+
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const todayDate = now.getDate();
+
+  for (let day = 1; day <= todayDate; day++) {
+    dates.push(new Date(year, month, day));
+  }
+
+  return dates;
+}
+
+function buildChartPoint(
+  date: Date,
+  expenses: Expense[],
+  runningBalance: number,
+  settings: Settings,
+  dailyLeakBudget: number,
+  cycleStartKey: string,
+  label: string
+): ChartPoint {
+  const key = dayKey(date);
+  const dayExpenses = expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === key);
+  const spent = sumTrackedExpenses(dayExpenses);
+  const leakAmount = sumLeakExpenses(dayExpenses);
+  const topLeakCategory = getCategoryLeakSummaries(dayExpenses)[0]?.category || "";
+  const open = runningBalance;
+  const close = runningBalance - spent;
+  const pressure = getChartPointPressure(leakAmount, dailyLeakBudget);
+  const status = getChartPressureStatus(leakAmount, spent, dailyLeakBudget);
+
+  return {
+    label,
+    key,
+    spent,
+    leakAmount,
+    count: dayExpenses.length,
+    open,
+    close,
+    pressure,
+    status,
+    biggestLeakCategory: topLeakCategory,
+    isCycleStart: key === cycleStartKey,
+  };
+}
+
 function buildChartData(
   range: ChartRange,
   expenses: Expense[],
@@ -6070,100 +6207,33 @@ function buildChartData(
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
   const baseBalance = totalIncome - fixedCosts;
-  const now = new Date();
-
-  if (range === "day") {
-    const points: ChartPoint[] = [];
-    const today = dayKey(now);
-    let runningBalance = baseBalance;
-
-    for (let hour = 0; hour < 24; hour++) {
-      const spent = sumTrackedExpenses(
-        expenses.filter((expense) => {
-          const date = new Date(expense.createdAt);
-          return dayKey(date) === today && date.getHours() === hour;
-        })
-      );
-
-      const open = runningBalance;
-      const close = runningBalance - spent;
-
-      points.push({
-        label: `${String(hour).padStart(2, "0")}:00`,
-        key: `${today}-${hour}`,
-        spent,
-        open,
-        close,
-      });
-
-      runningBalance = close;
-    }
-
-    return points;
-  }
-
-  if (range === "week") {
-    const points: ChartPoint[] = [];
-    let runningBalance = baseBalance;
-
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-
-      const key = dayKey(date);
-
-      const spent = sumTrackedExpenses(
-        expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === key)
-      );
-
-      const open = runningBalance;
-      const close = runningBalance - spent;
-
-      points.push({
-        label: date.toLocaleDateString("en-US", { weekday: "short" }),
-        key,
-        spent,
-        open,
-        close,
-      });
-
-      runningBalance = close;
-    }
-
-    return points;
-  }
-
-  const points: ChartPoint[] = [];
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const todayDate = now.getDate();
+  const dailyLeakBudget = getChartDailyLeakBudget(settings);
+  const cycleStartKey = getCycleStartKey(settings);
+  const dates = getChartDatesForRange(range);
   let runningBalance = baseBalance;
 
-  for (let day = 1; day <= todayDate; day++) {
-    const date = new Date(year, month, day);
-    const key = dayKey(date);
+  return dates.map((date) => {
+    const label =
+      range === "day"
+        ? "Today"
+        : range === "week"
+          ? date.toLocaleDateString("en-US", { weekday: "short" })
+          : String(date.getDate());
 
-    const spent = sumTrackedExpenses(
-      expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === key)
+    const point = buildChartPoint(
+      date,
+      expenses,
+      runningBalance,
+      settings,
+      dailyLeakBudget,
+      cycleStartKey,
+      label
     );
 
-    const open = runningBalance;
-    const close = runningBalance - spent;
-
-    points.push({
-      label: String(day),
-      key,
-      spent,
-      open,
-      close,
-    });
-
-    runningBalance = close;
-  }
-
-  return points;
+    runningBalance = point.close;
+    return point;
+  });
 }
-
 
 async function callBrokeApi(
   initData: string,
@@ -7370,9 +7440,9 @@ function HelpGuideModal({
     chart: {
       label: "Chart",
       eyebrow: "Chart Guide",
-      title: "$BROKE Chart: Analysis Center",
+      title: "$BROKE Chart: Wallet Pressure",
       intro:
-        "Chart is wallet memory and analysis. It shows movement first, then one fix, Analysis Lab, Leak Streaks, Weekly Review, and Monthly History.",
+        "Chart is wallet memory and analysis. It shows one daily pressure candle per day, then One Fix, Analysis Lab, Leak Streaks, Weekly Review, and Monthly History.",
       icon: "/nav-chart.png",
       footerTitle: "Chart rule",
       footerBody:
@@ -7381,19 +7451,19 @@ function HelpGuideModal({
         {
           title: "1. Choose the right range",
           body: [
-            "Day shows the current daily damage.",
-            "Week shows the last seven days and is best for habits.",
-            "Month shows the larger pressure across the current month.",
+            "Day shows today’s single pressure candle.",
+            "Week shows the last seven daily candles and is best for habits.",
+            "Month shows the larger pressure across the current cycle/month.",
             "Switch ranges to understand whether a leak is temporary or becoming normal.",
           ],
           icon: A.navChart,
         },
         {
-          title: "2. Read spending volume",
+          title: "2. Read leak pressure",
           body: [
-            "Spending volume shows how heavy the outgoing money was.",
-            "A high volume day is not always bad if it was needed.",
-            "A high volume day with Not needed or Maybe expenses is a warning signal.",
+            "Candle color follows leak pressure, not whether balance went down.",
+            "Needed spending can lower balance without making the candle dangerous.",
+            "Maybe and Not needed spending create Wallet HP pressure.",
           ],
           icon: A.chartFrog,
         },
@@ -12881,32 +12951,34 @@ function ChartScreen({
   }, [range, expenses]);
 
   const maxSpent = Math.max(...chartData.map((point) => point.spent), 1);
+  const maxLeakPressure = Math.max(...chartData.map((point) => point.pressure), 1);
   const selectedPoint = chartData[chartData.length - 1];
 
   const periodOpen = chartData[0]?.open ?? 0;
   const periodSpent = sum(chartData.map((point) => point.spent));
-  const periodClose = periodOpen - periodSpent;
+  const periodClose = selectedPoint?.close ?? periodOpen;
+  const periodCount = sum(chartData.map((point) => point.count));
+  const rangeLeaks = sum(chartData.map((point) => point.leakAmount));
+  const daysInView = Math.max(chartData.length, 1);
+  const dailyLeakBudget = getChartDailyLeakBudget(settings);
+  const periodLeakBudget = dailyLeakBudget * daysInView;
+  const leakPressure = clamp(Math.round((rangeLeaks / Math.max(periodLeakBudget, 1)) * 100), 0, 999);
 
-  const rangeLeaks = sumLeakExpenses(rangeExpenses);
+  const topRangeLeakCategory = getCategoryLeakSummaries(rangeExpenses)[0];
+  const topRangeTrackedCategory = getCategoryTrackedSummaries(rangeExpenses)[0];
+  const topRangeCategory = topRangeLeakCategory || topRangeTrackedCategory;
 
-  const topRangeCategory = getCategoryTrackedSummaries(rangeExpenses)[0];
-
-  const averageDailySpend =
-    range === "day"
-      ? periodSpent
-      : range === "week"
-        ? periodSpent / 7
-        : periodSpent / getCurrentDayOfMonth();
-
-  const leakPressure = periodSpent > 0 ? Math.round((rangeLeaks / periodSpent) * 100) : 0;
+  const averageDailySpend = periodSpent / daysInView;
+  const averageDailyLeak = rangeLeaks / daysInView;
   const hasRangeData = rangeExpenses.length > 0;
+  const latestPointLabel = selectedPoint ? getChartPointStatusLabel(selectedPoint) : "No candle yet";
 
   const title =
     range === "day"
       ? "Today"
       : range === "week"
         ? "Last 7 days"
-        : "This month";
+        : "This cycle";
 
   return (
     <div className="screen">
@@ -12914,9 +12986,9 @@ function ChartScreen({
 
       <section className="chart-banner">
         <p>
-          You watch crypto charts every day.
+          Wallet Pressure Chart tracks daily leak pressure.
           <br />
-          But do you watch your own <span>$BROKE Chart?</span>
+          Green means controlled. Red means <span>Wallet HP danger.</span>
         </p>
       </section>
 
@@ -12948,16 +13020,16 @@ function ChartScreen({
 
       <section className="chart-pulse-card">
         <div>
-          <span>Chart Pulse</span>
+          <span>Wallet Pressure Chart</span>
           <strong>
-            {periodSpent > 0
-              ? `${money(periodSpent, settings.currency)} tracked`
-              : "No damage yet"}
+            {hasRangeData
+              ? `${leakPressure}% pressure`
+              : "No pressure yet"}
           </strong>
           <small>
             {hasRangeData
-              ? `${rangeExpenses.length} records · ${leakPressure}% leak pressure`
-              : "Add expenses to make the chart alive."}
+              ? `${periodCount} records · ${money(rangeLeaks, settings.currency)} weighted leaks`
+              : "One day becomes one candle. Expenses update today’s candle."}
           </small>
         </div>
         <img src={A.chartFrog} alt="" />
@@ -12965,7 +13037,7 @@ function ChartScreen({
 
       <section className="chart-stats-grid">
         <div>
-          <span>Damage</span>
+          <span>Tracked spending</span>
           <strong>
             {periodSpent > 0 ? `-${money(periodSpent, settings.currency)}` : money(0, settings.currency)}
           </strong>
@@ -12973,25 +13045,25 @@ function ChartScreen({
         </div>
 
         <div>
-          <span>Leaks</span>
+          <span>Money leaks</span>
           <strong>{money(rangeLeaks, settings.currency)}</strong>
-          <small>{leakPressure}% pressure</small>
+          <small>{money(averageDailyLeak, settings.currency)} daily leak pace</small>
         </div>
 
         <div>
-          <span>Top category</span>
+          <span>Top leak</span>
           <strong>{topRangeCategory ? categoryDisplayLabel(settings, topRangeCategory.category) : "None"}</strong>
           <small>
             {topRangeCategory
               ? money(topRangeCategory.amount, settings.currency)
-              : "No records"}
+              : "No marked leak"}
           </small>
         </div>
 
         <div>
-          <span>Avg/day</span>
+          <span>Avg spend/day</span>
           <strong>{money(averageDailySpend, settings.currency)}</strong>
-          <small>{range === "day" ? "today" : "daily pace"}</small>
+          <small>{money(dailyLeakBudget, settings.currency)} daily leak budget</small>
         </div>
       </section>
 
@@ -13000,9 +13072,10 @@ function ChartScreen({
           <img src={A.chartFrog} alt="" />
           <div>
             <span>$BROKE Chart is waiting</span>
-            <strong>No wallet movement yet.</strong>
+            <strong>No wallet pressure yet.</strong>
             <p>
-              Track one expense to create the first candle, spending volume and leak pressure.
+              Track one expense to create today’s candle. Needed spending stays controlled;
+              Maybe and Not needed create leak pressure.
             </p>
             <button type="button" onClick={onOpenAdd}>
               Track first expense
@@ -13014,35 +13087,46 @@ function ChartScreen({
       <section className={`big-chart ${range}`}>
         <div className="chart-lines">
           {chartData.map((point) => {
-            const height = clamp(24 + (point.spent / maxSpent) * 68, 18, 92);
+            const height = clamp(24 + (point.pressure / maxLeakPressure) * 68, 18, 92);
+            const pointTitle = [
+              `${point.label}: ${getChartPointStatusLabel(point)}`,
+              `Tracked: ${money(point.spent, settings.currency)}`,
+              `Leaks: ${money(point.leakAmount, settings.currency)}`,
+              `Pressure: ${point.pressure}%`,
+              point.biggestLeakCategory
+                ? `Top leak: ${categoryDisplayLabel(settings, point.biggestLeakCategory)}`
+                : "Top leak: none",
+              point.isCycleStart ? "Cycle start / payday marker" : "",
+            ].filter(Boolean).join(" · ");
 
             return (
               <i
                 key={point.key}
-                className={point.spent > 0 ? "red" : "green"}
-                style={{ height: `${height}%` }}
-                title={`${point.label}: ${money(point.spent, settings.currency)}`}
+                className={getChartPointClassName(point)}
+                style={{ height: `${height}%`, width: range === "day" ? "24px" : undefined }}
+                title={pointTitle}
               />
             );
           })}
         </div>
 
         <div className="price-line">
-          <span>{money(periodClose, settings.currency)}</span>
+          <span>{leakPressure}% pressure</span>
         </div>
       </section>
 
       <section className="volume">
-        <label>Spending Volume — {title}</label>
+        <label>Leak Volume — {title}</label>
         <div className={range}>
           {chartData.map((point) => {
-            const height = clamp(12 + (point.spent / maxSpent) * 75, 10, 90);
+            const height = clamp(12 + (point.leakAmount / Math.max(rangeLeaks, 1)) * 75, 10, 90);
 
             return (
               <i
                 key={point.key}
-                className={point.spent > 0 ? "red" : "green"}
-                style={{ height: `${height}%` }}
+                className={getChartPointClassName(point)}
+                style={{ height: `${height}%`, width: range === "day" ? "24px" : undefined }}
+                title={`${point.label}: ${money(point.leakAmount, settings.currency)} leaks`}
               />
             );
           })}
@@ -13057,29 +13141,27 @@ function ChartScreen({
 
         <div className="day-info">
           <div>
-            <span>Open</span>
-            <b>{money(periodOpen, settings.currency)}</b>
+            <span>Tracked</span>
+            <b>{money(periodSpent, settings.currency)}</b>
           </div>
 
           <div>
-            <span>Close</span>
-            <b>{money(periodClose, settings.currency)}</b>
+            <span>Leaks</span>
+            <b>{money(rangeLeaks, settings.currency)}</b>
           </div>
 
           <div>
-            <span>Damage</span>
-            <b className="bad">
-              {periodSpent > 0
-                ? `-${money(periodSpent, settings.currency)}`
-                : money(0, settings.currency)}
-            </b>
+            <span>Real balance</span>
+            <b className={periodClose < 0 ? "bad" : "good"}>{money(periodClose, settings.currency)}</b>
           </div>
         </div>
 
         <div className="chart-range-note">
           <span>
-            Current point: {selectedPoint?.label ?? "-"} ·{" "}
-            {money(selectedPoint?.spent ?? 0, settings.currency)} spent
+            Current candle: {selectedPoint?.label ?? "-"} · {latestPointLabel} · {money(selectedPoint?.leakAmount ?? 0, settings.currency)} leaks · {selectedPoint?.pressure ?? 0}% pressure
+          </span>
+          <span>
+            Payday is treated as a cycle marker. It does not create a fake green candle and history is not deleted.
           </span>
         </div>
       </section>
@@ -17072,18 +17154,19 @@ function MenuLine({
 }
 
 function MiniChart({ chartDays }: { chartDays: ChartPoint[] }) {
-  const max = Math.max(...chartDays.map((day) => day.spent), 1);
+  const max = Math.max(...chartDays.map((day) => day.pressure), 1);
 
   return (
     <div className="mini-chart">
       {chartDays.map((day) => {
-        const height = clamp(18 + (day.spent / max) * 62, 14, 80);
+        const height = clamp(18 + (day.pressure / max) * 62, 14, 80);
 
         return (
           <i
             key={day.key}
-            className={day.spent > 0 ? "red" : "green"}
+            className={getChartPointClassName(day)}
             style={{ height: `${height}%` }}
+            title={`${day.label}: ${getChartPointStatusLabel(day)} · ${day.pressure}% pressure`}
           />
         );
       })}
