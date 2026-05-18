@@ -131,6 +131,8 @@ type ExchangeRateState = {
   error: string;
 };
 
+type CurrencyRepairScope = "missing" | "all";
+
 type CurrencyRepairResult = {
   expensesUpdated: number;
   incomeFieldsUpdated: number;
@@ -139,6 +141,8 @@ type CurrencyRepairResult = {
   debtItemsUpdated: number;
   cloudExpenseSync?: boolean;
   cloudAppStateSync?: boolean;
+  serverExpenseRepair?: boolean;
+  repairScope?: CurrencyRepairScope;
 };
 type ChartRange = "day" | "week" | "month";
 type RegionPreset =
@@ -2756,10 +2760,16 @@ const ruText: Record<string, string> = {
   "Income fields": "Поля дохода",
   "Fixed cost fields": "Поля фиксированных расходов",
   "Repairing...": "Исправляем...",
-  "New entries already remember their currency automatically. This tool is only for data created before the currency upgrade.": "Новые записи уже автоматически запоминают свою валюту. Этот инструмент только для данных, созданных до обновления валют.",
+  "New entries already remember their currency automatically. Missing-only fixes blank old rows. Force-all is only for old data that was already tagged as the wrong currency.": "Новые записи уже автоматически запоминают валюту. Missing-only исправляет старые строки без валюты. Force-all нужен только для старых данных, которые уже были помечены неверной валютой.",
   "Currency repair failed. Try again after the app syncs.": "Восстановление валюты не удалось. Попробуй снова после синхронизации приложения.",
   "Currency repair synced": "Валюта старых данных синхронизирована",
   "Currency repair cloud save failed": "Не удалось сохранить восстановление валюты в облако",
+  "Repair scope": "Область исправления",
+  "Use missing-only for blank old rows. Use force-all if old rows were already tagged as the wrong currency and still show as huge USD values.": "Используй Missing only для пустых старых строк. Используй Force all, если старые строки уже помечены неверной валютой и всё ещё выглядят как огромные USD-значения.",
+  "Missing only": "Только без валюты",
+  "Force all current data": "Принудительно все текущие данные",
+  "Force mark all as": "Принудительно отметить всё как",
+  "Missing-only fixes blank old rows. Force-all is only for old data that was already tagged as the wrong currency.": "Missing-only исправляет старые строки без валюты. Force-all нужен только для старых данных, которые уже были помечены неверной валютой.",
   "Wallet Pressure Chart tracks daily leak pressure.": "Wallet Pressure Chart отслеживает дневное давление утечек.",
   "Green means controlled. Red means": "Зелёный — контролируемо. Красный —",
   "Wallet HP danger.": "опасность для Wallet HP.",
@@ -2942,7 +2952,11 @@ function applyRussianDynamicRules(value: string) {
     .replace(/Stored as ([^·]*) · Displayed as ([^.]*)/g, "Сохранено как $1 · Отображается как $2")
     .replace(/Personal goal is displayed as ([^.]+)\. Original: ([^.]+)\./g, "Личная цель отображается как $1. Исходно: $2.")
     .replace(/Mark older numbers as ([A-Z]{3})\? This does not convert or rewrite amounts\. It only tags old data with the currency it was originally entered in\./g, "Отметить старые числа как $1? Это не конвертирует и не переписывает суммы. Это только помечает старые данные валютой, в которой они были введены изначально.")
+    .replace(/Force-mark ALL current money records as ([A-Z]{3})\? This does not convert or rewrite amounts\. Use this only if the visible old numbers were originally entered in ([A-Z]{3})\./g, "Принудительно отметить ВСЕ текущие денежные записи как $1? Это не конвертирует и не переписывает суммы. Используй только если видимые старые числа были изначально введены в $2.")
+    .replace(/Force mark all as ([A-Z]{3})/g, "Принудительно отметить всё как $1")
     .replace(/Mark old data as ([A-Z]{3})/g, "Отметить старые данные как $1")
+    .replace(/Marked (\d+) money fields as ([A-Z]{3})\. Original amounts stayed unchanged\. Refresh or reopen Telegram if old cloud rows were already loaded\./g, "Отмечено $1 денежных полей как $2. Исходные суммы не изменились. Обнови или переоткрой Telegram, если старые cloud-строки уже были загружены.")
+    .replace(/No missing currency fields found\. ([A-Z]{3}) is still ready for new entries\./g, "Полей без валюты не найдено. $1 всё равно готова для новых записей.")
     .replace(/(\d+) old expense row(s?) do not remember original currency yet\. Use Old Data Currency Repair before judging converted totals\./g, "$1 старых строк расходов ещё не помнят исходную валюту. Используй восстановление валюты старых данных перед оценкой конвертированных итогов.")
     .replace(/(\d+) old records/g, "$1 старых записей")
     .replace(/(\d+) total · (\d+) this month/g, "$1 всего · $2 за месяц")
@@ -6390,6 +6404,45 @@ async function callBrokeApi(
   return data;
 }
 
+async function callCurrencyRepairApi(
+  initData: string,
+  currency: Currency,
+  repairScope: CurrencyRepairScope,
+  payload: Record<string, unknown> = {}
+): Promise<{ ok: boolean; expensesUpdated?: number; settingsSynced?: boolean; appStateSynced?: boolean; error?: string }> {
+  const response = await fetch("/api/currency-repair", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      initData,
+      currency,
+      repairScope,
+      ...payload,
+    }),
+  });
+
+  const text = await response.text();
+  let data: { ok: boolean; expensesUpdated?: number; settingsSynced?: boolean; appStateSynced?: boolean; error?: string };
+
+  try {
+    data = JSON.parse(text) as { ok: boolean; expensesUpdated?: number; settingsSynced?: boolean; appStateSynced?: boolean; error?: string };
+  } catch {
+    const shortText = text.slice(0, 80).replace(/\s+/g, " ");
+    throw new Error(
+      `API /api/currency-repair returned non-JSON. Check app/api/currency-repair/route.ts. Response: ${shortText}`
+    );
+  }
+
+  if (!response.ok || !data.ok) {
+    throw new Error(data.error || "Currency repair failed");
+  }
+
+  return data;
+}
+
+
 export default function Home() {
   const [loaded, setLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("home");
@@ -6932,12 +6985,13 @@ export default function Home() {
     }
   }
 
-  async function repairOldCurrencyData(currency: Currency): Promise<CurrencyRepairResult> {
+  async function repairOldCurrencyData(currency: Currency, repairScope: CurrencyRepairScope = "missing"): Promise<CurrencyRepairResult> {
     const repairCurrency = normalizeCurrency(currency, settings.currency);
-    const expensesUpdated = expenses.filter((expense) => !expense.currency).length;
+    const shouldRepairExpense = (expense: Expense) => repairScope === "all" || !expense.currency;
+    const expensesUpdated = expenses.filter(shouldRepairExpense).length;
     const incomeFieldsUpdated = incomeKeys.filter((key) => settings.income[key] > 0).length;
     const fixedCostFieldsUpdated = fixedCostKeys.filter((key) => settings.fixedCosts[key] > 0).length;
-    const repairedAppState = repairLocalAppStateCurrency(repairCurrency);
+    const repairedAppState = repairLocalAppStateCurrency(repairCurrency, repairScope);
     const nextSettings: Settings = {
       ...settings,
       incomeCurrencies: currencyMapForKeys(incomeKeys, repairCurrency),
@@ -6948,36 +7002,66 @@ export default function Home() {
     setSettings(nextSettings);
     setExpenses((prev) =>
       prev.map((expense) =>
-        expense.currency
-          ? expense
-          : {
+        shouldRepairExpense(expense)
+          ? {
               ...expense,
               currency: repairCurrency,
             }
+          : expense
       )
     );
 
     let cloudExpenseSync = false;
     let cloudAppStateSync = false;
+    let serverExpenseRepair = false;
 
     if (cloudAuthReady) {
       try {
-        const data = await callBrokeApi(cloudInitData, "repairOldCurrency", {
+        const repairPayload = {
           currency: repairCurrency,
+          repairScope,
           settings: nextSettings,
           appState: readLocalCloudAppState(),
-        });
+        };
 
-        if (data.settings) setSettings(normalizeSettings(data.settings));
-        if (data.expenses) setExpenses(data.expenses.map(normalizeExpense));
-        if (data.appState) writeLocalCloudAppState(data.appState);
-        applyApiFeedback(data, "Currency repair synced");
+        const repairData = await callCurrencyRepairApi(
+          cloudInitData,
+          repairCurrency,
+          repairScope,
+          repairPayload
+        );
+
+        serverExpenseRepair = true;
+        cloudExpenseSync = Number(repairData.expensesUpdated || 0) >= 0;
+        cloudAppStateSync = Boolean(repairData.appStateSynced);
         setCloudStatus("cloud");
-        cloudExpenseSync = Boolean(data.expenseCurrencyRepair?.cloudExpenseSync);
-        cloudAppStateSync = Boolean(data.appStateCloudSync);
-      } catch (error) {
-        setCloudStatus("error");
-        setCloudError(error instanceof Error ? error.message : "Currency repair cloud save failed");
+        showToast("Currency repair synced", `${repairCurrency} metadata was applied without changing amounts.`, "success");
+      } catch (repairError) {
+        try {
+          const data = await callBrokeApi(cloudInitData, "repairOldCurrency", {
+            currency: repairCurrency,
+            repairScope,
+            settings: nextSettings,
+            appState: readLocalCloudAppState(),
+          });
+
+          if (data.settings) setSettings(normalizeSettings(data.settings));
+          if (data.expenses) setExpenses(data.expenses.map(normalizeExpense));
+          if (data.appState) writeLocalCloudAppState(data.appState);
+          applyApiFeedback(data, "Currency repair synced");
+          setCloudStatus("cloud");
+          cloudExpenseSync = Boolean(data.expenseCurrencyRepair?.cloudExpenseSync);
+          cloudAppStateSync = Boolean(data.appStateCloudSync);
+        } catch (fallbackError) {
+          setCloudStatus("error");
+          setCloudError(
+            fallbackError instanceof Error
+              ? fallbackError.message
+              : repairError instanceof Error
+                ? repairError.message
+                : "Currency repair cloud save failed"
+          );
+        }
       }
     }
 
@@ -6989,6 +7073,8 @@ export default function Home() {
       debtItemsUpdated: repairedAppState.debtItemsUpdated,
       cloudExpenseSync,
       cloudAppStateSync,
+      serverExpenseRepair,
+      repairScope,
     };
   }
 
@@ -15476,14 +15562,14 @@ function writeLocalCloudAppState(input: Partial<CloudAppState>) {
   window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
 }
 
-function repairLocalAppStateCurrency(currency: Currency) {
+function repairLocalAppStateCurrency(currency: Currency, repairScope: CurrencyRepairScope = "missing") {
   const planner = readGrowthPlannerState();
   let growthTargetsUpdated = 0;
 
   const repairedTargets = planner.realLifeTargets.map((target) => {
     const hasAmount = safeNumber(target.amount) > 0;
 
-    if (!hasAmount || target.currency) return target;
+    if (!hasAmount || (repairScope !== "all" && target.currency)) return target;
 
     growthTargetsUpdated += 1;
     return {
@@ -15492,7 +15578,7 @@ function repairLocalAppStateCurrency(currency: Currency) {
     };
   });
 
-  const savingGoalNeedsCurrency = safeNumber(planner.savingGoalAmount) > 0 && !planner.savingGoalCurrency;
+  const savingGoalNeedsCurrency = safeNumber(planner.savingGoalAmount) > 0 && (repairScope === "all" || !planner.savingGoalCurrency);
 
   if (savingGoalNeedsCurrency) {
     growthTargetsUpdated += 1;
@@ -15512,7 +15598,7 @@ function repairLocalAppStateCurrency(currency: Currency) {
     const hasMonthlyAmount = safeNumber(item.monthlyAmount) > 0;
     const hasRemainingAmount = safeNumber(item.remainingAmount) > 0;
 
-    if (hasMonthlyAmount && !item.currency) {
+    if (hasMonthlyAmount && (repairScope === "all" || !item.currency)) {
       next = {
         ...next,
         currency,
@@ -15520,7 +15606,7 @@ function repairLocalAppStateCurrency(currency: Currency) {
       debtItemsUpdated += 1;
     }
 
-    if (hasRemainingAmount && !item.remainingCurrency) {
+    if (hasRemainingAmount && (repairScope === "all" || !item.remainingCurrency)) {
       next = {
         ...next,
         remainingCurrency: currency,
@@ -16474,7 +16560,7 @@ function SettingsScreen({
   conversionSourceCount: number;
   onReset: () => void;
   onDeleteExpense: (id: string) => void;
-  onRepairOldCurrency: (currency: Currency) => Promise<CurrencyRepairResult>;
+  onRepairOldCurrency: (currency: Currency, repairScope?: CurrencyRepairScope) => Promise<CurrencyRepairResult>;
   telegram: TelegramState;
   webAuth: WebAuthState;
   cloudStatus: CloudStatus;
@@ -16499,6 +16585,7 @@ function SettingsScreen({
   const publicLeaderboard = Boolean(leaderboard?.me?.publicLeaderboard);
   const oldExpenseCount = rawExpenses.filter((expense) => !expense.currency).length;
   const [repairCurrency, setRepairCurrency] = useState<Currency>(settings.currency);
+  const [repairScope, setRepairScope] = useState<CurrencyRepairScope>("missing");
   const [repairBusy, setRepairBusy] = useState(false);
   const [repairMessage, setRepairMessage] = useState("");
 
@@ -16597,7 +16684,9 @@ function SettingsScreen({
 
   async function runOldDataCurrencyRepair() {
     const confirmed = window.confirm(
-      `Mark older numbers as ${repairCurrency}? This does not convert or rewrite amounts. It only tags old data with the currency it was originally entered in.`
+      repairScope === "all"
+        ? `Force-mark ALL current money records as ${repairCurrency}? This does not convert or rewrite amounts. Use this only if the visible old numbers were originally entered in ${repairCurrency}.`
+        : `Mark older numbers as ${repairCurrency}? This does not convert or rewrite amounts. It only tags old data with the currency it was originally entered in.`
     );
 
     if (!confirmed) return;
@@ -16606,7 +16695,7 @@ function SettingsScreen({
     setRepairMessage("");
 
     try {
-      const result = await onRepairOldCurrency(repairCurrency);
+      const result = await onRepairOldCurrency(repairCurrency, repairScope);
       const touched =
         result.expensesUpdated +
         result.incomeFieldsUpdated +
@@ -16616,7 +16705,7 @@ function SettingsScreen({
 
       setRepairMessage(
         touched > 0
-          ? `Marked ${touched} old money fields as ${repairCurrency}. Original amounts stayed unchanged.`
+          ? `Marked ${touched} money fields as ${repairCurrency}. Original amounts stayed unchanged. Refresh or reopen Telegram if old cloud rows were already loaded.`
           : `No missing currency fields found. ${repairCurrency} is still ready for new entries.`
       );
     } catch {
@@ -16937,6 +17026,30 @@ function SettingsScreen({
               </select>
             </label>
 
+            <div className="currency-repair-warning">
+              <strong>Repair scope</strong>
+              <span>
+                Use missing-only for blank old rows. Use force-all if old rows were already tagged as the wrong currency and still show as huge USD values.
+              </span>
+            </div>
+
+            <div className="currency-mode-options currency-repair-scope-options">
+              <button
+                type="button"
+                className={repairScope === "missing" ? "active" : ""}
+                onClick={() => setRepairScope("missing")}
+              >
+                Missing only
+              </button>
+              <button
+                type="button"
+                className={repairScope === "all" ? "active" : ""}
+                onClick={() => setRepairScope("all")}
+              >
+                Force all current data
+              </button>
+            </div>
+
             <div className="currency-repair-stats">
               <div>
                 <span>Old expense rows</span>
@@ -16958,13 +17071,13 @@ function SettingsScreen({
               onClick={runOldDataCurrencyRepair}
               disabled={repairBusy}
             >
-              {repairBusy ? "Repairing..." : `Mark old data as ${repairCurrency}`}
+              {repairBusy ? "Repairing..." : repairScope === "all" ? `Force mark all as ${repairCurrency}` : `Mark old data as ${repairCurrency}`}
             </button>
 
             {repairMessage && <p className="currency-repair-result">{repairMessage}</p>}
 
             <small className="currency-repair-note">
-              New entries already remember their currency automatically. This tool is only for data created before the currency upgrade.
+              New entries already remember their currency automatically. Missing-only fixes blank old rows. Force-all is only for old data that was already tagged as the wrong currency.
             </small>
           </section>
         </details>
