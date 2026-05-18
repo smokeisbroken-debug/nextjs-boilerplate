@@ -100,12 +100,33 @@ const currencyModeOptions: { value: CurrencyMode; label: string; helper: string 
   {
     value: "convert",
     label: "Convert values",
-    helper: "Saved as a preference now. Converted totals turn on in the next step after testing.",
+    helper: "Use cached exchange rates for entries that remember their original currency.",
   },
 ];
 
 type MoneyFormatOptions = {
   includeCode?: boolean;
+};
+
+type ExchangeRateSnapshot = {
+  baseCurrency: Currency;
+  quoteCurrency: Currency;
+  rate: number;
+  rateDate?: string;
+  source?: string;
+  fetchedAt?: string;
+  cached?: boolean;
+  cacheStatus?: string;
+};
+
+type ExchangeRateMap = Record<string, ExchangeRateSnapshot>;
+
+type ExchangeRateStatus = "idle" | "loading" | "ready" | "partial" | "error";
+
+type ExchangeRateState = {
+  rates: ExchangeRateMap;
+  status: ExchangeRateStatus;
+  error: string;
 };
 type ChartRange = "day" | "week" | "month";
 type RegionPreset =
@@ -277,6 +298,9 @@ type Expense = {
   note: string;
   createdAt: string;
   currency?: Currency;
+  originalAmount?: number;
+  originalCurrency?: Currency;
+  convertedForDisplay?: boolean;
 };
 
 type OnboardingStarterExpense = {
@@ -1262,6 +1286,8 @@ const ruText: Record<string, string> = {
   "New entries remember this currency for future conversion.": "Новые записи запоминают эту валюту для будущей конвертации.",
   "Currency currently changes display only. New entries remember this currency for future conversion.": "Валюта пока меняет только отображение. Новые записи запоминают эту валюту для будущей конвертации.",
   "Exchange-rate cache is now prepared server-side. Real conversion stays off until Currency Mode is added.": "Серверный кэш курсов уже подготовлен. Реальная конвертация остаётся выключенной до добавления Currency Mode.",
+  "Convert mode now uses cached exchange rates for entries with original currency metadata.": "Convert mode теперь использует кэш курсов для записей с исходной валютой.",
+  "Converted display is live for entries that remember their original currency. Income and fixed costs still use the selected currency directly.": "Конвертированное отображение включено для записей, которые запомнили исходную валюту. Доходы и фиксированные расходы пока используют выбранную валюту напрямую.",
   "Currency Mode": "Режим валюты",
   "Display only": "Только отображение",
   "Convert values": "Конвертировать значения",
@@ -3641,6 +3667,221 @@ function money(value: number, currency: Currency) {
   return formatMoney(value, currency);
 }
 
+function exchangeRateKey(baseCurrency: Currency, quoteCurrency: Currency) {
+  return `${baseCurrency}:${quoteCurrency}`;
+}
+
+function getUniqueCurrencies(values: Array<Currency | undefined>, fallback: Currency) {
+  return Array.from(
+    new Set(values.map((value) => normalizeCurrency(value, fallback)))
+  ).filter((currency) => supportedCurrencies.includes(currency));
+}
+
+function getRateSnapshot(
+  rates: ExchangeRateMap,
+  baseCurrency: Currency,
+  quoteCurrency: Currency
+) {
+  if (baseCurrency === quoteCurrency) {
+    return {
+      baseCurrency,
+      quoteCurrency,
+      rate: 1,
+      source: "identity",
+    } satisfies ExchangeRateSnapshot;
+  }
+
+  const direct = rates[exchangeRateKey(baseCurrency, quoteCurrency)];
+  if (direct && Number.isFinite(direct.rate) && direct.rate > 0) return direct;
+
+  return null;
+}
+
+function convertAmountWithRates(
+  value: number,
+  baseCurrency: Currency,
+  quoteCurrency: Currency,
+  rates: ExchangeRateMap
+) {
+  const safeValue = Number.isFinite(value) ? value : 0;
+  const rate = getRateSnapshot(rates, baseCurrency, quoteCurrency);
+
+  if (!rate) return null;
+
+  return safeValue * rate.rate;
+}
+
+function getDisplayAmount(
+  value: number,
+  sourceCurrency: Currency | undefined,
+  settings: Settings,
+  rates: ExchangeRateMap
+) {
+  const fromCurrency = normalizeCurrency(sourceCurrency, settings.currency);
+
+  if (settings.currencyMode !== "convert" || fromCurrency === settings.currency) {
+    return {
+      amount: value,
+      currency: fromCurrency,
+      originalAmount: value,
+      originalCurrency: fromCurrency,
+      converted: false,
+      ready: true,
+    };
+  }
+
+  const convertedAmount = convertAmountWithRates(value, fromCurrency, settings.currency, rates);
+
+  if (convertedAmount === null) {
+    return {
+      amount: value,
+      currency: fromCurrency,
+      originalAmount: value,
+      originalCurrency: fromCurrency,
+      converted: false,
+      ready: false,
+    };
+  }
+
+  return {
+    amount: convertedAmount,
+    currency: settings.currency,
+    originalAmount: value,
+    originalCurrency: fromCurrency,
+    converted: true,
+    ready: true,
+  };
+}
+
+function displayMoney(
+  value: number,
+  sourceCurrency: Currency | undefined,
+  settings: Settings,
+  rates: ExchangeRateMap,
+  options: MoneyFormatOptions = {}
+) {
+  const display = getDisplayAmount(value, sourceCurrency, settings, rates);
+  return formatMoney(display.amount, display.currency, options);
+}
+
+function originalMoneyNote(display: ReturnType<typeof getDisplayAmount>) {
+  if (!display.converted) return "";
+  return `≈ ${formatMoney(display.originalAmount, display.originalCurrency, { includeCode: true })}`;
+}
+
+function expenseToDisplayExpense(expense: Expense, settings: Settings, rates: ExchangeRateMap): Expense {
+  const display = getDisplayAmount(expense.amount, expense.currency, settings, rates);
+
+  if (!display.converted) return expense;
+
+  return {
+    ...expense,
+    amount: display.amount,
+    currency: display.currency,
+    originalAmount: display.originalAmount,
+    originalCurrency: display.originalCurrency,
+    convertedForDisplay: true,
+  };
+}
+
+function useExchangeRates(settings: Settings, sourceCurrencies: Array<Currency | undefined>) {
+  const [rateState, setRateState] = useState<ExchangeRateState>({
+    rates: {},
+    status: "idle",
+    error: "",
+  });
+
+  const sourceKey = getUniqueCurrencies(sourceCurrencies, settings.currency)
+    .filter((currency) => currency !== settings.currency)
+    .sort()
+    .join("|");
+
+  useEffect(() => {
+    if (settings.currencyMode !== "convert" || !sourceKey) {
+      const idleTimer = window.setTimeout(() => {
+        setRateState((prev) => ({ ...prev, status: "idle", error: "" }));
+      }, 0);
+
+      return () => window.clearTimeout(idleTimer);
+    }
+
+    let cancelled = false;
+    const sourceList = sourceKey.split("|").map((currency) => normalizeCurrency(currency, settings.currency));
+    const missing = sourceList.filter((currency) => {
+      const key = exchangeRateKey(currency, settings.currency);
+      return !rateState.rates[key];
+    });
+
+    if (missing.length === 0) {
+      const readyTimer = window.setTimeout(() => {
+        setRateState((prev) => ({ ...prev, status: "ready", error: "" }));
+      }, 0);
+
+      return () => window.clearTimeout(readyTimer);
+    }
+
+    async function loadRates() {
+      setRateState((prev) => ({ ...prev, status: "loading", error: "" }));
+
+      const results = await Promise.allSettled(
+        missing.map(async (baseCurrency) => {
+          const response = await fetch(
+            `/api/exchange-rates?base=${encodeURIComponent(baseCurrency)}&quote=${encodeURIComponent(settings.currency)}`,
+            { cache: "no-store" }
+          );
+
+          const data = await response.json();
+
+          if (!response.ok || !data?.ok || !Number.isFinite(Number(data.rate))) {
+            throw new Error(data?.error || `Rate ${baseCurrency}/${settings.currency} failed`);
+          }
+
+          return {
+            baseCurrency: normalizeCurrency(data.baseCurrency, baseCurrency),
+            quoteCurrency: normalizeCurrency(data.quoteCurrency, settings.currency),
+            rate: Number(data.rate),
+            rateDate: data.rateDate ? String(data.rateDate) : undefined,
+            source: data.source ? String(data.source) : "frankfurter",
+            fetchedAt: data.fetchedAt ? String(data.fetchedAt) : undefined,
+            cached: Boolean(data.cached),
+            cacheStatus: data.cacheStatus ? String(data.cacheStatus) : undefined,
+          } satisfies ExchangeRateSnapshot;
+        })
+      );
+
+      if (cancelled) return;
+
+      const nextRates: ExchangeRateMap = {};
+      const errors: string[] = [];
+
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled") {
+          nextRates[exchangeRateKey(result.value.baseCurrency, result.value.quoteCurrency)] = result.value;
+        } else {
+          errors.push(`${missing[index]}→${settings.currency}`);
+        }
+      });
+
+      setRateState((prev) => ({
+        rates: {
+          ...prev.rates,
+          ...nextRates,
+        },
+        status: errors.length > 0 ? (Object.keys(nextRates).length > 0 ? "partial" : "error") : "ready",
+        error: errors.length > 0 ? `Could not load rates: ${errors.join(", ")}` : "",
+      }));
+    }
+
+    void loadRates();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.currency, settings.currencyMode, sourceKey]);
+
+  return rateState;
+}
+
 function publicProofValue(settings: Settings, value: string) {
   return settings.privacy.publicProofMode ? "hidden" : value;
 }
@@ -5919,9 +6160,18 @@ export default function Home() {
     }
   }, [activeTab, loaded, onboardingCompleted, cloudAuthReady, cloudStatus]);
 
+  const expenseCurrencySources = useMemo(
+    () => expenses.map((expense) => expense.currency),
+    [expenses]
+  );
+  const expenseRateState = useExchangeRates(settings, expenseCurrencySources);
+  const displayExpenses = useMemo(
+    () => expenses.map((expense) => expenseToDisplayExpense(expense, settings, expenseRateState.rates)),
+    [expenses, settings, expenseRateState.rates]
+  );
   const currentMonthExpenses = useMemo(() => {
-    return getCurrentMonthExpenses(expenses);
-  }, [expenses]);
+    return getCurrentMonthExpenses(displayExpenses);
+  }, [displayExpenses]);
 
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
@@ -5953,15 +6203,15 @@ export default function Home() {
     const today = dayKey(new Date());
 
     return sum(
-      expenses
+      displayExpenses
         .filter((e) => dayKey(new Date(e.createdAt)) === today)
         .map((e) => e.amount)
     );
-  }, [expenses]);
+  }, [displayExpenses]);
 
   const chartDays = useMemo(() => {
-    return buildChartData("week", expenses, settings);
-  }, [expenses, settings]);
+    return buildChartData("week", displayExpenses, settings);
+  }, [displayExpenses, settings]);
 
   const localStreak = useMemo(() => {
     return calculateStreakFromExpenses(expenses);
@@ -5970,8 +6220,8 @@ export default function Home() {
   const activeStreak = cloudAuthReady && cloudStatus === "cloud" ? streak : localStreak;
 
   const walletInsights = useMemo(() => {
-    return buildWalletInsights(expenses, settings);
-  }, [expenses, settings]);
+    return buildWalletInsights(displayExpenses, settings);
+  }, [displayExpenses, settings]);
 
   async function addExpense() {
     const value = safeNumber(amount);
@@ -6341,7 +6591,7 @@ export default function Home() {
             leaderboard={leaderboard}
             expenses={currentMonthExpenses.slice(0, 6)}
             routineExpenses={currentMonthExpenses}
-            allExpenses={expenses}
+            allExpenses={displayExpenses}
             leakMission={leakMission}
             onStartLeakMission={startLocalLeakMission}
             onResetLeakMission={resetLocalLeakMission}
@@ -6384,7 +6634,7 @@ export default function Home() {
         {loaded && onboardingCompleted && activeTab === "chart" && (
           <ChartScreen
             settings={settings}
-            expenses={expenses}
+            expenses={displayExpenses}
             walletInsights={walletInsights}
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onBack={goHome}
@@ -6430,8 +6680,11 @@ export default function Home() {
           <SettingsScreen
             settings={settings}
             setSettings={setSettings}
-            expenses={expenses}
+            expenses={displayExpenses}
             currentMonthExpenses={currentMonthExpenses}
+            exchangeRateStatus={expenseRateState.status}
+            exchangeRateError={expenseRateState.error}
+            conversionSourceCount={getUniqueCurrencies(expenseCurrencySources, settings.currency).filter((currency) => currency !== settings.currency).length}
             onReset={resetData}
             onDeleteExpense={deleteExpense}
             telegram={telegram}
@@ -8776,9 +9029,15 @@ function LifeProfileSummaryCard({ settings }: { settings: Settings }) {
 function LifeProfileEditor({
   settings,
   setSettings,
+  exchangeRateStatus = "idle",
+  exchangeRateError = "",
+  conversionSourceCount = 0,
 }: {
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
+  exchangeRateStatus?: ExchangeRateStatus;
+  exchangeRateError?: string;
+  conversionSourceCount?: number;
 }) {
   function updateProfile<K extends keyof Settings["profile"]>(
     key: K,
@@ -8881,14 +9140,14 @@ function LifeProfileEditor({
           ))}
         </select>
         <small className="currency-foundation-note">
-          Exchange-rate cache is ready. No totals are converted yet.
+          Convert mode uses the exchange-rate cache for entries that remember their original currency.
         </small>
       </div>
 
       <div className="currency-mode-panel">
         <div className="currency-mode-heading">
           <span>Currency Mode</span>
-          <b>{settings.currencyMode === "convert" ? "Prepared mode" : "Current behavior"}</b>
+          <b>{settings.currencyMode === "convert" ? "Conversion on" : "Display only"}</b>
         </div>
         <div className="currency-mode-options" role="group" aria-label="Currency Mode">
           {currencyModeOptions.map((option) => (
@@ -8910,9 +9169,33 @@ function LifeProfileEditor({
         </div>
         <small className="currency-foundation-note">
           {settings.currencyMode === "convert"
-            ? "Convert mode is saved now. Converted totals turn on in the next step after testing."
+            ? "Converted display is live for entries that remember their original currency. Income and fixed costs still use the selected currency directly."
             : "Display-only keeps the old behavior: symbol changes, stored amounts do not."}
         </small>
+        {settings.currencyMode === "convert" && (
+          <div className="currency-conversion-status-card">
+            <span>Exchange-rate status</span>
+            <strong>
+              {exchangeRateStatus === "loading"
+                ? "Loading rates"
+                : exchangeRateStatus === "ready"
+                  ? "Rates ready"
+                  : exchangeRateStatus === "partial"
+                    ? "Partially ready"
+                    : exchangeRateStatus === "error"
+                      ? "Rate error"
+                      : conversionSourceCount > 0
+                        ? "Waiting for entries"
+                        : "No mixed currencies yet"}
+            </strong>
+            <small>
+              {exchangeRateError ||
+                (conversionSourceCount > 0
+                  ? `${conversionSourceCount} source currenc${conversionSourceCount === 1 ? "y" : "ies"} checked against ${settings.currency}.`
+                  : "Add entries in another currency, then switch display currency to see converted values.")}
+            </small>
+          </div>
+        )}
       </div>
 
       <div className="profile-block">
@@ -11055,7 +11338,21 @@ function ExpenseRow({
         </span>
       </div>
 
-      <b>{money(expense.amount, rowCurrency)}</b>
+      <b>
+        {money(expense.amount, rowCurrency)}
+        {expense.convertedForDisplay && expense.originalCurrency && Number.isFinite(expense.originalAmount) && (
+          <small className="converted-original-note">
+            {originalMoneyNote({
+              amount: expense.amount,
+              currency: rowCurrency,
+              originalAmount: expense.originalAmount || 0,
+              originalCurrency: expense.originalCurrency,
+              converted: true,
+              ready: true,
+            })}
+          </small>
+        )}
+      </b>
 
       <button
         type="button"
@@ -13405,6 +13702,14 @@ function GrowthLabScreen({
   }, []);
 
   const monthlyLeakExpenses = useMemo(() => getCurrentMonthExpenses(expenses), [expenses]);
+  const growthCurrencySources = useMemo(
+    () => [
+      ...realLifeTargets.map((target) => target.currency),
+      savingGoalCurrency,
+    ],
+    [realLifeTargets, savingGoalCurrency]
+  );
+  const growthRateState = useExchangeRates(settings, growthCurrencySources);
   const leakAmount = useMemo(
     () => getLeakAmountForGrowth(monthlyLeakExpenses),
     [monthlyLeakExpenses]
@@ -13449,9 +13754,18 @@ function GrowthLabScreen({
     () => buildGrowthLifeMeaning(finalPoint.balance, settings),
     [finalPoint.balance, settings]
   );
+  function getRealLifeTargetDisplay(target: GrowthManualTarget) {
+    return getDisplayAmount(
+      safeNumber(target.amount),
+      target.currency || settings.currency,
+      settings,
+      growthRateState.rates
+    );
+  }
+
   function getRealLifeTargetTotal(target: GrowthManualTarget) {
     const periodMonths = target.period === "year" ? 12 : 1;
-    return safeNumber(target.amount) * periodMonths;
+    return getRealLifeTargetDisplay(target).amount * periodMonths;
   }
 
   function getRealLifeTargetPeriodLabel(target: GrowthManualTarget) {
@@ -13459,9 +13773,11 @@ function GrowthLabScreen({
   }
 
   function getRealLifeTargetMonthsLabel(target: GrowthManualTarget) {
-    return `${formatGrowthMonthsCovered(finalPoint.balance, safeNumber(target.amount))} at ${money(
-      safeNumber(target.amount),
-      target.currency || settings.currency
+    const targetDisplay = getRealLifeTargetDisplay(target);
+
+    return `${formatGrowthMonthsCovered(finalPoint.balance, targetDisplay.amount)} at ${money(
+      targetDisplay.amount,
+      targetDisplay.currency
     )}/month`;
   }
 
@@ -13471,7 +13787,13 @@ function GrowthLabScreen({
   const primaryRealLifeTarget = completedRealLifeTargets[0] || realLifeTargets[0];
   const secondaryRealLifeTarget = completedRealLifeTargets[1] || realLifeTargets[1] || realLifeTargets[0];
   const activeGoalName = savingGoalName.trim() || "Your saving goal";
-  const activeGoalTarget = Math.max(0, safeNumber(savingGoalAmount));
+  const activeGoalDisplay = getDisplayAmount(
+    safeNumber(savingGoalAmount),
+    savingGoalCurrency || settings.currency,
+    settings,
+    growthRateState.rates
+  );
+  const activeGoalTarget = Math.max(0, activeGoalDisplay.amount);
   const goalMonths = getMonthsToGrowthGoal(activeGoalTarget, monthlyContribution);
   const goalProgress =
     activeGoalTarget > 0 ? clamp((finalPoint.balance / activeGoalTarget) * 100, 0, 100) : 0;
@@ -13950,7 +14272,8 @@ function GrowthLabScreen({
 
               <div className="growth-real-life-target-list">
                 {realLifeTargets.map((target) => {
-                  const targetAmount = safeNumber(target.amount);
+                  const targetDisplay = getRealLifeTargetDisplay(target);
+                  const targetAmount = targetDisplay.amount;
                   const targetTotal = getRealLifeTargetTotal(target);
                   const targetMonths = getMonthsToGrowthGoal(targetTotal, monthlyContribution);
                   const targetProgress =
@@ -13978,7 +14301,11 @@ function GrowthLabScreen({
                           aria-label="Planned cost amount"
                         />
 
-                        <small className="growth-currency-chip">Saved as {target.currency || settings.currency}</small>
+                        <small className="growth-currency-chip">
+                          {targetDisplay.converted
+                            ? `${money(targetDisplay.amount, targetDisplay.currency)} display · saved as ${target.currency || settings.currency}`
+                            : `Saved as ${target.currency || settings.currency}`}
+                        </small>
 
                         <div className="growth-row-period-toggle">
                           <button
@@ -14010,7 +14337,7 @@ function GrowthLabScreen({
                         <strong>{formatGoalTime(targetMonths)}</strong>
                         <small>
                           {formatGrowthMonthsCovered(finalPoint.balance, targetAmount)} at{" "}
-                          {money(targetAmount, settings.currency)}/month
+                          {money(targetAmount, targetDisplay.currency)}/month
                         </small>
                       </div>
 
@@ -14093,7 +14420,11 @@ function GrowthLabScreen({
                 </label>
               </div>
 
-              <p className="tiny-note">Personal goal amounts added now are saved as {savingGoalCurrency || settings.currency} for future conversion.</p>
+              <p className="tiny-note">
+                {activeGoalDisplay.converted
+                  ? `Personal goal is displayed as ${money(activeGoalDisplay.amount, activeGoalDisplay.currency)}. Original: ${money(activeGoalDisplay.originalAmount, activeGoalDisplay.originalCurrency)}.`
+                  : `Personal goal amounts are saved as ${savingGoalCurrency || settings.currency}.`}
+              </p>
 
               <div className="growth-goal-result">
                 <div>
@@ -14102,7 +14433,7 @@ function GrowthLabScreen({
                 </div>
                 <div>
                   <span>Target</span>
-                  <strong>{money(activeGoalTarget, savingGoalCurrency || settings.currency)}</strong>
+                  <strong>{money(activeGoalTarget, activeGoalDisplay.currency)}</strong>
                 </div>
                 <div>
                   <span>Redirected/month</span>
@@ -14335,11 +14666,21 @@ function writeLocalCloudAppState(input: Partial<CloudAppState>) {
   window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
 }
 
-function getDebtRadarTotals(items: DebtRadarItem[]): DebtRadarTotals {
+function getDebtRadarTotals(
+  items: DebtRadarItem[],
+  settings?: Settings,
+  rates: ExchangeRateMap = {}
+): DebtRadarTotals {
   return items.reduce<DebtRadarTotals>(
     (totals, item) => {
-      const monthlyAmount = Math.max(0, safeNumber(item.monthlyAmount));
-      const remainingAmount = item.kind === "debt" ? Math.max(0, safeNumber(item.remainingAmount)) : 0;
+      const monthlyDisplay = settings
+        ? getDisplayAmount(Math.max(0, safeNumber(item.monthlyAmount)), item.currency, settings, rates)
+        : { amount: Math.max(0, safeNumber(item.monthlyAmount)) };
+      const remainingDisplay = settings
+        ? getDisplayAmount(Math.max(0, safeNumber(item.remainingAmount)), item.remainingCurrency || item.currency, settings, rates)
+        : { amount: Math.max(0, safeNumber(item.remainingAmount)) };
+      const monthlyAmount = monthlyDisplay.amount;
+      const remainingAmount = item.kind === "debt" ? remainingDisplay.amount : 0;
 
       if (item.kind === "debt") totals.debtMonthly += monthlyAmount;
       if (item.kind === "bill") totals.billMonthly += monthlyAmount;
@@ -14399,6 +14740,7 @@ function DebtBillsRadarPanel({
   items,
   totals,
   settings,
+  exchangeRates,
   onUpdateItem,
   onAddItem,
   onRemoveItem,
@@ -14406,6 +14748,7 @@ function DebtBillsRadarPanel({
   items: DebtRadarItem[];
   totals: DebtRadarTotals;
   settings: Settings;
+  exchangeRates: ExchangeRateMap;
   onUpdateItem: (id: string, patch: Partial<DebtRadarItem>) => void;
   onAddItem: (kind: DebtRadarKind, name: string) => void;
   onRemoveItem: (id: string) => void;
@@ -14475,7 +14818,7 @@ function DebtBillsRadarPanel({
       </div>
 
       <p className="debt-radar-note">
-        Fill Monthly hit first. Remaining debt is counted only for Debt items. New items are saved as {settings.currency} for future conversion.
+        Fill Monthly hit first. Remaining debt is counted only for Debt items. Convert mode displays remembered currencies through the exchange-rate cache.
       </p>
 
       <div className="debt-radar-quick-row">
@@ -14493,9 +14836,22 @@ function DebtBillsRadarPanel({
       <div className="debt-radar-list">
         {items.map((item) => {
           const monthlyAmount = Math.max(0, safeNumber(item.monthlyAmount));
+          const monthlyDisplay = getDisplayAmount(monthlyAmount, item.currency || settings.currency, settings, exchangeRates);
+          const remainingDisplay = getDisplayAmount(
+            Math.max(0, safeNumber(item.remainingAmount)),
+            item.remainingCurrency || item.currency || settings.currency,
+            settings,
+            exchangeRates
+          );
           const itemMeta = [
-            monthlyAmount > 0 ? `${money(monthlyAmount, item.currency || settings.currency)}/mo` : "No monthly hit yet",
-            item.dueDay ? `Due day ${item.dueDay}` : "No due day",
+            monthlyAmount > 0
+              ? `${money(monthlyDisplay.amount, monthlyDisplay.currency)}/mo${monthlyDisplay.converted ? ` (${originalMoneyNote(monthlyDisplay)})` : ""}`
+              : "No monthly hit yet",
+            item.kind === "debt" && safeNumber(item.remainingAmount) > 0
+              ? `Remaining ${money(remainingDisplay.amount, remainingDisplay.currency)}${remainingDisplay.converted ? ` (${originalMoneyNote(remainingDisplay)})` : ""}`
+              : item.dueDay
+                ? `Due day ${item.dueDay}`
+                : "No due day",
             `${debtRadarPriorityLabel(item.priority)} priority`,
           ].join(" · ");
 
@@ -14795,6 +15151,11 @@ function WhatIfScreen({
   const [debtRadarItems, setDebtRadarItems] = useState<DebtRadarItem[]>(() =>
     readDebtRadarItems()
   );
+  const debtRadarCurrencySources = useMemo(
+    () => debtRadarItems.flatMap((item) => [item.currency, item.remainingCurrency]),
+    [debtRadarItems]
+  );
+  const debtRadarRateState = useExchangeRates(settings, debtRadarCurrencySources);
   const survivalCardRef = useRef<HTMLDivElement | null>(null);
 
   const categorySummaries = useMemo(() => {
@@ -14823,8 +15184,8 @@ function WhatIfScreen({
   }, []);
 
   const debtRadarTotals = useMemo(
-    () => getDebtRadarTotals(debtRadarItems),
-    [debtRadarItems]
+    () => getDebtRadarTotals(debtRadarItems, settings, debtRadarRateState.rates),
+    [debtRadarItems, settings, debtRadarRateState.rates]
   );
 
   const cards = useMemo<CategorySummary[]>(() => {
@@ -15026,6 +15387,7 @@ function WhatIfScreen({
           items={debtRadarItems}
           totals={debtRadarTotals}
           settings={settings}
+          exchangeRates={debtRadarRateState.rates}
           onUpdateItem={updateDebtRadarItem}
           onAddItem={addDebtRadarItem}
           onRemoveItem={removeDebtRadarItem}
@@ -15165,6 +15527,9 @@ function SettingsScreen({
   setSettings,
   expenses,
   currentMonthExpenses,
+  exchangeRateStatus,
+  exchangeRateError,
+  conversionSourceCount,
   onReset,
   onDeleteExpense,
   telegram,
@@ -15183,6 +15548,9 @@ function SettingsScreen({
   setSettings: Dispatch<SetStateAction<Settings>>;
   expenses: Expense[];
   currentMonthExpenses: Expense[];
+  exchangeRateStatus: ExchangeRateStatus;
+  exchangeRateError: string;
+  conversionSourceCount: number;
   onReset: () => void;
   onDeleteExpense: (id: string) => void;
   telegram: TelegramState;
@@ -15265,7 +15633,13 @@ function SettingsScreen({
     <div className="screen">
       <Header title="Settings" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
-      <LifeProfileEditor settings={settings} setSettings={setSettings} />
+      <LifeProfileEditor
+        settings={settings}
+        setSettings={setSettings}
+        exchangeRateStatus={exchangeRateStatus}
+        exchangeRateError={exchangeRateError}
+        conversionSourceCount={conversionSourceCount}
+      />
 
       <details className="clean-details settings-clean-details" open>
         <summary>

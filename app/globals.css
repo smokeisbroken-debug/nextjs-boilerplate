@@ -16014,3 +16014,55 @@ html[lang="ru"] .tab-guide-hero p {
     min-height: auto;
   }
 }
+
+/* v57.5 Real Converted Display */
+.converted-original-note {
+  display: block;
+  margin-top: 2px;
+  color: rgba(244, 255, 231, 0.5);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.currency-conversion-status-card {
+  border: 1px solid rgba(199, 255, 74, 0.14);
+  border-radius: 16px;
+  padding: 11px 12px;
+  background: rgba(0, 0, 0, 0.24);
+  display: grid;
+  gap: 4px;
+}
+
+.currency-conversion-status-card span {
+  color: rgba(244, 255, 231, 0.55);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.currency-conversion-status-card strong {
+  color: #f4ffe7;
+  font-size: 0.9rem;
+}
+
+.currency-conversion-status-card small {
+  color: rgba(244, 255, 231, 0.58);
+  line-height: 1.35;
+}
+
+.expense-row b {
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+}
+
+@media (max-width: 430px) {
+  .currency-conversion-status-card {
+    padding: 10px;
+  }
+
+  .expense-row b {
+    font-size: 12px;
+  }
+}
