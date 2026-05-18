@@ -129,6 +129,16 @@ type ExchangeRateState = {
   status: ExchangeRateStatus;
   error: string;
 };
+
+type CurrencyRepairResult = {
+  expensesUpdated: number;
+  incomeFieldsUpdated: number;
+  fixedCostFieldsUpdated: number;
+  growthTargetsUpdated: number;
+  debtItemsUpdated: number;
+  cloudExpenseSync?: boolean;
+  cloudAppStateSync?: boolean;
+};
 type ChartRange = "day" | "week" | "month";
 type RegionPreset =
   | "Global"
@@ -706,6 +716,7 @@ type BrokeApiResponse = {
   leaderboard?: LeaderboardState;
   appState?: CloudAppState;
   appStateCloudSync?: boolean;
+  expenseCurrencyRepair?: { updated: number; cloudExpenseSync: boolean };
   xpAwarded?: number;
   error?: string;
 };
@@ -6589,6 +6600,66 @@ export default function Home() {
     }
   }
 
+  async function repairOldCurrencyData(currency: Currency): Promise<CurrencyRepairResult> {
+    const repairCurrency = normalizeCurrency(currency, settings.currency);
+    const expensesUpdated = expenses.filter((expense) => !expense.currency).length;
+    const incomeFieldsUpdated = incomeKeys.filter((key) => settings.income[key] > 0).length;
+    const fixedCostFieldsUpdated = fixedCostKeys.filter((key) => settings.fixedCosts[key] > 0).length;
+    const repairedAppState = repairLocalAppStateCurrency(repairCurrency);
+    const nextSettings: Settings = {
+      ...settings,
+      incomeCurrencies: currencyMapForKeys(incomeKeys, repairCurrency),
+      fixedCostCurrencies: currencyMapForKeys(fixedCostKeys, repairCurrency),
+    };
+
+    triggerHaptic("medium");
+    setSettings(nextSettings);
+    setExpenses((prev) =>
+      prev.map((expense) =>
+        expense.currency
+          ? expense
+          : {
+              ...expense,
+              currency: repairCurrency,
+            }
+      )
+    );
+
+    let cloudExpenseSync = false;
+    let cloudAppStateSync = false;
+
+    if (cloudAuthReady) {
+      try {
+        const data = await callBrokeApi(cloudInitData, "repairOldCurrency", {
+          currency: repairCurrency,
+          settings: nextSettings,
+          appState: readLocalCloudAppState(),
+        });
+
+        if (data.settings) setSettings(normalizeSettings(data.settings));
+        if (data.expenses) setExpenses(data.expenses.map(normalizeExpense));
+        if (data.appState) writeLocalCloudAppState(data.appState);
+        applyApiFeedback(data, "Currency repair synced");
+        setCloudStatus("cloud");
+        cloudExpenseSync = Boolean(data.expenseCurrencyRepair?.cloudExpenseSync);
+        cloudAppStateSync = Boolean(data.appStateCloudSync);
+      } catch (error) {
+        setCloudStatus("error");
+        setCloudError(error instanceof Error ? error.message : "Currency repair cloud save failed");
+      }
+    }
+
+    return {
+      expensesUpdated,
+      incomeFieldsUpdated,
+      fixedCostFieldsUpdated,
+      growthTargetsUpdated: repairedAppState.growthTargetsUpdated,
+      debtItemsUpdated: repairedAppState.debtItemsUpdated,
+      cloudExpenseSync,
+      cloudAppStateSync,
+    };
+  }
+
   async function deleteExpense(id: string) {
     triggerHaptic("medium");
     setExpenses((prev) => prev.filter((expense) => expense.id !== id));
@@ -6952,6 +7023,7 @@ export default function Home() {
             settings={settings}
             setSettings={setSettings}
             expenses={displayExpenses}
+            rawExpenses={expenses}
             currentMonthExpenses={currentMonthExpenses}
             exchangeRateStatus={appRateState.status}
             exchangeRateError={appRateState.error}
@@ -6959,6 +7031,7 @@ export default function Home() {
             conversionSourceCount={getUniqueCurrencies(appCurrencySources, settings.currency).filter((currency) => currency !== settings.currency).length}
             onReset={resetData}
             onDeleteExpense={deleteExpense}
+            onRepairOldCurrency={repairOldCurrencyData}
             telegram={telegram}
             webAuth={webAuth}
             cloudStatus={cloudStatus}
@@ -15069,6 +15142,71 @@ function writeLocalCloudAppState(input: Partial<CloudAppState>) {
   window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
 }
 
+function repairLocalAppStateCurrency(currency: Currency) {
+  const planner = readGrowthPlannerState();
+  let growthTargetsUpdated = 0;
+
+  const repairedTargets = planner.realLifeTargets.map((target) => {
+    const hasAmount = safeNumber(target.amount) > 0;
+
+    if (!hasAmount || target.currency) return target;
+
+    growthTargetsUpdated += 1;
+    return {
+      ...target,
+      currency,
+    };
+  });
+
+  const savingGoalNeedsCurrency = safeNumber(planner.savingGoalAmount) > 0 && !planner.savingGoalCurrency;
+
+  if (savingGoalNeedsCurrency) {
+    growthTargetsUpdated += 1;
+  }
+
+  const repairedPlanner = normalizeGrowthPlannerState({
+    ...planner,
+    realLifeTargets: repairedTargets,
+    ...(savingGoalNeedsCurrency ? { savingGoalCurrency: currency } : {}),
+  });
+
+  const debtItems = readDebtRadarItems();
+  let debtItemsUpdated = 0;
+
+  const repairedDebtItems = debtItems.map((item) => {
+    let next = item;
+    const hasMonthlyAmount = safeNumber(item.monthlyAmount) > 0;
+    const hasRemainingAmount = safeNumber(item.remainingAmount) > 0;
+
+    if (hasMonthlyAmount && !item.currency) {
+      next = {
+        ...next,
+        currency,
+      };
+      debtItemsUpdated += 1;
+    }
+
+    if (hasRemainingAmount && !item.remainingCurrency) {
+      next = {
+        ...next,
+        remainingCurrency: currency,
+      };
+      debtItemsUpdated += 1;
+    }
+
+    return next;
+  });
+
+  writeGrowthPlannerState(repairedPlanner);
+  writeDebtRadarItems(repairedDebtItems);
+  window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
+
+  return {
+    growthTargetsUpdated,
+    debtItemsUpdated,
+  };
+}
+
 function getDebtRadarTotals(
   items: DebtRadarItem[],
   settings?: Settings,
@@ -15972,6 +16110,7 @@ function SettingsScreen({
   settings,
   setSettings,
   expenses,
+  rawExpenses,
   currentMonthExpenses,
   exchangeRateStatus,
   exchangeRateError,
@@ -15979,6 +16118,7 @@ function SettingsScreen({
   conversionSourceCount,
   onReset,
   onDeleteExpense,
+  onRepairOldCurrency,
   telegram,
   webAuth,
   cloudStatus,
@@ -15994,6 +16134,7 @@ function SettingsScreen({
   settings: Settings;
   setSettings: Dispatch<SetStateAction<Settings>>;
   expenses: Expense[];
+  rawExpenses: Expense[];
   currentMonthExpenses: Expense[];
   exchangeRateStatus: ExchangeRateStatus;
   exchangeRateError: string;
@@ -16001,6 +16142,7 @@ function SettingsScreen({
   conversionSourceCount: number;
   onReset: () => void;
   onDeleteExpense: (id: string) => void;
+  onRepairOldCurrency: (currency: Currency) => Promise<CurrencyRepairResult>;
   telegram: TelegramState;
   webAuth: WebAuthState;
   cloudStatus: CloudStatus;
@@ -16023,6 +16165,14 @@ function SettingsScreen({
   const categorySummaries = getCategorySummaries(currentMonthExpenses);
   const latestExpenses = expenses.slice(0, 8);
   const publicLeaderboard = Boolean(leaderboard?.me?.publicLeaderboard);
+  const oldExpenseCount = rawExpenses.filter((expense) => !expense.currency).length;
+  const [repairCurrency, setRepairCurrency] = useState<Currency>(settings.currency);
+  const [repairBusy, setRepairBusy] = useState(false);
+  const [repairMessage, setRepairMessage] = useState("");
+
+  useEffect(() => {
+    setRepairCurrency(settings.currency);
+  }, [settings.currency]);
 
   function updateIncome(key: keyof Settings["income"], value: string) {
     setSettings((prev) => ({
@@ -16087,6 +16237,37 @@ function SettingsScreen({
       ...prev,
       categoryNames: defaultCategoryNames,
     }));
+  }
+
+  async function runOldDataCurrencyRepair() {
+    const confirmed = window.confirm(
+      `Mark older numbers as ${repairCurrency}? This does not convert or rewrite amounts. It only tags old data with the currency it was originally entered in.`
+    );
+
+    if (!confirmed) return;
+
+    setRepairBusy(true);
+    setRepairMessage("");
+
+    try {
+      const result = await onRepairOldCurrency(repairCurrency);
+      const touched =
+        result.expensesUpdated +
+        result.incomeFieldsUpdated +
+        result.fixedCostFieldsUpdated +
+        result.growthTargetsUpdated +
+        result.debtItemsUpdated;
+
+      setRepairMessage(
+        touched > 0
+          ? `Marked ${touched} old money fields as ${repairCurrency}. Original amounts stayed unchanged.`
+          : `No missing currency fields found. ${repairCurrency} is still ready for new entries.`
+      );
+    } catch {
+      setRepairMessage("Currency repair failed. Try again after the app syncs.");
+    } finally {
+      setRepairBusy(false);
+    }
   }
 
   return (
@@ -16337,6 +16518,71 @@ function SettingsScreen({
           </div>
           <b>›</b>
         </div>
+
+        <details className="clean-details settings-clean-details currency-repair-details">
+          <summary>
+            <div>
+              <span>Old Data Currency Repair</span>
+              <small>Mark older values with the currency they were originally entered in.</small>
+            </div>
+            <b>{oldExpenseCount ? `${oldExpenseCount} old records` : "Optional"}</b>
+          </summary>
+
+          <section className="settings-group currency-repair-panel">
+            <div className="currency-repair-warning">
+              <strong>This does not convert amounts.</strong>
+              <span>
+                Use it only if older expenses, income, fixed costs, Growth targets,
+                and Debt Radar values were originally entered in the selected currency.
+              </span>
+            </div>
+
+            <label className="currency-repair-select-row">
+              <span>Old data was entered in</span>
+              <select
+                className="settings-select"
+                value={repairCurrency}
+                onChange={(event) => setRepairCurrency(normalizeCurrency(event.target.value, settings.currency))}
+              >
+                {supportedCurrencies.map((currency) => (
+                  <option value={currency} key={currency}>
+                    {currency} ({getCurrencySymbol(currency)})
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="currency-repair-stats">
+              <div>
+                <span>Old expense rows</span>
+                <strong>{oldExpenseCount}</strong>
+              </div>
+              <div>
+                <span>Income fields</span>
+                <strong>{incomeKeys.length}</strong>
+              </div>
+              <div>
+                <span>Fixed cost fields</span>
+                <strong>{fixedCostKeys.length}</strong>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="currency-repair-button"
+              onClick={runOldDataCurrencyRepair}
+              disabled={repairBusy}
+            >
+              {repairBusy ? "Repairing..." : `Mark old data as ${repairCurrency}`}
+            </button>
+
+            {repairMessage && <p className="currency-repair-result">{repairMessage}</p>}
+
+            <small className="currency-repair-note">
+              New entries already remember their currency automatically. This tool is only for data created before the currency upgrade.
+            </small>
+          </section>
+        </details>
 
         <button
           className="menu-line menu-button"

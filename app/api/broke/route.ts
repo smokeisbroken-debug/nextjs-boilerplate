@@ -2428,6 +2428,37 @@ async function deleteExpense(telegramId: number, id: string) {
   });
 }
 
+async function repairOldExpenseCurrency(telegramId: number, currencyInput: unknown) {
+  const currency = normalizeCurrency(currencyInput, defaultCurrency);
+
+  try {
+    const rows = (await supabaseFetch(
+      `broke_expenses?telegram_id=eq.${telegramId}&currency=is.null&select=id`,
+      {
+        method: "PATCH",
+        headers: {
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify({ currency }),
+      }
+    )) as Record<string, unknown>[];
+
+    return {
+      updated: Array.isArray(rows) ? rows.length : 0,
+      cloudExpenseSync: true,
+    };
+  } catch (error) {
+    if (isMissingExpenseCurrencyColumnError(error)) {
+      return {
+        updated: 0,
+        cloudExpenseSync: false,
+      };
+    }
+
+    throw error;
+  }
+}
+
 async function resetData(telegramId: number) {
   await supabaseFetch(`broke_expenses?telegram_id=eq.${telegramId}`, {
     method: "DELETE",
@@ -2924,6 +2955,32 @@ export async function POST(request: NextRequest) {
         ok: true,
         appState,
         appStateCloudSync,
+      });
+    }
+
+    if (action === "repairOldCurrency") {
+      const currency = normalizeCurrency(body.currency, defaultCurrency);
+      const settings = normalizeSettings((body.settings as Settings) || (await getSettings(telegramId)));
+      const appState = normalizeAppState((body.appState as AppState) || (await getAppState(telegramId)));
+      const expenseCurrencyRepair = await repairOldExpenseCurrency(telegramId, currency);
+
+      await saveSettings(telegramId, settings);
+      const appStateCloudSync = await saveAppState(telegramId, appState);
+
+      const expenses = await getExpenses(telegramId);
+      const streak = await getAndUpdateStreak(telegramId, expenses);
+      const badges = await getBadgeState(telegramId, user, settings, expenses, streak);
+      const leaderboard = await getLeaderboardState(telegramId, user, streak);
+
+      return NextResponse.json({
+        ok: true,
+        settings,
+        expenses,
+        appState,
+        appStateCloudSync,
+        expenseCurrencyRepair,
+        badges,
+        leaderboard,
       });
     }
 

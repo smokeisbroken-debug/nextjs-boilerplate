@@ -16111,3 +16111,109 @@ html[lang="ru"] .tab-guide-hero p {
     font-size: 0.6rem;
   }
 }
+
+/* v58.0 Old Data Currency Repair Tool */
+.currency-repair-details {
+  border-color: rgba(255, 202, 87, 0.16) !important;
+  background: rgba(18, 13, 4, 0.42) !important;
+}
+
+.currency-repair-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.currency-repair-warning {
+  border: 1px solid rgba(255, 202, 87, 0.18);
+  background: rgba(255, 202, 87, 0.07);
+  border-radius: 18px;
+  padding: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.currency-repair-warning strong {
+  color: #ffe29a;
+  font-size: 0.86rem;
+}
+
+.currency-repair-warning span,
+.currency-repair-note,
+.currency-repair-result {
+  color: rgba(244, 255, 231, 0.66);
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.currency-repair-select-row {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.currency-repair-select-row span {
+  color: rgba(244, 255, 231, 0.66);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.currency-repair-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.currency-repair-stats div {
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.22);
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.currency-repair-stats span {
+  color: rgba(244, 255, 231, 0.52);
+  font-size: 0.68rem;
+  line-height: 1.2;
+}
+
+.currency-repair-stats strong {
+  color: #c7ff4a;
+  font-size: 1rem;
+}
+
+.currency-repair-button {
+  border: 0;
+  border-radius: 16px;
+  padding: 13px 14px;
+  background: linear-gradient(135deg, #c7ff4a, #74ff87);
+  color: #101408;
+  font-weight: 950;
+  box-shadow: 0 14px 28px rgba(116, 255, 135, 0.12);
+}
+
+.currency-repair-button:disabled {
+  opacity: 0.62;
+  box-shadow: none;
+}
+
+.currency-repair-result {
+  border: 1px solid rgba(199, 255, 74, 0.16);
+  border-radius: 14px;
+  padding: 10px;
+  background: rgba(199, 255, 74, 0.07);
+  color: rgba(244, 255, 231, 0.82);
+  margin: 0;
+}
+
+@media (max-width: 430px) {
+  .currency-repair-stats {
+    grid-template-columns: 1fr;
+  }
+}
