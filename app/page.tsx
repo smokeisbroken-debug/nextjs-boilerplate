@@ -1244,6 +1244,7 @@ const ruText: Record<string, string> = {
   "New expenses are now saved with their original currency.": "Новые расходы теперь сохраняются с исходной валютой.",
   "New entries remember this currency for future conversion.": "Новые записи запоминают эту валюту для будущей конвертации.",
   "Currency currently changes display only. New entries remember this currency for future conversion.": "Валюта пока меняет только отображение. Новые записи запоминают эту валюту для будущей конвертации.",
+  "Exchange-rate cache is now prepared server-side. Real conversion stays off until Currency Mode is added.": "Серверный кэш курсов уже подготовлен. Реальная конвертация остаётся выключенной до добавления Currency Mode.",
   "Personal goal amounts added now are saved as": "Суммы личной цели, добавленные сейчас, сохраняются как",
   "for future conversion.": "для будущей конвертации.",
   "Amounts added now are stored with their original currency. Real conversion is still being prepared.": "Суммы, добавленные сейчас, сохраняются с исходной валютой. Реальная конвертация ещё готовится.",
@@ -8850,7 +8851,7 @@ function LifeProfileEditor({
           ))}
         </select>
         <small className="currency-foundation-note">
-          Currency currently changes display only. New entries remember this currency for future conversion.
+          Exchange-rate cache is now prepared server-side. Real conversion stays off until Currency Mode is added.
         </small>
       </div>
 

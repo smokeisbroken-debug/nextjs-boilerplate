@@ -2652,6 +2652,7 @@ export async function GET(request: NextRequest) {
       checkSupabaseTable("broke_user_badges"),
       checkSupabaseTable("broke_xp_events"),
       checkSupabaseTable("broke_leaderboard_profiles"),
+      checkSupabaseTable("broke_exchange_rates"),
     ]);
 
     return NextResponse.json({
