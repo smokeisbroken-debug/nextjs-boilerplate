@@ -2850,6 +2850,40 @@ function applyRussianDynamicRules(value: string) {
     .replace(/Final:/g, "Итог:")
     .replace(/Gain:/g, "Прибыль:");
 
+
+  next = next
+    .replace(/Stored as ([^.]*)\. Display-only mode changes the app label, not the saved number\./g, "Сохранено как $1. Режим Display-only меняет подпись валюты, но не сохранённое число.")
+    .replace(/Stored as ([^.]*)\. Rate to ([A-Z]{3}) is not ready yet\./g, "Сохранено как $1. Курс к $2 пока не готов.")
+    .replace(/Stored as ([^.]*)\. Same as display currency\./g, "Сохранено как $1. Это та же валюта отображения.")
+    .replace(/Stored as ([^·]*) · Displayed as ([^.]*)/g, "Сохранено как $1 · Отображается как $2")
+    .replace(/Personal goal is displayed as ([^.]+)\. Original: ([^.]+)\./g, "Личная цель отображается как $1. Исходно: $2.")
+    .replace(/Mark older numbers as ([A-Z]{3})\? This does not convert or rewrite amounts\. It only tags old data with the currency it was originally entered in\./g, "Отметить старые числа как $1? Это не конвертирует и не переписывает суммы. Это только помечает старые данные валютой, в которой они были введены изначально.")
+    .replace(/Mark old data as ([A-Z]{3})/g, "Отметить старые данные как $1")
+    .replace(/(\d+) old expense row(s?) do not remember original currency yet\. Use Old Data Currency Repair before judging converted totals\./g, "$1 старых строк расходов ещё не помнят исходную валюту. Используй восстановление валюты старых данных перед оценкой конвертированных итогов.")
+    .replace(/(\d+) old records/g, "$1 старых записей")
+    .replace(/(\d+) total · (\d+) this month/g, "$1 всего · $2 за месяц")
+    .replace(/(\d+) month/g, "$1 за месяц")
+    .replace(/(\d+) records · ([^·]+) weighted leaks/g, "$1 записей · $2 взвешенных утечек")
+    .replace(/([\p{Sc}]?[A-Z]{0,3}\s?[-\d,.]+|[A-Z]{1,4}\$[-\d,.]+|L[-\d,.]+|Rs[-\d,.]+|KSh[-\d,.]+|USh[-\d,.]+|TSh[-\d,.]+|FCFA[-\d,.]+|CFA[-\d,.]+|AED[-\d,.]+|SAR[-\d,.]+|MAD[-\d,.]+|RON[-\d,.]+) daily leak pace/gu, "$1 дневной темп утечек")
+    .replace(/([\p{Sc}]?[A-Z]{0,3}\s?[-\d,.]+|[A-Z]{1,4}\$[-\d,.]+|L[-\d,.]+|Rs[-\d,.]+|KSh[-\d,.]+|USh[-\d,.]+|TSh[-\d,.]+|FCFA[-\d,.]+|CFA[-\d,.]+|AED[-\d,.]+|SAR[-\d,.]+|MAD[-\d,.]+|RON[-\d,.]+) daily leak budget/gu, "$1 дневной бюджет утечек")
+    .replace(/Current candle: ([^·]+) · Quiet day · ([^·]+) leaks · (\d+)% pressure/g, "Текущая свеча: $1 · Тихий день · $2 утечек · $3% давление")
+    .replace(/Current candle: ([^·]+) · Controlled day · ([^·]+) leaks · (\d+)% pressure/g, "Текущая свеча: $1 · Контролируемый день · $2 утечек · $3% давление")
+    .replace(/Current candle: ([^·]+) · Warning leak day · ([^·]+) leaks · (\d+)% pressure/g, "Текущая свеча: $1 · День-предупреждение · $2 утечек · $3% давление")
+    .replace(/Current candle: ([^·]+) · Danger leak day · ([^·]+) leaks · (\d+)% pressure/g, "Текущая свеча: $1 · Опасный день утечек · $2 утечек · $3% давление")
+    .replace(/([A-Za-zА-Яа-яёЁ]+): Quiet day · (\d+)% pressure/g, "$1: тихий день · $2% давление")
+    .replace(/([A-Za-zА-Яа-яёЁ]+): Controlled day · (\d+)% pressure/g, "$1: контролируемый день · $2% давление")
+    .replace(/([A-Za-zА-Яа-яёЁ]+): Warning leak day · (\d+)% pressure/g, "$1: день-предупреждение · $2% давление")
+    .replace(/([A-Za-zА-Яа-яёЁ]+): Danger leak day · (\d+)% pressure/g, "$1: опасный день утечек · $2% давление")
+    .replace(/Tracked: ([^·]+)/g, "Записано: $1")
+    .replace(/Leaks: ([^·]+)/g, "Утечки: $1")
+    .replace(/Pressure: (\d+)%/g, "Давление: $1%")
+    .replace(/Top leak: none/g, "Главная утечка: нет")
+    .replace(/Top leak: ([A-Za-zА-Яа-яёЁ _/()$,.+-]+)/g, "Главная утечка: $1")
+    .replace(/Remaining ([^()·]+)/g, "Осталось $1")
+    .replace(/\bConvert mode\b/g, "режим конвертации")
+    .replace(/\bDisplay mode\b/g, "режим отображения")
+    .replace(/\bweighted leaks\b/g, "взвешенные утечки");
+
   return next;
 }
 
@@ -3124,6 +3158,89 @@ const NEED_TYPE_HELP: Record<NeedType, string> = {
   Needed: "Needed = necessary. It protects accuracy and does not count as a leak.",
   Maybe: "Maybe = grey zone. $BROKE counts half of it as leak pressure.",
   "Not needed": "Not needed = full leak. It lowers Wallet HP and powers Save/Growth insights.",
+  // v58.6 translation polish: settings currency, chart pressure, Growth, and Debt Radar.
+  "Use cached exchange rates for entries that remember their original currency.": "Использовать кэш курсов для записей, которые помнят исходную валюту.",
+  "Convert mode": "Режим конвертации",
+  "Display mode": "Режим отображения",
+  "Loading rates": "Загружаем курсы",
+  "Rates ready · repair old data": "Курсы готовы · исправь старые данные",
+  "Rates ready": "Курсы готовы",
+  "Some rates unavailable": "Некоторые курсы недоступны",
+  "Rate unavailable": "Курс недоступен",
+  "Waiting for entries": "Ждём записи",
+  "No mixed currencies yet": "Смешанных валют пока нет",
+  "New entries remember currency automatically. Old entries can be marked with Old Data Currency Repair if needed.": "Новые записи автоматически запоминают валюту. Старые записи при необходимости можно отметить через Old Data Currency Repair.",
+  "Conversion on": "Конвертация включена",
+  "Converted display is live across expenses, income, fixed costs, Growth targets, and Debt Radar. Non-USD views also show an approximate USD reference where available.": "Конвертированное отображение работает для расходов, дохода, фиксированных расходов, целей Growth и Debt Radar. Для не-USD режимов также показывается примерный USD-ориентир, где он доступен.",
+  "Display-only keeps old behavior: app labels change, but stored numbers are not converted or rewritten.": "Display-only сохраняет старое поведение: подписи валюты меняются, но сохранённые числа не конвертируются и не переписываются.",
+  "These are stored as original values.": "Это сохранено как исходные значения.",
+  "Convert mode shows their display value, but it does not replace the": "Convert mode показывает их отображаемую стоимость, но не заменяет",
+  "rent, food, transport, phone, data, or school numbers you entered.": "аренду, еду, транспорт, телефон, интернет или учебные суммы, которые ты ввёл.",
+  "Display Currency": "Валюта отображения",
+  "Old Data Currency Repair": "Восстановление валюты старых данных",
+  "Mark older values with the currency they were originally entered in.": "Отметь старые значения валютой, в которой они были введены изначально.",
+  "This does not convert amounts.": "Это не конвертирует суммы.",
+  "Use it only if older expenses, income, fixed costs, Growth targets,": "Используй это только если старые расходы, доход, фиксированные расходы и цели Growth",
+  "and Debt Radar values were originally entered in the selected currency.": "а также значения Debt Radar изначально были введены в выбранной валюте.",
+  "Old data was entered in": "Старые данные были введены в",
+  "Old expense rows": "Старые строки расходов",
+  "Income fields": "Поля дохода",
+  "Fixed cost fields": "Поля фиксированных расходов",
+  "Repairing...": "Исправляем...",
+  "New entries already remember their currency automatically. This tool is only for data created before the currency upgrade.": "Новые записи уже автоматически запоминают свою валюту. Этот инструмент только для данных, созданных до обновления валют.",
+  "Currency repair failed. Try again after the app syncs.": "Восстановление валюты не удалось. Попробуй снова после синхронизации приложения.",
+  "Currency repair synced": "Валюта старых данных синхронизирована",
+  "Currency repair cloud save failed": "Не удалось сохранить восстановление валюты в облако",
+  "Wallet Pressure Chart tracks daily leak pressure.": "Wallet Pressure Chart отслеживает дневное давление утечек.",
+  "Green means controlled. Red means": "Зелёный — контролируемо. Красный —",
+  "Wallet HP danger.": "опасность для Wallet HP.",
+  "Wallet Pressure Chart": "Wallet Pressure Chart",
+  "No pressure yet": "Давления пока нет",
+  "One day becomes one candle. Expenses update today’s candle.": "Один день = одна свеча. Расходы обновляют сегодняшнюю свечу.",
+  "Tracked spending": "Записанные расходы",
+  "Money leaks": "Денежные утечки",
+  "Top leak": "Главная утечка",
+  "No marked leak": "Отмеченной утечки нет",
+  "Avg spend/day": "Средний расход/день",
+  "No wallet pressure yet.": "Давления на кошелёк пока нет.",
+  "Track one expense to create today’s candle. Needed spending stays controlled;": "Запиши один расход, чтобы создать сегодняшнюю свечу. Needed-расходы остаются контролируемыми;",
+  "Maybe and Not needed create leak pressure.": "Maybe и Not needed создают давление утечек.",
+  "Quiet day": "Тихий день",
+  "Danger leak day": "Опасный день утечек",
+  "Warning leak day": "День-предупреждение",
+  "Controlled day": "Контролируемый день",
+  "No candle yet": "Свечи пока нет",
+  "This cycle": "Этот цикл",
+  "Leak Volume — Today": "Объём утечек — сегодня",
+  "Leak Volume — Last 7 days": "Объём утечек — последние 7 дней",
+  "Leak Volume — This cycle": "Объём утечек — этот цикл",
+  "Tracked": "Записано",
+  "Current candle:": "Текущая свеча:",
+  "Payday is treated as a cycle marker. It does not create a fake green candle and history is not deleted.": "День дохода считается маркером цикла. Он не создаёт фейковую зелёную свечу, и история не удаляется.",
+  "Cycle start / payday marker": "Старт цикла / маркер дохода",
+  "Top leak: none": "Главная утечка: нет",
+  "Cycle start": "Старт цикла",
+  "Payday marker": "Маркер дохода",
+  "Daily leak budget": "Дневной бюджет утечек",
+  "daily leak pace": "дневной темп утечек",
+  "daily leak budget": "дневной бюджет утечек",
+  "weighted leaks": "взвешенные утечки",
+  "Personal goal: add what you are building toward": "Личная цель: добавь то, к чему ты идёшь",
+  "Saving goal simulation only. No real funds, no custody, no staking, no guaranteed returns.": "Это только симуляция цели накопления. Реальных средств, хранения, staking и гарантированной доходности нет.",
+  "Find the leak. Redirect it into something real.": "Найди утечку. Перенаправь её во что-то реальное.",
+  "Monthly leak plan into a personal saving goal": "Месячный план утечек в личную цель накопления",
+  "Add your saving goal": "Добавь свою цель накопления",
+  "Not investments. Just monthly leaks redirected toward a real goal.": "Не инвестиции. Просто месячные утечки, перенаправленные к реальной цели.",
+  "Your saving goal": "Твоя цель накопления",
+  "Add a target and redirected leak amount first.": "Сначала добавь цель и перенаправленную сумму утечки.",
+  "Fill Monthly hit first. Remaining debt is counted only for Debt items. Convert mode displays remembered currencies through the exchange-rate cache.": "Сначала заполни Monthly hit. Remaining debt считается только для Debt-элементов. Convert mode показывает запомненные валюты через кэш курсов.",
+  "Monthly hit": "Месячный удар",
+  "Remaining debt": "Остаток долга",
+  "Debt": "Долг",
+  "Recurring bill": "Регулярный счёт",
+  "Maintenance": "Обслуживание",
+  "HP before daily leaks": "HP до дневных утечек",
+  "Silent pressure": "Тихое давление",
 };
 
 const defaultChallengeTemplates: ChallengeTemplate[] = [
