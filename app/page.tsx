@@ -7035,7 +7035,7 @@ export default function Home() {
         cloudExpenseSync = Number(repairData.expensesUpdated || 0) >= 0;
         cloudAppStateSync = Boolean(repairData.appStateSynced);
         setCloudStatus("cloud");
-        showToast("Currency repair synced", `${repairCurrency} metadata was applied without changing amounts.`, "success");
+        showToast("Currency repair synced", `${repairCurrency} metadata was applied without changing amounts.`, "info");
       } catch (repairError) {
         try {
           const data = await callBrokeApi(cloudInitData, "repairOldCurrency", {
