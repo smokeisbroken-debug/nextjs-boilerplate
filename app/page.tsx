@@ -89,6 +89,21 @@ const supportedCurrencies: Currency[] = [
 
 const defaultCurrency: Currency = "USD";
 
+type CurrencyMode = "display" | "convert";
+
+const currencyModeOptions: { value: CurrencyMode; label: string; helper: string }[] = [
+  {
+    value: "display",
+    label: "Display only",
+    helper: "Currency changes the symbol only. Existing totals stay exactly as stored.",
+  },
+  {
+    value: "convert",
+    label: "Convert values",
+    helper: "Saved as a preference now. Converted totals turn on in the next step after testing.",
+  },
+];
+
 type MoneyFormatOptions = {
   includeCode?: boolean;
 };
@@ -273,6 +288,7 @@ type OnboardingStarterExpense = {
 
 type Settings = {
   currency: Currency;
+  currencyMode: CurrencyMode;
   language: Language;
   dailyReminder: boolean;
   onboardingCompleted?: boolean;
@@ -835,6 +851,7 @@ const defaultCategoryNames: Record<string, string> = {
 
 const defaultSettings: Settings = {
   currency: defaultCurrency,
+  currencyMode: "display",
   language: "en",
   dailyReminder: true,
   onboardingCompleted: false,
@@ -1245,6 +1262,14 @@ const ruText: Record<string, string> = {
   "New entries remember this currency for future conversion.": "Новые записи запоминают эту валюту для будущей конвертации.",
   "Currency currently changes display only. New entries remember this currency for future conversion.": "Валюта пока меняет только отображение. Новые записи запоминают эту валюту для будущей конвертации.",
   "Exchange-rate cache is now prepared server-side. Real conversion stays off until Currency Mode is added.": "Серверный кэш курсов уже подготовлен. Реальная конвертация остаётся выключенной до добавления Currency Mode.",
+  "Currency Mode": "Режим валюты",
+  "Display only": "Только отображение",
+  "Convert values": "Конвертировать значения",
+  "Currency changes the symbol only. Existing totals stay exactly as stored.": "Валюта меняет только символ. Существующие суммы остаются как сохранены.",
+  "Saved as a preference now. Converted totals turn on in the next step after testing.": "Сейчас это сохраняется как настройка. Пересчитанные суммы включим следующим шагом после теста.",
+  "Current behavior": "Текущее поведение",
+  "Prepared mode": "Подготовленный режим",
+  "No totals are converted yet.": "Суммы пока ещё не конвертируются.",
   "Personal goal amounts added now are saved as": "Суммы личной цели, добавленные сейчас, сохраняются как",
   "for future conversion.": "для будущей конвертации.",
   "Amounts added now are stored with their original currency. Real conversion is still being prepared.": "Суммы, добавленные сейчас, сохраняются с исходной валютой. Реальная конвертация ещё готовится.",
@@ -2797,6 +2822,7 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
     ...defaultSettings,
     ...(input || {}),
     currency: normalizeCurrency(input?.currency, defaultSettings.currency),
+    currencyMode: normalizeCurrencyMode(input?.currencyMode),
     profile: {
       ...defaultSettings.profile,
       ...(input?.profile || {}),
@@ -3531,6 +3557,10 @@ function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true) {
   }
 }
 
+
+function normalizeCurrencyMode(value: unknown): CurrencyMode {
+  return value === "convert" ? "convert" : "display";
+}
 
 function normalizeCurrency(value: unknown, fallback: Currency = defaultCurrency): Currency {
   const candidate = String(value || "").trim().toUpperCase();
@@ -8734,7 +8764,7 @@ function LifeProfileSummaryCard({ settings }: { settings: Settings }) {
         <span>Life Profile</span>
         <strong>{settings.profile.lifeMode}</strong>
         <small>
-          {settings.profile.country} · {settings.currency} · {settings.profile.incomeStyle}
+          {settings.profile.country} · {settings.currency} · {settings.currencyMode === "convert" ? "Convert mode" : "Display mode"} · {settings.profile.incomeStyle}
         </small>
       </div>
 
@@ -8851,7 +8881,37 @@ function LifeProfileEditor({
           ))}
         </select>
         <small className="currency-foundation-note">
-          Exchange-rate cache is now prepared server-side. Real conversion stays off until Currency Mode is added.
+          Exchange-rate cache is ready. No totals are converted yet.
+        </small>
+      </div>
+
+      <div className="currency-mode-panel">
+        <div className="currency-mode-heading">
+          <span>Currency Mode</span>
+          <b>{settings.currencyMode === "convert" ? "Prepared mode" : "Current behavior"}</b>
+        </div>
+        <div className="currency-mode-options" role="group" aria-label="Currency Mode">
+          {currencyModeOptions.map((option) => (
+            <button
+              type="button"
+              key={option.value}
+              className={settings.currencyMode === option.value ? "active" : ""}
+              onClick={() =>
+                setSettings((prev) => ({
+                  ...prev,
+                  currencyMode: option.value,
+                }))
+              }
+            >
+              <strong>{option.label}</strong>
+              <small>{option.helper}</small>
+            </button>
+          ))}
+        </div>
+        <small className="currency-foundation-note">
+          {settings.currencyMode === "convert"
+            ? "Convert mode is saved now. Converted totals turn on in the next step after testing."
+            : "Display-only keeps the old behavior: symbol changes, stored amounts do not."}
         </small>
       </div>
 

@@ -86,6 +86,7 @@ const supportedCurrencies: Currency[] = [
 ];
 
 const defaultCurrency: Currency = "USD";
+type CurrencyMode = "display" | "convert";
 type NeedType = "Needed" | "Not needed" | "Maybe";
 type RegionPreset =
   | "Global"
@@ -123,6 +124,7 @@ type IncomeStyle = "Monthly" | "Weekly" | "Daily" | "Allowance" | "Irregular";
 
 type Settings = {
   currency: Currency;
+  currencyMode: CurrencyMode;
   language: Language;
   dailyReminder: boolean;
   onboardingCompleted?: boolean;
@@ -377,6 +379,7 @@ const defaultCategoryNames: Record<string, string> = {
 
 const defaultSettings: Settings = {
   currency: defaultCurrency,
+  currencyMode: "display",
   language: "en",
   dailyReminder: true,
   onboardingCompleted: false,
@@ -994,6 +997,10 @@ function newId() {
   return crypto.randomUUID();
 }
 
+function normalizeCurrencyMode(value: unknown): CurrencyMode {
+  return value === "convert" ? "convert" : "display";
+}
+
 function normalizeCurrency(value: unknown, fallback: Currency = defaultCurrency): Currency {
   const candidate = String(value || "").trim().toUpperCase();
 
@@ -1105,6 +1112,7 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
     ...defaultSettings,
     ...(input || {}),
     currency: normalizeCurrency(input?.currency, defaultSettings.currency),
+    currencyMode: normalizeCurrencyMode(input?.currencyMode),
     profile: {
       ...defaultSettings.profile,
       ...(input?.profile || {}),
