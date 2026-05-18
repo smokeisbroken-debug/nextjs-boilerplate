@@ -1209,6 +1209,18 @@ function isMissingAppStatePayloadColumnError(error: unknown) {
   );
 }
 
+function isMissingExpenseCurrencyColumnError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return (
+    message.includes("currency") &&
+    (message.includes("Could not find") ||
+      message.includes("column") ||
+      message.includes("PGRST204") ||
+      message.includes("schema cache"))
+  );
+}
+
 function getAuthenticatedTelegramUser(request: NextRequest, body: Record<string, unknown>) {
   const initData = String(body.initData || "");
 
@@ -2279,38 +2291,73 @@ async function importLocalExpensesIfEmpty(telegramId: number, expenses: Expense[
 
   if (existing.length > 0) return;
 
-  const rows = expenses.slice(0, 200).map((expense) => ({
+  const rowsWithCurrency = expenses.slice(0, 200).map((expense) => ({
     telegram_id: telegramId,
     amount: expense.amount,
     category: expense.category,
     need_type: expense.needType,
     note: expense.note || "",
     created_at: expense.createdAt || new Date().toISOString(),
+    ...(normalizeOptionalCurrency(expense.currency) ? { currency: normalizeOptionalCurrency(expense.currency) } : {}),
   }));
 
-  await supabaseFetch("broke_expenses", {
-    method: "POST",
-    body: JSON.stringify(rows),
-  });
+  try {
+    await supabaseFetch("broke_expenses", {
+      method: "POST",
+      body: JSON.stringify(rowsWithCurrency),
+    });
+  } catch (error) {
+    if (!isMissingExpenseCurrencyColumnError(error)) {
+      throw error;
+    }
+
+    const legacyRows = rowsWithCurrency.map(({ currency: _currency, ...row }) => row);
+
+    await supabaseFetch("broke_expenses", {
+      method: "POST",
+      body: JSON.stringify(legacyRows),
+    });
+  }
 }
 
 async function addExpense(telegramId: number, expense: Expense) {
-  const rows = (await supabaseFetch("broke_expenses?select=*", {
-    method: "POST",
-    headers: {
-      Prefer: "return=representation",
-    },
-    body: JSON.stringify({
-      telegram_id: telegramId,
-      amount: expense.amount,
-      category: expense.category,
-      need_type: expense.needType,
-      note: expense.note || "",
-      created_at: expense.createdAt || new Date().toISOString(),
-    }),
-  })) as Record<string, unknown>[];
+  const expenseCurrency = normalizeOptionalCurrency(expense.currency);
+  const rowWithCurrency = {
+    telegram_id: telegramId,
+    amount: expense.amount,
+    category: expense.category,
+    need_type: expense.needType,
+    note: expense.note || "",
+    created_at: expense.createdAt || new Date().toISOString(),
+    ...(expenseCurrency ? { currency: expenseCurrency } : {}),
+  };
 
-  return dbToExpense(rows[0]);
+  try {
+    const rows = (await supabaseFetch("broke_expenses?select=*", {
+      method: "POST",
+      headers: {
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(rowWithCurrency),
+    })) as Record<string, unknown>[];
+
+    return dbToExpense(rows[0]);
+  } catch (error) {
+    if (!isMissingExpenseCurrencyColumnError(error)) {
+      throw error;
+    }
+
+    const { currency: _currency, ...legacyRow } = rowWithCurrency;
+    const rows = (await supabaseFetch("broke_expenses?select=*", {
+      method: "POST",
+      headers: {
+        Prefer: "return=representation",
+      },
+      body: JSON.stringify(legacyRow),
+    })) as Record<string, unknown>[];
+
+    return dbToExpense(rows[0]);
+  }
 }
 
 async function deleteExpense(telegramId: number, id: string) {

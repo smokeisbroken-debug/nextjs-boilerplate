@@ -1241,6 +1241,12 @@ const ruText: Record<string, string> = {
   "Needed = necessary. It protects accuracy and does not count as a leak.": "Needed = необходимо. Это сохраняет точность и не считается утечкой.",
   "Maybe = grey zone. $BROKE counts half of it as leak pressure.": "Maybe = серая зона. $BROKE считает половину как давление утечки.",
   "Not needed = full leak. It lowers Wallet HP and powers Save/Growth insights.": "Not needed = полная утечка. Она снижает Wallet HP и питает инсайты Save/Growth.",
+  "New expenses are now saved with their original currency.": "Новые расходы теперь сохраняются с исходной валютой.",
+  "New entries remember this currency for future conversion.": "Новые записи запоминают эту валюту для будущей конвертации.",
+  "Currency currently changes display only. New entries remember this currency for future conversion.": "Валюта пока меняет только отображение. Новые записи запоминают эту валюту для будущей конвертации.",
+  "Personal goal amounts added now are saved as": "Суммы личной цели, добавленные сейчас, сохраняются как",
+  "for future conversion.": "для будущей конвертации.",
+  "Amounts added now are stored with their original currency. Real conversion is still being prepared.": "Суммы, добавленные сейчас, сохраняются с исходной валютой. Реальная конвертация ещё готовится.",
   "Add Expense": "Добавить расход",
   "Add a quick note...": "Добавь короткую заметку...",
   "Track daily leaks. Small leaks sink big wallets.": "Записывай утечки каждый день. Малые утечки топят большие кошельки.",
@@ -3617,6 +3623,23 @@ function safeNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function normalizeExpense(input: Partial<Expense>): Expense {
+  const currency = normalizeOptionalCurrency(input.currency);
+
+  return {
+    id: String(input.id || uid()),
+    amount: Number.isFinite(Number(input.amount)) ? Number(input.amount) : 0,
+    category: String(input.category || "Custom"),
+    needType:
+      input.needType === "Needed" || input.needType === "Not needed" || input.needType === "Maybe"
+        ? input.needType
+        : "Needed",
+    note: String(input.note || ""),
+    createdAt: String(input.createdAt || new Date().toISOString()),
+    ...(currency ? { currency } : {}),
+  };
+}
+
 function sum(values: number[]) {
   return values.reduce((acc, value) => acc + value, 0);
 }
@@ -5685,7 +5708,7 @@ export default function Home() {
         }
 
         if (Array.isArray(parsed.expenses)) {
-          setExpenses(parsed.expenses);
+          setExpenses(parsed.expenses.map(normalizeExpense));
         }
 
         if (parsed.onboardingCompleted === true) {
@@ -5766,7 +5789,7 @@ export default function Home() {
         if (cancelled) return;
 
         if (data.settings) setSettings(normalizeSettings(data.settings));
-        if (data.expenses) setExpenses(data.expenses);
+        if (data.expenses) setExpenses(data.expenses.map(normalizeExpense));
         if (data.streak) setStreak(data.streak);
         if (data.challengeTemplates) setChallengeTemplates(data.challengeTemplates);
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
@@ -5931,6 +5954,7 @@ export default function Home() {
       needType: expenseType,
       note,
       createdAt: new Date().toISOString(),
+      currency: settings.currency,
     };
 
     const nextExpenses = [expense, ...expenses];
@@ -5977,6 +6001,7 @@ export default function Home() {
       needType,
       note: "First leak",
       createdAt: new Date().toISOString(),
+      currency: settings.currency,
     };
 
     const nextExpenses = [expense, ...expenses];
@@ -8825,7 +8850,7 @@ function LifeProfileEditor({
           ))}
         </select>
         <small className="currency-foundation-note">
-          Currency currently changes display only. Real conversion is being prepared step by step.
+          Currency currently changes display only. New entries remember this currency for future conversion.
         </small>
       </div>
 
@@ -10952,7 +10977,7 @@ function ExpenseRow({
   currency?: Currency;
   onDeleteExpense: (id: string) => void;
 }) {
-  const rowCurrency = settings?.currency ?? currency ?? "USD";
+  const rowCurrency = expense.currency ?? settings?.currency ?? currency ?? "USD";
   const rowCategoryLabel = settings
     ? categoryDisplayName(settings, expense.category)
     : sentenceCase(categoryLabel(expense.category));
@@ -11036,6 +11061,7 @@ function AddExpenseScreen({
           />
           <b>{settings.currency}</b>
         </div>
+        <p className="tiny-note">New expenses are now saved with their original currency.</p>
       </section>
 
       <section className="quick-add-panel">
@@ -13269,6 +13295,9 @@ function GrowthLabScreen({
   const [growthPlannerTab, setGrowthPlannerTab] = useState<GrowthPlannerTab>("costs");
   const [savingGoalName, setSavingGoalName] = useState(() => readGrowthPlannerState().savingGoalName);
   const [savingGoalAmount, setSavingGoalAmount] = useState(() => readGrowthPlannerState().savingGoalAmount);
+  const [savingGoalCurrency, setSavingGoalCurrency] = useState<Currency>(() =>
+    readGrowthPlannerState().savingGoalCurrency || settings.currency
+  );
   const [realLifeTargets, setRealLifeTargets] = useState<GrowthManualTarget[]>(() =>
     readGrowthPlannerState().realLifeTargets
   );
@@ -13292,9 +13321,10 @@ function GrowthLabScreen({
       realLifeTargets,
       savingGoalName,
       savingGoalAmount,
+      savingGoalCurrency,
     });
     onAppStateChange?.();
-  }, [realLifeTargets, savingGoalName, savingGoalAmount]);
+  }, [realLifeTargets, savingGoalName, savingGoalAmount, savingGoalCurrency]);
 
   useEffect(() => {
     function applySyncedAppState() {
@@ -13303,6 +13333,7 @@ function GrowthLabScreen({
       setRealLifeTargets(planner.realLifeTargets);
       setSavingGoalName(planner.savingGoalName);
       setSavingGoalAmount(planner.savingGoalAmount);
+      setSavingGoalCurrency(planner.savingGoalCurrency || settings.currency);
     }
 
     window.addEventListener(CLOUD_APP_STATE_SYNC_EVENT, applySyncedAppState);
@@ -13369,7 +13400,7 @@ function GrowthLabScreen({
   function getRealLifeTargetMonthsLabel(target: GrowthManualTarget) {
     return `${formatGrowthMonthsCovered(finalPoint.balance, safeNumber(target.amount))} at ${money(
       safeNumber(target.amount),
-      settings.currency
+      target.currency || settings.currency
     )}/month`;
   }
 
@@ -13444,14 +13475,25 @@ function GrowthLabScreen({
 
   function updateRealLifeTarget(id: string, patch: Partial<GrowthManualTarget>) {
     setRealLifeTargets((current) =>
-      current.map((target) => (target.id === id ? { ...target, ...patch } : target))
+      current.map((target) => {
+        if (target.id !== id) return target;
+
+        const shouldStampCurrency =
+          "amount" in patch && String(patch.amount ?? "").trim().length > 0 && !target.currency;
+
+        return {
+          ...target,
+          ...(shouldStampCurrency ? { currency: settings.currency } : {}),
+          ...patch,
+        };
+      })
     );
   }
 
   function addRealLifeTarget() {
     setRealLifeTargets((current) => [
       ...current,
-      { id: uid(), name: "", amount: "", period: "one" },
+      { id: uid(), name: "", amount: "", period: "one", currency: settings.currency },
     ]);
   }
 
@@ -13469,11 +13511,11 @@ function GrowthLabScreen({
 
       if (emptyIndex >= 0) {
         return current.map((target, index) =>
-          index === emptyIndex ? { ...target, name, period: "one" } : target
+          index === emptyIndex ? { ...target, name, period: "one", currency: target.currency || settings.currency } : target
         );
       }
 
-      return [...current, { id: uid(), name, amount: "", period: "one" }];
+      return [...current, { id: uid(), name, amount: "", period: "one", currency: settings.currency }];
     });
 
     setGrowthPlannerTab("costs");
@@ -13875,6 +13917,8 @@ function GrowthLabScreen({
                           aria-label="Planned cost amount"
                         />
 
+                        <small className="growth-currency-chip">Saved as {target.currency || settings.currency}</small>
+
                         <div className="growth-row-period-toggle">
                           <button
                             type="button"
@@ -13951,7 +13995,10 @@ function GrowthLabScreen({
                     type="button"
                     key={option}
                     className={savingGoalName === option ? "active" : ""}
-                    onClick={() => setSavingGoalName(option)}
+                    onClick={() => {
+                      setSavingGoalName(option);
+                      setSavingGoalCurrency((current) => current || settings.currency);
+                    }}
                   >
                     {option}
                   </button>
@@ -13964,7 +14011,10 @@ function GrowthLabScreen({
                   <input
                     value={savingGoalName}
                     placeholder="Example: Emergency fund"
-                    onChange={(event) => setSavingGoalName(event.target.value)}
+                    onChange={(event) => {
+                      setSavingGoalName(event.target.value);
+                      setSavingGoalCurrency((current) => current || settings.currency);
+                    }}
                   />
                 </label>
 
@@ -13974,10 +14024,15 @@ function GrowthLabScreen({
                     inputMode="decimal"
                     value={savingGoalAmount}
                     placeholder="Example: 800"
-                    onChange={(event) => setSavingGoalAmount(event.target.value)}
+                    onChange={(event) => {
+                      setSavingGoalAmount(event.target.value);
+                      if (event.target.value.trim()) setSavingGoalCurrency((current) => current || settings.currency);
+                    }}
                   />
                 </label>
               </div>
+
+              <p className="tiny-note">Personal goal amounts added now are saved as {savingGoalCurrency || settings.currency} for future conversion.</p>
 
               <div className="growth-goal-result">
                 <div>
@@ -13986,7 +14041,7 @@ function GrowthLabScreen({
                 </div>
                 <div>
                   <span>Target</span>
-                  <strong>{money(activeGoalTarget, settings.currency)}</strong>
+                  <strong>{money(activeGoalTarget, savingGoalCurrency || settings.currency)}</strong>
                 </div>
                 <div>
                   <span>Redirected/month</span>
@@ -14265,7 +14320,7 @@ function normalizeDebtRadarDueDay(value: string) {
   return String(clamp(Number(digits), 1, 31));
 }
 
-function buildDebtRadarItem(kind: DebtRadarKind, name: string): DebtRadarItem {
+function buildDebtRadarItem(kind: DebtRadarKind, name: string, currency: Currency): DebtRadarItem {
   return {
     id: uid(),
     name,
@@ -14274,6 +14329,8 @@ function buildDebtRadarItem(kind: DebtRadarKind, name: string): DebtRadarItem {
     remainingAmount: "",
     dueDay: "",
     priority: kind === "debt" ? "high" : "medium",
+    currency,
+    remainingCurrency: currency,
   };
 }
 
@@ -14357,7 +14414,7 @@ function DebtBillsRadarPanel({
       </div>
 
       <p className="debt-radar-note">
-        Fill Monthly hit first. Remaining debt is counted only for Debt items.
+        Fill Monthly hit first. Remaining debt is counted only for Debt items. New items are saved as {settings.currency} for future conversion.
       </p>
 
       <div className="debt-radar-quick-row">
@@ -14376,7 +14433,7 @@ function DebtBillsRadarPanel({
         {items.map((item) => {
           const monthlyAmount = Math.max(0, safeNumber(item.monthlyAmount));
           const itemMeta = [
-            monthlyAmount > 0 ? `${money(monthlyAmount, settings.currency)}/mo` : "No monthly hit yet",
+            monthlyAmount > 0 ? `${money(monthlyAmount, item.currency || settings.currency)}/mo` : "No monthly hit yet",
             item.dueDay ? `Due day ${item.dueDay}` : "No due day",
             `${debtRadarPriorityLabel(item.priority)} priority`,
           ].join(" · ");
@@ -14827,12 +14884,28 @@ function WhatIfScreen({
 
   function updateDebtRadarItem(id: string, patch: Partial<DebtRadarItem>) {
     setDebtRadarItems((current) =>
-      current.map((item) => (item.id === id ? { ...item, ...patch } : item))
+      current.map((item) => {
+        if (item.id !== id) return item;
+
+        const shouldStampMonthlyCurrency =
+          "monthlyAmount" in patch && String(patch.monthlyAmount ?? "").trim().length > 0 && !item.currency;
+        const shouldStampRemainingCurrency =
+          "remainingAmount" in patch &&
+          String(patch.remainingAmount ?? "").trim().length > 0 &&
+          !item.remainingCurrency;
+
+        return {
+          ...item,
+          ...(shouldStampMonthlyCurrency ? { currency: settings.currency } : {}),
+          ...(shouldStampRemainingCurrency ? { remainingCurrency: settings.currency } : {}),
+          ...patch,
+        };
+      })
     );
   }
 
   function addDebtRadarItem(kind: DebtRadarKind, name: string) {
-    setDebtRadarItems((current) => [buildDebtRadarItem(kind, name), ...current].slice(0, 12));
+    setDebtRadarItems((current) => [buildDebtRadarItem(kind, name, settings.currency), ...current].slice(0, 12));
     triggerHaptic("light");
   }
 
