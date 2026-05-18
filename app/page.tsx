@@ -385,7 +385,12 @@ type ChartPoint = {
 
 type CategorySummary = {
   category: string;
+  /** Backward-compatible amount field. By default this is tracked spending. */
   amount: number;
+  /** All recorded spending in the category, including Needed. */
+  trackedAmount?: number;
+  /** Weighted leak pressure: Needed = 0%, Maybe = 50%, Not needed = 100%. */
+  leakAmount?: number;
   count: number;
   icon: string;
 };
@@ -610,6 +615,8 @@ type WalletInsight = {
 type SmartInsightContext = {
   debtRadarTotals?: DebtRadarTotals;
   growthPlanner?: GrowthPlannerState;
+  /** Same exchange-rate map used by Home totals; keeps Smart Insights in the same display currency. */
+  exchangeRates?: ExchangeRateMap;
   oldExpenseCurrencyMissingCount?: number;
 };
 
@@ -4326,19 +4333,14 @@ function getElapsedMonthDays() {
 function buildSurvivalForecast(settings: Settings, expenses: Expense[]): SurvivalForecast {
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
-  const spentThisMonth = sum(expenses.map((expense) => expense.amount));
+  const spentThisMonth = sumTrackedExpenses(expenses);
   const realBalance = totalIncome - fixedCosts - spentThisMonth;
   const daysUntilIncome = getDaysUntilIncome(settings);
   const nextPaydayDate = getNextPaydayDate(settings);
   const safeDailyBudget = Math.max(realBalance, 0) / Math.max(daysUntilIncome, 1);
   const elapsedDays = getElapsedMonthDays();
   const currentDailyPace = spentThisMonth > 0 ? spentThisMonth / elapsedDays : 0;
-  const leakDailyPace =
-    sum(
-      expenses
-        .filter((expense) => expense.needType !== "Needed")
-        .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
-    ) / elapsedDays;
+  const leakDailyPace = sumLeakExpenses(expenses) / elapsedDays;
 
   const surviveDays =
     realBalance <= 0
@@ -4410,14 +4412,37 @@ function getCurrentMonthExpenses(expenses: Expense[]) {
   });
 }
 
+function getExpenseTrackedValue(expense: Expense) {
+  return Math.max(0, Number.isFinite(expense.amount) ? expense.amount : 0);
+}
+
+function getExpenseLeakMultiplier(expense: Expense) {
+  if (expense.needType === "Needed") return 0;
+  if (expense.needType === "Maybe") return 0.5;
+  return 1;
+}
+
+function getExpenseLeakValue(expense: Expense) {
+  return getExpenseTrackedValue(expense) * getExpenseLeakMultiplier(expense);
+}
+
+function sumTrackedExpenses(expenses: Expense[]) {
+  return sum(expenses.map(getExpenseTrackedValue));
+}
+
+function sumLeakExpenses(expenses: Expense[]) {
+  return sum(expenses.map(getExpenseLeakValue));
+}
+
 function getCategorySummaries(expenses: Expense[]): CategorySummary[] {
-  const map = new Map<string, { amount: number; count: number }>();
+  const map = new Map<string, { trackedAmount: number; leakAmount: number; count: number }>();
 
   for (const expense of expenses) {
-    const current = map.get(expense.category) || { amount: 0, count: 0 };
+    const current = map.get(expense.category) || { trackedAmount: 0, leakAmount: 0, count: 0 };
 
     map.set(expense.category, {
-      amount: current.amount + expense.amount,
+      trackedAmount: current.trackedAmount + getExpenseTrackedValue(expense),
+      leakAmount: current.leakAmount + getExpenseLeakValue(expense),
       count: current.count + 1,
     });
   }
@@ -4425,11 +4450,33 @@ function getCategorySummaries(expenses: Expense[]): CategorySummary[] {
   return Array.from(map.entries())
     .map(([category, value]) => ({
       category,
-      amount: value.amount,
+      amount: value.trackedAmount,
+      trackedAmount: value.trackedAmount,
+      leakAmount: value.leakAmount,
       count: value.count,
       icon: getCategoryIcon(category),
     }))
     .sort((a, b) => b.amount - a.amount);
+}
+
+function getCategoryLeakSummaries(expenses: Expense[]): CategorySummary[] {
+  return getCategorySummaries(expenses)
+    .map((item) => ({
+      ...item,
+      amount: item.leakAmount ?? 0,
+    }))
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount || b.count - a.count);
+}
+
+function getCategoryTrackedSummaries(expenses: Expense[]): CategorySummary[] {
+  return getCategorySummaries(expenses)
+    .map((item) => ({
+      ...item,
+      amount: item.trackedAmount ?? item.amount,
+    }))
+    .filter((item) => item.amount > 0)
+    .sort((a, b) => b.amount - a.amount || b.count - a.count);
 }
 
 function formatMonthTitle(key: string) {
@@ -4455,12 +4502,6 @@ function getMonthlyHistoryOptions(expenses: Expense[]) {
 
 function getExpensesForMonthKey(expenses: Expense[], key: string) {
   return expenses.filter((expense) => monthKey(new Date(expense.createdAt)) === key);
-}
-
-function getExpenseLeakValue(expense: Expense) {
-  if (expense.needType === "Needed") return 0;
-  if (expense.needType === "Maybe") return expense.amount * 0.5;
-  return expense.amount;
 }
 
 function buildLeakReflection(
@@ -4576,7 +4617,7 @@ function buildMonthlyCategoryComment(category: string, total: number, count: num
 }
 
 function buildMonthlyLeakArchive(expenses: Expense[], selectedMonthKey: string): MonthlyLeakArchive {
-  const totalSpent = sum(expenses.map((expense) => expense.amount));
+  const totalSpent = sumTrackedExpenses(expenses);
   const totalLeaks = sum(expenses.map(getExpenseLeakValue));
   const totalCount = expenses.length;
   const map = new Map<string, Expense[]>();
@@ -4692,8 +4733,12 @@ function buildLeakPatterns(expenses: Expense[], settings: Settings): LeakPattern
     const notNeededCount = item.purchases.filter((expense) => expense.needType === "Not needed").length;
     const maybeCount = item.purchases.filter((expense) => expense.needType === "Maybe").length;
     const [dominantPart, dominantPartCount] = getDominantDayPart(item.purchases);
-    const amountLabel = money(item.total, settings.currency);
-    const averageLabel = money(item.average, settings.currency);
+    if (item.leakTotal <= 0) continue;
+
+    const leakAverage = item.count > 0 ? item.leakTotal / item.count : 0;
+    const leakSharePercent = archive.totalLeaks > 0 ? Math.round((item.leakTotal / archive.totalLeaks) * 100) : 0;
+    const amountLabel = money(item.leakTotal, settings.currency);
+    const averageLabel = money(leakAverage, settings.currency);
 
     if (item.count >= 5) {
       patterns.push({
@@ -4705,9 +4750,9 @@ function buildLeakPatterns(expenses: Expense[], settings: Settings): LeakPattern
         why: "This does not look like one random purchase. It looks like a repeated behavior.",
         fix: `Cut only 2 ${label} repeats next week and watch the monthly total change.`,
         count: item.count,
-        total: item.total,
-        average: item.average,
-        severity: item.count >= 10 || item.sharePercent >= 30 ? "high" : "medium",
+        total: item.leakTotal,
+        average: leakAverage,
+        severity: item.count >= 10 || leakSharePercent >= 30 ? "high" : "medium",
         tag: "Repeated habit",
       });
     }
@@ -4728,8 +4773,8 @@ function buildLeakPatterns(expenses: Expense[], settings: Settings): LeakPattern
             ? `Prepare one cheaper backup before the ${dominantPart}.`
             : `Add one rule before the usual ${dominantPart} trigger.`,
         count: dominantPartCount,
-        total: item.total,
-        average: item.average,
+        total: item.leakTotal,
+        average: leakAverage,
         severity: "medium",
         tag: `${sentenceCase(dominantPart)} trigger`,
       });
@@ -4745,14 +4790,14 @@ function buildLeakPatterns(expenses: Expense[], settings: Settings): LeakPattern
         why: "The leak may not be daily. It may appear when the week ends and discipline drops.",
         fix: `Set a weekend limit before Friday. Do not decide while already spending.`,
         count: weekendCount,
-        total: item.total,
-        average: item.average,
+        total: item.leakTotal,
+        average: leakAverage,
         severity: "medium",
         tag: "Weekend leak",
       });
     }
 
-    if (item.count <= 3 && item.total >= archive.totalSpent * 0.28 && item.total > 0) {
+    if (item.count <= 3 && item.leakTotal >= Math.max(archive.totalLeaks * 0.28, 1)) {
       patterns.push({
         id: `${item.category}-heavy`,
         category: item.category,
@@ -4762,8 +4807,8 @@ function buildLeakPatterns(expenses: Expense[], settings: Settings): LeakPattern
         why: "This is not frequent, but each hit is large enough to move the month.",
         fix: `Before the next ${label} purchase, wait 24 hours or set a hard cap.`,
         count: item.count,
-        total: item.total,
-        average: item.average,
+        total: item.leakTotal,
+        average: leakAverage,
         severity: "high",
         tag: "Heavy hit",
       });
@@ -4780,13 +4825,13 @@ function buildLeakPatterns(expenses: Expense[], settings: Settings): LeakPattern
         fix: `Make one rule: ${label} needs a reason before it gets tracked again.`,
         count: maybeCount + notNeededCount,
         total: item.leakTotal,
-        average: item.average,
+        average: leakAverage,
         severity: notNeededCount >= maybeCount ? "high" : "medium",
         tag: "Decision leak",
       });
     }
 
-    if (item.count >= 4 && item.average <= Math.max(5, archive.totalSpent * 0.04)) {
+    if (item.count >= 4 && leakAverage <= Math.max(5, archive.totalLeaks * 0.04)) {
       patterns.push({
         id: `${item.category}-small`,
         category: item.category,
@@ -4796,8 +4841,8 @@ function buildLeakPatterns(expenses: Expense[], settings: Settings): LeakPattern
         why: "The single purchase feels harmless. The pattern is what makes it expensive.",
         fix: `Reduce the number of repeats, not only the price.`,
         count: item.count,
-        total: item.total,
-        average: item.average,
+        total: item.leakTotal,
+        average: leakAverage,
         severity: item.count >= 8 ? "high" : "medium",
         tag: "Small repeated leak",
       });
@@ -4835,7 +4880,7 @@ function formatShortDayLabel(key: string) {
 
 function buildWeeklyReview(expenses: Expense[], settings: Settings): WeeklyReview {
   const weekExpenses = getLastSevenDaysExpenses(expenses);
-  const totalSpent = sum(weekExpenses.map((expense) => expense.amount));
+  const totalSpent = sumTrackedExpenses(weekExpenses);
   const totalLeaks = sum(weekExpenses.map(getExpenseLeakValue));
   const totalCount = weekExpenses.length;
   const leakPressure = totalSpent > 0 ? Math.round((totalLeaks / totalSpent) * 100) : 0;
@@ -5064,9 +5109,7 @@ function buildComebackState(expenses: Expense[], settings: Settings): ComebackSt
   const dailyLeakPace = sum(monthExpenses.map(getExpenseLeakValue)) / elapsedDays;
   const estimatedMissedLeaks = dailyLeakPace * daysAway;
 
-  const leakCategories = getCategorySummaries(
-    monthExpenses.filter((expense) => expense.needType !== "Needed")
-  );
+  const leakCategories = getCategoryLeakSummaries(monthExpenses);
   const biggestLeak = leakCategories[0] || null;
   const biggestLeakCategory = biggestLeak?.category || "none";
   const biggestLeakAmount = biggestLeak?.amount || 0;
@@ -5468,18 +5511,15 @@ function getLocalLeakMissionProgress(mission: LocalLeakMission | null, expenses:
   const end = new Date(mission.endsAt);
   const now = new Date();
 
-  const spent = sum(
-    expenses
-      .filter((expense) => {
-        const created = new Date(expense.createdAt);
-        return (
-          created >= start &&
-          created <= end &&
-          expense.category === mission.category &&
-          expense.needType !== "Needed"
-        );
-      })
-      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
+  const spent = sumLeakExpenses(
+    expenses.filter((expense) => {
+      const created = new Date(expense.createdAt);
+      return (
+        created >= start &&
+        created <= end &&
+        expense.category === mission.category
+      );
+    })
   );
 
   const percentUsed =
@@ -5518,17 +5558,10 @@ function buildWalletInsights(
   const weekExpenses = getLastSevenDaysExpenses(expenses);
   const monthExpenses = getCurrentMonthExpenses(expenses);
 
-  const todayCategories = getCategorySummaries(todayExpenses)
-    .filter((item) => item.amount > 0)
-    .sort((a, b) => b.amount - a.amount);
-
-  const weekCategories = getCategorySummaries(weekExpenses)
-    .filter((item) => item.amount > 0)
-    .sort((a, b) => b.amount - a.amount);
-
-  const monthCategories = getCategorySummaries(monthExpenses)
-    .filter((item) => item.amount > 0)
-    .sort((a, b) => b.amount - a.amount);
+  const todayTrackedCategories = getCategoryTrackedSummaries(todayExpenses);
+  const todayLeakCategories = getCategoryLeakSummaries(todayExpenses);
+  const weekTrackedCategories = getCategoryTrackedSummaries(weekExpenses);
+  const monthTrackedCategories = getCategoryTrackedSummaries(monthExpenses);
 
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
@@ -5551,21 +5584,8 @@ function buildWalletInsights(
     });
   }
 
-  const notNeededWeek = sum(
-    weekExpenses.filter((item) => item.needType === "Not needed").map((item) => item.amount)
-  );
-  const maybeWeek = sum(
-    weekExpenses.filter((item) => item.needType === "Maybe").map((item) => item.amount * 0.5)
-  );
-  const weekLeaks = notNeededWeek + maybeWeek;
-
-  const notNeededMonth = sum(
-    monthExpenses.filter((item) => item.needType === "Not needed").map((item) => item.amount)
-  );
-  const maybeMonth = sum(
-    monthExpenses.filter((item) => item.needType === "Maybe").map((item) => item.amount * 0.5)
-  );
-  const monthLeaks = notNeededMonth + maybeMonth;
+  const weekLeaks = sumLeakExpenses(weekExpenses);
+  const monthLeaks = sumLeakExpenses(monthExpenses);
 
   const debtRadarTotal = context.debtRadarTotals?.totalMonthly ?? 0;
 
@@ -5591,7 +5611,20 @@ function buildWalletInsights(
   const firstRealTarget = plannerTargets.find((target) => safeNumber(target.amount) > 0);
   const personalGoalAmount = safeNumber(context.growthPlanner?.savingGoalAmount || "0");
   const targetName = firstRealTarget?.name?.trim() || context.growthPlanner?.savingGoalName?.trim() || "your next target";
-  const targetAmount = firstRealTarget ? safeNumber(firstRealTarget.amount) : personalGoalAmount;
+  const targetDisplay = firstRealTarget
+    ? getDisplayAmount(
+        safeNumber(firstRealTarget.amount),
+        firstRealTarget.currency || settings.currency,
+        settings,
+        context.exchangeRates || {}
+      )
+    : getDisplayAmount(
+        personalGoalAmount,
+        context.growthPlanner?.savingGoalCurrency || settings.currency,
+        settings,
+        context.exchangeRates || {}
+      );
+  const targetAmount = Math.max(0, targetDisplay.amount * (firstRealTarget?.period === "year" ? 12 : 1));
 
   if (monthLeaks > 0 && targetAmount > 0) {
     const targetCoveragePercent = Math.round((monthLeaks / targetAmount) * 100);
@@ -5602,7 +5635,7 @@ function buildWalletInsights(
       body: `${money(monthLeaks, settings.currency)} in this month’s leaks could cover ${targetCoveragePercent}% of ${targetName}.`,
       detail:
         targetCoveragePercent >= 100
-          ? "The target is not far away. The leak is already large enough to pay for it."
+          ? `The target is not far away. The leak is already large enough to cover ${targetName}.`
           : "This is why Target Coverage matters: the leak becomes a real-life tradeoff, not just a number.",
       icon: A.navWhatIf,
       tone: targetCoveragePercent >= 100 ? "red" : targetCoveragePercent >= 40 ? "orange" : "gold",
@@ -5622,7 +5655,7 @@ function buildWalletInsights(
     });
   }
 
-  const monthSpent = sum(monthExpenses.map((item) => item.amount));
+  const monthSpent = sumTrackedExpenses(monthExpenses);
   const realBalance = totalIncome - fixedCosts - monthSpent;
   const walletHp = clamp(
     100 - Math.round((monthLeaks / availableAfterLifeCost) * 100),
@@ -5630,20 +5663,30 @@ function buildWalletInsights(
     100
   );
 
-  const todayTop = todayCategories[0];
+  const todayLeakTop = todayLeakCategories[0];
+  const todayTrackedTop = todayTrackedCategories[0];
 
-  if (todayTop) {
+  if (todayLeakTop) {
     insights.push({
       id: "daily_projection",
       title: "Today’s leak",
-      body: `You spent ${money(todayTop.amount, settings.currency)} on ${categoryLabel(todayTop.category)} today.`,
-      detail: `That becomes ${money(todayTop.amount * 30, settings.currency)}/month if this rhythm repeats.`,
-      icon: getCategoryIcon(todayTop.category),
-      tone: todayTop.amount >= availableAfterLifeCost * 0.06 ? "red" : "orange",
+      body: `${money(todayLeakTop.amount, settings.currency)} leaked through ${categoryLabel(todayLeakTop.category)} today.`,
+      detail: `If this leak rhythm repeats, it becomes ${money(todayLeakTop.amount * 30, settings.currency)}/month.`,
+      icon: getCategoryIcon(todayLeakTop.category),
+      tone: todayLeakTop.amount >= availableAfterLifeCost * 0.06 ? "red" : "orange",
+    });
+  } else if (todayTrackedTop) {
+    insights.push({
+      id: "daily_spending",
+      title: "Today’s spending",
+      body: `You tracked ${money(todayTrackedTop.amount, settings.currency)} on ${categoryLabel(todayTrackedTop.category)} today.`,
+      detail: "It is not counted as a leak unless it is marked Maybe or Not needed.",
+      icon: getCategoryIcon(todayTrackedTop.category),
+      tone: "green",
     });
   }
 
-  const weekTop = weekCategories[0];
+  const weekTop = weekTrackedCategories[0];
 
   if (weekTop && settings.fixedCosts.rent > 0) {
     const rentPercent = Math.round((weekTop.amount / settings.fixedCosts.rent) * 100);
@@ -5684,7 +5727,7 @@ function buildWalletInsights(
     });
   }
 
-  const repeating = weekCategories.find((item) => item.count >= 3);
+  const repeating = weekTrackedCategories.find((item) => item.count >= 3);
 
   if (repeating) {
     insights.push({
@@ -5731,7 +5774,7 @@ function buildWalletInsights(
   }
 
   const todayHasRecords = todayExpenses.length > 0;
-  const monthTop = monthCategories[0];
+  const monthTop = monthTrackedCategories[0];
   const currentDay = Math.max(getCurrentDayOfMonth(), 1);
   const daysLeftInMonth = Math.max(getDaysInCurrentMonth() - currentDay + 1, 1);
   const remainingAfterTrackedMonth = Math.max(totalIncome - fixedCosts - monthSpent, 0);
@@ -5820,9 +5863,10 @@ function buildWalletInsights(
   }
 
   const smallLeakLimit = Math.max(5, availableAfterLifeCost * 0.01);
-  const smallLeaks = monthExpenses.filter(
-    (expense) => expense.needType !== "Needed" && expense.amount <= smallLeakLimit
-  );
+  const smallLeaks = monthExpenses.filter((expense) => {
+    const leakValue = getExpenseLeakValue(expense);
+    return leakValue > 0 && leakValue <= smallLeakLimit;
+  });
 
   if (smallLeaks.length >= 5) {
     const smallLeakTotal = sum(smallLeaks.map(getExpenseLeakValue));
@@ -5851,7 +5895,7 @@ function buildWalletInsights(
     });
   }
 
-  const neededWeek = sum(weekExpenses.filter((item) => item.needType === "Needed").map((item) => item.amount));
+  const neededWeek = sumTrackedExpenses(weekExpenses.filter((item) => item.needType === "Needed"));
 
   if (neededWeek > 0 && neededWeek >= weekLeaks * 2 && weekLeaks > 0) {
     insights.push({
@@ -5865,7 +5909,7 @@ function buildWalletInsights(
   }
 
 
-  const challengeCategory = weekCategories.find((item) =>
+  const challengeCategory = weekTrackedCategories.find((item) =>
     ["Coffee", "Smoking", "Takeouts", "Shopping", "Subscriptions"].includes(item.category)
   );
 
@@ -5904,20 +5948,8 @@ function buildV2IdentityStats(
 ): V2IdentityStats {
   const weekExpenses = getLastSevenDaysExpenses(expenses);
   const monthExpenses = getCurrentMonthExpenses(expenses);
-  const weekLeakExpenses = weekExpenses.filter((expense) => expense.needType !== "Needed");
-  const monthLeakExpenses = monthExpenses.filter((expense) => expense.needType !== "Needed");
-
-  const weeklyLeaks = sum(
-    weekLeakExpenses.map((expense) =>
-      expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount
-    )
-  );
-
-  const monthlyLeaks = sum(
-    monthLeakExpenses.map((expense) =>
-      expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount
-    )
-  );
+  const weeklyLeaks = sumLeakExpenses(weekExpenses);
+  const monthlyLeaks = sumLeakExpenses(monthExpenses);
 
   const weeklyAvailable = Math.max((getTotalIncome(settings) - getFixedCosts(settings)) / 4.35, 1);
   const weeklySurvivalScore = clamp(
@@ -5932,9 +5964,7 @@ function buildV2IdentityStats(
   );
   const lifeHoursLost = weeklyLeaks > 0 ? Math.round((weeklyLeaks / hourlyValue) * 10) / 10 : 0;
 
-  const biggestLeak = getCategorySummaries(weekLeakExpenses)
-    .filter((item) => item.amount > 0)
-    .sort((a, b) => b.amount - a.amount)[0];
+  const biggestLeak = getCategoryLeakSummaries(weekExpenses)[0];
 
   const biggestLeakCategory = biggestLeak?.category ?? "No leak";
   const biggestLeakAmount = biggestLeak?.amount ?? 0;
@@ -6019,13 +6049,11 @@ function buildChartData(
     let runningBalance = baseBalance;
 
     for (let hour = 0; hour < 24; hour++) {
-      const spent = sum(
-        expenses
-          .filter((expense) => {
-            const date = new Date(expense.createdAt);
-            return dayKey(date) === today && date.getHours() === hour;
-          })
-          .map((expense) => expense.amount)
+      const spent = sumTrackedExpenses(
+        expenses.filter((expense) => {
+          const date = new Date(expense.createdAt);
+          return dayKey(date) === today && date.getHours() === hour;
+        })
       );
 
       const open = runningBalance;
@@ -6055,10 +6083,8 @@ function buildChartData(
 
       const key = dayKey(date);
 
-      const spent = sum(
-        expenses
-          .filter((expense) => dayKey(new Date(expense.createdAt)) === key)
-          .map((expense) => expense.amount)
+      const spent = sumTrackedExpenses(
+        expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === key)
       );
 
       const open = runningBalance;
@@ -6088,10 +6114,8 @@ function buildChartData(
     const date = new Date(year, month, day);
     const key = dayKey(date);
 
-    const spent = sum(
-      expenses
-        .filter((expense) => dayKey(new Date(expense.createdAt)) === key)
-        .map((expense) => expense.amount)
+    const spent = sumTrackedExpenses(
+      expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === key)
     );
 
     const open = runningBalance;
@@ -6545,21 +6569,9 @@ export default function Home() {
 
   const totalIncome = getTotalIncome(displaySettings);
   const fixedCosts = getFixedCosts(displaySettings);
-  const spentThisMonth = sum(currentMonthExpenses.map((e) => e.amount));
+  const spentThisMonth = sumTrackedExpenses(currentMonthExpenses);
 
-  const moneyLeaks = sum(
-    currentMonthExpenses
-      .filter((e) => e.needType === "Not needed")
-      .map((e) => e.amount)
-  );
-
-  const maybeLeaks = sum(
-    currentMonthExpenses
-      .filter((e) => e.needType === "Maybe")
-      .map((e) => e.amount * 0.5)
-  );
-
-  const totalLeaks = moneyLeaks + maybeLeaks;
+  const totalLeaks = sumLeakExpenses(currentMonthExpenses);
   const realBalance = totalIncome - fixedCosts - spentThisMonth;
   const availableAfterLifeCost = Math.max(totalIncome - fixedCosts, 1);
 
@@ -6572,10 +6584,8 @@ export default function Home() {
   const todaySpent = useMemo(() => {
     const today = dayKey(new Date());
 
-    return sum(
-      displayExpenses
-        .filter((e) => dayKey(new Date(e.createdAt)) === today)
-        .map((e) => e.amount)
+    return sumTrackedExpenses(
+      displayExpenses.filter((e) => dayKey(new Date(e.createdAt)) === today)
     );
   }, [displayExpenses]);
 
@@ -6598,6 +6608,7 @@ export default function Home() {
     return {
       debtRadarTotals,
       growthPlanner,
+      exchangeRates: appRateState.rates,
       oldExpenseCurrencyMissingCount,
     };
   }, [activeTab, displaySettings, appRateState.rates, expenses]);
@@ -9927,25 +9938,11 @@ function ReportsPanel({
   const todayExpenses = useMemo(() => getTodayExpenses(expenses), [expenses]);
   const weekExpenses = useMemo(() => getLastSevenDaysExpenses(expenses), [expenses]);
 
-  const todayLeakAmount = sum(
-    todayExpenses
-      .filter((expense) => expense.needType !== "Needed")
-      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
-  );
+  const todayLeakAmount = sumLeakExpenses(todayExpenses);
+  const weeklyLeakAmount = sumLeakExpenses(weekExpenses);
 
-  const weeklyLeakAmount = sum(
-    weekExpenses
-      .filter((expense) => expense.needType !== "Needed")
-      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
-  );
-
-  const todayTopCategory = getCategorySummaries(todayExpenses)
-    .filter((item) => item.amount > 0)
-    .sort((a, b) => b.amount - a.amount)[0];
-
-  const weekTopCategory = getCategorySummaries(weekExpenses)
-    .filter((item) => item.amount > 0)
-    .sort((a, b) => b.amount - a.amount)[0];
+  const todayTopCategory = getCategoryTrackedSummaries(todayExpenses)[0];
+  const weekTopCategory = getCategoryTrackedSummaries(weekExpenses)[0];
 
   const todayStatus =
     todayLeakAmount <= 0
@@ -12861,15 +12858,9 @@ function ChartScreen({
   const periodSpent = sum(chartData.map((point) => point.spent));
   const periodClose = periodOpen - periodSpent;
 
-  const rangeLeaks = sum(
-    rangeExpenses
-      .filter((expense) => expense.needType !== "Needed")
-      .map((expense) => (expense.needType === "Maybe" ? expense.amount * 0.5 : expense.amount))
-  );
+  const rangeLeaks = sumLeakExpenses(rangeExpenses);
 
-  const topRangeCategory = getCategorySummaries(rangeExpenses)
-    .filter((item) => item.amount > 0)
-    .sort((a, b) => b.amount - a.amount)[0];
+  const topRangeCategory = getCategoryTrackedSummaries(rangeExpenses)[0];
 
   const averageDailySpend =
     range === "day"
@@ -13851,11 +13842,7 @@ function getGrowthCases(simulation: GrowthSimulation) {
 }
 
 function getLeakAmountForGrowth(expenses: Expense[]) {
-  return expenses.reduce((acc, expense) => {
-    if (expense.needType === "Not needed") return acc + expense.amount;
-    if (expense.needType === "Maybe") return acc + expense.amount * 0.5;
-    return acc;
-  }, 0);
+  return sumLeakExpenses(expenses);
 }
 
 function buildGrowthShareText(
@@ -14301,7 +14288,7 @@ function GrowthLabScreen({
     [monthlyLeakExpenses]
   );
   const categorySummaries = useMemo(
-    () => getCategorySummaries(monthlyLeakExpenses),
+    () => getCategoryLeakSummaries(monthlyLeakExpenses),
     [monthlyLeakExpenses]
   );
   const topLeak = categorySummaries[0];
@@ -14407,7 +14394,7 @@ function GrowthLabScreen({
     primaryTargetCoverageLabel: primaryRealLifeTarget
       ? formatPlannedCostCoverage(
           finalPoint.balance,
-          safeNumber(primaryRealLifeTarget.amount),
+          getRealLifeTargetDisplay(primaryRealLifeTarget).amount,
           primaryRealLifeTarget.period,
           primaryRealLifeTarget.name
         )
@@ -14422,7 +14409,7 @@ function GrowthLabScreen({
     secondaryTargetCoverageLabel: secondaryRealLifeTarget
       ? formatPlannedCostCoverage(
           finalPoint.balance,
-          safeNumber(secondaryRealLifeTarget.amount),
+          getRealLifeTargetDisplay(secondaryRealLifeTarget).amount,
           secondaryRealLifeTarget.period,
           secondaryRealLifeTarget.name
         )
@@ -15847,9 +15834,7 @@ function WhatIfScreen({
   const survivalCardRef = useRef<HTMLDivElement | null>(null);
 
   const categorySummaries = useMemo(() => {
-    return getCategorySummaries(expenses)
-      .filter((item) => item.amount > 0)
-      .slice(0, 6);
+    return getCategoryLeakSummaries(expenses).slice(0, 6);
   }, [expenses]);
 
   const hasRealData = categorySummaries.length > 0;
@@ -15880,10 +15865,10 @@ function WhatIfScreen({
     if (hasRealData) return categorySummaries;
 
     return [
-      { category: "Coffee", amount: 84, count: 0, icon: A.coffee },
-      { category: "Smoking", amount: 120, count: 0, icon: A.smoking },
-      { category: "Takeouts", amount: 160, count: 0, icon: A.takeouts },
-      { category: "Shopping", amount: 98, count: 0, icon: A.shopping },
+      { category: "Coffee", amount: 84, trackedAmount: 84, leakAmount: 84, count: 0, icon: A.coffee },
+      { category: "Smoking", amount: 120, trackedAmount: 120, leakAmount: 120, count: 0, icon: A.smoking },
+      { category: "Takeouts", amount: 160, trackedAmount: 160, leakAmount: 160, count: 0, icon: A.takeouts },
+      { category: "Shopping", amount: 98, trackedAmount: 98, leakAmount: 98, count: 0, icon: A.shopping },
     ];
   }, [categorySummaries, hasRealData]);
 
@@ -16278,7 +16263,7 @@ function SettingsScreen({
   );
   const totalIncome = getTotalIncome(displaySettings);
   const fixedCosts = getFixedCosts(displaySettings);
-  const monthSpent = sum(currentMonthExpenses.map((item) => item.amount));
+  const monthSpent = sumTrackedExpenses(currentMonthExpenses);
   const categorySummaries = getCategorySummaries(currentMonthExpenses);
   const latestExpenses = expenses.slice(0, 8);
   const publicLeaderboard = Boolean(leaderboard?.me?.publicLeaderboard);
