@@ -607,6 +607,12 @@ type WalletInsight = {
   tone: "green" | "orange" | "red" | "gold";
 };
 
+type SmartInsightContext = {
+  debtRadarTotals?: DebtRadarTotals;
+  growthPlanner?: GrowthPlannerState;
+  oldExpenseCurrencyMissingCount?: number;
+};
+
 type V2IdentityStats = {
   weeklySurvivalScore: number;
   biggestLeakCategory: string;
@@ -5502,7 +5508,11 @@ function getCurrentDayOfMonth() {
   return Math.max(1, new Date().getDate());
 }
 
-function buildWalletInsights(expenses: Expense[], settings: Settings): WalletInsight[] {
+function buildWalletInsights(
+  expenses: Expense[],
+  settings: Settings,
+  context: SmartInsightContext = {}
+): WalletInsight[] {
   const insights: WalletInsight[] = [];
   const todayExpenses = getTodayExpenses(expenses);
   const weekExpenses = getLastSevenDaysExpenses(expenses);
@@ -5523,6 +5533,23 @@ function buildWalletInsights(expenses: Expense[], settings: Settings): WalletIns
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
   const availableAfterLifeCost = Math.max(totalIncome - fixedCosts, 1);
+  const fixedCostRatio = totalIncome > 0 ? fixedCosts / totalIncome : 0;
+
+  if (totalIncome > 0 && fixedCostRatio >= 0.5) {
+    const fixedCostPercent = Math.round(fixedCostRatio * 100);
+
+    insights.push({
+      id: "fixed_cost_pressure",
+      title: "Fixed cost pressure",
+      body: `${fixedCostPercent}% of income is already claimed before daily leaks start.`,
+      detail:
+        fixedCostPercent >= 75
+          ? "The wallet starts the month under pressure. Cutting one recurring cost may matter more than chasing tiny leaks."
+          : "This is your baseline pressure. Daily leaks become more dangerous when fixed costs are already high.",
+      icon: A.lifeCost,
+      tone: fixedCostPercent >= 75 ? "red" : fixedCostPercent >= 62 ? "orange" : "gold",
+    });
+  }
 
   const notNeededWeek = sum(
     weekExpenses.filter((item) => item.needType === "Not needed").map((item) => item.amount)
@@ -5539,6 +5566,61 @@ function buildWalletInsights(expenses: Expense[], settings: Settings): WalletIns
     monthExpenses.filter((item) => item.needType === "Maybe").map((item) => item.amount * 0.5)
   );
   const monthLeaks = notNeededMonth + maybeMonth;
+
+  const debtRadarTotal = context.debtRadarTotals?.totalMonthly ?? 0;
+
+  if (debtRadarTotal > 0) {
+    const silentPressurePercent = Math.round((debtRadarTotal / availableAfterLifeCost) * 100);
+    const comparisonDetail = monthLeaks > 0
+      ? debtRadarTotal >= monthLeaks
+        ? "Silent pressure is bigger than this month’s marked leaks. Recurring damage may be the real boss fight."
+        : "Daily leaks are still louder than silent pressure. Fix the repeating habit first."
+      : "Debt, bills, and maintenance are already waiting before optional spending begins.";
+
+    insights.push({
+      id: "silent_pressure_vs_leaks",
+      title: "Silent pressure",
+      body: `${money(debtRadarTotal, settings.currency)}/month is already waiting in Debt & Bills Radar.`,
+      detail: `${silentPressurePercent}% of available money is under silent pressure. ${comparisonDetail}`,
+      icon: A.walletHp,
+      tone: silentPressurePercent >= 35 ? "red" : silentPressurePercent >= 18 ? "orange" : "gold",
+    });
+  }
+
+  const plannerTargets = context.growthPlanner?.realLifeTargets ?? [];
+  const firstRealTarget = plannerTargets.find((target) => safeNumber(target.amount) > 0);
+  const personalGoalAmount = safeNumber(context.growthPlanner?.savingGoalAmount || "0");
+  const targetName = firstRealTarget?.name?.trim() || context.growthPlanner?.savingGoalName?.trim() || "your next target";
+  const targetAmount = firstRealTarget ? safeNumber(firstRealTarget.amount) : personalGoalAmount;
+
+  if (monthLeaks > 0 && targetAmount > 0) {
+    const targetCoveragePercent = Math.round((monthLeaks / targetAmount) * 100);
+
+    insights.push({
+      id: "leaks_to_target",
+      title: "Leak-to-target signal",
+      body: `${money(monthLeaks, settings.currency)} in this month’s leaks could cover ${targetCoveragePercent}% of ${targetName}.`,
+      detail:
+        targetCoveragePercent >= 100
+          ? "The target is not far away. The leak is already large enough to pay for it."
+          : "This is why Target Coverage matters: the leak becomes a real-life tradeoff, not just a number.",
+      icon: A.navWhatIf,
+      tone: targetCoveragePercent >= 100 ? "red" : targetCoveragePercent >= 40 ? "orange" : "gold",
+    });
+  }
+
+  if (settings.currencyMode === "convert" && (context.oldExpenseCurrencyMissingCount ?? 0) > 0) {
+    const missingCount = context.oldExpenseCurrencyMissingCount ?? 0;
+
+    insights.push({
+      id: "currency_repair_signal",
+      title: "Currency repair signal",
+      body: `${missingCount} old expense${missingCount === 1 ? "" : "s"} may still miss original currency metadata.`,
+      detail: "Use Old Data Currency Repair before judging converted totals or USD references.",
+      icon: A.navSettings,
+      tone: "gold",
+    });
+  }
 
   const monthSpent = sum(monthExpenses.map((item) => item.amount));
   const realBalance = totalIncome - fixedCosts - monthSpent;
@@ -6507,9 +6589,22 @@ export default function Home() {
 
   const activeStreak = cloudAuthReady && cloudStatus === "cloud" ? streak : localStreak;
 
+  const smartInsightContext = useMemo<SmartInsightContext>(() => {
+    const debtRadarItems = readDebtRadarItems();
+    const debtRadarTotals = getDebtRadarTotals(debtRadarItems, displaySettings, appRateState.rates);
+    const growthPlanner = readGrowthPlannerState();
+    const oldExpenseCurrencyMissingCount = expenses.filter((expense) => !expense.currency).length;
+
+    return {
+      debtRadarTotals,
+      growthPlanner,
+      oldExpenseCurrencyMissingCount,
+    };
+  }, [activeTab, displaySettings, appRateState.rates, expenses]);
+
   const walletInsights = useMemo(() => {
-    return buildWalletInsights(displayExpenses, displaySettings);
-  }, [displayExpenses, displaySettings]);
+    return buildWalletInsights(displayExpenses, displaySettings, smartInsightContext);
+  }, [displayExpenses, displaySettings, smartInsightContext]);
 
   async function addExpense() {
     const value = safeNumber(amount);
@@ -8509,8 +8604,8 @@ function DashboardScreen({
       <details className="clean-details">
         <summary>
           <div>
-            <span>Wallet Insights Lab</span>
-            <small>More signals from habits, timing, and pressure.</small>
+            <span>Smart Insights Lab</span>
+            <small>Signals from leaks, fixed costs, silent pressure, targets, and currency repair.</small>
           </div>
           <b>{walletInsights.length} signals</b>
         </summary>
