@@ -88,6 +88,7 @@ const supportedCurrencies: Currency[] = [
 ];
 
 const defaultCurrency: Currency = "USD";
+const usdReferenceCurrency: Currency = "USD";
 
 type CurrencyMode = "display" | "convert";
 
@@ -301,6 +302,8 @@ type Expense = {
   originalAmount?: number;
   originalCurrency?: Currency;
   convertedForDisplay?: boolean;
+  usdReferenceAmount?: number;
+  usdReferenceCurrency?: Currency;
 };
 
 type OnboardingStarterExpense = {
@@ -1328,7 +1331,7 @@ const ruText: Record<string, string> = {
   "Currency currently changes display only. New entries remember this currency for future conversion.": "Валюта пока меняет только отображение. Новые записи запоминают эту валюту для будущей конвертации.",
   "Exchange-rate cache is now prepared server-side. Real conversion stays off until Currency Mode is added.": "Серверный кэш курсов уже подготовлен. Реальная конвертация остаётся выключенной до добавления Currency Mode.",
   "Convert mode now uses cached exchange rates for entries with original currency metadata.": "Convert mode теперь использует кэш курсов для записей с исходной валютой.",
-  "Converted display is live for expenses, income, fixed costs, Growth targets, and Debt Radar values that remember their original currency.": "Конвертированное отображение включено для записей, которые запомнили исходную валюту. Доходы и фиксированные расходы пока используют выбранную валюту напрямую.",
+  "Converted display is live across expenses, income, fixed costs, Growth targets, and Debt Radar. Non-USD views also show an approximate USD reference where available.": "Конвертированное отображение включено для записей, которые запомнили исходную валюту. Доходы и фиксированные расходы пока используют выбранную валюту напрямую.",
   "Currency Mode": "Режим валюты",
   "Display only": "Только отображение",
   "Convert values": "Конвертировать значения",
@@ -3777,6 +3780,34 @@ function getUniqueCurrencies(values: Array<Currency | undefined>, fallback: Curr
   ).filter((currency) => supportedCurrencies.includes(currency));
 }
 
+type ExchangeRatePair = {
+  baseCurrency: Currency;
+  quoteCurrency: Currency;
+};
+
+function getExchangeRatePairs(settings: Settings, sourceCurrencies: Array<Currency | undefined>) {
+  if (settings.currencyMode !== "convert") return [] as ExchangeRatePair[];
+
+  const sources = getUniqueCurrencies([...sourceCurrencies, settings.currency], settings.currency);
+  const pairs = new Map<string, ExchangeRatePair>();
+
+  function addPair(baseCurrency: Currency, quoteCurrency: Currency) {
+    if (baseCurrency === quoteCurrency) return;
+    pairs.set(exchangeRateKey(baseCurrency, quoteCurrency), { baseCurrency, quoteCurrency });
+  }
+
+  sources.forEach((sourceCurrency) => {
+    addPair(sourceCurrency, settings.currency);
+    addPair(sourceCurrency, usdReferenceCurrency);
+  });
+
+  addPair(settings.currency, usdReferenceCurrency);
+
+  return Array.from(pairs.values()).sort((a, b) =>
+    exchangeRateKey(a.baseCurrency, a.quoteCurrency).localeCompare(exchangeRateKey(b.baseCurrency, b.quoteCurrency))
+  );
+}
+
 function getRateSnapshot(
   rates: ExchangeRateMap,
   baseCurrency: Currency,
@@ -3869,10 +3900,68 @@ function originalMoneyNote(display: ReturnType<typeof getDisplayAmount>) {
   return `≈ ${formatMoney(display.originalAmount, display.originalCurrency, { includeCode: true })}`;
 }
 
+function getUsdReferenceAmount(
+  value: number,
+  sourceCurrency: Currency | undefined,
+  settings: Settings,
+  rates: ExchangeRateMap
+) {
+  if (settings.currencyMode !== "convert") return null;
+
+  const fromCurrency = normalizeCurrency(sourceCurrency, settings.currency);
+
+  if (fromCurrency === usdReferenceCurrency) {
+    return {
+      amount: Number.isFinite(value) ? value : 0,
+      currency: usdReferenceCurrency,
+      ready: true,
+    };
+  }
+
+  const convertedAmount = convertAmountWithRates(value, fromCurrency, usdReferenceCurrency, rates);
+
+  if (convertedAmount === null) return null;
+
+  return {
+    amount: convertedAmount,
+    currency: usdReferenceCurrency,
+    ready: true,
+  };
+}
+
+function usdReferenceNote(
+  value: number,
+  sourceCurrency: Currency | undefined,
+  settings: Settings,
+  rates: ExchangeRateMap
+) {
+  const reference = getUsdReferenceAmount(value, sourceCurrency, settings, rates);
+
+  if (!reference || sourceCurrency === usdReferenceCurrency) return "";
+
+  return `≈ ${formatMoney(reference.amount, usdReferenceCurrency, { includeCode: true })}`;
+}
+
+function usdReferenceNoteFromDisplay(
+  display: ReturnType<typeof getDisplayAmount>,
+  settings: Settings,
+  rates: ExchangeRateMap
+) {
+  if (display.currency === usdReferenceCurrency) return "";
+
+  return usdReferenceNote(display.originalAmount, display.originalCurrency, settings, rates);
+}
+
 function expenseToDisplayExpense(expense: Expense, settings: Settings, rates: ExchangeRateMap): Expense {
   const display = getDisplayAmount(expense.amount, expense.currency, settings, rates);
+  const usdReference = getUsdReferenceAmount(display.originalAmount, display.originalCurrency, settings, rates);
+  const shouldAttachUsdReference = Boolean(
+    usdReference &&
+      display.currency !== usdReferenceCurrency &&
+      Number.isFinite(usdReference.amount)
+  );
 
-  if (!display.converted) return expense;
+  if (!display.converted && !shouldAttachUsdReference) return expense;
 
   return {
     ...expense,
@@ -3880,7 +3969,10 @@ function expenseToDisplayExpense(expense: Expense, settings: Settings, rates: Ex
     currency: display.currency,
     originalAmount: display.originalAmount,
     originalCurrency: display.originalCurrency,
-    convertedForDisplay: true,
+    convertedForDisplay: display.converted,
+    ...(shouldAttachUsdReference
+      ? { usdReferenceAmount: usdReference?.amount, usdReferenceCurrency }
+      : {}),
   };
 }
 
@@ -3891,13 +3983,13 @@ function useExchangeRates(settings: Settings, sourceCurrencies: Array<Currency |
     error: "",
   });
 
-  const sourceKey = getUniqueCurrencies(sourceCurrencies, settings.currency)
-    .filter((currency) => currency !== settings.currency)
-    .sort()
+  const ratePairs = getExchangeRatePairs(settings, sourceCurrencies);
+  const rateRequestKey = ratePairs
+    .map((pair) => exchangeRateKey(pair.baseCurrency, pair.quoteCurrency))
     .join("|");
 
   useEffect(() => {
-    if (settings.currencyMode !== "convert" || !sourceKey) {
+    if (settings.currencyMode !== "convert" || !rateRequestKey) {
       const idleTimer = window.setTimeout(() => {
         setRateState((prev) => ({ ...prev, status: "idle", error: "" }));
       }, 0);
@@ -3906,11 +3998,14 @@ function useExchangeRates(settings: Settings, sourceCurrencies: Array<Currency |
     }
 
     let cancelled = false;
-    const sourceList = sourceKey.split("|").map((currency) => normalizeCurrency(currency, settings.currency));
-    const missing = sourceList.filter((currency) => {
-      const key = exchangeRateKey(currency, settings.currency);
-      return !rateState.rates[key];
+    const requestedPairs = rateRequestKey.split("|").map((pairKey) => {
+      const [baseCurrency, quoteCurrency] = pairKey.split(":");
+      return {
+        baseCurrency: normalizeCurrency(baseCurrency, settings.currency),
+        quoteCurrency: normalizeCurrency(quoteCurrency, settings.currency),
+      };
     });
+    const missing = requestedPairs.filter((pair) => !rateState.rates[exchangeRateKey(pair.baseCurrency, pair.quoteCurrency)]);
 
     if (missing.length === 0) {
       const readyTimer = window.setTimeout(() => {
@@ -3924,21 +4019,21 @@ function useExchangeRates(settings: Settings, sourceCurrencies: Array<Currency |
       setRateState((prev) => ({ ...prev, status: "loading", error: "" }));
 
       const results = await Promise.allSettled(
-        missing.map(async (baseCurrency) => {
+        missing.map(async (pair) => {
           const response = await fetch(
-            `/api/exchange-rates?base=${encodeURIComponent(baseCurrency)}&quote=${encodeURIComponent(settings.currency)}`,
+            `/api/exchange-rates?base=${encodeURIComponent(pair.baseCurrency)}&quote=${encodeURIComponent(pair.quoteCurrency)}`,
             { cache: "no-store" }
           );
 
           const data = await response.json();
 
           if (!response.ok || !data?.ok || !Number.isFinite(Number(data.rate))) {
-            throw new Error(data?.error || `Rate ${baseCurrency}/${settings.currency} failed`);
+            throw new Error(data?.error || `Rate ${pair.baseCurrency}/${pair.quoteCurrency} failed`);
           }
 
           return {
-            baseCurrency: normalizeCurrency(data.baseCurrency, baseCurrency),
-            quoteCurrency: normalizeCurrency(data.quoteCurrency, settings.currency),
+            baseCurrency: normalizeCurrency(data.baseCurrency, pair.baseCurrency),
+            quoteCurrency: normalizeCurrency(data.quoteCurrency, pair.quoteCurrency),
             rate: Number(data.rate),
             rateDate: data.rateDate ? String(data.rateDate) : undefined,
             source: data.source ? String(data.source) : "frankfurter",
@@ -3958,7 +4053,8 @@ function useExchangeRates(settings: Settings, sourceCurrencies: Array<Currency |
         if (result.status === "fulfilled") {
           nextRates[exchangeRateKey(result.value.baseCurrency, result.value.quoteCurrency)] = result.value;
         } else {
-          errors.push(`${missing[index]}→${settings.currency}`);
+          const pair = missing[index];
+          errors.push(`${pair.baseCurrency}→${pair.quoteCurrency}`);
         }
       });
 
@@ -3977,7 +4073,7 @@ function useExchangeRates(settings: Settings, sourceCurrencies: Array<Currency |
     return () => {
       cancelled = true;
     };
-  }, [settings.currency, settings.currencyMode, sourceKey]);
+  }, [settings.currencyMode, rateRequestKey]);
 
   return rateState;
 }
@@ -6696,6 +6792,7 @@ export default function Home() {
         {loaded && onboardingCompleted && activeTab === "home" && (
           <DashboardScreen
             settings={displaySettings}
+            exchangeRates={appRateState.rates}
             summary={summary}
             badges={badges}
             walletInsights={walletInsights}
@@ -8002,6 +8099,7 @@ function Header({
 // V56.1: Daily / Weekly Reports share clean image cards.
 function DashboardScreen({
   settings,
+  exchangeRates,
   summary,
   badges,
   walletInsights,
@@ -8027,6 +8125,7 @@ function DashboardScreen({
   onBellClick,
 }: {
   settings: Settings;
+  exchangeRates: ExchangeRateMap;
   summary: {
     totalIncome: number;
     fixedCosts: number;
@@ -8060,32 +8159,36 @@ function DashboardScreen({
   onRoutineComplete: () => Promise<boolean>;
   onBellClick: () => void;
 }) {
+  const incomeUsdNote = usdReferenceNote(summary.totalIncome, settings.currency, settings, exchangeRates);
+  const fixedCostsUsdNote = usdReferenceNote(summary.fixedCosts, settings.currency, settings, exchangeRates);
+  const totalLeaksUsdNote = usdReferenceNote(summary.totalLeaks, settings.currency, settings, exchangeRates);
+  const realBalanceUsdNote = usdReferenceNote(summary.realBalance, settings.currency, settings, exchangeRates);
   const stats = [
     {
       title: "Income",
       value: money(summary.totalIncome, settings.currency),
-      subtitle: "This month",
+      subtitle: incomeUsdNote || "This month",
       icon: A.income,
       tone: "green",
     },
     {
       title: "Life Cost",
       value: money(summary.fixedCosts, settings.currency),
-      subtitle: "This month",
+      subtitle: fixedCostsUsdNote || "This month",
       icon: A.lifeCost,
       tone: "red",
     },
     {
       title: "Money Leaks",
       value: money(summary.totalLeaks, settings.currency),
-      subtitle: "This month",
+      subtitle: totalLeaksUsdNote || "This month",
       icon: A.leaks,
       tone: "orange",
     },
     {
       title: "Real Balance",
       value: money(summary.realBalance, settings.currency),
-      subtitle: "Left to stack",
+      subtitle: realBalanceUsdNote || "Left to stack",
       icon: A.balance,
       tone: "green",
     },
@@ -9261,7 +9364,7 @@ function LifeProfileEditor({
           ))}
         </select>
         <small className="currency-foundation-note">
-          Convert mode uses the exchange-rate cache for entries that remember their original currency.
+          Convert mode uses exchange-rate cache for remembered currencies and shows an approximate USD reference where available.
         </small>
       </div>
 
@@ -9290,7 +9393,7 @@ function LifeProfileEditor({
         </div>
         <small className="currency-foundation-note">
           {settings.currencyMode === "convert"
-            ? "Converted display is live for expenses, income, fixed costs, Growth targets, and Debt Radar values that remember their original currency."
+            ? "Converted display is live across expenses, income, fixed costs, Growth targets, and Debt Radar. Non-USD views also show an approximate USD reference where available."
             : "Display-only keeps the old behavior: symbol changes, stored amounts do not."}
         </small>
         {settings.currencyMode === "convert" && (
@@ -9312,7 +9415,7 @@ function LifeProfileEditor({
             <small>
               {exchangeRateError ||
                 (conversionSourceCount > 0
-                  ? `${conversionSourceCount} source currenc${conversionSourceCount === 1 ? "y" : "ies"} checked against ${settings.currency}.`
+                  ? `${conversionSourceCount} source currenc${conversionSourceCount === 1 ? "y" : "ies"} checked against ${settings.currency} and USD reference.`
                   : "Add entries in another currency, then switch display currency to see converted values.")}
             </small>
           </div>
@@ -11461,18 +11564,29 @@ function ExpenseRow({
 
       <b>
         {money(expense.amount, rowCurrency)}
-        {expense.convertedForDisplay && expense.originalCurrency && Number.isFinite(expense.originalAmount) && (
-          <small className="converted-original-note">
-            {originalMoneyNote({
-              amount: expense.amount,
-              currency: rowCurrency,
-              originalAmount: expense.originalAmount || 0,
-              originalCurrency: expense.originalCurrency,
-              converted: true,
-              ready: true,
-            })}
-          </small>
-        )}
+        {expense.usdReferenceAmount !== undefined &&
+          expense.usdReferenceCurrency &&
+          rowCurrency !== usdReferenceCurrency &&
+          Number.isFinite(expense.usdReferenceAmount) && (
+            <small className="converted-original-note">
+              ≈ {formatMoney(expense.usdReferenceAmount, expense.usdReferenceCurrency, { includeCode: true })}
+            </small>
+          )}
+        {(expense.usdReferenceAmount === undefined || rowCurrency === usdReferenceCurrency) &&
+          expense.convertedForDisplay &&
+          expense.originalCurrency &&
+          Number.isFinite(expense.originalAmount) && (
+            <small className="converted-original-note">
+              {originalMoneyNote({
+                amount: expense.amount,
+                currency: rowCurrency,
+                originalAmount: expense.originalAmount || 0,
+                originalCurrency: expense.originalCurrency,
+                converted: true,
+                ready: true,
+              })}
+            </small>
+          )}
       </b>
 
       <button
@@ -13914,6 +14028,7 @@ function GrowthLabScreen({
     settings,
     growthRateState.rates
   );
+  const activeGoalUsdNote = usdReferenceNoteFromDisplay(activeGoalDisplay, settings, growthRateState.rates);
   const activeGoalTarget = Math.max(0, activeGoalDisplay.amount);
   const goalMonths = getMonthsToGrowthGoal(activeGoalTarget, monthlyContribution);
   const goalProgress =
@@ -14394,6 +14509,7 @@ function GrowthLabScreen({
               <div className="growth-real-life-target-list">
                 {realLifeTargets.map((target) => {
                   const targetDisplay = getRealLifeTargetDisplay(target);
+                  const targetUsdNote = usdReferenceNoteFromDisplay(targetDisplay, settings, growthRateState.rates);
                   const targetAmount = targetDisplay.amount;
                   const targetTotal = getRealLifeTargetTotal(target);
                   const targetMonths = getMonthsToGrowthGoal(targetTotal, monthlyContribution);
@@ -14424,8 +14540,10 @@ function GrowthLabScreen({
 
                         <small className="growth-currency-chip">
                           {targetDisplay.converted
-                            ? `${money(targetDisplay.amount, targetDisplay.currency)} display · saved as ${target.currency || settings.currency}`
-                            : `Saved as ${target.currency || settings.currency}`}
+                            ? `${money(targetDisplay.amount, targetDisplay.currency)} display${targetUsdNote ? ` · ${targetUsdNote}` : ""} · saved as ${target.currency || settings.currency}`
+                            : targetUsdNote
+                              ? `Saved as ${target.currency || settings.currency} · ${targetUsdNote}`
+                              : `Saved as ${target.currency || settings.currency}`}
                         </small>
 
                         <div className="growth-row-period-toggle">
@@ -14543,8 +14661,10 @@ function GrowthLabScreen({
 
               <p className="tiny-note">
                 {activeGoalDisplay.converted
-                  ? `Personal goal is displayed as ${money(activeGoalDisplay.amount, activeGoalDisplay.currency)}. Original: ${money(activeGoalDisplay.originalAmount, activeGoalDisplay.originalCurrency)}.`
-                  : `Personal goal amounts are saved as ${savingGoalCurrency || settings.currency}.`}
+                  ? `Personal goal is displayed as ${money(activeGoalDisplay.amount, activeGoalDisplay.currency)}${activeGoalUsdNote ? ` (${activeGoalUsdNote})` : ""}. Original: ${money(activeGoalDisplay.originalAmount, activeGoalDisplay.originalCurrency)}.`
+                  : activeGoalUsdNote
+                    ? `Personal goal amounts are saved as ${savingGoalCurrency || settings.currency}. ${activeGoalUsdNote}.`
+                    : `Personal goal amounts are saved as ${savingGoalCurrency || settings.currency}.`}
               </p>
 
               <div className="growth-goal-result">
@@ -14555,6 +14675,7 @@ function GrowthLabScreen({
                 <div>
                   <span>Target</span>
                   <strong>{money(activeGoalTarget, activeGoalDisplay.currency)}</strong>
+                  {activeGoalUsdNote && <small className="usd-reference-note">{activeGoalUsdNote}</small>}
                 </div>
                 <div>
                   <span>Redirected/month</span>
@@ -14879,6 +15000,11 @@ function DebtBillsRadarPanel({
   const pressureBase = income > 0 ? income : Math.max(fixedCosts + totals.totalMonthly, 1);
   const silentPressure = clamp(Math.round((totals.totalMonthly / pressureBase) * 100), 0, 100);
   const walletHpBeforeDailySpending = clamp(100 - Math.round((totals.totalMonthly / pressureBase) * 70), 0, 100);
+  const totalMonthlyUsdNote = usdReferenceNote(totals.totalMonthly, settings.currency, settings, exchangeRates);
+  const debtMonthlyUsdNote = usdReferenceNote(totals.debtMonthly, settings.currency, settings, exchangeRates);
+  const billMonthlyUsdNote = usdReferenceNote(totals.billMonthly, settings.currency, settings, exchangeRates);
+  const maintenanceUsdNote = usdReferenceNote(totals.maintenanceMonthly, settings.currency, settings, exchangeRates);
+  const remainingDebtUsdNote = usdReferenceNote(totals.totalRemainingDebt, settings.currency, settings, exchangeRates);
   const quickTargets: { kind: DebtRadarKind; name: string }[] = [
     { kind: "debt", name: "Credit card" },
     { kind: "debt", name: "Loan payment" },
@@ -14896,6 +15022,7 @@ function DebtBillsRadarPanel({
         <div>
           <span>Silent killers</span>
           <strong>{money(totals.totalMonthly, settings.currency)}/month</strong>
+          {totalMonthlyUsdNote && <small className="usd-reference-note">{totalMonthlyUsdNote}/mo</small>}
           <p>
             Debt, recurring bills and maintenance hit Wallet HP before daily spending starts.
           </p>
@@ -14910,14 +15037,17 @@ function DebtBillsRadarPanel({
         <div>
           <span>Debt payments</span>
           <strong>{money(totals.debtMonthly, settings.currency)}</strong>
+          {debtMonthlyUsdNote && <small className="usd-reference-note">{debtMonthlyUsdNote}</small>}
         </div>
         <div>
           <span>Recurring bills</span>
           <strong>{money(totals.billMonthly, settings.currency)}</strong>
+          {billMonthlyUsdNote && <small className="usd-reference-note">{billMonthlyUsdNote}</small>}
         </div>
         <div>
           <span>Maintenance</span>
           <strong>{money(totals.maintenanceMonthly, settings.currency)}</strong>
+          {maintenanceUsdNote && <small className="usd-reference-note">{maintenanceUsdNote}</small>}
         </div>
         <div>
           <span>Silent pressure</span>
@@ -14928,12 +15058,12 @@ function DebtBillsRadarPanel({
       <div className="debt-radar-warning">
         <strong>
           {totals.totalMonthly > 0
-            ? `${money(totals.totalMonthly, settings.currency)} is already waiting every month.`
+            ? `${money(totals.totalMonthly, settings.currency)}${totalMonthlyUsdNote ? ` (${totalMonthlyUsdNote})` : ""} is already waiting every month.`
             : "Add the silent bills that repeat every month."}
         </strong>
         <span>
           {totals.totalRemainingDebt > 0
-            ? `${money(totals.totalRemainingDebt, settings.currency)} remaining debt tracked. ${totals.highPriorityCount} high-priority item${totals.highPriorityCount === 1 ? "" : "s"}.`
+            ? `${money(totals.totalRemainingDebt, settings.currency)}${remainingDebtUsdNote ? ` (${remainingDebtUsdNote})` : ""} remaining debt tracked. ${totals.highPriorityCount} high-priority item${totals.highPriorityCount === 1 ? "" : "s"}.`
             : "Use this as a private local log for debt, bills and maintenance. No investment logic."}
         </span>
       </div>
@@ -14964,12 +15094,14 @@ function DebtBillsRadarPanel({
             settings,
             exchangeRates
           );
+          const monthlyUsdNote = usdReferenceNoteFromDisplay(monthlyDisplay, settings, exchangeRates);
+          const remainingUsdNote = usdReferenceNoteFromDisplay(remainingDisplay, settings, exchangeRates);
           const itemMeta = [
             monthlyAmount > 0
-              ? `${money(monthlyDisplay.amount, monthlyDisplay.currency)}/mo${monthlyDisplay.converted ? ` (${originalMoneyNote(monthlyDisplay)})` : ""}`
+              ? `${money(monthlyDisplay.amount, monthlyDisplay.currency)}/mo${monthlyUsdNote ? ` (${monthlyUsdNote})` : monthlyDisplay.converted ? ` (${originalMoneyNote(monthlyDisplay)})` : ""}`
               : "No monthly hit yet",
             item.kind === "debt" && safeNumber(item.remainingAmount) > 0
-              ? `Remaining ${money(remainingDisplay.amount, remainingDisplay.currency)}${remainingDisplay.converted ? ` (${originalMoneyNote(remainingDisplay)})` : ""}`
+              ? `Remaining ${money(remainingDisplay.amount, remainingDisplay.currency)}${remainingUsdNote ? ` (${remainingUsdNote})` : remainingDisplay.converted ? ` (${originalMoneyNote(remainingDisplay)})` : ""}`
               : item.dueDay
                 ? `Due day ${item.dueDay}`
                 : "No due day",

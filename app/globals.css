@@ -16066,3 +16066,20 @@ html[lang="ru"] .tab-guide-hero p {
     font-size: 12px;
   }
 }
+
+/* v57.7 USD Reference Display */
+.usd-reference-note {
+  display: block;
+  margin-top: 3px;
+  color: rgba(199, 255, 74, 0.72);
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.stat-card .usd-reference-note,
+.debt-radar-stats .usd-reference-note,
+.growth-goal-result .usd-reference-note {
+  color: rgba(199, 255, 74, 0.68);
+  font-size: 0.68rem;
+}
