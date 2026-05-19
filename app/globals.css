@@ -16074,3 +16074,171 @@ html[lang="ru"] .tab-guide-hero p {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== V58.9 DETAILED COMPACT CANDLE STORY ===== */
+.candle-story-card {
+  display: grid;
+  gap: 10px;
+}
+
+.candle-story-title {
+  margin-bottom: 2px;
+}
+
+.candle-story-why {
+  margin-top: 0;
+}
+
+.candle-story-stats {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.candle-story-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
+  gap: 10px;
+}
+
+.candle-story-block,
+.candle-story-compact-row > div,
+.candle-story-takeaway {
+  padding: 11px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+.candle-story-block > span,
+.candle-story-compact-row span,
+.candle-story-takeaway span,
+.candle-story-events > span {
+  display: block;
+  color: var(--green);
+  font-size: 11px;
+  line-height: 1.1;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+}
+
+.candle-story-block > small,
+.candle-story-compact-row p,
+.candle-story-takeaway p {
+  display: block;
+  margin: 6px 0 0;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.36;
+  font-weight: 740;
+}
+
+.candle-story-cause-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.candle-story-cause-list article {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  overflow: hidden;
+  padding: 9px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.candle-story-cause-list article b {
+  display: block;
+  position: relative;
+  z-index: 1;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.12;
+  font-weight: 950;
+}
+
+.candle-story-cause-list article small {
+  display: block;
+  position: relative;
+  z-index: 1;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.18;
+  font-weight: 760;
+}
+
+.candle-story-cause-list article strong {
+  position: relative;
+  z-index: 1;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.candle-story-cause-list article i {
+  position: absolute;
+  inset: auto auto 0 0;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  box-shadow: 0 0 14px rgba(183, 255, 25, 0.22);
+}
+
+.candle-story-mix-bars {
+  display: flex;
+  width: 100%;
+  height: 9px;
+  overflow: hidden;
+  margin: 10px 0 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.candle-story-mix-bars i {
+  display: block;
+  min-width: 0;
+  height: 100%;
+}
+
+.candle-story-mix-bars i.needed {
+  background: rgba(183, 255, 25, 0.82);
+}
+
+.candle-story-mix-bars i.maybe {
+  background: rgba(246, 200, 76, 0.86);
+}
+
+.candle-story-mix-bars i.not-needed {
+  background: rgba(255, 73, 73, 0.86);
+}
+
+.candle-story-compact-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.candle-story-events {
+  gap: 8px;
+}
+
+.candle-story-events > span {
+  margin-bottom: 2px;
+}
+
+.candle-story-takeaway {
+  background: rgba(183, 255, 25, 0.055);
+  border-color: rgba(183, 255, 25, 0.14);
+}
+
+@media (max-width: 430px) {
+  .candle-story-stats,
+  .candle-story-grid,
+  .candle-story-compact-row {
+    grid-template-columns: 1fr;
+  }
+}
