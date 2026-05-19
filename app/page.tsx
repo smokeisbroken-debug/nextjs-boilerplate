@@ -2786,7 +2786,6 @@ const ruText: Record<string, string> = {
   "Tap another candle or add an expense to see what happened that day.": "Нажми другую свечу или добавь расход, чтобы увидеть, что случилось в этот день.",
   "This day had spending, but it was marked Needed, so it did not create leak pressure.": "В этот день были расходы, но они отмечены как Needed, поэтому не создали давление утечек.",
   "This candle has leak pressure, but no single category dominates it yet.": "У этой свечи есть давление утечек, но одна категория пока не доминирует.",
-  "Biggest leak": "Главная утечка",
   "Biggest spending": "Главный расход",
   "No weighted leak": "Нет weighted leak",
   "No tracked spending": "Нет tracked spending",
