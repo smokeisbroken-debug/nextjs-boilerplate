@@ -2813,6 +2813,26 @@ const ruText: Record<string, string> = {
   "Current candle:": "Текущая свеча:",
   "Payday is treated as a cycle marker. It does not create a fake green candle and history is not deleted.": "День дохода считается маркером цикла. Он не создаёт фейковую зелёную свечу, и история не удаляется.",
   "Cycle start / payday marker": "Старт цикла / маркер дохода",
+  "Candle Story": "История свечи",
+  "Main causes": "Главные причины",
+  "Range context": "Контекст периода",
+  "Pattern detected": "Обнаруженный паттерн",
+  "Top events": "Главные события",
+  "Takeaway": "Вывод",
+  "No spending categories recorded yet.": "Категории расходов пока не записаны.",
+  "No pattern yet. Add an expense or inspect another candle.": "Паттерна пока нет. Добавь расход или выбери другую свечу.",
+  "Controlled basics: spending happened, but it did not create leak pressure.": "Контролируемая база: расходы были, но не создали давление утечек.",
+  "Evening leak cluster detected. Most pressure happened later in the day.": "Обнаружен вечерний кластер утечек. Большая часть давления появилась ближе к вечеру.",
+  "Not needed spending created most of the pressure.": "Большую часть давления создали Not needed расходы.",
+  "Grey-zone Maybe spending created the pressure without one clear failure point.": "Давление создали серые Maybe расходы без одной явной причины.",
+  "No strong pattern detected yet.": "Сильный паттерн пока не обнаружен.",
+  "No range impact yet.": "Влияния на период пока нет.",
+  "This candle added tracked spending, but 0% of the selected range leaks.": "Эта свеча добавила записанные расходы, но 0% утечек выбранного периода.",
+  "This candle is empty. Track one expense to make the chart tell a real story.": "Эта свеча пустая. Запиши один расход, чтобы график начал рассказывать реальную историю.",
+  "This candle stayed controlled because the spending was marked Needed.": "Эта свеча осталась контролируемой, потому что расходы были отмечены как Needed.",
+  "This candle turned red because avoidable spending created enough pressure to hurt Wallet HP.": "Эта свеча стала красной, потому что избегаемые расходы создали давление на Wallet HP.",
+  "This candle is a warning: the pressure is visible, but still easy to correct.": "Эта свеча — предупреждение: давление уже видно, но его ещё легко исправить.",
+  "This candle had small leak pressure, but it stayed below the danger zone.": "У этой свечи было небольшое давление утечек, но она осталась ниже зоны опасности.",
   "Top leak: none": "Главная утечка: нет",
   "Cycle start": "Старт цикла",
   "Payday marker": "Маркер дохода",
@@ -13219,12 +13239,43 @@ function ChartScreen({
   const averageDailySpend = periodSpent / daysInView;
   const averageDailyLeak = rangeLeaks / daysInView;
   const hasRangeData = rangeExpenses.length > 0;
+  const title =
+    range === "day"
+      ? "Today"
+      : range === "week"
+        ? "Last 7 days"
+        : "This cycle";
   const latestPointLabel = selectedPoint ? getChartPointStatusLabel(selectedPoint) : "No candle yet";
   const selectedTopLeak = selectedDayLeakSummaries[0] || null;
   const selectedTopTracked = selectedDayTrackedSummaries[0] || null;
   const selectedNeededTotal = sumTrackedExpensesByNeedType(selectedDayExpenses, "Needed");
   const selectedMaybeTotal = sumTrackedExpensesByNeedType(selectedDayExpenses, "Maybe");
   const selectedNotNeededTotal = sumTrackedExpensesByNeedType(selectedDayExpenses, "Not needed");
+  const selectedTrackedTotal = selectedPoint?.spent ?? 0;
+  const selectedLeakTotal = selectedPoint?.leakAmount ?? 0;
+  const selectedDayEventCount = selectedDayExpenses.length;
+  const selectedNeededPercent = selectedTrackedTotal > 0 ? Math.round((selectedNeededTotal / selectedTrackedTotal) * 100) : 0;
+  const selectedMaybePercent = selectedTrackedTotal > 0 ? Math.round((selectedMaybeTotal / selectedTrackedTotal) * 100) : 0;
+  const selectedNotNeededPercent = selectedTrackedTotal > 0 ? Math.max(0, 100 - selectedNeededPercent - selectedMaybePercent) : 0;
+  const selectedLeakShareOfRange = rangeLeaks > 0 ? Math.round((selectedLeakTotal / rangeLeaks) * 100) : 0;
+  const selectedLeakRank = selectedPoint && selectedLeakTotal > 0
+    ? [...chartData]
+        .filter((point) => point.leakAmount > 0)
+        .sort((a, b) => b.leakAmount - a.leakAmount)
+        .findIndex((point) => point.key === selectedPoint.key) + 1
+    : 0;
+  const selectedMainCauseMode = selectedDayLeakSummaries.length > 0 ? "leak" : "spending";
+  const selectedMainCauseTotal = selectedMainCauseMode === "leak" ? selectedLeakTotal : selectedTrackedTotal;
+  const selectedMainCauses = (selectedMainCauseMode === "leak" ? selectedDayLeakSummaries : selectedDayTrackedSummaries).slice(0, 4);
+  const selectedTopEvents = [...selectedDayExpenses]
+    .sort((a, b) => getExpenseLeakValue(b) - getExpenseLeakValue(a) || getExpenseTrackedValue(b) - getExpenseTrackedValue(a))
+    .slice(0, 5);
+  const selectedEveningLeak = sumLeakExpenses(
+    selectedDayExpenses.filter((expense) => new Date(expense.createdAt).getHours() >= 18)
+  );
+  const selectedTopLeakRepeatCount = selectedTopLeak
+    ? selectedDayExpenses.filter((expense) => expense.category === selectedTopLeak.category).length
+    : 0;
   const selectedDayInsightTitle = !selectedPoint || selectedPoint.count <= 0
     ? "No activity on this candle"
     : selectedPoint.leakAmount <= 0
@@ -13239,15 +13290,35 @@ function ChartScreen({
     : selectedPoint.leakAmount <= 0
       ? "This day had spending, but it was marked Needed, so it did not create leak pressure."
       : selectedTopLeak
-        ? `${categoryDisplayLabel(settings, selectedTopLeak.category)} created the biggest leak pressure on this candle.`
+        ? `${categoryDisplayLabel(settings, selectedTopLeak.category)} created ${money(selectedTopLeak.amount, settings.currency)} of leak pressure on this candle.`
         : "This candle has leak pressure, but no single category dominates it yet.";
-
-  const title =
-    range === "day"
-      ? "Today"
-      : range === "week"
-        ? "Last 7 days"
-        : "This cycle";
+  const selectedPatternText = !selectedPoint || selectedPoint.count <= 0
+    ? "No pattern yet. Add an expense or inspect another candle."
+    : selectedPoint.leakAmount <= 0
+      ? "Controlled basics: spending happened, but it did not create leak pressure."
+      : selectedEveningLeak >= selectedLeakTotal * 0.5 && selectedLeakTotal > 0
+        ? "Evening leak cluster detected. Most pressure happened later in the day."
+        : selectedTopLeak && selectedTopLeakRepeatCount >= 2
+          ? `${categoryDisplayLabel(settings, selectedTopLeak.category)} repeated ${selectedTopLeakRepeatCount} times on this candle.`
+          : selectedNotNeededTotal >= selectedMaybeTotal && selectedNotNeededTotal > 0
+            ? "Not needed spending created most of the pressure."
+            : selectedMaybeTotal > 0
+              ? "Grey-zone Maybe spending created the pressure without one clear failure point."
+              : "No strong pattern detected yet.";
+  const selectedTakeawayText = !selectedPoint || selectedPoint.count <= 0
+    ? "This candle is empty. Track one expense to make the chart tell a real story."
+    : selectedPoint.leakAmount <= 0
+      ? "This candle stayed controlled because the spending was marked Needed."
+      : selectedPoint.status === "danger"
+        ? "This candle turned red because avoidable spending created enough pressure to hurt Wallet HP."
+        : selectedPoint.status === "warning"
+          ? "This candle is a warning: the pressure is visible, but still easy to correct."
+          : "This candle had small leak pressure, but it stayed below the danger zone.";
+  const selectedRangeContext = !selectedPoint || selectedPoint.count <= 0
+    ? "No range impact yet."
+    : selectedLeakTotal <= 0
+      ? "This candle added tracked spending, but 0% of the selected range leaks."
+      : `${selectedLeakShareOfRange}% of ${title.toLowerCase()} leaks came from this candle${selectedLeakRank > 0 ? ` · leak rank #${selectedLeakRank}` : ""}.`;
 
   return (
     <div className="screen">
@@ -13444,24 +13515,34 @@ function ChartScreen({
         </div>
       </section>
 
-      <section className="day-card selected-candle-card">
-        <div className="day-title">
+      <section className="day-card selected-candle-card candle-story-card">
+        <div className="day-title candle-story-title">
           <div>
             <strong>{selectedPoint?.label ?? title}</strong>
-            <small>Selected pressure candle</small>
+            <small>Candle Story · {selectedPoint ? getChartPointStatusLabel(selectedPoint) : "No candle selected"}</small>
           </div>
           <img src={A.calendar} alt="" />
         </div>
 
-        <div className="day-info">
+        <div className="selected-candle-insight candle-story-why">
+          <span>{selectedDayInsightTitle}</span>
+          <p>{selectedDayInsightBody}</p>
+        </div>
+
+        <div className="day-info candle-story-stats">
           <div>
             <span>Tracked</span>
-            <b>{money(selectedPoint?.spent ?? 0, settings.currency)}</b>
+            <b>{money(selectedTrackedTotal, settings.currency)}</b>
           </div>
 
           <div>
             <span>Leaks</span>
-            <b>{money(selectedPoint?.leakAmount ?? 0, settings.currency)}</b>
+            <b>{money(selectedLeakTotal, settings.currency)}</b>
+          </div>
+
+          <div>
+            <span>Pressure</span>
+            <b>{selectedPoint?.pressure ?? 0}%</b>
           </div>
 
           <div>
@@ -13470,47 +13551,84 @@ function ChartScreen({
           </div>
         </div>
 
-        <div className="selected-candle-insight">
-          <span>{selectedDayInsightTitle}</span>
-          <p>{selectedDayInsightBody}</p>
-        </div>
+        <div className="candle-story-grid">
+          <div className="candle-story-block">
+            <span>Main causes</span>
+            {selectedMainCauses.length > 0 ? (
+              <div className="candle-story-cause-list">
+                {selectedMainCauses.map((item) => {
+                  const share = selectedMainCauseTotal > 0 ? Math.round((item.amount / selectedMainCauseTotal) * 100) : 0;
 
-        <div className="selected-candle-breakdown">
-          <div>
-            <span>Biggest leak</span>
-            <b>{selectedTopLeak ? categoryDisplayLabel(settings, selectedTopLeak.category) : "None"}</b>
-            <small>{selectedTopLeak ? money(selectedTopLeak.amount, settings.currency) : "No weighted leak"}</small>
-          </div>
-
-          <div>
-            <span>Biggest spending</span>
-            <b>{selectedTopTracked ? categoryDisplayLabel(settings, selectedTopTracked.category) : "None"}</b>
-            <small>{selectedTopTracked ? money(selectedTopTracked.amount, settings.currency) : "No tracked spending"}</small>
-          </div>
-        </div>
-
-        <div className="selected-candle-mix">
-          <span>Spending mix</span>
-          <small>
-            Needed {money(selectedNeededTotal, settings.currency)} · Maybe {money(selectedMaybeTotal, settings.currency)} · Not needed {money(selectedNotNeededTotal, settings.currency)}
-          </small>
-        </div>
-
-        {selectedDayExpenses.length > 0 && (
-          <div className="selected-candle-events">
-            {selectedDayExpenses.slice(0, 3).map((expense) => (
-              <div key={expense.id}>
-                <span>{categoryDisplayLabel(settings, expense.category)}</span>
-                <b>{money(expense.amount, settings.currency)}</b>
-                <small>{expense.needType}</small>
+                  return (
+                    <article key={item.category}>
+                      <div>
+                        <b>{categoryDisplayLabel(settings, item.category)}</b>
+                        <small>{selectedMainCauseMode === "leak" ? "Leak pressure" : "Tracked spending"} · {item.count}x</small>
+                      </div>
+                      <strong>{share}%</strong>
+                      <i style={{ width: `${clamp(share, 3, 100)}%` }} />
+                    </article>
+                  );
+                })}
               </div>
-            ))}
+            ) : (
+              <small>No spending categories recorded yet.</small>
+            )}
+          </div>
+
+          <div className="candle-story-block">
+            <span>Spending mix</span>
+            <div className="candle-story-mix-bars" aria-label="Spending mix">
+              <i className="needed" style={{ width: `${clamp(selectedNeededPercent, 0, 100)}%` }} />
+              <i className="maybe" style={{ width: `${clamp(selectedMaybePercent, 0, 100)}%` }} />
+              <i className="not-needed" style={{ width: `${clamp(selectedNotNeededPercent, 0, 100)}%` }} />
+            </div>
+            <small>
+              Needed {selectedNeededPercent}% · Maybe {selectedMaybePercent}% · Not needed {selectedNotNeededPercent}%
+            </small>
+          </div>
+        </div>
+
+        <div className="candle-story-compact-row">
+          <div>
+            <span>Pattern detected</span>
+            <p>{selectedPatternText}</p>
+          </div>
+          <div>
+            <span>Range context</span>
+            <p>{selectedRangeContext}</p>
+          </div>
+        </div>
+
+        {selectedTopEvents.length > 0 && (
+          <div className="selected-candle-events candle-story-events">
+            <span>Top events</span>
+            {selectedTopEvents.map((expense) => {
+              const leakValue = getExpenseLeakValue(expense);
+              const expenseTime = new Date(expense.createdAt).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+              });
+
+              return (
+                <div key={expense.id}>
+                  <span>{categoryDisplayLabel(settings, expense.category)}</span>
+                  <b>{money(getExpenseTrackedValue(expense), settings.currency)}</b>
+                  <small>{expense.needType} · {expenseTime} · leak {money(leakValue, settings.currency)}</small>
+                </div>
+              );
+            })}
           </div>
         )}
 
+        <div className="candle-story-takeaway">
+          <span>Takeaway</span>
+          <p>{selectedTakeawayText}</p>
+        </div>
+
         <div className="chart-range-note">
           <span>
-            Current candle: {selectedPoint?.label ?? "-"} · {latestPointLabel} · {money(selectedPoint?.leakAmount ?? 0, settings.currency)} leaks · {selectedPoint?.pressure ?? 0}% pressure
+            Current candle: {selectedPoint?.label ?? "-"} · {latestPointLabel} · {money(selectedLeakTotal, settings.currency)} leaks · {selectedPoint?.pressure ?? 0}% pressure · {selectedDayEventCount} events
           </span>
           <span>
             Payday is treated as a cycle marker. It does not create a fake green candle and history is not deleted.
