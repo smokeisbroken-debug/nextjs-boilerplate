@@ -2774,6 +2774,23 @@ const ruText: Record<string, string> = {
   "Green means controlled. Red means": "Зелёный — контролируемо. Красный —",
   "Wallet HP danger.": "опасность для Wallet HP.",
   "Wallet Pressure Chart": "Wallet Pressure Chart",
+  "Tap a candle to inspect the day": "Нажми на свечу, чтобы разобрать день",
+  "No candle selected": "Свеча не выбрана",
+  "Selected pressure candle": "Выбранная свеча давления",
+  "Balance after": "Баланс после",
+  "No activity on this candle": "На этой свече нет активности",
+  "Controlled spending day": "День контролируемых расходов",
+  "Wallet HP danger day": "Опасный день для Wallet HP",
+  "Leak pressure warning": "Предупреждение по утечкам",
+  "Minor leak pressure": "Небольшое давление утечек",
+  "Tap another candle or add an expense to see what happened that day.": "Нажми другую свечу или добавь расход, чтобы увидеть, что случилось в этот день.",
+  "This day had spending, but it was marked Needed, so it did not create leak pressure.": "В этот день были расходы, но они отмечены как Needed, поэтому не создали давление утечек.",
+  "This candle has leak pressure, but no single category dominates it yet.": "У этой свечи есть давление утечек, но одна категория пока не доминирует.",
+  "Biggest leak": "Главная утечка",
+  "Biggest spending": "Главный расход",
+  "No weighted leak": "Нет weighted leak",
+  "No tracked spending": "Нет tracked spending",
+  "Spending mix": "Состав расходов",
   "No pressure yet": "Давления пока нет",
   "One day becomes one candle. Expenses update today’s candle.": "Один день = одна свеча. Расходы обновляют сегодняшнюю свечу.",
   "Tracked spending": "Записанные расходы",
@@ -6236,6 +6253,8 @@ function getChartPointPressure(leakAmount: number, dailyLeakBudget: number) {
 
 function getChartPointClassName(point: ChartPoint) {
   if (point.status === "danger") return "red";
+  if (point.status === "warning") return "yellow";
+  if (point.status === "quiet") return "quiet";
   return "green";
 }
 
@@ -6296,6 +6315,14 @@ function getChartDatesForRange(range: ChartRange) {
   }
 
   return dates;
+}
+
+function getExpensesForDayKey(expenses: Expense[], key: string) {
+  return expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === key);
+}
+
+function sumTrackedExpensesByNeedType(expenses: Expense[], needType: NeedType) {
+  return sumTrackedExpenses(expenses.filter((expense) => expense.needType === needType));
 }
 
 function buildChartPoint(
@@ -13155,13 +13182,30 @@ function ChartScreen({
     return getCurrentMonthExpenses(expenses);
   }, [range, expenses]);
 
+  const [selectedChartKey, setSelectedChartKey] = useState<string | null>(null);
+
   const maxSpent = Math.max(...chartData.map((point) => point.spent), 1);
   const maxLeakPressure = Math.max(...chartData.map((point) => point.pressure), 1);
-  const selectedPoint = chartData[chartData.length - 1];
+  const latestPoint = chartData[chartData.length - 1];
+  const selectedPoint =
+    chartData.find((point) => point.key === selectedChartKey) || latestPoint;
+
+  const selectedDayExpenses = useMemo(
+    () => (selectedPoint ? getExpensesForDayKey(expenses, selectedPoint.key) : []),
+    [expenses, selectedPoint?.key]
+  );
+  const selectedDayLeakSummaries = useMemo(
+    () => getCategoryLeakSummaries(selectedDayExpenses),
+    [selectedDayExpenses]
+  );
+  const selectedDayTrackedSummaries = useMemo(
+    () => getCategoryTrackedSummaries(selectedDayExpenses),
+    [selectedDayExpenses]
+  );
 
   const periodOpen = chartData[0]?.open ?? 0;
   const periodSpent = sum(chartData.map((point) => point.spent));
-  const periodClose = selectedPoint?.close ?? periodOpen;
+  const periodClose = latestPoint?.close ?? periodOpen;
   const periodCount = sum(chartData.map((point) => point.count));
   const rangeLeaks = sum(chartData.map((point) => point.leakAmount));
   const daysInView = Math.max(chartData.length, 1);
@@ -13177,6 +13221,27 @@ function ChartScreen({
   const averageDailyLeak = rangeLeaks / daysInView;
   const hasRangeData = rangeExpenses.length > 0;
   const latestPointLabel = selectedPoint ? getChartPointStatusLabel(selectedPoint) : "No candle yet";
+  const selectedTopLeak = selectedDayLeakSummaries[0] || null;
+  const selectedTopTracked = selectedDayTrackedSummaries[0] || null;
+  const selectedNeededTotal = sumTrackedExpensesByNeedType(selectedDayExpenses, "Needed");
+  const selectedMaybeTotal = sumTrackedExpensesByNeedType(selectedDayExpenses, "Maybe");
+  const selectedNotNeededTotal = sumTrackedExpensesByNeedType(selectedDayExpenses, "Not needed");
+  const selectedDayInsightTitle = !selectedPoint || selectedPoint.count <= 0
+    ? "No activity on this candle"
+    : selectedPoint.leakAmount <= 0
+      ? "Controlled spending day"
+      : selectedPoint.status === "danger"
+        ? "Wallet HP danger day"
+        : selectedPoint.status === "warning"
+          ? "Leak pressure warning"
+          : "Minor leak pressure";
+  const selectedDayInsightBody = !selectedPoint || selectedPoint.count <= 0
+    ? "Tap another candle or add an expense to see what happened that day."
+    : selectedPoint.leakAmount <= 0
+      ? "This day had spending, but it was marked Needed, so it did not create leak pressure."
+      : selectedTopLeak
+        ? `${categoryDisplayLabel(settings, selectedTopLeak.category)} created the biggest leak pressure on this candle.`
+        : "This candle has leak pressure, but no single category dominates it yet.";
 
   const title =
     range === "day"
@@ -13289,6 +13354,11 @@ function ChartScreen({
         </section>
       )}
 
+      <div className="chart-interaction-hint">
+        <span>Tap a candle to inspect the day</span>
+        <b>{selectedPoint ? `${selectedPoint.label} · ${getChartPointStatusLabel(selectedPoint)}` : "No candle selected"}</b>
+      </div>
+
       <section className={`big-chart ${range}`}>
         <div className="chart-lines">
           {chartData.map((point) => {
@@ -13304,12 +13374,33 @@ function ChartScreen({
               point.isCycleStart ? "Cycle start / payday marker" : "",
             ].filter(Boolean).join(" · ");
 
+            const isSelected = selectedPoint?.key === point.key;
+            const className = [
+              getChartPointClassName(point),
+              isSelected ? "selected" : "",
+              point.isCycleStart ? "cycle-start" : "",
+            ].filter(Boolean).join(" ");
+
             return (
               <i
                 key={point.key}
-                className={getChartPointClassName(point)}
+                role="button"
+                tabIndex={0}
+                aria-label={pointTitle}
+                className={className}
                 style={{ height: `${height}%`, width: range === "day" ? "24px" : undefined }}
                 title={pointTitle}
+                onClick={() => {
+                  triggerHaptic("light");
+                  setSelectedChartKey(point.key);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    triggerHaptic("light");
+                    setSelectedChartKey(point.key);
+                  }
+                }}
               />
             );
           })}
@@ -13326,40 +13417,97 @@ function ChartScreen({
           {chartData.map((point) => {
             const height = clamp(12 + (point.leakAmount / Math.max(rangeLeaks, 1)) * 75, 10, 90);
 
+            const isSelected = selectedPoint?.key === point.key;
+
             return (
               <i
                 key={point.key}
-                className={getChartPointClassName(point)}
+                role="button"
+                tabIndex={0}
+                aria-label={`${point.label}: ${money(point.leakAmount, settings.currency)} leaks`}
+                className={`${getChartPointClassName(point)}${isSelected ? " selected" : ""}`}
                 style={{ height: `${height}%`, width: range === "day" ? "24px" : undefined }}
                 title={`${point.label}: ${money(point.leakAmount, settings.currency)} leaks`}
+                onClick={() => {
+                  triggerHaptic("light");
+                  setSelectedChartKey(point.key);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    triggerHaptic("light");
+                    setSelectedChartKey(point.key);
+                  }
+                }}
               />
             );
           })}
         </div>
       </section>
 
-      <section className="day-card">
+      <section className="day-card selected-candle-card">
         <div className="day-title">
-          <strong>{title}</strong>
+          <div>
+            <strong>{selectedPoint?.label ?? title}</strong>
+            <small>Selected pressure candle</small>
+          </div>
           <img src={A.calendar} alt="" />
         </div>
 
         <div className="day-info">
           <div>
             <span>Tracked</span>
-            <b>{money(periodSpent, settings.currency)}</b>
+            <b>{money(selectedPoint?.spent ?? 0, settings.currency)}</b>
           </div>
 
           <div>
             <span>Leaks</span>
-            <b>{money(rangeLeaks, settings.currency)}</b>
+            <b>{money(selectedPoint?.leakAmount ?? 0, settings.currency)}</b>
           </div>
 
           <div>
-            <span>Real balance</span>
-            <b className={periodClose < 0 ? "bad" : "good"}>{money(periodClose, settings.currency)}</b>
+            <span>Balance after</span>
+            <b className={(selectedPoint?.close ?? periodClose) < 0 ? "bad" : "good"}>{money(selectedPoint?.close ?? periodClose, settings.currency)}</b>
           </div>
         </div>
+
+        <div className="selected-candle-insight">
+          <span>{selectedDayInsightTitle}</span>
+          <p>{selectedDayInsightBody}</p>
+        </div>
+
+        <div className="selected-candle-breakdown">
+          <div>
+            <span>Biggest leak</span>
+            <b>{selectedTopLeak ? categoryDisplayLabel(settings, selectedTopLeak.category) : "None"}</b>
+            <small>{selectedTopLeak ? money(selectedTopLeak.amount, settings.currency) : "No weighted leak"}</small>
+          </div>
+
+          <div>
+            <span>Biggest spending</span>
+            <b>{selectedTopTracked ? categoryDisplayLabel(settings, selectedTopTracked.category) : "None"}</b>
+            <small>{selectedTopTracked ? money(selectedTopTracked.amount, settings.currency) : "No tracked spending"}</small>
+          </div>
+        </div>
+
+        <div className="selected-candle-mix">
+          <span>Spending mix</span>
+          <small>
+            Needed {money(selectedNeededTotal, settings.currency)} · Maybe {money(selectedMaybeTotal, settings.currency)} · Not needed {money(selectedNotNeededTotal, settings.currency)}
+          </small>
+        </div>
+
+        {selectedDayExpenses.length > 0 && (
+          <div className="selected-candle-events">
+            {selectedDayExpenses.slice(0, 3).map((expense) => (
+              <div key={expense.id}>
+                <span>{categoryDisplayLabel(settings, expense.category)}</span>
+                <b>{money(expense.amount, settings.currency)}</b>
+                <small>{expense.needType}</small>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="chart-range-note">
           <span>

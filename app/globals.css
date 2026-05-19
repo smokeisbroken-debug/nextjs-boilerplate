@@ -8411,15 +8411,6 @@ section.badge-vault-panel .badge-vault-card:not(.earned)::after {
   border: 1px solid rgba(183, 255, 25, 0.16) !important;
 }
 
-
-.currency-foundation-note {
-  grid-column: 1 / -1;
-  margin-top: -2px;
-  color: rgba(244, 247, 240, 0.54) !important;
-  font-size: 10.5px;
-  line-height: 1.35;
-}
-
 .profile-block {
   padding: 11px 0 4px;
 }
@@ -15261,21 +15252,6 @@ html[lang="ru"] .tab-guide-hero p {
   gap: 8px;
 }
 
-.growth-currency-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 26px;
-  padding: 0 9px;
-  border: 1px solid rgba(183, 255, 25, 0.12);
-  border-radius: 999px;
-  color: rgba(244, 247, 240, 0.68);
-  background: rgba(183, 255, 25, 0.055);
-  font-size: 10px;
-  font-weight: 850;
-  white-space: nowrap;
-}
-
 .growth-row-period-toggle {
   display: inline-grid;
   grid-template-columns: repeat(2, 34px);
@@ -15937,297 +15913,164 @@ html[lang="ru"] .tab-guide-hero p {
   }
 }
 
-/* v57.4 Currency Mode setting */
-.currency-mode-panel {
-  border: 1px solid rgba(190, 255, 72, 0.16);
-  background: rgba(10, 18, 13, 0.76);
-  border-radius: 20px;
-  padding: 14px;
-  display: grid;
-  gap: 12px;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
-}
-
-.currency-mode-heading {
+/* v58.8 — Chart Interaction Polish */
+.chart-interaction-hint {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-}
-
-.currency-mode-heading span {
-  color: rgba(244, 255, 231, 0.78);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.currency-mode-heading b {
-  color: #c7ff4a;
-  font-size: 0.74rem;
-  border: 1px solid rgba(199, 255, 74, 0.22);
-  border-radius: 999px;
-  padding: 5px 9px;
-  background: rgba(199, 255, 74, 0.08);
-  white-space: nowrap;
-}
-
-.currency-mode-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.currency-mode-options button {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.045);
-  color: #f4ffe7;
-  padding: 12px;
-  text-align: left;
-  display: grid;
-  gap: 5px;
-  min-height: 94px;
-}
-
-.currency-mode-options button.active {
-  border-color: rgba(199, 255, 74, 0.55);
-  background: linear-gradient(135deg, rgba(199, 255, 74, 0.17), rgba(255, 255, 255, 0.055));
-  box-shadow: 0 0 18px rgba(199, 255, 74, 0.08);
-}
-
-.currency-mode-options strong {
-  font-size: 0.86rem;
-}
-
-.currency-mode-options small {
-  color: rgba(244, 255, 231, 0.56);
-  line-height: 1.35;
-}
-
-@media (max-width: 430px) {
-  .currency-mode-options {
-    grid-template-columns: 1fr;
-  }
-
-  .currency-mode-options button {
-    min-height: auto;
-  }
-}
-
-/* v57.5 Real Converted Display */
-.converted-original-note {
-  display: block;
-  margin-top: 2px;
-  color: rgba(244, 255, 231, 0.5);
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.15;
-}
-
-.currency-conversion-status-card {
-  border: 1px solid rgba(199, 255, 74, 0.14);
-  border-radius: 16px;
-  padding: 11px 12px;
-  background: rgba(0, 0, 0, 0.24);
-  display: grid;
-  gap: 4px;
-}
-
-.currency-conversion-status-card span {
-  color: rgba(244, 255, 231, 0.55);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
-.currency-conversion-status-card strong {
-  color: #f4ffe7;
-  font-size: 0.9rem;
-}
-
-.currency-conversion-status-card small {
-  color: rgba(244, 255, 231, 0.58);
-  line-height: 1.35;
-}
-
-.currency-conversion-status-card.warning {
-  border-color: rgba(255, 202, 87, 0.24);
-  background: rgba(255, 202, 87, 0.075);
-}
-
-.currency-conversion-status-card.warning strong {
-  color: #ffe29a;
-}
-
-.currency-edge-note {
-  color: rgba(199, 255, 74, 0.68) !important;
-  font-weight: 750;
-}
-
-.expense-row b {
-  display: grid;
-  justify-items: end;
-  gap: 1px;
-}
-
-@media (max-width: 430px) {
-  .currency-conversion-status-card {
-    padding: 10px;
-  }
-
-  .expense-row b {
-    font-size: 12px;
-  }
-}
-
-/* v57.7 USD Reference Display */
-.usd-reference-note {
-  display: block;
-  margin-top: 3px;
-  color: rgba(199, 255, 74, 0.72);
-  font-size: 0.7rem;
-  font-weight: 800;
-  line-height: 1.15;
-}
-
-.stat-card .usd-reference-note,
-.debt-radar-stats .usd-reference-note,
-.growth-goal-result .usd-reference-note {
-  color: rgba(199, 255, 74, 0.68);
-  font-size: 0.68rem;
-}
-
-/* v57.8 USD Reference in Share Cards */
-.share-usd-reference-note {
-  display: block;
-  margin-top: 3px;
-  color: rgba(199, 255, 74, 0.72);
-  font-size: 0.62rem;
-  font-weight: 850;
-  line-height: 1.12;
-  overflow-wrap: anywhere;
-}
-
-.report-public-share-grid .share-usd-reference-note,
-.weekly-share-grid .share-usd-reference-note,
-.monthly-share-grid .share-usd-reference-note,
-.survival-share-grid .share-usd-reference-note,
-.public-share-savings .share-usd-reference-note {
-  color: rgba(199, 255, 74, 0.76);
-  font-size: 10px;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-@media (max-width: 430px) {
-  .share-usd-reference-note {
-    font-size: 0.6rem;
-  }
-}
-
-/* v58.0 Old Data Currency Repair Tool */
-.currency-repair-details {
-  border-color: rgba(255, 202, 87, 0.16) !important;
-  background: rgba(18, 13, 4, 0.42) !important;
-}
-
-.currency-repair-panel {
-  display: grid;
-  gap: 12px;
-}
-
-.currency-repair-warning {
-  border: 1px solid rgba(255, 202, 87, 0.18);
-  background: rgba(255, 202, 87, 0.07);
+  margin: 12px 0 8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(183, 255, 25, 0.18);
   border-radius: 18px;
-  padding: 12px;
-  display: grid;
-  gap: 6px;
+  background: rgba(183, 255, 25, 0.06);
 }
 
-.currency-repair-warning strong {
-  color: #ffe29a;
-  font-size: 0.86rem;
-}
-
-.currency-repair-warning span,
-.currency-repair-note,
-.currency-repair-result {
-  color: rgba(244, 255, 231, 0.66);
-  font-size: 0.76rem;
-  line-height: 1.45;
-}
-
-.currency-repair-select-row {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.035);
-  padding: 12px;
-  display: grid;
-  gap: 8px;
-}
-
-.currency-repair-select-row span {
-  color: rgba(244, 255, 231, 0.66);
-  font-size: 0.75rem;
+.chart-interaction-hint span {
+  color: var(--muted);
+  font-size: 12px;
   font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
 }
 
-.currency-repair-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.currency-repair-stats div {
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  border-radius: 15px;
-  background: rgba(0, 0, 0, 0.22);
-  padding: 10px;
-  display: grid;
-  gap: 4px;
-}
-
-.currency-repair-stats span {
-  color: rgba(244, 255, 231, 0.52);
-  font-size: 0.68rem;
-  line-height: 1.2;
-}
-
-.currency-repair-stats strong {
-  color: #c7ff4a;
-  font-size: 1rem;
-}
-
-.currency-repair-button {
-  border: 0;
-  border-radius: 16px;
-  padding: 13px 14px;
-  background: linear-gradient(135deg, #c7ff4a, #74ff87);
-  color: #101408;
+.chart-interaction-hint b {
+  color: var(--green);
+  font-size: 12px;
   font-weight: 950;
-  box-shadow: 0 14px 28px rgba(116, 255, 135, 0.12);
+  text-align: right;
 }
 
-.currency-repair-button:disabled {
-  opacity: 0.62;
+.chart-lines i,
+.volume i {
+  cursor: pointer;
+  outline: none;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease, border 0.16s ease;
+}
+
+.chart-lines i:focus-visible,
+.volume i:focus-visible,
+.chart-lines i.selected,
+.volume i.selected {
+  transform: translateY(-5px) scaleX(1.2);
+  box-shadow: 0 0 0 2px rgba(183, 255, 25, 0.32), 0 0 18px rgba(183, 255, 25, 0.34);
+}
+
+.chart-lines i.yellow,
+.volume i.yellow {
+  background: #f6c84c;
+  box-shadow: 0 0 12px rgba(246, 200, 76, 0.22);
+}
+
+.chart-lines i.quiet,
+.volume i.quiet {
+  background: rgba(255, 255, 255, 0.2);
   box-shadow: none;
 }
 
-.currency-repair-result {
-  border: 1px solid rgba(199, 255, 74, 0.16);
-  border-radius: 14px;
-  padding: 10px;
-  background: rgba(199, 255, 74, 0.07);
-  color: rgba(244, 255, 231, 0.82);
-  margin: 0;
+.chart-lines i.cycle-start {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.22), 0 0 18px rgba(183, 255, 25, 0.2);
+}
+
+.selected-candle-card .day-title > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.selected-candle-card .day-title small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.selected-candle-insight {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(183, 255, 25, 0.14);
+  border-radius: 16px;
+  background: rgba(183, 255, 25, 0.055);
+}
+
+.selected-candle-insight span {
+  display: block;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.selected-candle-insight p {
+  margin: 6px 0 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.selected-candle-breakdown {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.selected-candle-breakdown > div,
+.selected-candle-mix,
+.selected-candle-events > div {
+  padding: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.selected-candle-breakdown span,
+.selected-candle-mix span,
+.selected-candle-events span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.selected-candle-breakdown b,
+.selected-candle-events b {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.selected-candle-breakdown small,
+.selected-candle-mix small,
+.selected-candle-events small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.selected-candle-mix {
+  margin-top: 10px;
+}
+
+.selected-candle-events {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 @media (max-width: 430px) {
-  .currency-repair-stats {
+  .chart-interaction-hint {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .chart-interaction-hint b {
+    text-align: left;
+  }
+
+  .selected-candle-breakdown {
     grid-template-columns: 1fr;
   }
 }
