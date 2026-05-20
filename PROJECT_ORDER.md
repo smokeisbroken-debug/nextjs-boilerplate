@@ -1,25 +1,28 @@
-# Project Order — v58.19 First User Clarity Polish
+# Project Order — v59.1
 
-Current checkpoint: v58.19.
+Current stable line before this patch: `v58.19 — First User Clarity Polish`.
 
-## Purpose
+## v59.1 objective
 
-Make the app easier to understand in the first 30–60 seconds without adding a new feature module.
+Make trigger chips stable enough for future features by storing them as structured Supabase metadata while preserving old note-tag compatibility.
 
-## Changes
+## Required order
 
-1. Onboarding now explains the first-session loop:
-   - Track one leak.
-   - Read Wallet HP.
-   - Get the pattern.
-2. Home now shows a compact clarity strip:
-   - Track leak → Read pattern → Take next move.
-3. New users with no expenses see a direct clarity card telling them not to fill the whole app first.
-4. Track Leak now explains what will happen after saving:
-   - Wallet HP updates.
-   - Pattern Lab learns context.
-   - Next move becomes clearer.
+1. Backup/check Supabase project.
+2. Run migration:
+   `supabase/migrations/20260520_v59_1_expense_context_foundation.sql`
+3. Deploy patch files:
+   - `app/page.tsx`
+   - `app/api/broke/route.ts`
+   - docs/review files
+4. Run audit:
+   `supabase/review/20260520_v59_1_expense_context_audit.sql`
+5. Smoke test:
+   - Save leak without triggers.
+   - Save leak with Stress + Late night.
+   - Reopen app.
+   - Confirm Chart / Leak Pattern Lab sees the trigger.
 
-## Stability notes
+## Rollback note
 
-This is UI/copy/CSS only. It does not alter calculations, APIs, Supabase, Telegram webhook, RLS, security settings, or database shape.
+If needed, revert app files to v58.19. The new Supabase columns are additive and can stay in place safely.

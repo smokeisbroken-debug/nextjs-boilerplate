@@ -313,6 +313,7 @@ type Expense = {
   needType: NeedType;
   note: string;
   createdAt: string;
+  triggerTags?: LeakTriggerId[];
   currency?: Currency;
   originalAmount?: number;
   originalCurrency?: Currency;
@@ -1460,7 +1461,7 @@ const ruText: Record<string, string> = {
   "optional, but useful": "необязательно, но полезно",
   "Pattern context": "Контекст паттерна",
   "No trigger selected yet": "Триггер пока не выбран",
-  "Selected triggers are saved into the note as tags so Leak Pattern Lab can read them.": "Выбранные триггеры сохраняются в заметку как теги, чтобы Leak Pattern Lab мог их читать.",
+  "Selected triggers are saved as structured context. The note keeps safe fallback tags for older versions.": "Выбранные триггеры сохраняются как структурированный контекст. Заметка сохраняет безопасные fallback-теги для старых версий.",
   "Add context... e.g. tired after work": "Добавь контекст... например устал после работы",
   "Track honestly. The app cannot detect a pattern without context.": "Записывай честно. Без контекста приложение не увидит паттерн.",
   "First-session promise": "Обещание первой сессии",
@@ -3445,6 +3446,21 @@ const LEAK_TRIGGER_CHIPS = [
 type LeakTriggerId = (typeof LEAK_TRIGGER_CHIPS)[number]["id"];
 
 const LEAK_TRIGGER_TAGS = LEAK_TRIGGER_CHIPS.map((trigger) => trigger.tag);
+const LEAK_TRIGGER_IDS = LEAK_TRIGGER_CHIPS.map((trigger) => trigger.id);
+
+function normalizeLeakTriggerTags(input?: unknown, fallbackNote = ""): LeakTriggerId[] {
+  const rawTags = Array.isArray(input) ? input : [];
+  const fromStructured = rawTags
+    .map((tag) => String(tag).trim().toLowerCase())
+    .filter((tag): tag is LeakTriggerId => LEAK_TRIGGER_IDS.includes(tag as LeakTriggerId));
+
+  const note = fallbackNote.toLowerCase();
+  const fromNote = LEAK_TRIGGER_CHIPS
+    .filter((trigger) => note.includes(trigger.tag.toLowerCase()))
+    .map((trigger) => trigger.id);
+
+  return Array.from(new Set([...fromStructured, ...fromNote]));
+}
 
 function buildNoteWithLeakTriggers(note: string, selectedTriggers: LeakTriggerId[]) {
   const trimmedNote = note.trim();
@@ -4567,6 +4583,7 @@ function normalizeExpense(input: Partial<Expense>): Expense {
         : "Needed",
     note: String(input.note || ""),
     createdAt: String(input.createdAt || new Date().toISOString()),
+    triggerTags: normalizeLeakTriggerTags(input.triggerTags, String(input.note || "")),
     ...(currency ? { currency } : {}),
   };
 }
@@ -5142,17 +5159,16 @@ function getLeakNoteTrigger(expense: Expense) {
 }
 
 function expenseHasLeakTriggerTag(expense: Expense, triggerId: LeakTriggerId) {
-  const trigger = LEAK_TRIGGER_CHIPS.find((item) => item.id === triggerId);
-  if (!trigger) return false;
+  const structuredTags = normalizeLeakTriggerTags(expense.triggerTags, expense.note);
 
-  return expense.note.toLowerCase().includes(trigger.tag.toLowerCase());
+  return structuredTags.includes(triggerId);
 }
 
 function getLeakTriggerLabelsFromNote(expense: Expense) {
-  const note = expense.note.toLowerCase();
+  const structuredTags = normalizeLeakTriggerTags(expense.triggerTags, expense.note);
 
   return LEAK_TRIGGER_CHIPS
-    .filter((trigger) => note.includes(trigger.tag.toLowerCase()))
+    .filter((trigger) => structuredTags.includes(trigger.id))
     .map((trigger) => trigger.label);
 }
 
@@ -7804,6 +7820,7 @@ export default function Home() {
       needType: expenseType,
       note: noteWithTriggers,
       createdAt: new Date().toISOString(),
+      triggerTags: normalizeLeakTriggerTags(selectedLeakTriggers),
       currency: settings.currency,
     };
 
@@ -7852,6 +7869,7 @@ export default function Home() {
       needType,
       note: "First leak",
       createdAt: new Date().toISOString(),
+      triggerTags: [],
       currency: settings.currency,
     };
 

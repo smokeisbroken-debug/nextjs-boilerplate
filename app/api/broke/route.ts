@@ -88,6 +88,37 @@ const supportedCurrencies: Currency[] = [
 const defaultCurrency: Currency = "USD";
 type CurrencyMode = "display" | "convert";
 type NeedType = "Needed" | "Not needed" | "Maybe";
+type LeakTriggerId =
+  | "stress"
+  | "boredom"
+  | "impulse"
+  | "after-payday"
+  | "late-night"
+  | "social-pressure"
+  | "weekend"
+  | "habit";
+
+const supportedLeakTriggerIds: LeakTriggerId[] = [
+  "stress",
+  "boredom",
+  "impulse",
+  "after-payday",
+  "late-night",
+  "social-pressure",
+  "weekend",
+  "habit",
+];
+
+const leakTriggerTags: Record<LeakTriggerId, string> = {
+  stress: "#stress",
+  boredom: "#boredom",
+  impulse: "#impulse",
+  "after-payday": "#after-payday",
+  "late-night": "#late-night",
+  "social-pressure": "#social-pressure",
+  weekend: "#weekend",
+  habit: "#habit",
+};
 type RegionPreset =
   | "Global"
   | "Custom"
@@ -180,6 +211,7 @@ type Expense = {
   needType: NeedType;
   note: string;
   createdAt: string;
+  triggerTags?: LeakTriggerId[];
   currency?: Currency;
 };
 
@@ -1283,6 +1315,33 @@ function isMissingExpenseCurrencyColumnError(error: unknown) {
   );
 }
 
+function isMissingExpenseTriggerTagsColumnError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return (
+    message.includes("trigger_tags") &&
+    (message.includes("Could not find") ||
+      message.includes("column") ||
+      message.includes("PGRST204") ||
+      message.includes("schema cache"))
+  );
+}
+
+function normalizeLeakTriggerTags(input?: unknown, fallbackNote = ""): LeakTriggerId[] {
+  const fromStructured = Array.isArray(input)
+    ? input
+        .map((tag) => String(tag).trim().toLowerCase())
+        .filter((tag): tag is LeakTriggerId => supportedLeakTriggerIds.includes(tag as LeakTriggerId))
+    : [];
+
+  const note = fallbackNote.toLowerCase();
+  const fromNote = supportedLeakTriggerIds.filter((triggerId) =>
+    note.includes(leakTriggerTags[triggerId].toLowerCase())
+  );
+
+  return Array.from(new Set([...fromStructured, ...fromNote]));
+}
+
 function getAuthenticatedTelegramUser(request: NextRequest, body: Record<string, unknown>) {
   const initData = String(body.initData || "");
 
@@ -1368,6 +1427,7 @@ function dbToExpense(row: Record<string, unknown>): Expense {
     needType: String(row.need_type ?? "Needed") as NeedType,
     note: String(row.note ?? ""),
     createdAt: String(row.created_at ?? new Date().toISOString()),
+    triggerTags: normalizeLeakTriggerTags(row.trigger_tags, String(row.note ?? "")),
     ...(currency ? { currency } : {}),
   };
 }
@@ -2359,6 +2419,7 @@ async function importLocalExpensesIfEmpty(telegramId: number, expenses: Expense[
     category: expense.category,
     need_type: expense.needType,
     note: expense.note || "",
+    trigger_tags: normalizeLeakTriggerTags(expense.triggerTags, expense.note),
     created_at: expense.createdAt || new Date().toISOString(),
     ...(normalizeOptionalCurrency(expense.currency) ? { currency: normalizeOptionalCurrency(expense.currency) } : {}),
   }));
@@ -2369,11 +2430,26 @@ async function importLocalExpensesIfEmpty(telegramId: number, expenses: Expense[
       body: JSON.stringify(rowsWithCurrency),
     });
   } catch (error) {
-    if (!isMissingExpenseCurrencyColumnError(error)) {
+    const missingCurrency = isMissingExpenseCurrencyColumnError(error);
+    const missingTriggerTags = isMissingExpenseTriggerTagsColumnError(error);
+
+    if (!missingCurrency && !missingTriggerTags) {
       throw error;
     }
 
-    const legacyRows = rowsWithCurrency.map(({ currency: _currency, ...row }) => row);
+    const legacyRows = rowsWithCurrency.map((row) => {
+      const nextRow: Record<string, unknown> = { ...row };
+
+      if (missingCurrency) {
+        delete nextRow.currency;
+      }
+
+      if (missingTriggerTags) {
+        delete nextRow.trigger_tags;
+      }
+
+      return nextRow;
+    });
 
     await supabaseFetch("broke_expenses", {
       method: "POST",
@@ -2390,6 +2466,7 @@ async function addExpense(telegramId: number, expense: Expense) {
     category: expense.category,
     need_type: expense.needType,
     note: expense.note || "",
+    trigger_tags: normalizeLeakTriggerTags(expense.triggerTags, expense.note),
     created_at: expense.createdAt || new Date().toISOString(),
     ...(expenseCurrency ? { currency: expenseCurrency } : {}),
   };
@@ -2405,11 +2482,23 @@ async function addExpense(telegramId: number, expense: Expense) {
 
     return dbToExpense(rows[0]);
   } catch (error) {
-    if (!isMissingExpenseCurrencyColumnError(error)) {
+    const missingCurrency = isMissingExpenseCurrencyColumnError(error);
+    const missingTriggerTags = isMissingExpenseTriggerTagsColumnError(error);
+
+    if (!missingCurrency && !missingTriggerTags) {
       throw error;
     }
 
-    const { currency: _currency, ...legacyRow } = rowWithCurrency;
+    const legacyRow: Record<string, unknown> = { ...rowWithCurrency };
+
+    if (missingCurrency) {
+      delete legacyRow.currency;
+    }
+
+    if (missingTriggerTags) {
+      delete legacyRow.trigger_tags;
+    }
+
     const rows = (await supabaseFetch("broke_expenses?select=*", {
       method: "POST",
       headers: {

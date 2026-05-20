@@ -1,34 +1,38 @@
-# $BROKE / SmokeIsBroke — v58.19 First User Clarity Polish
+# $BROKE / SmokeIsBroke — v59.1 Expense Context Foundation
 
-Patch-only release focused on the first user experience.
+This patch moves Track Leak trigger chips toward a stable data foundation.
 
 ## What changed
 
-- Added clearer first-session messaging on onboarding.
-- Reframed the onboarding route around: Track one leak → Read Wallet HP → Get the pattern.
-- Added a first-session promise card so new users understand the immediate result.
-- Added a compact Home hero clarity strip: Track leak → Read pattern → Take next move.
-- Added a first-user clarity card when the user has no expenses yet.
-- Added a Track Leak result preview explaining what happens after saving a leak.
-- Updated Trigger Chips helper copy to sound less technical and more behavioral.
-- Added Russian translation entries for the new clarity copy.
+- Expenses now support structured `triggerTags` in the client.
+- `/api/broke` now reads/writes `trigger_tags` on `broke_expenses`.
+- Leak Pattern Lab reads structured trigger tags first and still supports old note hashtags.
+- Old note hashtags remain as a fallback for backwards compatibility.
+- Supabase migration adds:
+  - `broke_expenses.trigger_tags text[] not null default '{}'`
+  - `broke_expenses.context_version integer not null default 1`
+  - allowed trigger constraint
+  - GIN index for trigger lookups
+  - backfill from old note hashtags
 
-## Backend impact
+## Stable fallback
 
-No backend changes.
+The API is defensive. If the `trigger_tags` column is missing, expense saves fall back to the old note-based behavior instead of crashing.
 
-- No API route changes.
-- No Supabase migrations.
-- No database schema changes.
-- No Telegram webhook changes.
-- No stored data rewrites.
+Run the migration to enable structured trigger storage.
 
-## Verification
+## Deployment order
 
-Passed:
+1. Run `supabase/migrations/20260520_v59_1_expense_context_foundation.sql` in Supabase SQL Editor.
+2. Replace the files from this patch.
+3. Deploy to Vercel.
+4. Run `supabase/review/20260520_v59_1_expense_context_audit.sql` to confirm the column/index/backfill.
+5. Track a new leak with trigger chips and confirm Chart / Leak Pattern Lab still works.
 
-```bash
-npm run typecheck
-npm run lint:quiet
-NEXT_TELEMETRY_DISABLED=1 npm run build
-```
+## Not changed
+
+- No auth model change.
+- No webhook change.
+- No RLS rollback.
+- No stored amount rewrite.
+- No destructive migration.

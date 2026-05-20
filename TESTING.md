@@ -1,8 +1,8 @@
-# Testing — v58.19 First User Clarity Polish
+# Testing — v59.1 Expense Context Foundation
 
-## Automated checks
+## Local checks
 
-Run:
+Passed before packaging:
 
 ```bash
 npm run typecheck
@@ -10,36 +10,33 @@ npm run lint:quiet
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-Expected: all pass.
+## Supabase checks
 
-## Manual QA
+Run after migration:
 
-### Onboarding
+```sql
+-- file: supabase/review/20260520_v59_1_expense_context_audit.sql
+```
 
-- Open a fresh user session.
-- Confirm the first screen explains the app as a first-session loop.
-- Confirm the route says Track one leak / Read Wallet HP / Get the pattern.
-- Confirm Fast Start still opens Track Leak.
-- Confirm final onboarding CTA says Open Track Leak.
+Expected:
 
-### Home
+- `trigger_tags` exists on `broke_expenses`.
+- `context_version` exists on `broke_expenses`.
+- `broke_expenses_trigger_tags_allowed` exists.
+- `broke_expenses_trigger_tags_gin_idx` exists.
+- Old hashtag notes are backfilled into `trigger_tags` when possible.
 
-- With no expenses, confirm Home shows:
-  - hero clarity strip;
-  - Today’s Focus;
-  - first-user clarity card.
-- Confirm the first-user clarity card opens Track Leak.
-- With existing expenses, confirm the first-user clarity card is hidden.
+## App smoke test
 
-### Track Leak
+1. Open app.
+2. Go to Track Leak.
+3. Add amount/category.
+4. Select `Stress` and `Late night` trigger chips.
+5. Save.
+6. Reopen app.
+7. Open Chart / Leak Pattern Lab.
+8. Confirm the new leak still appears and pattern context is read.
 
-- Open Track Leak.
-- Confirm the result preview appears below the hero.
-- Save a leak.
-- Confirm normal save/load behavior still works.
-- Confirm trigger tags still attach to notes when chips are selected.
+## Compatibility test
 
-### Russian mode
-
-- Switch language to Russian.
-- Confirm the new onboarding/Home/Track Leak copy is translated or readable.
+Save should still work if the migration has not been run yet, but structured trigger storage will not persist until the migration exists.
