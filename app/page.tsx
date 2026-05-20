@@ -2380,6 +2380,15 @@ const ruText: Record<string, string> = {
   "This is not a boring expense tracker. It is a wallet survival system: find the leak, protect Wallet HP, then redirect the saved money into growth.": "Это не скучный трекер расходов. Это система выживания кошелька: найди утечку, защити Wallet HP, потом перенаправь сохранённые деньги в рост.",
   "Find the leak": "Найди утечку",
   "Track one real expense and mark if it was Needed, Maybe, or Not needed.": "Запиши одну реальную трату и отметь её как Needed, Maybe или Not needed.",
+  "Fast Start": "Быстрый старт",
+  "Skip the setup. Track one real leak now.": "Пропусти настройку. Запиши одну реальную утечку сейчас.",
+  "Best for first-time users: profile, income and fixed costs can be added later.": "Лучше для новых пользователей: профиль, доход и постоянные расходы можно добавить позже.",
+  "Fast start: Track leak": "Быстрый старт: записать утечку",
+  "Private numbers can wait.": "Личные цифры могут подождать.",
+  "Add income later and still reach the first leak. Accuracy improves when you fill it in.": "Добавь доход позже и всё равно дойди до первой утечки. Точность улучшится, когда заполнишь.",
+  "Add later": "Добавить позже",
+  "Fixed costs can wait.": "Постоянные расходы могут подождать.",
+  "Track one real leak first, then return here when you know the monthly numbers.": "Сначала запиши одну реальную утечку, потом вернись сюда, когда будешь знать месячные цифры.",
   "Protect Wallet HP": "Защити Wallet HP",
   "Your HP shows if leaks are putting pressure on the month.": "HP показывает, давят ли утечки на месяц.",
   "Redirect into Growth": "Перенаправь в Growth",
@@ -9145,6 +9154,11 @@ function OnboardingScreen({
     onComplete(finalSettings, targetTab, starterExpense);
   }
 
+  function startFast() {
+    triggerHaptic("medium");
+    finish("add");
+  }
+
   return (
     <div className="screen onboarding-screen v58-onboarding">
       <div className="onboarding-top v58-onboarding-top">
@@ -9210,6 +9224,17 @@ function OnboardingScreen({
                 <span>Use Growth Lab to simulate what saved leaks could become.</span>
               </div>
             </article>
+          </div>
+
+          <div className="v58-fast-start-card">
+            <div>
+              <span>Fast Start</span>
+              <strong>Skip the setup. Track one real leak now.</strong>
+              <p>Best for first-time users: profile, income and fixed costs can be added later.</p>
+            </div>
+            <button type="button" onClick={startFast}>
+              Fast start: Track leak
+            </button>
           </div>
 
           <div className="v58-privacy-note">
@@ -9281,6 +9306,14 @@ function OnboardingScreen({
             </div>
           </div>
 
+          <div className="v58-soft-skip-row">
+            <div>
+              <strong>Private numbers can wait.</strong>
+              <span>Add income later and still reach the first leak. Accuracy improves when you fill it in.</span>
+            </div>
+            <button type="button" onClick={next}>Add later</button>
+          </div>
+
           <div className="v58-privacy-note">
             <strong>Not public</strong>
             <span>Income is used for calculations. Share cards do not expose it.</span>
@@ -9349,6 +9382,14 @@ function OnboardingScreen({
                 {money(realBalance, draft.currency)}
               </strong>
             </div>
+          </div>
+
+          <div className="v58-soft-skip-row">
+            <div>
+              <strong>Fixed costs can wait.</strong>
+              <span>Track one real leak first, then return here when you know the monthly numbers.</span>
+            </div>
+            <button type="button" onClick={next}>Add later</button>
           </div>
         </section>
       )}
