@@ -1,26 +1,47 @@
-# v58.18 testing notes
+#!/usr/bin/env bash
+set -u
 
-This pack does not change app code. Testing is manual and should be done against production after v58.16 and v58.17 are applied.
+BASE_URL="${1:-}"
 
-## Minimum required checks
+if [ -z "$BASE_URL" ]; then
+  echo "Usage: bash scripts/security-smoke-test.sh https://YOUR-DOMAIN.vercel.app"
+  exit 1
+fi
 
-```txt
-1. /api/telegram/set-webhook without key is blocked
-2. /api/telegram/delete-webhook without key is blocked
-3. /api/broke?check=supabase without key is blocked
-4. notification cron without secret is blocked or method-limited
-5. Supabase audit shows RLS enabled + forced on existing BROKE tables
-6. anon/authenticated have no direct grants on BROKE tables
-7. service_role still has needed access
-8. app can save a Track Leak entry
-9. Telegram Mini App opens and loads user data
-10. share cards still work
-```
+BASE_URL="${BASE_URL%/}"
 
-## Suggested local command
+echo "v58.18 public no-secret smoke test"
+echo "Base URL: $BASE_URL"
+echo ""
 
-```bash
-bash scripts/security-smoke-test.sh https://YOUR-DOMAIN.vercel.app
-```
+check_get() {
+  local path="$1"
+  local label="$2"
+  local code
+  code=$(curl -sS -o /dev/null -w "%{http_code}" "$BASE_URL$path" || true)
+  printf "%-45s %s\n" "$label" "$code"
+}
 
-This script only checks no-secret public endpoint responses. It does not verify Supabase, GitHub, Vercel, or Telegram auth by itself.
+check_post_json() {
+  local path="$1"
+  local label="$2"
+  local body="$3"
+  local code
+  code=$(curl -sS -o /dev/null -w "%{http_code}" \
+    -X POST "$BASE_URL$path" \
+    -H "Content-Type: application/json" \
+    --data "$body" || true)
+  printf "%-45s %s\n" "$label" "$code"
+}
+
+check_get "/api/telegram/set-webhook" "set-webhook no key"
+check_get "/api/telegram/delete-webhook" "delete-webhook no key"
+check_get "/api/broke?check=supabase" "supabase diagnostics no key"
+check_get "/api/notifications/gentle" "gentle notifications GET no key"
+check_post_json "/api/notifications/gentle" "gentle notifications POST no key" "{}"
+check_post_json "/api/community" "community POST no secret" '{"text":"v58.18 security smoke test"}'
+check_post_json "/api/share-result" "share-result wrong payload" '{"not":"an image"}'
+
+echo ""
+echo "Interpretation: protected endpoints should return 401/403, or sometimes 405 for wrong method."
+echo "A 200 on set-webhook, delete-webhook, diagnostics, or cron without a secret is a blocker."
