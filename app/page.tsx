@@ -9654,40 +9654,6 @@ function DashboardScreen({
         />
       </section>
 
-      <section className="stats-grid">
-        {stats.map((item) => (
-          <div className={`stat-card ${item.tone}`} key={item.title}>
-            <div className="stat-top">
-              <img src={item.icon} alt="" />
-              <span>{item.title}</span>
-            </div>
-            <strong>{item.value}</strong>
-            <small>{item.subtitle}</small>
-          </div>
-        ))}
-      </section>
-
-      <LifeProfileSummaryCard settings={settings} />
-
-      <StreakCard streak={summary.streak} />
-
-      <section className="hp-card">
-        <div className="section-title">
-          <span>Wallet HP</span>
-          <b>{summary.walletHp >= 80 ? "Stable Wallet" : "Small Leak"}</b>
-        </div>
-
-        <div className="hp-row">
-          <img src={A.walletHp} alt="Wallet HP" />
-          <div className="hp-bar">
-            <div style={{ width: `${summary.walletHp}%` }} />
-          </div>
-          <strong>{summary.walletHp} / 100</strong>
-        </div>
-
-        <p>Hold the line, fix the leaks.</p>
-      </section>
-
       <SmartHomeFocusCard
         settings={settings}
         summary={summary}
@@ -9696,6 +9662,52 @@ function DashboardScreen({
         onOpenAdd={onOpenAdd}
         onOpenChart={onOpenChart}
       />
+
+      <details className="clean-details home-wallet-details">
+        <summary>
+          <div>
+            <span>Wallet Snapshot</span>
+            <small>Full numbers, streak, life profile, and Wallet HP.</small>
+          </div>
+          <b>{summary.walletHp}/100 HP</b>
+        </summary>
+
+        <section className="home-wallet-snapshot-panel">
+          <section className="stats-grid compact-home-stats">
+            {stats.map((item) => (
+              <div className={`stat-card ${item.tone}`} key={item.title}>
+                <div className="stat-top">
+                  <img src={item.icon} alt="" />
+                  <span>{item.title}</span>
+                </div>
+                <strong>{item.value}</strong>
+                <small>{item.subtitle}</small>
+              </div>
+            ))}
+          </section>
+
+          <LifeProfileSummaryCard settings={settings} />
+
+          <StreakCard streak={summary.streak} />
+
+          <section className="hp-card">
+            <div className="section-title">
+              <span>Wallet HP</span>
+              <b>{summary.walletHp >= 80 ? "Stable Wallet" : "Small Leak"}</b>
+            </div>
+
+            <div className="hp-row">
+              <img src={A.walletHp} alt="Wallet HP" />
+              <div className="hp-bar">
+                <div style={{ width: `${summary.walletHp}%` }} />
+              </div>
+              <strong>{summary.walletHp} / 100</strong>
+            </div>
+
+            <p>Hold the line, fix the leaks.</p>
+          </section>
+        </section>
+      </details>
 
       {comebackState && (
         <ComebackModeCard
@@ -10250,7 +10262,7 @@ function SmartHomeFocusCard({
       </button>
 
       <small className="smart-focus-note">
-        Home is now simplified: one main action here, extra systems below in collapsible sections.
+        Start with one action. Wallet Snapshot and deeper systems stay below so Home does not feel like a report.
       </small>
     </section>
   );
