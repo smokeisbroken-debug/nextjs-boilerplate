@@ -1,29 +1,36 @@
-# $BROKE / SmokeIsBroke — v59.3.2 Wallet Snapshot Order Hotfix
+# v59.3.3 — Home Hero Compact Header
 
-Patch-only update from v59.3.1.
+Patch-only release from v59.3.2.
 
-## Purpose
+## Goal
 
-The Home block order needed one more adjustment: the core cash-flow numbers should appear first inside the Wallet Snapshot block. The daily snapshot/tabs should sit below them as supporting history/context.
+Clean up the Home screen after Wallet Snapshot became visible upfront.
+
+The cash-flow numbers remain first. The brand/mascot area is now a compact Home header instead of a large promo-style banner.
 
 ## Changes
 
-- Kept `Wallet Snapshot for Today` as the first Home block under the app header.
-- Moved the main cash-flow cards directly under the Wallet Snapshot heading:
-  - Income;
-  - Life Cost;
-  - Money Leaks;
-  - Real Balance.
-- Moved the daily Wallet Snapshot tabs and selected-day card below the cash-flow cards.
-- Kept secondary context in `More wallet context`:
-  - Life Profile;
-  - Streak;
-  - Wallet HP details.
+- Converted the large Home hero into a compact header card.
+- Reduced the main Home slogan size.
+- Kept the frog mascot visible, but smaller and anchored inside the compact Home header.
+- Changed the Home hero text to shorter utility-first copy:
+  - `Your wallet is leaking.`
+  - `Numbers first. Pattern next.`
+- Shortened the clarity pill:
+  - `Track leak → Read pattern → Next move`
+- Preserved the Wallet Snapshot order:
+  - Income
+  - Life Cost
+  - Money Leaks
+  - Real Balance
+  - day snapshot tabs
+  - selected day snapshot
 
-## Backend
+## Not changed
 
-No API changes.
-No Supabase changes.
-No migrations.
-No Telegram webhook changes.
-No stored-data rewrite.
+- No API changes.
+- No Supabase changes.
+- No migrations.
+- No Telegram webhook changes.
+- No calculations changed.
+- No stored data changed.

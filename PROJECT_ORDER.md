@@ -1,18 +1,29 @@
-# Project Order — v59.3.2
+# Project Order — v59.3.3
 
-Current stable base before this hotfix: v59.3.1 Wallet Snapshot Top Placement.
+Current patch: `v59.3.3 — Home Hero Compact Header`
 
-## v59.3.2 objective
+## Apply order
 
-Inside the top Wallet Snapshot block, show the core cash-flow numbers first, then show the day snapshot/tabs underneath.
-
-## Install order
-
-1. Replace `app/page.tsx`.
-2. Replace docs if desired.
+1. Start from working `v59.3.2`.
+2. Replace:
+   - `app/page.tsx`
+   - `app/globals.css`
+   - `README.md`
+   - `PROJECT_ORDER.md`
+   - `TESTING.md`
 3. Deploy to Vercel.
-4. Test Home on mobile and Telegram WebView.
+4. Open the Telegram Mini App and verify Home.
 
-## No backend step
+## Expected Home order
 
-Do not run any Supabase SQL for this hotfix.
+1. Header
+2. Wallet Snapshot for Today
+3. Income / Life Cost / Money Leaks / Real Balance
+4. Snapshot day tabs and selected day state
+5. Compact Home hero with small frog mascot
+6. Today's Focus
+7. Remaining Home sections
+
+## Backend
+
+No backend or database step is required.
