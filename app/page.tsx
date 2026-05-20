@@ -9897,6 +9897,19 @@ function DashboardScreen({
           <b>{summary.walletHp}/100 HP</b>
         </div>
 
+        <section className="stats-grid compact-home-stats wallet-snapshot-primary-stats">
+          {stats.map((item) => (
+            <div className={`stat-card ${item.tone}`} key={item.title}>
+              <div className="stat-top">
+                <img src={item.icon} alt="" />
+                <span>{item.title}</span>
+              </div>
+              <strong>{item.value}</strong>
+              <small>{item.subtitle}</small>
+            </div>
+          ))}
+        </section>
+
         {walletSnapshotTabs.length > 0 && selectedSnapshotPoint && (
           <>
             <div className="wallet-snapshot-tabs" aria-label="Wallet snapshot days">
@@ -9935,19 +9948,6 @@ function DashboardScreen({
             </section>
           </>
         )}
-
-        <section className="stats-grid compact-home-stats wallet-snapshot-primary-stats">
-          {stats.map((item) => (
-            <div className={`stat-card ${item.tone}`} key={item.title}>
-              <div className="stat-top">
-                <img src={item.icon} alt="" />
-                <span>{item.title}</span>
-              </div>
-              <strong>{item.value}</strong>
-              <small>{item.subtitle}</small>
-            </div>
-          ))}
-        </section>
 
         <details className="wallet-snapshot-more">
           <summary>

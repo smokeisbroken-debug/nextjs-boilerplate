@@ -1,14 +1,14 @@
-# Testing — v59.3.1 Wallet Snapshot Top Placement Hotfix
+# Testing — v59.3.2 Wallet Snapshot Order Hotfix
 
 ## Required checks
 
 - Home loads after deployment.
-- `Wallet Snapshot for Today` is the first visible content block under the app header.
-- Hero / brand message appears below Wallet Snapshot.
+- `Wallet Snapshot for Today` is still the first visible content block under the app header.
+- Income / Life Cost / Money Leaks / Real Balance appear at the top of that block.
+- Snapshot day tabs appear below the cash-flow cards.
+- Selected-day wallet snapshot card appears below the day tabs.
+- Hero / brand message appears below the Wallet Snapshot block.
 - Today’s Focus still appears after the hero.
-- Income / Life Cost / Money Leaks / Real Balance are visible upfront.
-- Snapshot day tabs scroll horizontally on mobile.
-- Tapping a day tab changes the daily snapshot card.
 - More wallet context opens and shows profile, streak, and Wallet HP.
 - Track Leak still saves expenses.
 - Chart / Leak Pattern Lab still loads.

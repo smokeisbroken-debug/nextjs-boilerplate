@@ -1,23 +1,24 @@
-# $BROKE / SmokeIsBroke — v59.3.1 Wallet Snapshot Top Placement Hotfix
+# $BROKE / SmokeIsBroke — v59.3.2 Wallet Snapshot Order Hotfix
 
-Patch-only update from v59.3.
+Patch-only update from v59.3.1.
 
 ## Purpose
 
-Community feedback clarified that the Wallet Snapshot should not only be visible upfront. It should be the first Home block under the app header, because the cash-flow state is the immediate psychological hook when users open the app.
+The Home block order needed one more adjustment: the core cash-flow numbers should appear first inside the Wallet Snapshot block. The daily snapshot/tabs should sit below them as supporting history/context.
 
 ## Changes
 
-- Moved `Wallet Snapshot for Today` to the very top of Home, directly under the app header.
-- Hero / brand message now appears below the Wallet Snapshot.
-- Today’s Focus stays below the hero.
-- Cash-flow cards remain visible upfront:
+- Kept `Wallet Snapshot for Today` as the first Home block under the app header.
+- Moved the main cash-flow cards directly under the Wallet Snapshot heading:
   - Income;
   - Life Cost;
   - Money Leaks;
   - Real Balance.
-- Snapshot day tabs still allow quick comparison with older wallet states.
-- Profile, streak, and Wallet HP details remain inside secondary `More wallet context`.
+- Moved the daily Wallet Snapshot tabs and selected-day card below the cash-flow cards.
+- Kept secondary context in `More wallet context`:
+  - Life Profile;
+  - Streak;
+  - Wallet HP details.
 
 ## Backend
 

@@ -1,10 +1,10 @@
-# Project Order — v59.3.1
+# Project Order — v59.3.2
 
-Current stable base before this hotfix: v59.3 Wallet Snapshot Visibility.
+Current stable base before this hotfix: v59.3.1 Wallet Snapshot Top Placement.
 
-## v59.3.1 objective
+## v59.3.2 objective
 
-Place Wallet Snapshot as the first Home content block, directly under the app header, so users see their money state immediately when opening the app.
+Inside the top Wallet Snapshot block, show the core cash-flow numbers first, then show the day snapshot/tabs underneath.
 
 ## Install order
 
