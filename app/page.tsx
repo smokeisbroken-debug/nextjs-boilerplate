@@ -5127,10 +5127,10 @@ function buildLeakPatternLabSummary(
     confidence === "Waiting"
       ? "Add a few Maybe or Not needed records. The lab will look for timing, payday, weekend, and emotional triggers."
       : signals[0]
-        ? `${signals[0].title}: ${signals[0].count} records · ${money(signals[0].total, settings.currency)} leak pressure.`
+        ? `${signals[0].title}. ${money(signals[0].total, settings.currency)} of this month’s leak pressure is connected to this behavior signal.`
         : patterns[0]
-          ? `${patterns[0].tag}: ${patterns[0].count} records · ${money(patterns[0].total, settings.currency)} leak pressure.`
-          : "The month has leak data, but no clear trigger has repeated enough yet.";
+          ? `${patterns[0].tag}. ${money(patterns[0].total, settings.currency)} of leak pressure points to a repeated habit, not one random purchase.`
+          : "The month has leak data, but no trigger has repeated enough to call it a behavior pattern yet.";
 
   return {
     headline,
@@ -5141,6 +5141,171 @@ function buildLeakPatternLabSummary(
     patternPressure: signalPressure,
     highRiskCount,
     signals,
+  };
+}
+
+type SelectedCandleDiagnosis = {
+  tone: "empty" | "controlled" | "watch" | "danger";
+  label: string;
+  title: string;
+  body: string;
+  primaryLabel: string;
+  primaryValue: string;
+  secondaryLabel: string;
+  secondaryValue: string;
+  action: string;
+};
+
+function buildSelectedCandleDiagnosis(
+  selectedPoint: ChartPoint | undefined,
+  selectedDayExpenses: Expense[],
+  selectedTopLeak: CategorySummary | null,
+  selectedLeakShareOfRange: number,
+  selectedLeakRank: number,
+  settings: Settings,
+  rangeTitle: string
+): SelectedCandleDiagnosis {
+  if (!selectedPoint || selectedPoint.count <= 0) {
+    return {
+      tone: "empty",
+      label: "No signal yet",
+      title: "This candle has no spending story.",
+      body: "Add one honest record or tap another candle. The chart needs real behavior before it can diagnose a pattern.",
+      primaryLabel: "Records",
+      primaryValue: "0",
+      secondaryLabel: "Leak pressure",
+      secondaryValue: money(0, settings.currency),
+      action: "Track the next real expense, even if it feels small.",
+    };
+  }
+
+  if (selectedPoint.leakAmount <= 0) {
+    return {
+      tone: "controlled",
+      label: "Controlled day",
+      title: "Spending happened, but it did not become a leak.",
+      body: "This candle stayed clean because the records were marked as Needed. That separation is the point: life costs are not the enemy.",
+      primaryLabel: "Records",
+      primaryValue: `${selectedPoint.count}x`,
+      secondaryLabel: "Leak pressure",
+      secondaryValue: money(0, settings.currency),
+      action: "Keep separating real costs from optional pressure.",
+    };
+  }
+
+  const leakExpenses = selectedDayExpenses.filter((expense) => getExpenseLeakValue(expense) > 0);
+  const lateNightExpenses = leakExpenses.filter(isLateNightExpense);
+  const weekend = isWeekendDate(new Date(`${selectedPoint.key}T00:00:00`));
+  const afterPaydayDay = getAfterPaydayDayIndex(new Date(`${selectedPoint.key}T00:00:00`), settings);
+  const emotionalExpenses = leakExpenses.filter((expense) => Boolean(getLeakNoteTrigger(expense)));
+  const maybeLeakTotal = sumLeakExpenses(selectedDayExpenses.filter((expense) => expense.needType === "Maybe"));
+  const notNeededLeakTotal = sumLeakExpenses(selectedDayExpenses.filter((expense) => expense.needType === "Not needed"));
+  const lateNightLeakTotal = sumLeakExpenses(lateNightExpenses);
+  const topLeakName = selectedTopLeak ? categoryDisplayLabel(settings, selectedTopLeak.category) : "one category";
+  const rangeLabel = rangeTitle.toLowerCase();
+  const rangeImpact = selectedLeakShareOfRange > 0
+    ? `${selectedLeakShareOfRange}% of ${rangeLabel} leaks`
+    : "range impact";
+  const rankLabel = selectedLeakRank > 0 ? `#${selectedLeakRank}` : "active";
+
+  if (lateNightExpenses.length >= 2 || lateNightLeakTotal >= selectedPoint.leakAmount * 0.45) {
+    return {
+      tone: selectedPoint.status === "danger" ? "danger" : "watch",
+      label: "Timing pattern",
+      title: "Late-night spending is doing damage.",
+      body: "This looks less like a random category problem and more like a weak-resistance time window: tired, scrolling, bored, or buying too late.",
+      primaryLabel: "Night leaks",
+      primaryValue: `${lateNightExpenses.length}x`,
+      secondaryLabel: "Range impact",
+      secondaryValue: rangeImpact,
+      action: "Set a no-spend rule after 22:00 or prepare a cheaper fallback before the night starts.",
+    };
+  }
+
+  if (afterPaydayDay > 0) {
+    return {
+      tone: selectedPoint.status === "danger" ? "danger" : "watch",
+      label: "Payday pattern",
+      title: "Fresh money lowered resistance.",
+      body: `This candle happened on day ${afterPaydayDay} of the income cycle. The risk is not income itself — it is spending too freely right after it lands.`,
+      primaryLabel: "Cycle day",
+      primaryValue: `Day ${afterPaydayDay}`,
+      secondaryLabel: "Leak rank",
+      secondaryValue: rankLabel,
+      action: "Protect essentials first, then give optional spending a fixed cap for the first 4 days.",
+    };
+  }
+
+  if (weekend) {
+    return {
+      tone: selectedPoint.status === "danger" ? "danger" : "watch",
+      label: "Weekend pattern",
+      title: "The week structure disappeared and spending pressure showed up.",
+      body: "Weekend leaks are dangerous because they feel like reward time, not a financial decision. That makes them easy to repeat.",
+      primaryLabel: "Day type",
+      primaryValue: "Weekend",
+      secondaryLabel: "Range impact",
+      secondaryValue: rangeImpact,
+      action: "Set the weekend cap before Friday. Do not negotiate with the wallet while already spending.",
+    };
+  }
+
+  if (emotionalExpenses.length > 0) {
+    const trigger = getLeakNoteTrigger(emotionalExpenses[0]);
+
+    return {
+      tone: selectedPoint.status === "danger" ? "danger" : "watch",
+      label: "Emotion clue",
+      title: "The note gives the leak context.",
+      body: trigger
+        ? `The app saw “${trigger}” in the note. That suggests the leak was connected to mood, stress, boredom, or impulse — not only the category.`
+        : "The note suggests the leak had emotional context, not only a spending category.",
+      primaryLabel: "Clues",
+      primaryValue: `${emotionalExpenses.length}x`,
+      secondaryLabel: "Leak pressure",
+      secondaryValue: money(selectedPoint.leakAmount, settings.currency),
+      action: "When the reason is emotional, wait 10 minutes before buying and write the feeling first.",
+    };
+  }
+
+  if (maybeLeakTotal >= Math.max(notNeededLeakTotal, selectedPoint.leakAmount * 0.5)) {
+    return {
+      tone: selectedPoint.status === "danger" ? "danger" : "watch",
+      label: "Grey-zone pattern",
+      title: "This was not one obvious mistake.",
+      body: "Most pressure came from Maybe decisions — the type of spending that feels acceptable in the moment but becomes expensive when repeated.",
+      primaryLabel: "Maybe leaks",
+      primaryValue: money(maybeLeakTotal, settings.currency),
+      secondaryLabel: "Range impact",
+      secondaryValue: rangeImpact,
+      action: "Make one rule for Maybe spending: it needs a reason before it gets approved.",
+    };
+  }
+
+  if (notNeededLeakTotal > 0) {
+    return {
+      tone: selectedPoint.status === "danger" ? "danger" : "watch",
+      label: "Avoidable leak",
+      title: "Optional spending created the pressure.",
+      body: `${topLeakName} was the main visible cause, but the real pattern is simpler: the wallet got hit by Not needed spending.`,
+      primaryLabel: "Not needed",
+      primaryValue: money(notNeededLeakTotal, settings.currency),
+      secondaryLabel: "Leak rank",
+      secondaryValue: rankLabel,
+      action: "Cut one repeat of the main category before trying to fix everything.",
+    };
+  }
+
+  return {
+    tone: selectedPoint.status === "danger" ? "danger" : "watch",
+    label: "Pattern forming",
+    title: "This candle is starting to show behavior pressure.",
+    body: `${topLeakName} created the clearest pressure, but the app needs a few more records before calling it a repeat pattern.`,
+    primaryLabel: "Leak pressure",
+    primaryValue: money(selectedPoint.leakAmount, settings.currency),
+    secondaryLabel: "Range impact",
+    secondaryValue: rangeImpact,
+    action: "Keep logging this category for a few more days. The repeat pattern will become clearer.",
   };
 }
 
@@ -13616,26 +13781,10 @@ function ChartScreen({
     : 0;
   const selectedMainCauseMode = selectedDayLeakSummaries.length > 0 ? "leak" : "spending";
   const selectedMainCauseTotal = selectedMainCauseMode === "leak" ? selectedLeakTotal : selectedTrackedTotal;
-  const selectedMainCauses = (selectedMainCauseMode === "leak" ? selectedDayLeakSummaries : selectedDayTrackedSummaries).slice(0, 4);
+  const selectedMainCauses = (selectedMainCauseMode === "leak" ? selectedDayLeakSummaries : selectedDayTrackedSummaries).slice(0, 3);
   const selectedTopEvents = [...selectedDayExpenses]
     .sort((a, b) => getExpenseLeakValue(b) - getExpenseLeakValue(a) || getExpenseTrackedValue(b) - getExpenseTrackedValue(a))
-    .slice(0, 5);
-  const selectedDayInsightTitle = !selectedPoint || selectedPoint.count <= 0
-    ? "No activity on this candle"
-    : selectedPoint.leakAmount <= 0
-      ? "Controlled spending day"
-      : selectedPoint.status === "danger"
-        ? "Wallet HP danger day"
-        : selectedPoint.status === "warning"
-          ? "Leak pressure warning"
-          : "Minor leak pressure";
-  const selectedDayInsightBody = !selectedPoint || selectedPoint.count <= 0
-    ? "Tap another candle or add an expense to see what happened that day."
-    : selectedPoint.leakAmount <= 0
-      ? "This day had spending, but it was marked Needed, so it did not create leak pressure."
-      : selectedTopLeak
-        ? `${categoryDisplayLabel(settings, selectedTopLeak.category)} created ${money(selectedTopLeak.amount, settings.currency)} of leak pressure on this candle.`
-        : "This candle has leak pressure, but no single category dominates it yet.";
+    .slice(0, 3);
   const selectedPatternText = describeSelectedCandlePattern(
     selectedPoint,
     selectedDayExpenses,
@@ -13656,6 +13805,15 @@ function ChartScreen({
     : selectedLeakTotal <= 0
       ? "This candle added tracked spending, but 0% of the selected range leaks."
       : `${selectedLeakShareOfRange}% of ${title.toLowerCase()} leaks came from this candle${selectedLeakRank > 0 ? ` · leak rank #${selectedLeakRank}` : ""}.`;
+  const selectedDiagnosis = buildSelectedCandleDiagnosis(
+    selectedPoint,
+    selectedDayExpenses,
+    selectedTopLeak,
+    selectedLeakShareOfRange,
+    selectedLeakRank,
+    settings,
+    title
+  );
 
   return (
     <div className="screen">
@@ -13856,14 +14014,33 @@ function ChartScreen({
         <div className="day-title candle-story-title">
           <div>
             <strong>{selectedPoint?.label ?? title}</strong>
-            <small>Candle Story · {selectedPoint ? getChartPointStatusLabel(selectedPoint) : "No candle selected"}</small>
+            <small>Pattern Insight · {selectedPoint ? getChartPointStatusLabel(selectedPoint) : "No candle selected"}</small>
           </div>
           <img src={A.calendar} alt="" />
         </div>
 
-        <div className="selected-candle-insight candle-story-why">
-          <span>{selectedDayInsightTitle}</span>
-          <p>{selectedDayInsightBody}</p>
+        <div className={`candle-pattern-diagnosis ${selectedDiagnosis.tone}`}>
+          <div className="candle-pattern-diagnosis-head">
+            <span>{selectedDiagnosis.label}</span>
+            <strong>{selectedDiagnosis.title}</strong>
+            <p>{selectedDiagnosis.body}</p>
+          </div>
+
+          <div className="candle-pattern-diagnosis-metrics">
+            <div>
+              <small>{selectedDiagnosis.primaryLabel}</small>
+              <b>{selectedDiagnosis.primaryValue}</b>
+            </div>
+            <div>
+              <small>{selectedDiagnosis.secondaryLabel}</small>
+              <b>{selectedDiagnosis.secondaryValue}</b>
+            </div>
+          </div>
+
+          <div className="candle-pattern-diagnosis-action">
+            <small>Next move</small>
+            <span>{selectedDiagnosis.action}</span>
+          </div>
         </div>
 
         <div className="day-info candle-story-stats">
@@ -13920,9 +14097,11 @@ function ChartScreen({
               <i className="maybe" style={{ width: `${clamp(selectedMaybePercent, 0, 100)}%` }} />
               <i className="not-needed" style={{ width: `${clamp(selectedNotNeededPercent, 0, 100)}%` }} />
             </div>
-            <small>
-              Needed {selectedNeededPercent}% · Maybe {selectedMaybePercent}% · Not needed {selectedNotNeededPercent}%
-            </small>
+            <div className="candle-story-mix-labels">
+              <span><b>Needed</b>{selectedNeededPercent}%</span>
+              <span><b>Maybe</b>{selectedMaybePercent}%</span>
+              <span><b>Not needed</b>{selectedNotNeededPercent}%</span>
+            </div>
           </div>
         </div>
 
