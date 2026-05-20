@@ -451,6 +451,27 @@ type LeakPattern = {
   tag: string;
 };
 
+type LeakPatternSignal = {
+  id: string;
+  label: string;
+  title: string;
+  body: string;
+  count: number;
+  total: number;
+  severity: "low" | "medium" | "high";
+};
+
+type LeakPatternLabSummary = {
+  headline: string;
+  detail: string;
+  dominantTrigger: string;
+  confidence: "Waiting" | "Learning" | "Clear";
+  riskLevel: "quiet" | "watch" | "danger";
+  patternPressure: number;
+  highRiskCount: number;
+  signals: LeakPatternSignal[];
+};
+
 type WeeklyReviewDay = {
   key: string;
   label: string;
@@ -2553,7 +2574,7 @@ const ruText: Record<string, string> = {
   "Last leak": "Последняя утечка",
   "Track next decision": "Записать следующее решение",
   "No history": "Нет истории",
-  "Analysis Lab": "Лаборатория анализа",
+  "Leak Pattern Lab": "Лаборатория паттернов утечек",
   "Patterns, streaks, and deeper wallet signals.": "Паттерны, серии и глубокие сигналы кошелька.",
   "More wallet insights": "Ещё инсайты кошелька",
   "History Archive": "Архив истории",
@@ -4926,6 +4947,257 @@ function getDominantDayPart(expenses: Expense[]) {
   }
 
   return Array.from(parts.entries()).sort((a, b) => b[1] - a[1])[0] || ["unknown", 0];
+}
+
+const EMOTIONAL_LEAK_KEYWORDS = [
+  "stress",
+  "stressed",
+  "bored",
+  "boredom",
+  "sad",
+  "angry",
+  "anxious",
+  "anxiety",
+  "lonely",
+  "tired",
+  "doom",
+  "impulse",
+  "emotional",
+  "emotion",
+  "reward",
+  "нерв",
+  "нервы",
+  "стресс",
+  "скука",
+  "скучно",
+  "устал",
+  "устала",
+  "злость",
+  "грусть",
+  "тревога",
+  "одиноко",
+  "импульс",
+];
+
+function isLateNightExpense(expense: Expense) {
+  const hour = new Date(expense.createdAt).getHours();
+  return hour >= 22 || hour < 6;
+}
+
+function getLeakNoteTrigger(expense: Expense) {
+  const note = expense.note.trim().toLowerCase();
+
+  if (!note) return "";
+
+  return EMOTIONAL_LEAK_KEYWORDS.find((keyword) => note.includes(keyword)) || "";
+}
+
+function getAfterPaydayDayIndex(date: Date, settings: Settings) {
+  const cycleStartKey = getCycleStartKey(settings);
+  const cycleStart = new Date(`${cycleStartKey}T00:00:00`);
+  const current = new Date(date);
+  cycleStart.setHours(0, 0, 0, 0);
+  current.setHours(0, 0, 0, 0);
+
+  const diff = Math.floor((current.getTime() - cycleStart.getTime()) / 86400000);
+
+  return diff >= 0 && diff <= 3 ? diff + 1 : 0;
+}
+
+function buildLeakPatternSignals(expenses: Expense[], settings: Settings): LeakPatternSignal[] {
+  const monthLeakExpenses = getCurrentMonthExpenses(expenses).filter((expense) => getExpenseLeakValue(expense) > 0);
+  const totalLeaks = sumLeakExpenses(monthLeakExpenses);
+  const signals: LeakPatternSignal[] = [];
+
+  if (monthLeakExpenses.length === 0 || totalLeaks <= 0) return signals;
+
+  const makeSignal = (
+    id: string,
+    label: string,
+    title: string,
+    expensesForSignal: Expense[],
+    body: string,
+    severity: LeakPatternSignal["severity"]
+  ) => {
+    const total = sumLeakExpenses(expensesForSignal);
+
+    if (expensesForSignal.length <= 0 || total <= 0) return;
+
+    signals.push({
+      id,
+      label,
+      title,
+      body,
+      count: expensesForSignal.length,
+      total,
+      severity,
+    });
+  };
+
+  const lateNightExpenses = monthLeakExpenses.filter(isLateNightExpense);
+  const weekendExpenses = monthLeakExpenses.filter((expense) => isWeekendDate(new Date(expense.createdAt)));
+  const afterPaydayExpenses = monthLeakExpenses.filter((expense) => getAfterPaydayDayIndex(new Date(expense.createdAt), settings) > 0);
+  const emotionalExpenses = monthLeakExpenses.filter((expense) => Boolean(getLeakNoteTrigger(expense)));
+
+  if (lateNightExpenses.length >= 2 || sumLeakExpenses(lateNightExpenses) >= totalLeaks * 0.25) {
+    makeSignal(
+      "late-night",
+      "Late-night",
+      "Late-night leak window",
+      lateNightExpenses,
+      `${lateNightExpenses.length} leak record${lateNightExpenses.length === 1 ? "" : "s"} happened after 22:00 or before 06:00. This is often tiredness, scrolling, or impulse pressure.`,
+      lateNightExpenses.length >= 4 || sumLeakExpenses(lateNightExpenses) >= totalLeaks * 0.35 ? "high" : "medium"
+    );
+  }
+
+  if (weekendExpenses.length >= 2 || sumLeakExpenses(weekendExpenses) >= totalLeaks * 0.3) {
+    makeSignal(
+      "weekend",
+      "Weekend",
+      "Weekend discipline drop",
+      weekendExpenses,
+      `${weekendExpenses.length} leak record${weekendExpenses.length === 1 ? "" : "s"} landed on Saturday or Sunday. The leak may appear when the week ends, not every day.`,
+      weekendExpenses.length >= 4 || sumLeakExpenses(weekendExpenses) >= totalLeaks * 0.4 ? "high" : "medium"
+    );
+  }
+
+  if (afterPaydayExpenses.length >= 2 || sumLeakExpenses(afterPaydayExpenses) >= totalLeaks * 0.25) {
+    makeSignal(
+      "after-payday",
+      "After payday",
+      "After-payday spike",
+      afterPaydayExpenses,
+      `${afterPaydayExpenses.length} leak record${afterPaydayExpenses.length === 1 ? "" : "s"} happened in the first 4 days of the income cycle. Fresh money may be lowering resistance.`,
+      afterPaydayExpenses.length >= 4 || sumLeakExpenses(afterPaydayExpenses) >= totalLeaks * 0.35 ? "high" : "medium"
+    );
+  }
+
+  if (emotionalExpenses.length >= 1) {
+    const triggerNames = Array.from(new Set(emotionalExpenses.map(getLeakNoteTrigger).filter(Boolean))).slice(0, 3);
+
+    makeSignal(
+      "emotional",
+      "Emotion",
+      "Emotional spending clue",
+      emotionalExpenses,
+      `${emotionalExpenses.length} leak note${emotionalExpenses.length === 1 ? "" : "s"} mentioned ${triggerNames.join(", ") || "stress / boredom"}. The app is seeing context, not only amounts.`,
+      emotionalExpenses.length >= 3 || sumLeakExpenses(emotionalExpenses) >= totalLeaks * 0.25 ? "high" : "medium"
+    );
+  }
+
+  return signals.sort((a, b) => {
+    const severityScore = { high: 3, medium: 2, low: 1 };
+    return severityScore[b.severity] - severityScore[a.severity] || b.total - a.total || b.count - a.count;
+  });
+}
+
+function buildLeakPatternLabSummary(
+  expenses: Expense[],
+  settings: Settings,
+  patterns: LeakPattern[]
+): LeakPatternLabSummary {
+  const monthExpenses = getCurrentMonthExpenses(expenses);
+  const monthLeakExpenses = monthExpenses.filter((expense) => getExpenseLeakValue(expense) > 0);
+  const totalLeaks = sumLeakExpenses(monthLeakExpenses);
+  const signals = buildLeakPatternSignals(expenses, settings);
+  const highRiskCount = signals.filter((signal) => signal.severity === "high").length + patterns.filter((pattern) => pattern.severity === "high").length;
+  const signalPressure = totalLeaks > 0 ? clamp(Math.round((sum(signals.map((signal) => signal.total)) / totalLeaks) * 100), 0, 100) : 0;
+  const confidence: LeakPatternLabSummary["confidence"] =
+    monthLeakExpenses.length <= 0
+      ? "Waiting"
+      : monthLeakExpenses.length < 5
+        ? "Learning"
+        : "Clear";
+  const riskLevel: LeakPatternLabSummary["riskLevel"] =
+    highRiskCount > 0 || signalPressure >= 70
+      ? "danger"
+      : signals.length > 0 || patterns.length > 0
+        ? "watch"
+        : "quiet";
+  const dominantTrigger = signals[0]?.label || patterns[0]?.tag || "No trigger yet";
+  const headline =
+    confidence === "Waiting"
+      ? "Leak Pattern Lab is waiting for data"
+      : riskLevel === "danger"
+        ? "Strong behavior pattern detected"
+        : riskLevel === "watch"
+          ? "Early leak pattern detected"
+          : "No strong behavior pattern yet";
+  const detail =
+    confidence === "Waiting"
+      ? "Add a few Maybe or Not needed records. The lab will look for timing, payday, weekend, and emotional triggers."
+      : signals[0]
+        ? `${signals[0].title}: ${signals[0].count} records · ${money(signals[0].total, settings.currency)} leak pressure.`
+        : patterns[0]
+          ? `${patterns[0].tag}: ${patterns[0].count} records · ${money(patterns[0].total, settings.currency)} leak pressure.`
+          : "The month has leak data, but no clear trigger has repeated enough yet.";
+
+  return {
+    headline,
+    detail,
+    dominantTrigger,
+    confidence,
+    riskLevel,
+    patternPressure: signalPressure,
+    highRiskCount,
+    signals,
+  };
+}
+
+function describeSelectedCandlePattern(
+  selectedPoint: ChartPoint | undefined,
+  selectedDayExpenses: Expense[],
+  selectedTopLeak: CategorySummary | null,
+  settings: Settings
+) {
+  if (!selectedPoint || selectedPoint.count <= 0) {
+    return "No pattern yet. Add an expense or inspect another candle.";
+  }
+
+  if (selectedPoint.leakAmount <= 0) {
+    return "Controlled basics: spending happened, but it did not create leak pressure.";
+  }
+
+  const leakExpenses = selectedDayExpenses.filter((expense) => getExpenseLeakValue(expense) > 0);
+  const lateNightExpenses = leakExpenses.filter(isLateNightExpense);
+  const emotionalExpenses = leakExpenses.filter((expense) => Boolean(getLeakNoteTrigger(expense)));
+  const afterPaydayDay = getAfterPaydayDayIndex(new Date(`${selectedPoint.key}T00:00:00`), settings);
+  const maybeTotal = sumTrackedExpensesByNeedType(selectedDayExpenses, "Maybe");
+  const notNeededTotal = sumTrackedExpensesByNeedType(selectedDayExpenses, "Not needed");
+  const topLeakRepeatCount = selectedTopLeak
+    ? selectedDayExpenses.filter((expense) => expense.category === selectedTopLeak.category).length
+    : 0;
+
+  if (lateNightExpenses.length >= 2 || sumLeakExpenses(lateNightExpenses) >= selectedPoint.leakAmount * 0.5) {
+    return "Late-night leak detected. Most pressure happened after 22:00 or before 06:00.";
+  }
+
+  if (afterPaydayDay > 0 && selectedPoint.leakAmount > 0) {
+    return `After-payday spike detected. This candle is day ${afterPaydayDay} of the income cycle.`;
+  }
+
+  if (isWeekendDate(new Date(`${selectedPoint.key}T00:00:00`)) && selectedPoint.leakAmount > 0) {
+    return "Weekend leak detected. The pressure appeared when the normal week structure was gone.";
+  }
+
+  if (emotionalExpenses.length > 0) {
+    const trigger = getLeakNoteTrigger(emotionalExpenses[0]);
+    return `Emotional spending clue detected${trigger ? `: ${trigger}` : ""}. The note gives context behind the leak.`;
+  }
+
+  if (selectedTopLeak && topLeakRepeatCount >= 2) {
+    return `${categoryDisplayLabel(settings, selectedTopLeak.category)} repeated ${topLeakRepeatCount} times on this candle.`;
+  }
+
+  if (notNeededTotal >= maybeTotal && notNeededTotal > 0) {
+    return "Not needed spending created most of the pressure.";
+  }
+
+  if (maybeTotal > 0) {
+    return "Grey-zone Maybe spending created the pressure without one clear failure point.";
+  }
+
+  return "No strong pattern detected yet.";
 }
 
 function buildLeakPatterns(expenses: Expense[], settings: Settings): LeakPattern[] {
@@ -7693,11 +7965,11 @@ function HelpGuideModal({
       eyebrow: "Chart Guide",
       title: "$BROKE Chart: Wallet Pressure",
       intro:
-        "Chart is wallet memory and analysis. It shows one daily pressure candle per day, then One Fix, Analysis Lab, Leak Streaks, Weekly Review, and Monthly History.",
+        "Chart is wallet memory and analysis. It shows one daily pressure candle per day, then One Fix, Leak Pattern Lab, Leak Streaks, Weekly Review, and Monthly History.",
       icon: "/nav-chart.png",
       footerTitle: "Chart rule",
       footerBody:
-        "Start with the chart, follow One Fix, then open Analysis Lab or History only when you need deeper detail.",
+        "Start with the chart, follow One Fix, then open Leak Pattern Lab or History only when you need deeper detail.",
       sections: [
         {
           title: "1. Choose the right range",
@@ -7728,9 +8000,9 @@ function HelpGuideModal({
           icon: A.leaks,
         },
         {
-          title: "4. Use Analysis Lab",
+          title: "4. Use Leak Pattern Lab",
           body: [
-            "Analysis Lab explains patterns, repeated leaks, and category streaks in plain language.",
+            "Leak Pattern Lab explains timing triggers, repeated leaks, payday spikes, weekend leaks, and emotional spending clues in plain language.",
             "It turns repeated records into one clear action.",
             "Use One Fix when you do not know what to fix next.",
           ],
@@ -12378,64 +12650,136 @@ function AddExpenseScreen({
 function PatternDetectorPanel({
   settings,
   patterns,
+  labSummary,
   onOpenAdd,
 }: {
   settings: Settings;
   patterns: LeakPattern[];
+  labSummary: LeakPatternLabSummary;
   onOpenAdd: () => void;
 }) {
-  const topPattern = patterns[0];
+  const topSignal = labSummary.signals[0] || null;
+  const topPattern = patterns[0] || null;
+  const heroSeverity = topSignal?.severity || topPattern?.severity || "low";
+  const heroTitle = topSignal?.title || topPattern?.title || labSummary.headline;
+  const heroBody = topSignal?.body || topPattern?.body || labSummary.detail;
+  const heroTag = topSignal?.label || topPattern?.tag || labSummary.confidence;
+  const heroIcon = topPattern?.icon || A.chartFrog;
+  const heroCount = topSignal?.count || topPattern?.count || 0;
+  const heroTotal = topSignal?.total || topPattern?.total || 0;
+  const heroAverage = heroCount > 0 ? heroTotal / heroCount : topPattern?.average || 0;
+  const whyText = topSignal
+    ? "Timing and context reveal the trigger behind the leak. This turns tracking into behavior awareness."
+    : topPattern?.why || "The lab needs a few leak records before it can detect a reliable behavior signal.";
+  const fixText = topSignal
+    ? topSignal.id === "late-night"
+      ? "Create a late-night no-spend rule and prepare a cheaper fallback before 22:00."
+      : topSignal.id === "weekend"
+        ? "Set a weekend leak cap before Friday. Do not decide while already spending."
+        : topSignal.id === "after-payday"
+          ? "Protect the first 4 days after income. Move essentials first, then allow optional spending."
+          : "When the note says stress, boredom, or impulse, wait 10 minutes before buying."
+    : topPattern?.fix || "Track 3–5 more Maybe or Not needed expenses to unlock clearer patterns.";
 
   return (
-    <section className="pattern-detector-panel">
+    <section className={`pattern-detector-panel leak-pattern-lab ${labSummary.riskLevel}`}>
       <div className="section-title">
-        <span>Pattern Detector</span>
-        <small>What the app sees behind your expenses.</small>
+        <span>Leak Pattern Lab</span>
+        <small>When, why, and how the leak repeats.</small>
       </div>
 
-      {topPattern ? (
+      <div className="leak-pattern-lab-hero-copy">
+        <strong>{labSummary.headline}</strong>
+        <p>{labSummary.detail}</p>
+      </div>
+
+      <div className="pattern-detector-grid leak-pattern-lab-stats">
+        <div>
+          <span>Confidence</span>
+          <strong>{labSummary.confidence}</strong>
+        </div>
+        <div>
+          <span>Top trigger</span>
+          <strong>{labSummary.dominantTrigger}</strong>
+        </div>
+        <div>
+          <span>Mapped pressure</span>
+          <strong>{labSummary.patternPressure}%</strong>
+        </div>
+      </div>
+
+      {(topSignal || topPattern) ? (
         <>
-          <div className={`pattern-detector-hero ${topPattern.severity}`}>
-            <img src={topPattern.icon} alt="" />
+          <div className={`pattern-detector-hero ${heroSeverity}`}>
+            <img src={heroIcon} alt="" />
             <div>
-              <span>{topPattern.tag}</span>
-              <strong>{topPattern.title}</strong>
-              <p>{topPattern.body}</p>
+              <span>{heroTag}</span>
+              <strong>{heroTitle}</strong>
+              <p>{heroBody}</p>
             </div>
+          </div>
+
+          <div className="pattern-signal-strip">
+            {labSummary.signals.length > 0 ? (
+              labSummary.signals.slice(0, 4).map((signal) => (
+                <article className={signal.severity} key={signal.id}>
+                  <span>{signal.label}</span>
+                  <strong>{signal.count}x</strong>
+                  <small>{money(signal.total, settings.currency)}</small>
+                </article>
+              ))
+            ) : (
+              <article>
+                <span>Behavior</span>
+                <strong>{patterns.length}</strong>
+                <small>category patterns</small>
+              </article>
+            )}
           </div>
 
           <div className="pattern-detector-insight">
             <strong>Why this matters</strong>
-            <p>{topPattern.why}</p>
+            <p>{whyText}</p>
           </div>
 
           <div className="pattern-detector-fix">
             <strong>One fix</strong>
-            <p>{topPattern.fix}</p>
+            <p>{fixText}</p>
           </div>
 
           <div className="pattern-detector-grid">
             <div>
               <span>Count</span>
-              <strong>{topPattern.count}x</strong>
+              <strong>{heroCount}x</strong>
             </div>
             <div>
               <span>Total</span>
-              <strong>{money(topPattern.total, settings.currency)}</strong>
+              <strong>{money(heroTotal, settings.currency)}</strong>
             </div>
             <div>
               <span>Average</span>
-              <strong>{money(topPattern.average, settings.currency)}</strong>
+              <strong>{money(heroAverage, settings.currency)}</strong>
             </div>
           </div>
 
           <details className="pattern-more-details">
             <summary>
-              <span>Detected patterns</span>
-              <b>{patterns.length}</b>
+              <span>Detected signals</span>
+              <b>{labSummary.signals.length + patterns.length}</b>
             </summary>
 
             <div className="pattern-list">
+              {labSummary.signals.map((signal) => (
+                <article className={`pattern-item ${signal.severity}`} key={signal.id}>
+                  <img src={A.chartFrog} alt="" />
+                  <div>
+                    <strong>{signal.title}</strong>
+                    <span>{signal.label} · {signal.count}x · {money(signal.total, settings.currency)}</span>
+                    <p>{signal.body}</p>
+                  </div>
+                </article>
+              ))}
+
               {patterns.map((pattern) => (
                 <article className={`pattern-item ${pattern.severity}`} key={pattern.id}>
                   <img src={pattern.icon} alt="" />
@@ -12457,8 +12801,9 @@ function PatternDetectorPanel({
               <span>No pattern yet</span>
               <strong>Track more expenses to reveal behavior.</strong>
               <p>
-                The detector needs repeated records to see habits, triggers,
-                weekend leaks and decision-zone spending.
+                The detector looks for late-night leaks, weekend leaks,
+                after-payday spikes, emotional notes, repeated categories,
+                and decision-zone spending.
               </p>
             </div>
           </div>
@@ -12470,6 +12815,7 @@ function PatternDetectorPanel({
     </section>
   );
 }
+
 
 function LeakStreaksPanel({
   settings,
@@ -13052,6 +13398,10 @@ function ChartScreen({
     () => buildLeakPatterns(expenses, settings),
     [expenses, settings]
   );
+  const leakPatternLabSummary = useMemo(
+    () => buildLeakPatternLabSummary(expenses, settings, leakPatterns),
+    [expenses, settings, leakPatterns]
+  );
   const oneFixRecommendation = useMemo(
     () => buildOneFixRecommendation(leakPatterns, weeklyReview, settings, oneFixDifficulty),
     [leakPatterns, weeklyReview, settings, oneFixDifficulty]
@@ -13270,12 +13620,6 @@ function ChartScreen({
   const selectedTopEvents = [...selectedDayExpenses]
     .sort((a, b) => getExpenseLeakValue(b) - getExpenseLeakValue(a) || getExpenseTrackedValue(b) - getExpenseTrackedValue(a))
     .slice(0, 5);
-  const selectedEveningLeak = sumLeakExpenses(
-    selectedDayExpenses.filter((expense) => new Date(expense.createdAt).getHours() >= 18)
-  );
-  const selectedTopLeakRepeatCount = selectedTopLeak
-    ? selectedDayExpenses.filter((expense) => expense.category === selectedTopLeak.category).length
-    : 0;
   const selectedDayInsightTitle = !selectedPoint || selectedPoint.count <= 0
     ? "No activity on this candle"
     : selectedPoint.leakAmount <= 0
@@ -13292,19 +13636,12 @@ function ChartScreen({
       : selectedTopLeak
         ? `${categoryDisplayLabel(settings, selectedTopLeak.category)} created ${money(selectedTopLeak.amount, settings.currency)} of leak pressure on this candle.`
         : "This candle has leak pressure, but no single category dominates it yet.";
-  const selectedPatternText = !selectedPoint || selectedPoint.count <= 0
-    ? "No pattern yet. Add an expense or inspect another candle."
-    : selectedPoint.leakAmount <= 0
-      ? "Controlled basics: spending happened, but it did not create leak pressure."
-      : selectedEveningLeak >= selectedLeakTotal * 0.5 && selectedLeakTotal > 0
-        ? "Evening leak cluster detected. Most pressure happened later in the day."
-        : selectedTopLeak && selectedTopLeakRepeatCount >= 2
-          ? `${categoryDisplayLabel(settings, selectedTopLeak.category)} repeated ${selectedTopLeakRepeatCount} times on this candle.`
-          : selectedNotNeededTotal >= selectedMaybeTotal && selectedNotNeededTotal > 0
-            ? "Not needed spending created most of the pressure."
-            : selectedMaybeTotal > 0
-              ? "Grey-zone Maybe spending created the pressure without one clear failure point."
-              : "No strong pattern detected yet.";
+  const selectedPatternText = describeSelectedCandlePattern(
+    selectedPoint,
+    selectedDayExpenses,
+    selectedTopLeak,
+    settings
+  );
   const selectedTakeawayText = !selectedPoint || selectedPoint.count <= 0
     ? "This candle is empty. Track one expense to make the chart tell a real story."
     : selectedPoint.leakAmount <= 0
@@ -13669,8 +14006,8 @@ function ChartScreen({
       <details className="chart-premium-details analysis-lab-details">
         <summary>
           <div>
-            <span>Analysis Lab</span>
-            <small>Patterns, streaks, and deeper wallet signals.</small>
+            <span>Leak Pattern Lab</span>
+            <small>Timing, payday, weekend, and behavior signals.</small>
           </div>
           <img
             src={PREMIUM_VISUAL_PACK.analysisLabMascot}
@@ -13685,6 +14022,7 @@ function ChartScreen({
           <PatternDetectorPanel
             settings={settings}
             patterns={leakPatterns}
+            labSummary={leakPatternLabSummary}
             onOpenAdd={onOpenAdd}
           />
 
