@@ -728,6 +728,22 @@ type AppToast = {
   tone: "xp" | "badge" | "info";
 };
 
+const APP_NOTIFY_EVENT = "broke-app-notify";
+
+function notifyApp(title: string, detail = "", tone: AppToast["tone"] = "info") {
+  if (typeof window === "undefined") return;
+
+  window.dispatchEvent(
+    new CustomEvent(APP_NOTIFY_EVENT, {
+      detail: {
+        title,
+        detail,
+        tone,
+      },
+    })
+  );
+}
+
 type LeakReflectionTone = "needed" | "maybe" | "leak" | "pattern" | "heavy";
 
 type LeakReflection = {
@@ -7439,6 +7455,26 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    function handleAppNotify(event: Event) {
+      const detail = (event as CustomEvent<{
+        title?: string;
+        detail?: string;
+        tone?: AppToast["tone"];
+      }>).detail;
+
+      if (!detail?.title) return;
+
+      showToast(detail.title, detail.detail ?? "", detail.tone ?? "info");
+    }
+
+    window.addEventListener(APP_NOTIFY_EVENT, handleAppNotify);
+
+    return () => {
+      window.removeEventListener(APP_NOTIFY_EVENT, handleAppNotify);
+    };
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (toastTimerRef.current) {
         window.clearTimeout(toastTimerRef.current);
@@ -8016,7 +8052,7 @@ export default function Home() {
     triggerHaptic("medium");
 
     if (!cloudAuthReady) {
-      window.alert("Connect Telegram to sync your account and start challenges.");
+      notifyApp("Connect Telegram", "Sync your account first, then start challenges.");
       return;
     }
 
@@ -8109,7 +8145,7 @@ export default function Home() {
 
   async function toggleLeaderboardPublic(nextValue: boolean) {
     if (!cloudAuthReady) {
-      window.alert("Connect Telegram to use the public leaderboard.");
+      notifyApp("Connect Telegram", "Public leaderboard needs cloud sync first.");
       return;
     }
 
@@ -11143,7 +11179,7 @@ function ReportsPanel({
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
-        window.alert("Report copied. Paste it in Telegram, X, or anywhere you want.");
+        notifyApp("Report copied", "Paste it in Telegram, X, or anywhere you want.");
         return;
       }
     } catch {
@@ -11177,7 +11213,7 @@ function ReportsPanel({
         if (shareInitData) {
           try {
             await sendShareImageViaBot(imageFile, shareInitData, text);
-            window.alert("Report image was sent to your Telegram bot chat.");
+            notifyApp("Report sent", "Open your Telegram bot chat and forward it anywhere.");
             return;
           } catch {
             // Continue to download fallback below.
@@ -11185,7 +11221,7 @@ function ReportsPanel({
         }
 
         downloadImageFile(imageFile);
-        window.alert("Report image downloaded. You can post it in Telegram or X.");
+        notifyApp("Report downloaded", "You can post the PNG in Telegram or X.");
         return;
       }
     } catch {
@@ -11677,7 +11713,7 @@ function BiggestLeakChallengePanel({
     try {
       if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(shareText);
-        window.alert("Mission result copied. Paste it in Telegram, X, or anywhere you want.");
+        notifyApp("Mission copied", "Paste it in Telegram, X, or anywhere you want.");
         return;
       }
     } catch {
@@ -11706,7 +11742,7 @@ function BiggestLeakChallengePanel({
         if (shareInitData) {
           try {
             await sendShareImageViaBot(imageFile, shareInitData, shareText);
-            window.alert("Mission image was sent to your Telegram bot chat.");
+            notifyApp("Mission sent", "Open your Telegram bot chat and forward it anywhere.");
             return;
           } catch {
             // Continue to download fallback below.
@@ -11714,7 +11750,7 @@ function BiggestLeakChallengePanel({
         }
 
         downloadImageFile(imageFile);
-        window.alert("Mission image downloaded. You can post it in Telegram or X.");
+        notifyApp("Mission downloaded", "You can post the PNG in Telegram or X.");
         return;
       }
     } catch {
@@ -12797,14 +12833,14 @@ function ShareResultCard({
 
       try {
         await sendShareImageViaBot(imageFile, shareInitData, shareText);
-        window.alert("Image was sent to your Telegram bot chat. Open the bot chat and forward it anywhere.");
+        notifyApp("Image sent", "Open your Telegram bot chat and forward it anywhere.");
         return;
       } catch {
         downloadImageFile(imageFile);
-        window.alert("Telegram WebView cannot share image files directly. Bot delivery failed too, so the PNG was downloaded.");
+        notifyApp("PNG downloaded", "Telegram WebView could not share directly, so the card was saved as a file.");
       }
     } catch {
-      window.alert("Image sharing was cancelled or is not supported by this browser.");
+      notifyApp("Sharing unavailable", "Image sharing was cancelled or is not supported by this browser.");
     } finally {
       setImageSharing(false);
     }
@@ -14100,19 +14136,19 @@ function ChartScreen({
 
       if (!shareInitData) {
         downloadImageFile(imageFile);
-        window.alert("Open the app inside Telegram to send the Weekly Review card to the bot. On web, the PNG was downloaded.");
+        notifyApp("Weekly Review downloaded", "Open inside Telegram next time to send the card to the bot.");
         return;
       }
 
       try {
         await sendShareImageViaBot(imageFile, shareInitData, weeklyReviewShareText);
-        window.alert("Weekly Review card was sent to your Telegram bot chat.");
+        notifyApp("Weekly Review sent", "Open your Telegram bot chat and forward it anywhere.");
       } catch {
         downloadImageFile(imageFile);
-        window.alert("Bot delivery failed, so the Weekly Review card was downloaded as PNG.");
+        notifyApp("PNG downloaded", "Bot delivery failed, so the Weekly Review card was saved as a file.");
       }
     } catch {
-      window.alert("Weekly Review sharing is not supported by this browser.");
+      notifyApp("Sharing unavailable", "Weekly Review sharing is not supported by this browser.");
     } finally {
       setWeeklyReviewSharing(false);
     }
@@ -14161,19 +14197,19 @@ function ChartScreen({
 
       if (!shareInitData) {
         downloadImageFile(imageFile);
-        window.alert("Open the app inside Telegram to send the Monthly Leak History card to the bot. On web, the PNG was downloaded.");
+        notifyApp("Monthly card downloaded", "Open inside Telegram next time to send the card to the bot.");
         return;
       }
 
       try {
         await sendShareImageViaBot(imageFile, shareInitData, monthlyHistoryShareText);
-        window.alert("Monthly Leak History card was sent to your Telegram bot chat.");
+        notifyApp("Monthly card sent", "Open your Telegram bot chat and forward it anywhere.");
       } catch {
         downloadImageFile(imageFile);
-        window.alert("Bot delivery failed, so the Monthly Leak History card was downloaded as PNG.");
+        notifyApp("PNG downloaded", "Bot delivery failed, so the Monthly Leak History card was saved as a file.");
       }
     } catch {
-      window.alert("Monthly Leak History sharing is not supported by this browser.");
+      notifyApp("Sharing unavailable", "Monthly Leak History sharing is not supported by this browser.");
     } finally {
       setHistorySharing(false);
     }
@@ -16097,7 +16133,7 @@ function GrowthLabScreen({
     try {
       if (navigator.clipboard) {
         await navigator.clipboard.writeText(text);
-        window.alert("Share text copied.");
+        notifyApp("Share text copied", "Paste it anywhere you want to post.");
       }
     } catch {
       // Clipboard can be unavailable in some Telegram webviews.
@@ -16128,9 +16164,7 @@ function GrowthLabScreen({
 
       if (shareInitData) {
         await sendShareImageViaBot(file, shareInitData, text);
-        window.alert(
-          "Growth card was sent to your Telegram bot chat. Open the bot chat and forward it anywhere."
-        );
+        notifyApp("Growth card sent", "Open your Telegram bot chat and forward it anywhere.");
       } else if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({
           title: "$BROKE Growth Lab",
@@ -16139,13 +16173,9 @@ function GrowthLabScreen({
         });
       } else if (navigator.clipboard) {
         await navigator.clipboard.writeText(text);
-        window.alert(
-          "Telegram bot delivery needs Telegram initData. Open the app inside Telegram and try again. The card preview is ready below and share text was copied."
-        );
+        notifyApp("Share text copied", "Open inside Telegram to send the card to the bot. The preview is ready below.");
       } else {
-        window.alert(
-          "Telegram bot delivery needs Telegram initData. Open the app inside Telegram and try again. The card preview is ready below."
-        );
+        notifyApp("Telegram needed", "Open inside Telegram to send the card to the bot. The preview is ready below.");
       }
 
       markDailyRoutineAction("sharedProgress");
@@ -16165,11 +16195,9 @@ function GrowthLabScreen({
           });
         } else if (navigator.clipboard) {
           await navigator.clipboard.writeText(text);
-          window.alert(
-            "Bot delivery failed. The card preview is ready below and share text was copied."
-          );
+          notifyApp("Share text copied", "Bot delivery failed. The card preview is ready below.");
         } else {
-          window.alert("Bot delivery failed. The card preview is ready below.");
+          notifyApp("Bot delivery failed", "The card preview is ready below.");
         }
       } catch {
         // User cancelled share or browser blocked the fallback.
@@ -17512,19 +17540,19 @@ function WhatIfScreen({
 
       if (!shareInitData) {
         downloadImageFile(imageFile);
-        window.alert("Open the app inside Telegram to send the Survival card to the bot. On web, the PNG was downloaded.");
+        notifyApp("Survival card downloaded", "Open inside Telegram next time to send it to the bot.");
         return;
       }
 
       try {
         await sendShareImageViaBot(imageFile, shareInitData, survivalShareText);
-        window.alert("Survival card was sent to your Telegram bot chat. Open the bot chat and forward it anywhere.");
+        notifyApp("Survival card sent", "Open your Telegram bot chat and forward it anywhere.");
       } catch {
         downloadImageFile(imageFile);
-        window.alert("Bot delivery failed, so the Survival card was downloaded as PNG.");
+        notifyApp("PNG downloaded", "Bot delivery failed, so the Survival card was saved as a file.");
       }
     } catch {
-      window.alert("Survival card sharing is not supported by this browser.");
+      notifyApp("Sharing unavailable", "Survival card sharing is not supported by this browser.");
     } finally {
       setSurvivalSharing(false);
     }
