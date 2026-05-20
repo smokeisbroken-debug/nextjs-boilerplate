@@ -9887,6 +9887,33 @@ function DashboardScreen({
     <div className="screen">
       <Header title="$BROKE Life Tracker" rightIcon={A.help} onRight={onBellClick} />
 
+      <section className="hero home-compact-hero" aria-label="Home wallet status">
+        <div className="home-compact-hero-copy">
+          <span className="home-compact-kicker">Home status</span>
+          <h1>
+            Your wallet is leaking.
+            <span>Numbers first. Pattern next.</span>
+          </h1>
+          <div className="home-clarity-pill compact">
+            <span>Track leak</span>
+            <b>→</b>
+            <span>Read pattern</span>
+            <b>→</b>
+            <span>Next move</span>
+          </div>
+        </div>
+
+        <img
+          className="home-mascot home-compact-mascot"
+          src={PREMIUM_VISUAL_PACK.homeMascot}
+          alt="Mascot"
+          onError={(event) => {
+            event.currentTarget.src = A.homeMascot;
+          }}
+        />
+      </section>
+
+
       <section className="home-wallet-snapshot-card">
         <div className="wallet-snapshot-heading">
           <div>
@@ -9980,32 +10007,6 @@ function DashboardScreen({
         </details>
       </section>
 
-
-      <section className="hero home-compact-hero" aria-label="Home wallet status">
-        <div className="home-compact-hero-copy">
-          <span className="home-compact-kicker">Home status</span>
-          <h1>
-            Your wallet is leaking.
-            <span>Numbers first. Pattern next.</span>
-          </h1>
-          <div className="home-clarity-pill compact">
-            <span>Track leak</span>
-            <b>→</b>
-            <span>Read pattern</span>
-            <b>→</b>
-            <span>Next move</span>
-          </div>
-        </div>
-
-        <img
-          className="home-mascot home-compact-mascot"
-          src={PREMIUM_VISUAL_PACK.homeMascot}
-          alt="Mascot"
-          onError={(event) => {
-            event.currentTarget.src = A.homeMascot;
-          }}
-        />
-      </section>
 
       <SmartHomeFocusCard
         settings={settings}
