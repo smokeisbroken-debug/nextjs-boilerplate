@@ -472,6 +472,27 @@ type LeakPatternLabSummary = {
   signals: LeakPatternSignal[];
 };
 
+type WeeklyPatternSummaryCard = {
+  id: string;
+  label: string;
+  title: string;
+  body: string;
+  value: string;
+  severity: "low" | "medium" | "high";
+};
+
+type WeeklyPatternSummary = {
+  tone: "quiet" | "watch" | "danger";
+  headline: string;
+  body: string;
+  strongestPattern: string;
+  nextMove: string;
+  totalLeaks: number;
+  leakPressure: number;
+  confidence: "Waiting" | "Learning" | "Clear";
+  cards: WeeklyPatternSummaryCard[];
+};
+
 type WeeklyReviewDay = {
   key: string;
   label: string;
@@ -5252,6 +5273,223 @@ function buildLeakPatternLabSummary(
     patternPressure: signalPressure,
     highRiskCount,
     signals,
+  };
+}
+
+
+function buildWeeklyPatternSummary(expenses: Expense[], settings: Settings): WeeklyPatternSummary {
+  const weekExpenses = getLastSevenDaysExpenses(expenses);
+  const weekLeakExpenses = weekExpenses.filter((expense) => getExpenseLeakValue(expense) > 0);
+  const totalSpent = sumTrackedExpenses(weekExpenses);
+  const totalLeaks = sumLeakExpenses(weekLeakExpenses);
+  const leakPressure = totalSpent > 0 ? Math.round((totalLeaks / totalSpent) * 100) : 0;
+  const confidence: WeeklyPatternSummary["confidence"] =
+    weekLeakExpenses.length <= 0
+      ? "Waiting"
+      : weekLeakExpenses.length < 4
+        ? "Learning"
+        : "Clear";
+
+  const weekendExpenses = weekLeakExpenses.filter(
+    (expense) => isWeekendDate(new Date(expense.createdAt)) || expenseHasLeakTriggerTag(expense, "weekend")
+  );
+  const lateNightExpenses = weekLeakExpenses.filter(
+    (expense) => isLateNightExpense(expense) || expenseHasLeakTriggerTag(expense, "late-night")
+  );
+  const afterPaydayExpenses = weekLeakExpenses.filter(
+    (expense) => getAfterPaydayDayIndex(new Date(expense.createdAt), settings) > 0 || expenseHasLeakTriggerTag(expense, "after-payday")
+  );
+  const emotionalTriggerIds: LeakTriggerId[] = ["stress", "boredom", "impulse", "social-pressure", "habit"];
+  const emotionalExpenses = weekLeakExpenses.filter(
+    (expense) =>
+      Boolean(getLeakNoteTrigger(expense)) ||
+      emotionalTriggerIds.some((triggerId) => expenseHasLeakTriggerTag(expense, triggerId))
+  );
+  const maybeExpenses = weekExpenses.filter((expense) => expense.needType === "Maybe");
+  const notNeededExpenses = weekExpenses.filter((expense) => expense.needType === "Not needed");
+  const maybeLeaks = sumLeakExpenses(maybeExpenses);
+  const notNeededLeaks = sumLeakExpenses(notNeededExpenses);
+  const weekendLeaks = sumLeakExpenses(weekendExpenses);
+  const lateNightLeaks = sumLeakExpenses(lateNightExpenses);
+  const afterPaydayLeaks = sumLeakExpenses(afterPaydayExpenses);
+  const emotionalLeaks = sumLeakExpenses(emotionalExpenses);
+
+  const dayMap = new Map<string, { leaks: number; count: number }>();
+  for (const expense of weekLeakExpenses) {
+    const key = dayKey(new Date(expense.createdAt));
+    const current = dayMap.get(key) || { leaks: 0, count: 0 };
+    dayMap.set(key, {
+      leaks: current.leaks + getExpenseLeakValue(expense),
+      count: current.count + 1,
+    });
+  }
+  const worstDay = Array.from(dayMap.entries())
+    .map(([key, value]) => ({ key, ...value }))
+    .sort((a, b) => b.leaks - a.leaks || b.count - a.count)[0] || null;
+  const worstDayShare = worstDay && totalLeaks > 0 ? Math.round((worstDay.leaks / totalLeaks) * 100) : 0;
+
+  const categorySummaries = getCategoryLeakSummaries(weekExpenses);
+  const topCategory = categorySummaries[0] || null;
+  const topCategoryShare = topCategory && totalLeaks > 0 ? Math.round((topCategory.amount / totalLeaks) * 100) : 0;
+
+  const cards: WeeklyPatternSummaryCard[] = [];
+  const addCard = (
+    id: string,
+    label: string,
+    title: string,
+    body: string,
+    value: string,
+    severity: WeeklyPatternSummaryCard["severity"],
+    include: boolean
+  ) => {
+    if (!include) return;
+    cards.push({ id, label, title, body, value, severity });
+  };
+
+  addCard(
+    "grey-zone",
+    "Grey zone",
+    "Questionable decisions carried the week.",
+    "The danger is not always obvious bad spending. Sometimes it is repeated Maybe decisions that feel small in the moment.",
+    `${totalLeaks > 0 ? Math.round((maybeLeaks / totalLeaks) * 100) : 0}%`,
+    maybeLeaks >= totalLeaks * 0.5 ? "high" : "medium",
+    maybeLeaks > 0 && maybeLeaks >= Math.max(notNeededLeaks, totalLeaks * 0.35)
+  );
+
+  addCard(
+    "full-leak",
+    "Full leak",
+    "Avoidable spending was the loudest signal.",
+    "This week was not only survival costs. The app sees spending you already marked as avoidable.",
+    money(notNeededLeaks, settings.currency),
+    notNeededLeaks >= totalLeaks * 0.55 ? "high" : "medium",
+    notNeededLeaks > 0 && notNeededLeaks >= Math.max(maybeLeaks, totalLeaks * 0.35)
+  );
+
+  addCard(
+    "weekend",
+    "Weekend",
+    "Weekend mode changed the wallet.",
+    "The leak is attached to the structure of the week. Friday to Sunday needs a cap before the spending starts.",
+    `${totalLeaks > 0 ? Math.round((weekendLeaks / totalLeaks) * 100) : 0}%`,
+    weekendLeaks >= totalLeaks * 0.6 ? "high" : "medium",
+    weekendExpenses.length >= 2 || (totalLeaks > 0 && weekendLeaks >= totalLeaks * 0.35)
+  );
+
+  addCard(
+    "late-night",
+    "Late night",
+    "Low-discipline hours showed up.",
+    "This is where tiredness, scrolling, boredom, or impulse can become a wallet leak.",
+    `${lateNightExpenses.length}x`,
+    lateNightLeaks >= totalLeaks * 0.45 ? "high" : "medium",
+    lateNightExpenses.length >= 1 && (lateNightExpenses.length >= 2 || lateNightLeaks >= totalLeaks * 0.25)
+  );
+
+  addCard(
+    "after-payday",
+    "After payday",
+    "Fresh money lowered resistance.",
+    "The first days after income are risky because the wallet feels safe before fixed life costs fully hit.",
+    `${afterPaydayExpenses.length}x`,
+    afterPaydayLeaks >= totalLeaks * 0.45 ? "high" : "medium",
+    afterPaydayExpenses.length >= 1 && (afterPaydayExpenses.length >= 2 || afterPaydayLeaks >= totalLeaks * 0.25)
+  );
+
+  addCard(
+    "emotion",
+    "Emotion",
+    "The notes show a trigger, not only a category.",
+    "Stress, boredom, impulse, habit, or social pressure can explain why the same leak keeps coming back.",
+    `${emotionalExpenses.length}x`,
+    emotionalLeaks >= totalLeaks * 0.35 ? "high" : "medium",
+    emotionalExpenses.length >= 1
+  );
+
+  addCard(
+    "one-day-spike",
+    "Spike day",
+    "One day carried too much of the damage.",
+    "This week may not be broken every day. One dangerous candle may be doing most of the work.",
+    `${worstDayShare}%`,
+    worstDayShare >= 70 ? "high" : "medium",
+    Boolean(worstDay && worstDayShare >= 45 && totalLeaks > 0)
+  );
+
+  addCard(
+    "top-category",
+    "Category",
+    "One category is louder than the rest.",
+    topCategory
+      ? `${categoryDisplayLabel(settings, topCategory.category)} created the clearest weekly leak signal. Fixing one category is easier than fixing your whole life.`
+      : "No category is loud enough yet.",
+    `${topCategoryShare}%`,
+    topCategoryShare >= 55 ? "high" : "medium",
+    Boolean(topCategory && topCategoryShare >= 38 && totalLeaks > 0)
+  );
+
+  cards.sort((a, b) => {
+    const score = { high: 3, medium: 2, low: 1 };
+    return score[b.severity] - score[a.severity] || b.value.localeCompare(a.value);
+  });
+
+  const strongest = cards[0] || null;
+  const tone: WeeklyPatternSummary["tone"] =
+    confidence === "Waiting"
+      ? "quiet"
+      : cards.some((card) => card.severity === "high") || leakPressure >= 65
+        ? "danger"
+        : cards.length > 0 || leakPressure >= 25
+          ? "watch"
+          : "quiet";
+
+  const headline =
+    confidence === "Waiting"
+      ? "Weekly Pattern is waiting for honest records"
+      : strongest
+        ? `This week’s strongest pattern: ${strongest.label}`
+        : leakPressure > 0
+          ? "Leaks exist, but the pattern is still forming"
+          : "This week looks controlled so far";
+
+  const body =
+    confidence === "Waiting"
+      ? "Track a few Grey zone or Full leak decisions. $BROKE needs context before it can call out behavior."
+      : strongest
+        ? strongest.body
+        : leakPressure > 0
+          ? "The week has leak pressure, but no trigger repeated enough to become a clear behavior signal yet."
+          : "Tracked spending has not turned into visible leak pressure this week.";
+
+  const nextMove =
+    strongest?.id === "grey-zone"
+      ? "Before the next Maybe purchase, label it as Survival cost or Full leak. Do not leave it blurry."
+      : strongest?.id === "full-leak"
+        ? "Cut one avoidable repeat this week. Start with the category that felt easiest to justify."
+        : strongest?.id === "weekend"
+          ? "Set the weekend cap before Friday. Do not decide while already spending."
+          : strongest?.id === "late-night"
+            ? "Create a no-spend rule after 22:00 and prepare a cheaper fallback."
+            : strongest?.id === "after-payday"
+              ? "Protect essentials first for the first 4 days after income, then allow optional spending."
+              : strongest?.id === "emotion"
+                ? "When a trigger appears, wait 10 minutes and write the feeling before buying."
+                : strongest?.id === "one-day-spike"
+                  ? "Find the one day that created the spike and block the same setup next week."
+                  : strongest?.id === "top-category"
+                    ? `Reduce ${topCategory ? categoryDisplayLabel(settings, topCategory.category) : "the top category"} once before fixing anything else.`
+                    : "Track the next real decision with a trigger chip so the pattern gets sharper.";
+
+  return {
+    tone,
+    headline,
+    body,
+    strongestPattern: strongest?.label || "No strong pattern yet",
+    nextMove,
+    totalLeaks,
+    leakPressure,
+    confidence,
+    cards: cards.slice(0, 4),
   };
 }
 
@@ -13000,11 +13238,13 @@ function PatternDetectorPanel({
   settings,
   patterns,
   labSummary,
+  weeklyPatternSummary,
   onOpenAdd,
 }: {
   settings: Settings;
   patterns: LeakPattern[];
   labSummary: LeakPatternLabSummary;
+  weeklyPatternSummary: WeeklyPatternSummary;
   onOpenAdd: () => void;
 }) {
   const topSignal = labSummary.signals[0] || null;
@@ -13054,6 +13294,52 @@ function PatternDetectorPanel({
         <div>
           <span>Mapped pressure</span>
           <strong>{labSummary.patternPressure}%</strong>
+        </div>
+      </div>
+
+      <div className={`weekly-pattern-summary ${weeklyPatternSummary.tone}`}>
+        <div className="weekly-pattern-summary-head">
+          <span>7-day behavior read</span>
+          <strong>{weeklyPatternSummary.headline}</strong>
+          <p>{weeklyPatternSummary.body}</p>
+        </div>
+
+        <div className="weekly-pattern-summary-metrics">
+          <div>
+            <small>Confidence</small>
+            <b>{weeklyPatternSummary.confidence}</b>
+          </div>
+          <div>
+            <small>Leaks</small>
+            <b>{money(weeklyPatternSummary.totalLeaks, settings.currency)}</b>
+          </div>
+          <div>
+            <small>Pressure</small>
+            <b>{weeklyPatternSummary.leakPressure}%</b>
+          </div>
+        </div>
+
+        {weeklyPatternSummary.cards.length > 0 ? (
+          <div className="weekly-pattern-card-grid">
+            {weeklyPatternSummary.cards.map((card) => (
+              <article className={card.severity} key={card.id}>
+                <span>{card.label}</span>
+                <strong>{card.title}</strong>
+                <p>{card.body}</p>
+                <b>{card.value}</b>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="weekly-pattern-empty">
+            <strong>No weekly trigger is loud yet.</strong>
+            <p>Use trigger chips on the next Track Leak entry so the app can separate habit, timing, mood, and category.</p>
+          </div>
+        )}
+
+        <div className="weekly-pattern-next-move">
+          <small>Next move this week</small>
+          <span>{weeklyPatternSummary.nextMove}</span>
         </div>
       </div>
 
@@ -13751,6 +14037,10 @@ function ChartScreen({
     () => buildLeakPatternLabSummary(expenses, settings, leakPatterns),
     [expenses, settings, leakPatterns]
   );
+  const weeklyPatternSummary = useMemo(
+    () => buildWeeklyPatternSummary(expenses, settings),
+    [expenses, settings]
+  );
   const oneFixRecommendation = useMemo(
     () => buildOneFixRecommendation(leakPatterns, weeklyReview, settings, oneFixDifficulty),
     [leakPatterns, weeklyReview, settings, oneFixDifficulty]
@@ -14386,6 +14676,7 @@ function ChartScreen({
             settings={settings}
             patterns={leakPatterns}
             labSummary={leakPatternLabSummary}
+            weeklyPatternSummary={weeklyPatternSummary}
             onOpenAdd={onOpenAdd}
           />
 
