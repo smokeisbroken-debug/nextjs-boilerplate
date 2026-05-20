@@ -392,6 +392,39 @@ type LeaderboardState = {
   allTime: LeaderboardProfile[];
 };
 
+type PatternHistoryTone = "quiet" | "watch" | "danger";
+type PatternHistoryConfidence = "Waiting" | "Learning" | "Clear";
+type PatternHistoryCard = {
+  id: string;
+  label: string;
+  title: string;
+  body: string;
+  value: string;
+  severity: "low" | "medium" | "high";
+};
+
+type PatternHistoryInput = {
+  periodType?: "weekly";
+  periodKey: string;
+  periodLabel: string;
+  tone: PatternHistoryTone;
+  headline: string;
+  body: string;
+  strongestPattern: string;
+  nextMove: string;
+  totalLeaks: number;
+  leakPressure: number;
+  confidence: PatternHistoryConfidence;
+  cards: PatternHistoryCard[];
+};
+
+type PatternHistoryRecord = Required<Pick<PatternHistoryInput, "periodKey" | "periodLabel" | "tone" | "headline" | "body" | "strongestPattern" | "nextMove" | "totalLeaks" | "leakPressure" | "confidence" | "cards">> & {
+  id: string;
+  periodType: "weekly";
+  createdAt: string;
+  updatedAt: string;
+};
+
 type TelegramUser = {
   id: number;
   first_name?: string;
@@ -1327,6 +1360,59 @@ function isMissingExpenseTriggerTagsColumnError(error: unknown) {
   );
 }
 
+function isMissingPatternHistoryTableError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return (
+    message.includes("broke_pattern_history") &&
+    (message.includes("does not exist") ||
+      message.includes("relation") ||
+      message.includes("schema cache") ||
+      message.includes("PGRST") ||
+      message.includes("Could not find"))
+  );
+}
+
+function normalizePatternHistoryCard(input: unknown): PatternHistoryCard | null {
+  if (!input || typeof input !== "object") return null;
+
+  const card = input as Partial<PatternHistoryCard>;
+  const severity = card.severity === "high" || card.severity === "medium" || card.severity === "low" ? card.severity : "low";
+
+  return {
+    id: String(card.id || "pattern"),
+    label: String(card.label || "Pattern"),
+    title: String(card.title || "Pattern signal"),
+    body: String(card.body || "The app needs more records to explain this signal."),
+    value: String(card.value || "-"),
+    severity,
+  };
+}
+
+function normalizePatternHistoryInput(input: unknown): PatternHistoryInput {
+  const raw = (input && typeof input === "object" ? input : {}) as Partial<PatternHistoryInput>;
+  const tone = raw.tone === "danger" || raw.tone === "watch" || raw.tone === "quiet" ? raw.tone : "quiet";
+  const confidence = raw.confidence === "Clear" || raw.confidence === "Learning" || raw.confidence === "Waiting" ? raw.confidence : "Waiting";
+  const cards = Array.isArray(raw.cards)
+    ? raw.cards.map(normalizePatternHistoryCard).filter((card): card is PatternHistoryCard => Boolean(card)).slice(0, 6)
+    : [];
+
+  return {
+    periodType: "weekly",
+    periodKey: String(raw.periodKey || "").slice(0, 40),
+    periodLabel: String(raw.periodLabel || raw.periodKey || "Current week").slice(0, 80),
+    tone,
+    headline: String(raw.headline || "Weekly pattern is forming").slice(0, 180),
+    body: String(raw.body || "Track more real leaks to build a reliable pattern history.").slice(0, 600),
+    strongestPattern: String(raw.strongestPattern || "No strong pattern yet").slice(0, 120),
+    nextMove: String(raw.nextMove || "Track the next real decision with context.").slice(0, 400),
+    totalLeaks: Math.max(0, Number(raw.totalLeaks || 0)),
+    leakPressure: Math.max(0, Math.min(100, Math.round(Number(raw.leakPressure || 0)))),
+    confidence,
+    cards,
+  };
+}
+
 function normalizeLeakTriggerTags(input?: unknown, fallbackNote = ""): LeakTriggerId[] {
   const fromStructured = Array.isArray(input)
     ? input
@@ -1429,6 +1515,32 @@ function dbToExpense(row: Record<string, unknown>): Expense {
     createdAt: String(row.created_at ?? new Date().toISOString()),
     triggerTags: normalizeLeakTriggerTags(row.trigger_tags, String(row.note ?? "")),
     ...(currency ? { currency } : {}),
+  };
+}
+
+function dbToPatternHistory(row: Record<string, unknown>): PatternHistoryRecord {
+  const payload = normalizePatternHistoryInput(row.summary_payload || {});
+  const cardsRaw = Array.isArray(row.cards) ? row.cards : payload.cards;
+  const cards = cardsRaw
+    .map(normalizePatternHistoryCard)
+    .filter((card): card is PatternHistoryCard => Boolean(card));
+
+  return {
+    id: String(row.id || ""),
+    periodType: "weekly",
+    periodKey: String(row.period_key || payload.periodKey || ""),
+    periodLabel: String(row.period_label || payload.periodLabel || row.period_key || "Current week"),
+    tone: row.tone === "danger" || row.tone === "watch" || row.tone === "quiet" ? row.tone : payload.tone,
+    headline: String(row.headline || payload.headline),
+    body: String(row.body || payload.body),
+    strongestPattern: String(row.strongest_pattern || payload.strongestPattern),
+    nextMove: String(row.next_move || payload.nextMove),
+    totalLeaks: Number(row.total_leaks ?? payload.totalLeaks ?? 0),
+    leakPressure: Number(row.leak_pressure ?? payload.leakPressure ?? 0),
+    confidence: row.confidence === "Clear" || row.confidence === "Learning" || row.confidence === "Waiting" ? row.confidence : payload.confidence,
+    cards,
+    createdAt: String(row.created_at || new Date().toISOString()),
+    updatedAt: String(row.updated_at || new Date().toISOString()),
   };
 }
 
@@ -2404,6 +2516,62 @@ async function getExpenses(telegramId: number) {
   return rows.map(dbToExpense);
 }
 
+async function getPatternHistory(telegramId: number, limit = 8) {
+  try {
+    const rows = (await supabaseFetch(
+      `broke_pattern_history?telegram_id=eq.${telegramId}&period_type=eq.weekly&select=*&order=period_key.desc&limit=${limit}`
+    )) as Record<string, unknown>[];
+
+    return rows.map(dbToPatternHistory);
+  } catch (error) {
+    if (isMissingPatternHistoryTableError(error)) return [];
+
+    throw error;
+  }
+}
+
+async function savePatternHistory(telegramId: number, input: unknown) {
+  const pattern = normalizePatternHistoryInput(input);
+
+  if (!pattern.periodKey) {
+    throw new Error("Missing pattern history period key");
+  }
+
+  try {
+    const rows = (await supabaseFetch("broke_pattern_history?on_conflict=telegram_id,period_type,period_key&select=*", {
+      method: "POST",
+      headers: {
+        Prefer: "resolution=merge-duplicates,return=representation",
+      },
+      body: JSON.stringify({
+        telegram_id: telegramId,
+        period_type: "weekly",
+        period_key: pattern.periodKey,
+        period_label: pattern.periodLabel,
+        tone: pattern.tone,
+        headline: pattern.headline,
+        body: pattern.body,
+        strongest_pattern: pattern.strongestPattern,
+        next_move: pattern.nextMove,
+        total_leaks: pattern.totalLeaks,
+        leak_pressure: pattern.leakPressure,
+        confidence: pattern.confidence,
+        cards: pattern.cards,
+        summary_payload: pattern,
+        updated_at: new Date().toISOString(),
+      }),
+    })) as Record<string, unknown>[];
+
+    return { saved: true, record: rows[0] ? dbToPatternHistory(rows[0]) : null };
+  } catch (error) {
+    if (isMissingPatternHistoryTableError(error)) {
+      return { saved: false, record: null };
+    }
+
+    throw error;
+  }
+}
+
 async function importLocalExpensesIfEmpty(telegramId: number, expenses: Expense[]) {
   if (!expenses.length) return;
 
@@ -2579,6 +2747,14 @@ async function resetData(telegramId: number) {
 
   try {
     await supabaseFetch(`broke_leaderboard_profiles?telegram_id=eq.${telegramId}`, {
+      method: "DELETE",
+    });
+  } catch {
+    // ignore if table not ready
+  }
+
+  try {
+    await supabaseFetch(`broke_pattern_history?telegram_id=eq.${telegramId}`, {
       method: "DELETE",
     });
   } catch {
@@ -2880,6 +3056,7 @@ export async function GET(request: NextRequest) {
       checkSupabaseTable("broke_web_link_codes"),
       checkSupabaseTable("broke_community_messages"),
       checkSupabaseTable("broke_notification_logs"),
+      checkSupabaseTable("broke_pattern_history"),
     ]);
 
     return NextResponse.json({
@@ -2942,6 +3119,7 @@ export async function POST(request: NextRequest) {
       }
 
       const leaderboard = await getLeaderboardState(telegramId, user, streak);
+      const patternHistory = await getPatternHistory(telegramId);
 
       return NextResponse.json({
         ok: true,
@@ -2951,6 +3129,7 @@ export async function POST(request: NextRequest) {
         badges,
         leaderboard,
         appState,
+        patternHistory,
         ...challengeState,
       });
     }
@@ -3096,6 +3275,18 @@ export async function POST(request: NextRequest) {
         ok: true,
         appState,
         appStateCloudSync,
+      });
+    }
+
+    if (action === "savePatternHistory") {
+      const result = await savePatternHistory(telegramId, body.pattern);
+      const patternHistory = await getPatternHistory(telegramId);
+
+      return NextResponse.json({
+        ok: true,
+        patternHistorySaved: result.saved,
+        patternHistoryRecord: result.record,
+        patternHistory,
       });
     }
 

@@ -1,8 +1,6 @@
-# Testing — v59.1 Expense Context Foundation
+# Testing — v59.2 Pattern History Foundation
 
-## Local checks
-
-Passed before packaging:
+## Local verification
 
 ```bash
 npm run typecheck
@@ -10,33 +8,33 @@ npm run lint:quiet
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-## Supabase checks
+## Supabase verification
 
-Run after migration:
+After running the migration, run:
 
-```sql
--- file: supabase/review/20260520_v59_1_expense_context_audit.sql
+```txt
+supabase/review/20260520_v59_2_pattern_history_audit.sql
 ```
 
 Expected:
 
-- `trigger_tags` exists on `broke_expenses`.
-- `context_version` exists on `broke_expenses`.
-- `broke_expenses_trigger_tags_allowed` exists.
-- `broke_expenses_trigger_tags_gin_idx` exists.
-- Old hashtag notes are backfilled into `trigger_tags` when possible.
+- table exists = true;
+- required columns exist;
+- rowsecurity = true;
+- anon/authenticated do not have direct table grants;
+- service_role has table privileges.
 
 ## App smoke test
 
-1. Open app.
-2. Go to Track Leak.
-3. Add amount/category.
-4. Select `Stress` and `Late night` trigger chips.
-5. Save.
-6. Reopen app.
-7. Open Chart / Leak Pattern Lab.
-8. Confirm the new leak still appears and pattern context is read.
+1. Open the Mini App.
+2. Track one or more leaks with trigger chips.
+3. Open Chart.
+4. Open Leak Pattern Lab.
+5. Confirm Pattern memory shows either:
+   - saved weekly reads, or
+   - a warming-up empty state.
+6. Refresh/reopen the app and confirm saved reads can load after cloud sync.
 
-## Compatibility test
+## Failure behavior
 
-Save should still work if the migration has not been run yet, but structured trigger storage will not persist until the migration exists.
+If the Supabase table was not migrated yet, the app should still work. Pattern history will stay empty until the migration is applied.

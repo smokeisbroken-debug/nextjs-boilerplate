@@ -494,6 +494,24 @@ type WeeklyPatternSummary = {
   cards: WeeklyPatternSummaryCard[];
 };
 
+type PatternHistoryRecord = {
+  id?: string;
+  periodType: "weekly";
+  periodKey: string;
+  periodLabel: string;
+  tone: WeeklyPatternSummary["tone"];
+  headline: string;
+  body: string;
+  strongestPattern: string;
+  nextMove: string;
+  totalLeaks: number;
+  leakPressure: number;
+  confidence: WeeklyPatternSummary["confidence"];
+  cards: WeeklyPatternSummaryCard[];
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 type WeeklyReviewDay = {
   key: string;
   label: string;
@@ -801,6 +819,9 @@ type BrokeApiResponse = {
   leaderboard?: LeaderboardState;
   appState?: CloudAppState;
   appStateCloudSync?: boolean;
+  patternHistory?: PatternHistoryRecord[];
+  patternHistorySaved?: boolean;
+  patternHistoryRecord?: PatternHistoryRecord | null;
   expenseCurrencyRepair?: { updated: number; cloudExpenseSync: boolean };
   xpAwarded?: number;
   error?: string;
@@ -5558,6 +5579,54 @@ function buildWeeklyPatternSummary(expenses: Expense[], settings: Settings): Wee
   };
 }
 
+function getIsoWeekPatternKey(date = new Date()) {
+  const current = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = current.getUTCDay() || 7;
+  current.setUTCDate(current.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(current.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((current.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+
+  return `${current.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function getIsoWeekPatternLabel(date = new Date()) {
+  return `Week ${getIsoWeekPatternKey(date).split("-W")[1]} · ${date.getFullYear()}`;
+}
+
+function buildPatternHistoryRecord(summary: WeeklyPatternSummary, date = new Date()): PatternHistoryRecord {
+  return {
+    periodType: "weekly",
+    periodKey: getIsoWeekPatternKey(date),
+    periodLabel: getIsoWeekPatternLabel(date),
+    tone: summary.tone,
+    headline: summary.headline,
+    body: summary.body,
+    strongestPattern: summary.strongestPattern,
+    nextMove: summary.nextMove,
+    totalLeaks: summary.totalLeaks,
+    leakPressure: summary.leakPressure,
+    confidence: summary.confidence,
+    cards: summary.cards,
+  };
+}
+
+function shouldSavePatternHistory(record: PatternHistoryRecord) {
+  return record.confidence !== "Waiting" || record.totalLeaks > 0 || record.cards.length > 0;
+}
+
+function patternHistorySignature(record: PatternHistoryRecord) {
+  return JSON.stringify({
+    periodKey: record.periodKey,
+    tone: record.tone,
+    headline: record.headline,
+    strongestPattern: record.strongestPattern,
+    totalLeaks: Math.round(record.totalLeaks * 100) / 100,
+    leakPressure: record.leakPressure,
+    confidence: record.confidence,
+    cards: record.cards.map((card) => `${card.id}:${card.value}:${card.severity}`),
+  });
+}
+
 type SelectedCandleDiagnosis = {
   tone: "empty" | "controlled" | "watch" | "danger";
   label: string;
@@ -7361,6 +7430,7 @@ export default function Home() {
   const [badges, setBadges] = useState<BadgeItem[]>(defaultBadges);
   const [leaderboard, setLeaderboard] = useState<LeaderboardState | null>(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [patternHistory, setPatternHistory] = useState<PatternHistoryRecord[]>([]);
   const [toast, setToast] = useState<AppToast | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [leakMission, setLeakMission] = useState<LocalLeakMission | null>(null);
@@ -7370,6 +7440,8 @@ export default function Home() {
   const badgesReadyRef = useRef(false);
   const toastTimerRef = useRef<number | null>(null);
   const appStateSyncTimerRef = useRef<number | null>(null);
+  const patternHistorySyncTimerRef = useRef<number | null>(null);
+  const patternHistorySignatureRef = useRef("");
 
   const [amount, setAmount] = useState("25.00");
   const [note, setNote] = useState("");
@@ -7532,6 +7604,10 @@ export default function Home() {
       if (appStateSyncTimerRef.current) {
         window.clearTimeout(appStateSyncTimerRef.current);
       }
+
+      if (patternHistorySyncTimerRef.current) {
+        window.clearTimeout(patternHistorySyncTimerRef.current);
+      }
     };
   }, []);
 
@@ -7640,6 +7716,7 @@ export default function Home() {
         if (data.leaderboard) setLeaderboard(data.leaderboard);
         if (data.badges) applyBadges(data.badges, true);
         if (data.appState) writeLocalCloudAppState(data.appState);
+        if (data.patternHistory) setPatternHistory(data.patternHistory);
 
         const cloudOnboardingCompleted =
           data.settings?.onboardingCompleted === true ||
@@ -7748,6 +7825,52 @@ export default function Home() {
     () => expenses.map((expense) => expenseToDisplayExpense(expense, settings, appRateState.rates)),
     [expenses, settings, appRateState.rates]
   );
+
+  const currentWeeklyPatternSummary = useMemo(
+    () => buildWeeklyPatternSummary(displayExpenses, settings),
+    [displayExpenses, settings]
+  );
+  const currentPatternHistoryRecord = useMemo(
+    () => buildPatternHistoryRecord(currentWeeklyPatternSummary),
+    [currentWeeklyPatternSummary]
+  );
+
+  useEffect(() => {
+    if (!loaded || !onboardingCompleted || cloudStatus !== "cloud" || !cloudAuthReady) return;
+    if (!shouldSavePatternHistory(currentPatternHistoryRecord)) return;
+
+    const signature = patternHistorySignature(currentPatternHistoryRecord);
+
+    if (patternHistorySignatureRef.current === signature) return;
+
+    if (patternHistorySyncTimerRef.current) {
+      window.clearTimeout(patternHistorySyncTimerRef.current);
+    }
+
+    patternHistorySyncTimerRef.current = window.setTimeout(async () => {
+      try {
+        const data = await callBrokeApi(cloudInitData, "savePatternHistory", {
+          pattern: currentPatternHistoryRecord,
+        });
+
+        patternHistorySignatureRef.current = signature;
+
+        if (data.patternHistory) {
+          setPatternHistory(data.patternHistory);
+        }
+      } catch (error) {
+        setCloudStatus("error");
+        setCloudError(error instanceof Error ? error.message : "Pattern history cloud save failed");
+      }
+    }, 1200);
+
+    return () => {
+      if (patternHistorySyncTimerRef.current) {
+        window.clearTimeout(patternHistorySyncTimerRef.current);
+      }
+    };
+  }, [loaded, onboardingCompleted, cloudStatus, cloudAuthReady, cloudInitData, currentPatternHistoryRecord]);
+
   const displaySettings = useMemo(
     () => displaySettingsForMoney(settings, appRateState.rates),
     [settings, appRateState.rates]
@@ -8322,6 +8445,7 @@ export default function Home() {
             expenses={displayExpenses}
             walletInsights={walletInsights}
             exchangeRates={appRateState.rates}
+            patternHistory={patternHistory}
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onBack={goHome}
             onExport={openExportHelp}
@@ -13414,12 +13538,14 @@ function PatternDetectorPanel({
   patterns,
   labSummary,
   weeklyPatternSummary,
+  patternHistory,
   onOpenAdd,
 }: {
   settings: Settings;
   patterns: LeakPattern[];
   labSummary: LeakPatternLabSummary;
   weeklyPatternSummary: WeeklyPatternSummary;
+  patternHistory: PatternHistoryRecord[];
   onOpenAdd: () => void;
 }) {
   const topSignal = labSummary.signals[0] || null;
@@ -13516,6 +13642,34 @@ function PatternDetectorPanel({
           <small>Next move this week</small>
           <span>{weeklyPatternSummary.nextMove}</span>
         </div>
+      </div>
+
+      <div className="pattern-history-panel">
+        <div className="pattern-history-head">
+          <span>Pattern memory</span>
+          <strong>{patternHistory.length > 0 ? `${patternHistory.length} saved read${patternHistory.length === 1 ? "" : "s"}` : "Cloud history is warming up"}</strong>
+          <p>Weekly pattern reads are now saved as structured history, so future reports can compare behavior over time.</p>
+        </div>
+
+        {patternHistory.length > 0 ? (
+          <div className="pattern-history-list">
+            {patternHistory.slice(0, 4).map((record) => (
+              <article className={record.tone} key={`${record.periodType}-${record.periodKey}`}>
+                <div>
+                  <span>{record.periodLabel}</span>
+                  <strong>{record.strongestPattern}</strong>
+                  <p>{record.headline}</p>
+                </div>
+                <b>{record.leakPressure}%</b>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="pattern-history-empty">
+            <strong>No saved weekly reads yet.</strong>
+            <p>Track a few leaks with trigger chips and open Chart again after cloud sync.</p>
+          </div>
+        )}
       </div>
 
       {(topSignal || topPattern) ? (
@@ -14166,6 +14320,7 @@ function ChartScreen({
   expenses,
   walletInsights,
   exchangeRates,
+  patternHistory,
   shareInitData,
   onBack,
   onExport,
@@ -14175,6 +14330,7 @@ function ChartScreen({
   expenses: Expense[];
   walletInsights: WalletInsight[];
   exchangeRates: ExchangeRateMap;
+  patternHistory: PatternHistoryRecord[];
   shareInitData: string;
   onBack: () => void;
   onExport: () => void;
@@ -14852,6 +15008,7 @@ function ChartScreen({
             patterns={leakPatterns}
             labSummary={leakPatternLabSummary}
             weeklyPatternSummary={weeklyPatternSummary}
+            patternHistory={patternHistory}
             onOpenAdd={onOpenAdd}
           />
 

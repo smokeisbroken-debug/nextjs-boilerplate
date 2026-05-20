@@ -1,38 +1,53 @@
-# $BROKE / SmokeIsBroke — v59.1 Expense Context Foundation
+# $BROKE / SmokeIsBroke — v59.2 Pattern History Foundation
 
-This patch moves Track Leak trigger chips toward a stable data foundation.
+This patch adds the first structured server-side history layer for Leak Pattern reads.
 
 ## What changed
 
-- Expenses now support structured `triggerTags` in the client.
-- `/api/broke` now reads/writes `trigger_tags` on `broke_expenses`.
-- Leak Pattern Lab reads structured trigger tags first and still supports old note hashtags.
-- Old note hashtags remain as a fallback for backwards compatibility.
-- Supabase migration adds:
-  - `broke_expenses.trigger_tags text[] not null default '{}'`
-  - `broke_expenses.context_version integer not null default 1`
-  - allowed trigger constraint
-  - GIN index for trigger lookups
-  - backfill from old note hashtags
+- Added Supabase table `broke_pattern_history` for weekly pattern snapshots.
+- Added `/api/broke` action `savePatternHistory`.
+- `sync` now returns saved pattern history.
+- The app saves the current weekly pattern read after cloud sync.
+- Leak Pattern Lab now shows a small **Pattern memory** block with recent saved weekly reads.
+- Existing pattern logic remains client-side; this patch only stores the summary safely for future comparison.
 
-## Stable fallback
+## Files to replace
 
-The API is defensive. If the `trigger_tags` column is missing, expense saves fall back to the old note-based behavior instead of crashing.
+```txt
+app/page.tsx
+app/api/broke/route.ts
+app/globals.css
+README.md
+PROJECT_ORDER.md
+TESTING.md
+```
 
-Run the migration to enable structured trigger storage.
+## Supabase files to run/check
+
+Run migration first:
+
+```txt
+supabase/migrations/20260520_v59_2_pattern_history_foundation.sql
+```
+
+Then run audit:
+
+```txt
+supabase/review/20260520_v59_2_pattern_history_audit.sql
+```
 
 ## Deployment order
 
-1. Run `supabase/migrations/20260520_v59_1_expense_context_foundation.sql` in Supabase SQL Editor.
-2. Replace the files from this patch.
+1. Run the Supabase migration.
+2. Replace patch files in GitHub/project.
 3. Deploy to Vercel.
-4. Run `supabase/review/20260520_v59_1_expense_context_audit.sql` to confirm the column/index/backfill.
-5. Track a new leak with trigger chips and confirm Chart / Leak Pattern Lab still works.
+4. Open the app with cloud auth.
+5. Track/open Chart so Pattern History can save.
+6. Run the audit SQL.
 
-## Not changed
+## Safety
 
-- No auth model change.
-- No webhook change.
-- No RLS rollback.
-- No stored amount rewrite.
-- No destructive migration.
+- Old expenses are not rewritten.
+- Old trigger-tags remain compatible.
+- If the table is missing, the API returns empty pattern history instead of crashing.
+- Direct anon/authenticated table access should remain revoked; server uses service_role.
