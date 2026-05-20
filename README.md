@@ -1,178 +1,538 @@
-# $BROKE / SmokeIsBroke Telegram Mini App
+# v58.18 — Final Security Verification Checklist
 
-Current patch checkpoint: **v58.15 — Fast Start Onboarding**.
+## Purpose
 
-This is the working Next.js app for the $BROKE / SmokeIsBroke ecosystem.
+This pack is the final manual verification layer after:
 
-## Stack
+- `v58.16 — Security Audit & Guard Rails`
+- `v58.17 — Supabase RLS / Permissions Review Pack`
 
-- Next.js 16.2.4
-- React 19.2.4
-- Tailwind CSS v4
-- Supabase
-- Telegram Mini App / Telegram Bot
+It does **not** change the app code, Supabase schema, Telegram webhook logic, or user data. It is a checklist for confirming that the app is secure enough to return to product work.
 
-## Main files
+---
+
+## Verification result
+
+Use this result at the end:
 
 ```txt
-app/page.tsx              Main UI and client logic
-app/globals.css           Main design system
-app/api/broke/route.ts    Main Supabase/API logic
-app/api/telegram/route.ts Telegram webhook
-app/api/auth/telegram     Website Telegram login
+v58.18 status: PASS / NEEDS FIX
+Date:
+Checked by:
+Production URL:
+Telegram bot:
+Supabase project:
+Notes:
 ```
 
-## Useful commands
+Do not mark this as `PASS` until all critical checks below are completed.
+
+---
+
+# 1. Required Vercel environment variables
+
+Open **Vercel → Project → Settings → Environment Variables**.
+
+## Required
+
+Confirm these exist in Production:
+
+```txt
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+TELEGRAM_BOT_TOKEN
+TELEGRAM_WEBHOOK_SECRET
+TELEGRAM_SETUP_SECRET
+WEB_AUTH_SECRET
+CRON_SECRET
+```
+
+## Optional but recommended
+
+```txt
+DIAGNOSTICS_SECRET
+NOTIFICATIONS_SECRET
+COMMUNITY_WEB_POSTING_ENABLED=false
+COMMUNITY_WRITE_SECRET
+```
+
+## Must not exist
+
+No secret should use the public Next.js prefix:
+
+```txt
+NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY ❌
+NEXT_PUBLIC_TELEGRAM_BOT_TOKEN ❌
+NEXT_PUBLIC_TELEGRAM_WEBHOOK_SECRET ❌
+NEXT_PUBLIC_TELEGRAM_SETUP_SECRET ❌
+NEXT_PUBLIC_WEB_AUTH_SECRET ❌
+NEXT_PUBLIC_CRON_SECRET ❌
+```
+
+Only non-secret client values should use `NEXT_PUBLIC_`.
+
+---
+
+# 2. Public endpoint guard checks
+
+Replace:
+
+```txt
+https://YOUR-DOMAIN.vercel.app
+```
+
+with the production app URL.
+
+## 2.1 Telegram set webhook endpoint
+
+Open without secret:
+
+```txt
+https://YOUR-DOMAIN.vercel.app/api/telegram/set-webhook
+```
+
+Expected:
+
+```txt
+401 / 403 / unauthorized
+```
+
+It must **not** set the webhook without `?key=TELEGRAM_SETUP_SECRET`.
+
+Then test with secret only when needed:
+
+```txt
+https://YOUR-DOMAIN.vercel.app/api/telegram/set-webhook?key=YOUR_TELEGRAM_SETUP_SECRET
+```
+
+Expected:
+
+```txt
+ok / webhook set
+```
+
+## 2.2 Telegram delete webhook endpoint
+
+Open without secret:
+
+```txt
+https://YOUR-DOMAIN.vercel.app/api/telegram/delete-webhook
+```
+
+Expected:
+
+```txt
+401 / 403 / unauthorized
+```
+
+Do **not** run the delete endpoint with the real key unless you intentionally want to remove the Telegram webhook.
+
+## 2.3 Telegram webhook endpoint
+
+A direct random request to:
+
+```txt
+https://YOUR-DOMAIN.vercel.app/api/telegram
+```
+
+without Telegram's secret header should not be accepted as a trusted webhook update.
+
+Expected:
+
+```txt
+401 / 403 / ignored / invalid method
+```
+
+The important point: a random public request must not be able to impersonate Telegram.
+
+## 2.4 Supabase diagnostics endpoint
+
+Open without secret:
+
+```txt
+https://YOUR-DOMAIN.vercel.app/api/broke?check=supabase
+```
+
+Expected:
+
+```txt
+401 / 403 / unauthorized
+```
+
+With `DIAGNOSTICS_SECRET` or `TELEGRAM_SETUP_SECRET`, it may show diagnostics. Without a secret, it must not expose env/table details.
+
+## 2.5 Gentle notifications cron
+
+Call without secret:
+
+```txt
+https://YOUR-DOMAIN.vercel.app/api/notifications/gentle
+```
+
+Expected:
+
+```txt
+401 / 403 / unauthorized
+```
+
+If the route only supports POST, `405 Method Not Allowed` is also acceptable for a plain browser GET.
+
+## 2.6 Community web posting
+
+If `COMMUNITY_WEB_POSTING_ENABLED` is missing or set to `false`, public website posting to Telegram must not work.
+
+Expected:
+
+```txt
+disabled / unauthorized / forbidden
+```
+
+Only enable this intentionally with:
+
+```txt
+COMMUNITY_WEB_POSTING_ENABLED=true
+COMMUNITY_WRITE_SECRET=strong-random-secret
+```
+
+## 2.7 Share image upload checks
+
+Try uploading a non-image or very large file through the share endpoint if you have a safe local test request.
+
+Expected:
+
+```txt
+wrong type rejected
+oversized file rejected
+normal share flow still works
+```
+
+---
+
+# 3. Supabase RLS verification
+
+Run this first in Supabase SQL Editor:
+
+```txt
+supabase/review/20260520_v58_17_rls_audit.sql
+```
+
+If you do not have the file open from v58.17, use the copy inside this v58.18 pack:
+
+```txt
+supabase/review/20260520_v58_18_post_rls_audit.sql
+```
+
+## Expected for existing $BROKE tables
+
+```txt
+table_exists = true
+rls_enabled = true
+rls_forced = true
+policies = (no policies)
+```
+
+## Expected grants
+
+```txt
+service_role: SELECT, INSERT, UPDATE, DELETE
+anon: no table grants
+authenticated: no table grants
+```
+
+## Required columns
+
+These should exist:
+
+```txt
+broke_settings.settings_payload
+broke_settings.app_state_payload
+broke_expenses.currency
+```
+
+Missing optional tables are not automatically a blocker if the feature is not used, but missing required columns should be fixed.
+
+---
+
+# 4. Functional regression checks after security hardening
+
+Security is not finished unless the app still works.
+
+## 4.1 First user flow
+
+Check:
+
+```txt
+Open app → onboarding → Fast start: Track leak → save first leak
+```
+
+Expected:
+
+```txt
+User reaches Track Leak quickly
+Leak saves successfully
+Home updates
+Chart updates
+```
+
+## 4.2 Track Leak + triggers
+
+Create a test leak with:
+
+```txt
+Amount: small test amount
+Category: any
+Decision: Grey zone or Full leak
+Triggers: Stress + Late night or Weekend
+Note: optional
+```
+
+Expected:
+
+```txt
+Leak saves
+Trigger tags remain in notes or pattern data
+Chart / Leak Pattern Lab can read the signal
+```
+
+## 4.3 Cloud sync / settings
+
+Change one harmless setting, then reload.
+
+Expected:
+
+```txt
+Setting persists
+No unauthorized errors in UI
+No data disappears
+```
+
+## 4.4 Currency and old-data repair
+
+Check Settings:
+
+```txt
+Display Currency
+Currency Mode
+Old Data Currency Repair
+```
+
+Expected:
+
+```txt
+Settings load
+No broken exchange-rate warning unless external rates fail
+Repair panel is visible and does not auto-run accidentally
+```
+
+## 4.5 Telegram Mini App
+
+Open from Telegram bot button.
+
+Expected:
+
+```txt
+Mini App opens
+Telegram initData auth works
+Expenses load/save
+No blank screen
+```
+
+## 4.6 Web manual link
+
+Check manual Telegram/Web link if available.
+
+Expected:
+
+```txt
+Link code flow still works
+No account collision
+Same user data appears after link
+```
+
+## 4.7 Share flows
+
+Check:
+
+```txt
+Daily share/result
+Growth share card
+Survival card
+Weekly Review
+Monthly Leak History
+```
+
+Expected:
+
+```txt
+Card generation works
+Toast feedback appears
+No browser alert regression
+No private debt details exposed
+```
+
+---
+
+# 5. GitHub repository checks
+
+Open GitHub repo.
+
+## 5.1 No secrets committed
+
+Search the repo for:
+
+```txt
+SUPABASE_SERVICE_ROLE_KEY
+TELEGRAM_BOT_TOKEN
+TELEGRAM_WEBHOOK_SECRET
+TELEGRAM_SETUP_SECRET
+WEB_AUTH_SECRET
+CRON_SECRET
+service_role
+.env
+```
+
+Expected:
+
+```txt
+No real secret values in code
+Only documentation/template references
+.env files are not committed
+```
+
+## 5.2 GitHub secret scanning
+
+Enable if available:
+
+```txt
+Settings → Code security and analysis → Secret scanning
+Settings → Code security and analysis → Dependabot alerts
+```
+
+## 5.3 Branch safety
+
+Recommended:
+
+```txt
+main branch protected
+pull requests required before merge if a team joins
+force pushes disabled
+at least one rollback-ready deployment exists in Vercel
+```
+
+For a solo early-stage project, branch protection can be lighter, but never commit `.env` or service-role keys.
+
+---
+
+# 6. Vercel project checks
+
+## 6.1 Deployment protection
+
+Check:
+
+```txt
+Only GitHub repo owner/team can deploy
+Preview deployments do not expose production-only secrets unnecessarily
+Production secrets are scoped to Production where possible
+```
+
+## 6.2 Build logs
+
+Look through latest production build logs.
+
+Expected:
+
+```txt
+No secret values printed
+No env dump
+No stack trace exposing tokens
+No suspicious external script URLs added
+```
+
+## 6.3 Domains
+
+Check:
+
+```txt
+Production domain is correct
+Old test domains are not advertised
+Telegram webhook points to the production domain
+```
+
+---
+
+# 7. Dependency check
+
+Run locally:
 
 ```bash
-npm run dev
-npm run typecheck
-npm run lint:quiet
-npm run build
-npm run verify
+npm audit
 ```
 
-Use `npm run verify` before deploy. It runs:
+If it reports a Next.js security fix, update Next in a separate dependency-only patch.
 
-```bash
-npm run typecheck
-npm run lint:quiet
-npm run build
+Recommended future patch if needed:
+
+```txt
+v58.19 — Dependency Security Update
 ```
 
-## v58.11 Track Leak UX + Trigger Chips
+Do not mix dependency upgrades with product UI changes.
 
-This patch improves the Add screen so users record behavior context, not only amounts.
+---
 
-Changed:
+# 8. Pass / fail rules
 
-- renames the Add screen experience to `Track Leak`;
-- adds a behavior-first hero explaining that triggers help Pattern Lab understand why the leak happened;
-- changes decision labels from raw Needed / Maybe / Not needed UI to:
-  - `Survival cost`
-  - `Grey zone`
-  - `Full leak`
-- adds trigger chips:
-  - Stress
-  - Boredom
-  - Impulse
-  - After payday
-  - Late night
-  - Social pressure
-  - Weekend
-  - Habit
-- saves selected triggers into the existing `note` field as tags such as `#stress` or `#late-night`;
-- extends the existing Leak Pattern detector so trigger tags can strengthen late-night, weekend, after-payday, and emotional/context signals;
-- updates RU translations for the new Add/Track Leak wording.
+## Critical blockers
 
-Not changed:
+Do not mark v58.18 as PASS if any of these are true:
 
-- no API changes;
-- no Supabase migration;
-- no Telegram webhook changes;
-- no new database columns;
-- no stored-data rewrite.
+```txt
+/api/telegram/set-webhook works without key
+/api/telegram/delete-webhook works without key
+/api/broke?check=supabase exposes diagnostics without key
+notification cron runs without secret
+Supabase anon/authenticated can read/write BROKE tables directly
+SUPABASE_SERVICE_ROLE_KEY is exposed in GitHub or NEXT_PUBLIC env
+Telegram bot token is exposed in GitHub or NEXT_PUBLIC env
+App can no longer save/load user expenses
+```
 
-## v58.12 Weekly Pattern Summary
+## Acceptable non-blockers
 
-This patch strengthens Leak Pattern Lab by adding a 7-day behavior read inside Chart.
+These can be fixed later:
 
-Changed:
+```txt
+Minor UI spacing issue
+Optional table missing for unused feature
+npm audit moderate issue that does not have a safe immediate patch
+One share card style mismatch
+Documentation still mentioning older version number
+```
 
-- adds a weekly pattern summary card inside Leak Pattern Lab;
-- reads the last 7 days of expenses and leak pressure;
-- highlights the strongest weekly behavior pattern, such as:
-  - Grey zone decisions;
-  - Full leak spending;
-  - Weekend mode;
-  - Late-night spending;
-  - After-payday spending;
-  - Emotion / stress / boredom / impulse clues;
-  - One-day spike;
-  - Top category concentration;
-- adds weekly confidence, total leaks, leak pressure, and a direct “Next move this week”;
-- keeps this as client-side analysis using existing expense data and v58.11 trigger tags.
+---
 
-Not changed:
+# 9. Final sign-off template
 
-- no API changes;
-- no Supabase migration;
-- no Telegram webhook changes;
-- no new database columns;
-- no stored-data rewrite.
+Use this message internally when done:
 
-## v58.13 Toast Feedback Polish
+```txt
+v58.18 Final Security Verification: PASS
 
-This patch removes browser-native alert popups from the main app flow and routes user feedback through the existing in-app toast system.
+Checked:
+- endpoint guard rails
+- Supabase RLS/grants
+- required columns
+- GitHub secret scan/manual search
+- Vercel env names and build logs
+- Telegram Mini App auth
+- Track Leak save/load
+- Chart / Leak Pattern Lab
+- share cards
 
-Changed:
+Known non-blockers:
+- ...
 
-- added a small app-wide notification event helper so nested panels can trigger the existing toast without prop drilling;
-- replaced browser `window.alert` calls used by challenges, leaderboard, reports, share cards, Growth cards, Weekly Review, Monthly History, Mission results, and Survival cards;
-- kept clipboard `window.prompt` fallback where needed, because it still gives users a manual copy path when WebView clipboard access is blocked;
-- makes Telegram WebView share/download feedback feel native instead of browser-like.
-
-Not changed:
-
-- no API changes;
-- no Supabase migration;
-- no Telegram webhook changes;
-- no database schema changes;
-- no share-card logic rewrite.
-
-## v58.14 Home Priority Layout
-
-This patch makes Home feel less like a report wall and more like a daily command screen.
-
-Changed:
-
-- moves `Today’s Focus` directly under the hero so the first visible action is clear;
-- moves full financial stats, Life Profile, Streak, and Wallet HP into a collapsible `Wallet Snapshot` section;
-- keeps the key quick metrics visible inside Today’s Focus: Wallet HP, biggest leak, and today’s tracked spend;
-- updates helper copy so users understand Home has one main action first and deeper systems below;
-- adds mobile polish for the new Wallet Snapshot section.
-
-Not changed:
-
-- no API changes;
-- no Supabase migration;
-- no Telegram webhook changes;
-- no database schema changes;
-- no calculation logic changes;
-- no stored-data rewrite.
-
-
-## v58.15 Fast Start Onboarding
-
-This patch reduces first-session friction so a new user can reach Track Leak faster.
-
-Changed:
-
-- adds a `Fast Start` call-to-action on the first onboarding screen;
-- Fast Start completes onboarding and opens Track Leak with the starter leak prefilled, so users can record a real leak immediately;
-- adds soft `Add later` rows on Income and Fixed Costs steps so private numbers do not block the first aha moment;
-- clarifies that profile, income and fixed costs can be filled later for better accuracy;
-- adds mobile styling and RU translations for the new onboarding copy.
-
-Not changed:
-
-- no API changes;
-- no Supabase migration;
-- no Telegram webhook changes;
-- no database schema changes;
-- no calculation logic changes;
-- no stored-data rewrite.
-
-## v58.16 Security Audit & Guard Rails
-
-Security hardening added after v58.15:
-
-- Telegram webhook requires `TELEGRAM_WEBHOOK_SECRET`.
-- Webhook setup/delete endpoints require `TELEGRAM_SETUP_SECRET`.
-- Notification cron requires `CRON_SECRET` or `NOTIFICATIONS_SECRET`.
-- Supabase diagnostics require `DIAGNOSTICS_SECRET` or `TELEGRAM_SETUP_SECRET`.
-- Community web posting is disabled by default.
-- Share image upload validates type and size.
-- Basic security headers are set in `next.config.ts`.
-
-See `SECURITY_AUDIT.md` for the full table and environment checklist.
+Next recommended version:
+- v58.19 Dependency Security Update, if npm audit still flags Next.js
+- otherwise return to product polish
+```
