@@ -1,43 +1,25 @@
-# Secret exposure response playbook
+# Project Order — v58.19 First User Clarity Polish
 
-Use this if a secret is ever found in GitHub, a screenshot, logs, chat, or a public file.
+Current checkpoint: v58.19.
 
-## 1. Assume exposed secrets are compromised
+## Purpose
 
-Do not only delete the file. Rotate the secret.
+Make the app easier to understand in the first 30–60 seconds without adding a new feature module.
 
-## 2. Rotate in this order
+## Changes
 
-```txt
-1. Supabase service role key
-2. Telegram bot token
-3. WEB_AUTH_SECRET
-4. TELEGRAM_WEBHOOK_SECRET
-5. TELEGRAM_SETUP_SECRET
-6. CRON_SECRET / NOTIFICATIONS_SECRET
-7. COMMUNITY_WRITE_SECRET
-```
+1. Onboarding now explains the first-session loop:
+   - Track one leak.
+   - Read Wallet HP.
+   - Get the pattern.
+2. Home now shows a compact clarity strip:
+   - Track leak → Read pattern → Take next move.
+3. New users with no expenses see a direct clarity card telling them not to fill the whole app first.
+4. Track Leak now explains what will happen after saving:
+   - Wallet HP updates.
+   - Pattern Lab learns context.
+   - Next move becomes clearer.
 
-## 3. Update Vercel
+## Stability notes
 
-```txt
-Vercel → Project → Settings → Environment Variables
-Replace secret
-Redeploy production
-```
-
-## 4. Reset Telegram webhook if needed
-
-After rotating Telegram webhook/setup secrets:
-
-```txt
-/api/telegram/set-webhook?key=NEW_TELEGRAM_SETUP_SECRET
-```
-
-## 5. Check Supabase logs
-
-Look for unusual reads/writes around the exposure window.
-
-## 6. Remove from Git history if needed
-
-If a real secret was committed, use GitHub guidance or a history rewrite tool. Rotation is still required even if history is cleaned.
+This is UI/copy/CSS only. It does not alter calculations, APIs, Supabase, Telegram webhook, RLS, security settings, or database shape.

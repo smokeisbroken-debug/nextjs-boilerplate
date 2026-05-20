@@ -1463,6 +1463,30 @@ const ruText: Record<string, string> = {
   "Selected triggers are saved into the note as tags so Leak Pattern Lab can read them.": "Выбранные триггеры сохраняются в заметку как теги, чтобы Leak Pattern Lab мог их читать.",
   "Add context... e.g. tired after work": "Добавь контекст... например устал после работы",
   "Track honestly. The app cannot detect a pattern without context.": "Записывай честно. Без контекста приложение не увидит паттерн.",
+  "First-session promise": "Обещание первой сессии",
+  "One real leak should unlock one useful insight.": "Одна реальная утечка должна открыть один полезный инсайт.",
+  "No spreadsheet feeling. Save a leak, read the signal, then decide the next move.": "Без ощущения таблицы. Сохрани утечку, прочитай сигнал и выбери следующий шаг.",
+  "This is not a finance dashboard. It is a first-session loop: track one real leak, see what it did to Wallet HP, then get one clear next move.": "Это не финансовый дашборд. Это цикл первой сессии: запиши одну реальную утечку, увидь влияние на Wallet HP и получи следующий понятный шаг.",
+  "Track one leak": "Запиши одну утечку",
+  "Save one real expense, then mark it as Survival, Grey zone, or Full leak.": "Сохрани один реальный расход и отметь его как выживание, серую зону или полную утечку.",
+  "Read Wallet HP": "Проверь Wallet HP",
+  "See whether the month is stable or whether small leaks are creating pressure.": "Увидь, месяц стабилен или мелкие утечки уже создают давление.",
+  "Get the pattern": "Получи паттерн",
+  "Pattern Lab starts explaining the trigger behind the leak, not just the amount.": "Pattern Lab начинает объяснять триггер за утечкой, а не только сумму.",
+  "private numbers can wait. The first result should come fast.": "приватные цифры могут подождать. Первый результат должен появиться быстро.",
+  "Track leak": "Записать утечку",
+  "Read pattern": "Прочитать паттерн",
+  "Take next move": "Сделать следующий шаг",
+  "New here?": "Новичок?",
+  "Do not fill the whole app first.": "Не заполняй всё приложение сначала.",
+  "Track one real leak. That is enough to unlock Wallet HP, the first chart signal, and a useful next move.": "Запиши одну реальную утечку. Этого достаточно, чтобы открыть Wallet HP, первый сигнал графика и полезный следующий шаг.",
+  "After saving this leak": "После сохранения этой утечки",
+  "Wallet HP updates": "Wallet HP обновится",
+  "Pattern Lab learns context": "Pattern Lab изучит контекст",
+  "Next move becomes clearer": "Следующий шаг станет понятнее",
+  "Tip: choose one trigger if you know it. This is what makes future pattern reads feel personal.": "Совет: выбери один триггер, если знаешь его. Это делает будущие паттерны более личными.",
+  "Start with one action. This screen is the loop: track a leak, read the pattern, then come back tomorrow.": "Начни с одного действия. Этот экран — цикл: запиши утечку, прочитай паттерн и вернись завтра.",
+  "Open Track Leak": "Открыть Track Leak",
   "Stress": "Стресс",
   "Boredom": "Скука",
   "Impulse": "Импульс",
@@ -9195,8 +9219,8 @@ function OnboardingScreen({
             <span>$BROKE Life Tracker</span>
             <h1>Welcome, {firstName}.</h1>
             <p>
-              This is not a boring expense tracker. It is a wallet survival system:
-              find the leak, protect Wallet HP, then redirect the saved money into growth.
+              This is not a finance dashboard. It is a first-session loop: track one real leak,
+              see what it did to Wallet HP, then get one clear next move.
             </p>
           </div>
 
@@ -9204,24 +9228,24 @@ function OnboardingScreen({
             <article>
               <img src={A.leaks} alt="" />
               <div>
-                <strong>Find the leak</strong>
-                <span>Track one real expense and mark if it was Needed, Maybe, or Not needed.</span>
+                <strong>Track one leak</strong>
+                <span>Save one real expense, then mark it as Survival, Grey zone, or Full leak.</span>
               </div>
             </article>
 
             <article>
               <img src={A.walletMascot} alt="" />
               <div>
-                <strong>Protect Wallet HP</strong>
-                <span>Your HP shows if leaks are putting pressure on the month.</span>
+                <strong>Read Wallet HP</strong>
+                <span>See whether the month is stable or whether small leaks are creating pressure.</span>
               </div>
             </article>
 
             <article>
-              <img src={GROWTH_PUBLIC_ASSETS.market} alt="" />
+              <img src={A.chartFrog} alt="" />
               <div>
-                <strong>Redirect into Growth</strong>
-                <span>Use Growth Lab to simulate what saved leaks could become.</span>
+                <strong>Get the pattern</strong>
+                <span>Pattern Lab starts explaining the trigger behind the leak, not just the amount.</span>
               </div>
             </article>
           </div>
@@ -9230,11 +9254,17 @@ function OnboardingScreen({
             <div>
               <span>Fast Start</span>
               <strong>Skip the setup. Track one real leak now.</strong>
-              <p>Best for first-time users: profile, income and fixed costs can be added later.</p>
+              <p>Best for first-time users: private numbers can wait. The first result should come fast.</p>
             </div>
             <button type="button" onClick={startFast}>
               Fast start: Track leak
             </button>
+          </div>
+
+          <div className="first-session-promise-card">
+            <span>First-session promise</span>
+            <strong>One real leak should unlock one useful insight.</strong>
+            <p>No spreadsheet feeling. Save a leak, read the signal, then decide the next move.</p>
           </div>
 
           <div className="v58-privacy-note">
@@ -9496,7 +9526,7 @@ function OnboardingScreen({
             className="primary-btn onboarding-next"
             onClick={() => finish("add")}
           >
-            Open Add and track it
+            Open Track Leak
           </button>
         )}
       </div>
@@ -9683,6 +9713,13 @@ function DashboardScreen({
             is not broken.
             <span>It is leaking.</span>
           </h1>
+          <div className="home-clarity-pill">
+            <span>Track leak</span>
+            <b>→</b>
+            <span>Read pattern</span>
+            <b>→</b>
+            <span>Take next move</span>
+          </div>
         </div>
 
         <img
@@ -9703,6 +9740,19 @@ function DashboardScreen({
         onOpenAdd={onOpenAdd}
         onOpenChart={onOpenChart}
       />
+
+      {allExpenses.length === 0 && (
+        <section className="first-user-clarity-card">
+          <div>
+            <span>New here?</span>
+            <strong>Do not fill the whole app first.</strong>
+            <p>Track one real leak. That is enough to unlock Wallet HP, the first chart signal, and a useful next move.</p>
+          </div>
+          <button type="button" onClick={onOpenAdd}>
+            Track first leak
+          </button>
+        </section>
+      )}
 
       <details className="clean-details home-wallet-details">
         <summary>
@@ -10303,7 +10353,7 @@ function SmartHomeFocusCard({
       </button>
 
       <small className="smart-focus-note">
-        Start with one action. Wallet Snapshot and deeper systems stay below so Home does not feel like a report.
+        Start with one action. This screen is the loop: track a leak, read the pattern, then come back tomorrow.
       </small>
     </section>
   );
@@ -13183,6 +13233,24 @@ function AddExpenseScreen({
         <img src={A.addFrog} alt="" />
       </section>
 
+      <section className="track-leak-result-preview">
+        <span>After saving this leak</span>
+        <div>
+          <article>
+            <strong>1</strong>
+            <p>Wallet HP updates</p>
+          </article>
+          <article>
+            <strong>2</strong>
+            <p>Pattern Lab learns context</p>
+          </article>
+          <article>
+            <strong>3</strong>
+            <p>Next move becomes clearer</p>
+          </article>
+        </div>
+      </section>
+
       <section className="amount-box track-leak-amount">
         <label>Amount</label>
         <div className="amount-input">
@@ -13295,7 +13363,7 @@ function AddExpenseScreen({
           <span>Pattern context</span>
           <strong>{triggerPreview}</strong>
         </p>
-        <p className="tiny-note">Selected triggers are saved into the note as tags so Leak Pattern Lab can read them.</p>
+        <p className="tiny-note">Tip: choose one trigger if you know it. This is what makes future pattern reads feel personal.</p>
       </section>
 
       <section className="note-box track-note-box">
