@@ -18,25 +18,54 @@ function getSetupSecret() {
   return process.env.TELEGRAM_SETUP_SECRET || "";
 }
 
+function getProvidedSetupKey(request: NextRequest) {
+  const authHeader = request.headers.get("authorization") || "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+  return request.nextUrl.searchParams.get("key") || bearer;
+}
+
+function authorizeSetupRequest(request: NextRequest) {
+  const setupSecret = getSetupSecret();
+
+  if (!setupSecret) {
+    return {
+      ok: false,
+      status: 500,
+      error: "Missing TELEGRAM_SETUP_SECRET. Webhook setup endpoints are locked by default.",
+    };
+  }
+
+  if (getProvidedSetupKey(request) !== setupSecret) {
+    return {
+      ok: false,
+      status: 401,
+      error: "Wrong setup key",
+    };
+  }
+
+  return { ok: true, status: 200, error: "" };
+}
+
 export async function GET(request: NextRequest) {
+  const authorization = authorizeSetupRequest(request);
+
+  if (!authorization.ok) {
+    return NextResponse.json(
+      { ok: false, error: authorization.error },
+      { status: authorization.status }
+    );
+  }
+
   const botToken = getBotToken();
   const webAppUrl = getWebAppUrl();
   const webhookSecret = getWebhookSecret();
-  const setupSecret = getSetupSecret();
 
-  if (setupSecret) {
-    const key = request.nextUrl.searchParams.get("key");
-
-    if (key !== setupSecret) {
-      return NextResponse.json({ ok: false, error: "Wrong setup key" }, { status: 401 });
-    }
-  }
-
-  if (!botToken || !webAppUrl) {
+  if (!botToken || !webAppUrl || !webhookSecret) {
     return NextResponse.json(
       {
         ok: false,
-        error: "Missing TELEGRAM_BOT_TOKEN or WEBAPP_URL environment variable",
+        error: "Missing TELEGRAM_BOT_TOKEN, WEBAPP_URL, or TELEGRAM_WEBHOOK_SECRET environment variable",
       },
       { status: 500 }
     );
@@ -52,7 +81,7 @@ export async function GET(request: NextRequest) {
     body: JSON.stringify({
       url: webhookUrl,
       allowed_updates: ["message"],
-      secret_token: webhookSecret || undefined,
+      secret_token: webhookSecret,
       drop_pending_updates: true,
     }),
   });

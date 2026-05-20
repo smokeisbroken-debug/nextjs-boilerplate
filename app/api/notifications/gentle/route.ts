@@ -268,11 +268,15 @@ async function logNotification(input: {
   });
 }
 
+function getNotificationSecret() {
+  return getOptionalEnv("CRON_SECRET") || getOptionalEnv("NOTIFICATIONS_SECRET");
+}
+
 function isAuthorized(request: NextRequest) {
-  const secret = getOptionalEnv("CRON_SECRET") || getOptionalEnv("NOTIFICATIONS_SECRET");
+  const secret = getNotificationSecret();
 
   if (!secret) {
-    return true;
+    return false;
   }
 
   const key = request.nextUrl.searchParams.get("key");
@@ -284,6 +288,16 @@ function isAuthorized(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    if (!getNotificationSecret()) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Missing CRON_SECRET or NOTIFICATIONS_SECRET. Notification endpoint is locked by default.",
+        },
+        { status: 500 }
+      );
+    }
+
     if (!isAuthorized(request)) {
       return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
     }

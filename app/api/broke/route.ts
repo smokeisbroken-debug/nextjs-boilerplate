@@ -2716,22 +2716,64 @@ async function checkSupabaseTable(tableName: string) {
   }
 }
 
+function getDiagnosticsSecret() {
+  return process.env.DIAGNOSTICS_SECRET || process.env.TELEGRAM_SETUP_SECRET || "";
+}
+
+function isDiagnosticsAuthorized(request: NextRequest) {
+  const secret = getDiagnosticsSecret();
+
+  if (!secret) return false;
+
+  const key = request.nextUrl.searchParams.get("key");
+  const authHeader = request.headers.get("authorization") || "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+  return key === secret || bearer === secret;
+}
+
 export async function GET(request: NextRequest) {
   const check = request.nextUrl.searchParams.get("check");
+  const authorized = isDiagnosticsAuthorized(request);
 
   const base = {
     ok: true,
     route: "/api/broke",
-    env: {
-      TELEGRAM_BOT_TOKEN: hasEnv("TELEGRAM_BOT_TOKEN"),
-      SUPABASE_URL: hasEnv("SUPABASE_URL"),
-      SUPABASE_SERVICE_ROLE_KEY: hasEnv("SUPABASE_SERVICE_ROLE_KEY"),
-      WEB_AUTH_SECRET: hasEnv("WEB_AUTH_SECRET"),
-    },
+    diagnosticsProtected: true,
   };
 
   if (check !== "supabase") {
-    return NextResponse.json(base);
+    return NextResponse.json(
+      authorized
+        ? {
+            ...base,
+            env: {
+              TELEGRAM_BOT_TOKEN: hasEnv("TELEGRAM_BOT_TOKEN"),
+              SUPABASE_URL: hasEnv("SUPABASE_URL"),
+              SUPABASE_SERVICE_ROLE_KEY: hasEnv("SUPABASE_SERVICE_ROLE_KEY"),
+              WEB_AUTH_SECRET: hasEnv("WEB_AUTH_SECRET"),
+              TELEGRAM_WEBHOOK_SECRET: hasEnv("TELEGRAM_WEBHOOK_SECRET"),
+              TELEGRAM_SETUP_SECRET: hasEnv("TELEGRAM_SETUP_SECRET"),
+              CRON_SECRET: hasEnv("CRON_SECRET"),
+            },
+          }
+        : base
+    );
+  }
+
+  if (!getDiagnosticsSecret()) {
+    return NextResponse.json(
+      {
+        ...base,
+        ok: false,
+        error: "Missing DIAGNOSTICS_SECRET or TELEGRAM_SETUP_SECRET. Supabase diagnostics are locked by default.",
+      },
+      { status: 500 }
+    );
+  }
+
+  if (!authorized) {
+    return NextResponse.json({ ...base, ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
   try {
@@ -2746,13 +2788,23 @@ export async function GET(request: NextRequest) {
       checkSupabaseTable("broke_xp_events"),
       checkSupabaseTable("broke_leaderboard_profiles"),
       checkSupabaseTable("broke_exchange_rates"),
+      checkSupabaseTable("broke_web_link_codes"),
+      checkSupabaseTable("broke_community_messages"),
+      checkSupabaseTable("broke_notification_logs"),
     ]);
 
     return NextResponse.json({
       ...base,
+      env: {
+        TELEGRAM_BOT_TOKEN: hasEnv("TELEGRAM_BOT_TOKEN"),
+        SUPABASE_URL: hasEnv("SUPABASE_URL"),
+        SUPABASE_SERVICE_ROLE_KEY: hasEnv("SUPABASE_SERVICE_ROLE_KEY"),
+        WEB_AUTH_SECRET: hasEnv("WEB_AUTH_SECRET"),
+        TELEGRAM_WEBHOOK_SECRET: hasEnv("TELEGRAM_WEBHOOK_SECRET"),
+        TELEGRAM_SETUP_SECRET: hasEnv("TELEGRAM_SETUP_SECRET"),
+        CRON_SECRET: hasEnv("CRON_SECRET"),
+      },
       supabase: {
-        originalUrl: getEnv("SUPABASE_URL").replace(/\?.*$/, ""),
-        normalizedBaseUrl: getSupabaseBaseUrl(),
         urlHost: new URL(getSupabaseBaseUrl()).host,
         tables,
       },

@@ -18,6 +18,8 @@ type WebAuthSession = {
 };
 
 const WEB_AUTH_COOKIE = "broke_tg_session";
+const MAX_SHARE_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_SHARE_IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
 function getEnv(name: string) {
   const value = process.env[name];
@@ -179,6 +181,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { ok: false, error: "Missing image file" },
         { status: 400 }
+      );
+    }
+
+    if (!ALLOWED_SHARE_IMAGE_TYPES.has(image.type || "")) {
+      return NextResponse.json(
+        { ok: false, error: "Unsupported image type" },
+        { status: 400 }
+      );
+    }
+
+    if (image.size > MAX_SHARE_IMAGE_BYTES) {
+      return NextResponse.json(
+        { ok: false, error: "Image is too large" },
+        { status: 413 }
       );
     }
 

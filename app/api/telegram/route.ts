@@ -425,13 +425,20 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   const secret = getWebhookSecret();
+  const incomingSecret = request.headers.get("x-telegram-bot-api-secret-token");
 
-  if (secret) {
-    const incomingSecret = request.headers.get("x-telegram-bot-api-secret-token");
+  if (!secret) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Missing TELEGRAM_WEBHOOK_SECRET. Telegram webhook is locked by default.",
+      },
+      { status: 500 }
+    );
+  }
 
-    if (incomingSecret !== secret) {
-      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
-    }
+  if (incomingSecret !== secret) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
   }
 
   let update: TelegramUpdate;

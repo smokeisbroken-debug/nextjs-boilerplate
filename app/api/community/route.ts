@@ -17,6 +17,27 @@ function getOptionalEnv(name: string) {
   return process.env[name] || "";
 }
 
+
+function isWebCommunityPostingEnabled() {
+  return getOptionalEnv("COMMUNITY_WEB_POSTING_ENABLED") === "true";
+}
+
+function getCommunityWriteSecret() {
+  return getOptionalEnv("COMMUNITY_WRITE_SECRET");
+}
+
+function isCommunityWriteAuthorized(request: NextRequest) {
+  const secret = getCommunityWriteSecret();
+
+  if (!secret) return false;
+
+  const key = request.nextUrl.searchParams.get("key");
+  const authHeader = request.headers.get("authorization") || "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+  return key === secret || bearer === secret;
+}
+
 function getEnv(name: string) {
   const value = process.env[name];
 
@@ -179,6 +200,20 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!isWebCommunityPostingEnabled()) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Community web posting is disabled. The public feed remains read-only.",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (!isCommunityWriteAuthorized(request)) {
+      return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await request.json();
     const action = String(body.action || "");
 
