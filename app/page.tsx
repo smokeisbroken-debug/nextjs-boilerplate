@@ -9836,6 +9836,46 @@ function DashboardScreen({
     },
   ];
 
+  const walletSnapshotTabs = useMemo(() => {
+    const todayKey = dayKey(new Date());
+    return chartDays
+      .slice(-7)
+      .reverse()
+      .map((point, index) => {
+        const date = new Date(`${point.key}T12:00:00`);
+        const isToday = point.key === todayKey || index === 0;
+        const shortLabel = isToday
+          ? "Today"
+          : date.toLocaleDateString("en-US", { weekday: "short" });
+        const fullLabel = isToday
+          ? "Today’s Wallet Snapshot"
+          : `${date.toLocaleDateString("en-US", { weekday: "long" })} Wallet Snapshot`;
+
+        return {
+          point,
+          shortLabel,
+          fullLabel,
+        };
+      });
+  }, [chartDays]);
+
+  const [selectedWalletSnapshotKey, setSelectedWalletSnapshotKey] = useState("");
+
+  const selectedWalletSnapshot =
+    walletSnapshotTabs.find((tab) => tab.point.key === selectedWalletSnapshotKey) || walletSnapshotTabs[0] || null;
+
+  const selectedSnapshotPoint = selectedWalletSnapshot?.point || null;
+  const selectedSnapshotPressure = selectedSnapshotPoint
+    ? selectedSnapshotPoint.pressure >= 80
+      ? "High pressure"
+      : selectedSnapshotPoint.pressure >= 45
+        ? "Watch zone"
+        : selectedSnapshotPoint.spent > 0
+          ? "Controlled"
+          : "Quiet"
+    : "No snapshot";
+  const selectedSnapshotTone = selectedSnapshotPoint?.status || "quiet";
+
   const identityStats = useMemo(() => {
     return buildV2IdentityStats(allExpenses, settings, summary.walletHp);
   }, [allExpenses, settings, summary.walletHp]);
@@ -9896,51 +9936,98 @@ function DashboardScreen({
         </section>
       )}
 
-      <details className="clean-details home-wallet-details">
-        <summary>
+      <section className="home-wallet-snapshot-card">
+        <div className="wallet-snapshot-heading">
           <div>
-            <span>Wallet Snapshot</span>
-            <small>Full numbers, streak, life profile, and Wallet HP.</small>
+            <span>Wallet Snapshot for Today</span>
+            <strong>Your cash flow is still the hook.</strong>
+            <p>Open the app and see the money state first. Scroll days to compare older wallet snapshots.</p>
           </div>
           <b>{summary.walletHp}/100 HP</b>
-        </summary>
+        </div>
 
-        <section className="home-wallet-snapshot-panel">
-          <section className="stats-grid compact-home-stats">
-            {stats.map((item) => (
-              <div className={`stat-card ${item.tone}`} key={item.title}>
-                <div className="stat-top">
-                  <img src={item.icon} alt="" />
-                  <span>{item.title}</span>
-                </div>
-                <strong>{item.value}</strong>
-                <small>{item.subtitle}</small>
-              </div>
-            ))}
-          </section>
-
-          <LifeProfileSummaryCard settings={settings} />
-
-          <StreakCard streak={summary.streak} />
-
-          <section className="hp-card">
-            <div className="section-title">
-              <span>Wallet HP</span>
-              <b>{summary.walletHp >= 80 ? "Stable Wallet" : "Small Leak"}</b>
+        {walletSnapshotTabs.length > 0 && selectedSnapshotPoint && (
+          <>
+            <div className="wallet-snapshot-tabs" aria-label="Wallet snapshot days">
+              {walletSnapshotTabs.map((tab) => (
+                <button
+                  key={tab.point.key}
+                  type="button"
+                  className={tab.point.key === selectedSnapshotPoint.key ? "active" : ""}
+                  onClick={() => setSelectedWalletSnapshotKey(tab.point.key)}
+                >
+                  <span>{tab.shortLabel}</span>
+                  <small>{tab.point.spent > 0 ? money(tab.point.spent, settings.currency) : "quiet"}</small>
+                </button>
+              ))}
             </div>
 
-            <div className="hp-row">
-              <img src={A.walletHp} alt="Wallet HP" />
-              <div className="hp-bar">
-                <div style={{ width: `${summary.walletHp}%` }} />
+            <section className={`wallet-snapshot-day-card ${selectedSnapshotTone}`}>
+              <div>
+                <span>{selectedWalletSnapshot?.fullLabel}</span>
+                <strong>{selectedSnapshotPressure}</strong>
               </div>
-              <strong>{summary.walletHp} / 100</strong>
-            </div>
+              <div className="wallet-snapshot-day-metrics">
+                <article>
+                  <span>State after day</span>
+                  <strong>{money(selectedSnapshotPoint.close, settings.currency)}</strong>
+                </article>
+                <article>
+                  <span>Tracked</span>
+                  <strong>{money(selectedSnapshotPoint.spent, settings.currency)}</strong>
+                </article>
+                <article>
+                  <span>Leak pressure</span>
+                  <strong>{money(selectedSnapshotPoint.leakAmount, settings.currency)}</strong>
+                </article>
+              </div>
+            </section>
+          </>
+        )}
 
-            <p>Hold the line, fix the leaks.</p>
-          </section>
+        <section className="stats-grid compact-home-stats wallet-snapshot-primary-stats">
+          {stats.map((item) => (
+            <div className={`stat-card ${item.tone}`} key={item.title}>
+              <div className="stat-top">
+                <img src={item.icon} alt="" />
+                <span>{item.title}</span>
+              </div>
+              <strong>{item.value}</strong>
+              <small>{item.subtitle}</small>
+            </div>
+          ))}
         </section>
-      </details>
+
+        <details className="wallet-snapshot-more">
+          <summary>
+            <span>More wallet context</span>
+            <b>Profile / streak / HP</b>
+          </summary>
+
+          <section className="home-wallet-snapshot-panel">
+            <LifeProfileSummaryCard settings={settings} />
+
+            <StreakCard streak={summary.streak} />
+
+            <section className="hp-card">
+              <div className="section-title">
+                <span>Wallet HP</span>
+                <b>{summary.walletHp >= 80 ? "Stable Wallet" : "Small Leak"}</b>
+              </div>
+
+              <div className="hp-row">
+                <img src={A.walletHp} alt="Wallet HP" />
+                <div className="hp-bar">
+                  <div style={{ width: `${summary.walletHp}%` }} />
+                </div>
+                <strong>{summary.walletHp} / 100</strong>
+              </div>
+
+              <p>Hold the line, fix the leaks.</p>
+            </section>
+          </section>
+        </details>
+      </section>
 
       {comebackState && (
         <ComebackModeCard

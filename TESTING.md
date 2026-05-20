@@ -1,40 +1,20 @@
-# Testing — v59.2 Pattern History Foundation
+# Testing — v59.3 Wallet Snapshot Visibility
 
-## Local verification
+## Required checks
 
-```bash
-npm run typecheck
-npm run lint:quiet
-NEXT_TELEMETRY_DISABLED=1 npm run build
-```
+- Home loads after deployment.
+- Today’s Focus still appears near the top.
+- Wallet Snapshot is visible without opening a collapsible section.
+- Income / Life Cost / Money Leaks / Real Balance are visible upfront.
+- Snapshot day tabs scroll horizontally on mobile.
+- Tapping a day tab changes the daily snapshot card.
+- More wallet context opens and shows profile, streak, and Wallet HP.
+- Track Leak still saves expenses.
+- Chart / Leak Pattern Lab still loads.
+- Telegram Mini App layout does not collide with bottom nav.
 
-## Supabase verification
+## Build checks used
 
-After running the migration, run:
-
-```txt
-supabase/review/20260520_v59_2_pattern_history_audit.sql
-```
-
-Expected:
-
-- table exists = true;
-- required columns exist;
-- rowsecurity = true;
-- anon/authenticated do not have direct table grants;
-- service_role has table privileges.
-
-## App smoke test
-
-1. Open the Mini App.
-2. Track one or more leaks with trigger chips.
-3. Open Chart.
-4. Open Leak Pattern Lab.
-5. Confirm Pattern memory shows either:
-   - saved weekly reads, or
-   - a warming-up empty state.
-6. Refresh/reopen the app and confirm saved reads can load after cloud sync.
-
-## Failure behavior
-
-If the Supabase table was not migrated yet, the app should still work. Pattern history will stay empty until the migration is applied.
+- `npm run typecheck`
+- `npm run lint:quiet`
+- `NEXT_TELEMETRY_DISABLED=1 npm run build`

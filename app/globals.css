@@ -17863,3 +17863,270 @@ html[lang="ru"] .trigger-preview strong {
     text-align: left;
   }
 }
+
+/* ===== V59.3 WALLET SNAPSHOT VISIBILITY ===== */
+.home-wallet-snapshot-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 26px;
+  border: 1px solid rgba(183, 255, 25, 0.15);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.13), transparent 36%),
+    radial-gradient(circle at 0% 100%, rgba(157, 0, 255, 0.09), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.018));
+  box-shadow: inset 0 0 0 1px rgba(183, 255, 25, 0.04), 0 16px 38px rgba(0, 0, 0, 0.24);
+}
+
+.wallet-snapshot-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.wallet-snapshot-heading span {
+  display: block;
+  color: var(--green);
+  font-size: 10.5px;
+  line-height: 1;
+  font-weight: 960;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.wallet-snapshot-heading strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 19px;
+  line-height: 1.05;
+  font-weight: 990;
+  letter-spacing: -0.035em;
+}
+
+.wallet-snapshot-heading p {
+  margin: 6px 0 0;
+  max-width: 420px;
+  color: rgba(244, 247, 240, 0.64);
+  font-size: 11.5px;
+  line-height: 1.34;
+  font-weight: 760;
+}
+
+.wallet-snapshot-heading > b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 76px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 999px;
+  color: #071007;
+  background: linear-gradient(90deg, var(--green-2), var(--green-3));
+  box-shadow: 0 12px 28px rgba(183, 255, 25, 0.16);
+  font-size: 13px;
+  font-weight: 990;
+  white-space: nowrap;
+}
+
+.wallet-snapshot-tabs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 5px;
+  margin: 0 -2px;
+  scrollbar-width: none;
+}
+
+.wallet-snapshot-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.wallet-snapshot-tabs button {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 4px;
+  min-width: 76px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 17px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.16);
+  text-align: left;
+}
+
+.wallet-snapshot-tabs button.active {
+  border-color: rgba(183, 255, 25, 0.33);
+  background: rgba(183, 255, 25, 0.105);
+  box-shadow: inset 0 0 0 1px rgba(183, 255, 25, 0.045), 0 10px 22px rgba(0, 0, 0, 0.16);
+}
+
+.wallet-snapshot-tabs span {
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 940;
+}
+
+.wallet-snapshot-tabs small {
+  color: rgba(244, 247, 240, 0.58);
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 760;
+}
+
+.wallet-snapshot-day-card {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 21px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.wallet-snapshot-day-card.warning {
+  border-color: rgba(255, 177, 43, 0.2);
+  background: linear-gradient(180deg, rgba(255, 177, 43, 0.08), rgba(0, 0, 0, 0.15));
+}
+
+.wallet-snapshot-day-card.danger {
+  border-color: rgba(255, 92, 80, 0.24);
+  background: linear-gradient(180deg, rgba(255, 92, 80, 0.09), rgba(0, 0, 0, 0.15));
+}
+
+.wallet-snapshot-day-card.safe {
+  border-color: rgba(183, 255, 25, 0.18);
+  background: linear-gradient(180deg, rgba(183, 255, 25, 0.07), rgba(0, 0, 0, 0.14));
+}
+
+.wallet-snapshot-day-card > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wallet-snapshot-day-card > div:first-child span {
+  color: rgba(244, 247, 240, 0.64);
+  font-size: 11px;
+  line-height: 1.1;
+  font-weight: 840;
+}
+
+.wallet-snapshot-day-card > div:first-child strong {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 980;
+  white-space: nowrap;
+}
+
+.wallet-snapshot-day-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.wallet-snapshot-day-metrics article {
+  min-width: 0;
+  padding: 9px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.wallet-snapshot-day-metrics span {
+  display: block;
+  color: rgba(244, 247, 240, 0.55);
+  font-size: 9.5px;
+  line-height: 1.1;
+  font-weight: 820;
+}
+
+.wallet-snapshot-day-metrics strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.05;
+  font-weight: 980;
+  word-break: break-word;
+}
+
+.wallet-snapshot-primary-stats {
+  margin-top: 0;
+}
+
+.wallet-snapshot-more {
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 19px;
+  background: rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.wallet-snapshot-more summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.wallet-snapshot-more summary::-webkit-details-marker {
+  display: none;
+}
+
+.wallet-snapshot-more summary span {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.wallet-snapshot-more summary b {
+  color: rgba(244, 247, 240, 0.56);
+  font-size: 10.5px;
+  line-height: 1;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
+.wallet-snapshot-more .home-wallet-snapshot-panel {
+  padding: 0 12px 12px;
+}
+
+@media (max-width: 430px) {
+  .home-wallet-snapshot-card {
+    padding: 12px;
+    border-radius: 23px;
+  }
+
+  .wallet-snapshot-heading {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-snapshot-heading > b {
+    justify-self: start;
+    min-height: 36px;
+  }
+
+  .wallet-snapshot-heading strong {
+    font-size: 17px;
+  }
+
+  .wallet-snapshot-day-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .wallet-snapshot-day-card > div:first-child {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .wallet-snapshot-tabs button {
+    min-width: 72px;
+    padding: 8px 9px;
+  }
+}
