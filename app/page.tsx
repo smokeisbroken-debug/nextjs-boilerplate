@@ -9887,55 +9887,6 @@ function DashboardScreen({
     <div className="screen">
       <Header title="$BROKE Life Tracker" rightIcon={A.help} onRight={onBellClick} />
 
-      <section className="hero">
-        <div>
-          <h1>
-            Your wallet
-            <br />
-            is not broken.
-            <span>It is leaking.</span>
-          </h1>
-          <div className="home-clarity-pill">
-            <span>Track leak</span>
-            <b>→</b>
-            <span>Read pattern</span>
-            <b>→</b>
-            <span>Take next move</span>
-          </div>
-        </div>
-
-        <img
-          className="home-mascot"
-          src={PREMIUM_VISUAL_PACK.homeMascot}
-          alt="Mascot"
-          onError={(event) => {
-            event.currentTarget.src = A.homeMascot;
-          }}
-        />
-      </section>
-
-      <SmartHomeFocusCard
-        settings={settings}
-        summary={summary}
-        allExpenses={allExpenses}
-        identityStats={identityStats}
-        onOpenAdd={onOpenAdd}
-        onOpenChart={onOpenChart}
-      />
-
-      {allExpenses.length === 0 && (
-        <section className="first-user-clarity-card">
-          <div>
-            <span>New here?</span>
-            <strong>Do not fill the whole app first.</strong>
-            <p>Track one real leak. That is enough to unlock Wallet HP, the first chart signal, and a useful next move.</p>
-          </div>
-          <button type="button" onClick={onOpenAdd}>
-            Track first leak
-          </button>
-        </section>
-      )}
-
       <section className="home-wallet-snapshot-card">
         <div className="wallet-snapshot-heading">
           <div>
@@ -10028,6 +9979,56 @@ function DashboardScreen({
           </section>
         </details>
       </section>
+
+
+      <section className="hero">
+        <div>
+          <h1>
+            Your wallet
+            <br />
+            is not broken.
+            <span>It is leaking.</span>
+          </h1>
+          <div className="home-clarity-pill">
+            <span>Track leak</span>
+            <b>→</b>
+            <span>Read pattern</span>
+            <b>→</b>
+            <span>Take next move</span>
+          </div>
+        </div>
+
+        <img
+          className="home-mascot"
+          src={PREMIUM_VISUAL_PACK.homeMascot}
+          alt="Mascot"
+          onError={(event) => {
+            event.currentTarget.src = A.homeMascot;
+          }}
+        />
+      </section>
+
+      <SmartHomeFocusCard
+        settings={settings}
+        summary={summary}
+        allExpenses={allExpenses}
+        identityStats={identityStats}
+        onOpenAdd={onOpenAdd}
+        onOpenChart={onOpenChart}
+      />
+
+      {allExpenses.length === 0 && (
+        <section className="first-user-clarity-card">
+          <div>
+            <span>New here?</span>
+            <strong>Do not fill the whole app first.</strong>
+            <p>Track one real leak. That is enough to unlock Wallet HP, the first chart signal, and a useful next move.</p>
+          </div>
+          <button type="button" onClick={onOpenAdd}>
+            Track first leak
+          </button>
+        </section>
+      )}
 
       {comebackState && (
         <ComebackModeCard

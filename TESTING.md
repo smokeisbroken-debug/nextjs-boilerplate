@@ -1,10 +1,11 @@
-# Testing — v59.3 Wallet Snapshot Visibility
+# Testing — v59.3.1 Wallet Snapshot Top Placement Hotfix
 
 ## Required checks
 
 - Home loads after deployment.
-- Today’s Focus still appears near the top.
-- Wallet Snapshot is visible without opening a collapsible section.
+- `Wallet Snapshot for Today` is the first visible content block under the app header.
+- Hero / brand message appears below Wallet Snapshot.
+- Today’s Focus still appears after the hero.
 - Income / Life Cost / Money Leaks / Real Balance are visible upfront.
 - Snapshot day tabs scroll horizontally on mobile.
 - Tapping a day tab changes the daily snapshot card.

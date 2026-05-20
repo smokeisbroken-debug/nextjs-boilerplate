@@ -1,19 +1,18 @@
-# Project Order — v59.3
+# Project Order — v59.3.1
 
-Current stable base before this patch: v59.2 Pattern History Foundation.
+Current stable base before this hotfix: v59.3 Wallet Snapshot Visibility.
 
-## v59.3 objective
+## v59.3.1 objective
 
-Restore the psychological hook on Home by making cash-flow state visible upfront again.
+Place Wallet Snapshot as the first Home content block, directly under the app header, so users see their money state immediately when opening the app.
 
 ## Install order
 
 1. Replace `app/page.tsx`.
-2. Replace `app/globals.css`.
-3. Replace docs if desired.
-4. Deploy to Vercel.
-5. Test Home on mobile and Telegram WebView.
+2. Replace docs if desired.
+3. Deploy to Vercel.
+4. Test Home on mobile and Telegram WebView.
 
 ## No backend step
 
-Do not run any Supabase SQL for this patch.
+Do not run any Supabase SQL for this hotfix.

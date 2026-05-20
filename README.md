@@ -1,27 +1,23 @@
-# $BROKE / SmokeIsBroke — v59.3 Wallet Snapshot Visibility
+# $BROKE / SmokeIsBroke — v59.3.1 Wallet Snapshot Top Placement Hotfix
 
-Patch-only update from v59.2.
+Patch-only update from v59.3.
 
 ## Purpose
 
-Community feedback said the Home tab felt less alive when cash-flow numbers were hidden behind a collapsed Wallet Snapshot. This patch restores upfront money-state visibility while keeping the cleaner Home hierarchy.
+Community feedback clarified that the Wallet Snapshot should not only be visible upfront. It should be the first Home block under the app header, because the cash-flow state is the immediate psychological hook when users open the app.
 
 ## Changes
 
-- Wallet Snapshot is visible directly on Home again.
-- Added a clear heading: `Wallet Snapshot for Today`.
-- Added scrollable day snapshot tabs for the current 7-day chart range.
-- Daily snapshot cards show:
-  - state after day;
-  - tracked amount;
-  - leak pressure;
-  - pressure status.
-- Monthly cash-flow cards stay visible upfront:
+- Moved `Wallet Snapshot for Today` to the very top of Home, directly under the app header.
+- Hero / brand message now appears below the Wallet Snapshot.
+- Today’s Focus stays below the hero.
+- Cash-flow cards remain visible upfront:
   - Income;
   - Life Cost;
   - Money Leaks;
   - Real Balance.
-- Profile, streak, and Wallet HP details moved into a small secondary collapsible block.
+- Snapshot day tabs still allow quick comparison with older wallet states.
+- Profile, streak, and Wallet HP details remain inside secondary `More wallet context`.
 
 ## Backend
 
