@@ -1402,6 +1402,46 @@ const ruText: Record<string, string> = {
   "for future conversion.": "для будущей конвертации.",
   "Amounts added now are stored with their original currency. Real conversion is still being prepared.": "Суммы, добавленные сейчас, сохраняются с исходной валютой. Реальная конвертация ещё готовится.",
   "Add Expense": "Добавить расход",
+  "Track Leak": "Записать утечку",
+  "Behavior mode": "Режим поведения",
+  "Track the trigger, not only the amount.": "Записывай триггер, а не только сумму.",
+  "Amount shows the damage. Decision type and trigger chips help Pattern Lab explain why it happened.": "Сумма показывает ущерб. Тип решения и триггеры помогают Pattern Lab понять, почему это произошло.",
+  "New records are saved with their original currency.": "Новые записи сохраняются с исходной валютой.",
+  "Quick leak presets": "Быстрые утечки",
+  "Leak category": "Категория утечки",
+  "Decision type": "Тип решения",
+  "Survival cost": "Расход на выживание",
+  "necessary": "необходимо",
+  "Grey zone": "Серая зона",
+  "questionable": "сомнительно",
+  "Full leak": "Полная утечка",
+  "avoidable": "можно избежать",
+  "Survival cost = necessary. It protects accuracy and does not count as a leak.": "Расход на выживание = необходимо. Он сохраняет точность и не считается утечкой.",
+  "Grey zone = questionable. $BROKE counts half of it as leak pressure.": "Серая зона = спорно. $BROKE считает половину как давление утечки.",
+  "Full leak = avoidable. It lowers Wallet HP and powers Save/Growth insights.": "Полная утечка = можно было избежать. Она снижает Wallet HP и питает инсайты Save/Growth.",
+  "Trigger chips": "Триггеры",
+  "optional, but useful": "необязательно, но полезно",
+  "Pattern context": "Контекст паттерна",
+  "No trigger selected yet": "Триггер пока не выбран",
+  "Selected triggers are saved into the note as tags so Leak Pattern Lab can read them.": "Выбранные триггеры сохраняются в заметку как теги, чтобы Leak Pattern Lab мог их читать.",
+  "Add context... e.g. tired after work": "Добавь контекст... например устал после работы",
+  "Track honestly. The app cannot detect a pattern without context.": "Записывай честно. Без контекста приложение не увидит паттерн.",
+  "Stress": "Стресс",
+  "Boredom": "Скука",
+  "Impulse": "Импульс",
+  "After payday": "После зарплаты",
+  "Late night": "Поздняя ночь",
+  "Social pressure": "Давление окружения",
+  "Weekend": "Выходные",
+  "Habit": "Привычка",
+  "pressure buy": "покупка под давлением",
+  "nothing to do": "нечего делать",
+  "fast decision": "быстрое решение",
+  "money just landed": "деньги только пришли",
+  "low discipline": "мало дисциплины",
+  "others pushed it": "повлияли другие",
+  "weekend mode": "режим выходных",
+  "repeat loop": "повторяющийся цикл",
   "Add a quick note...": "Добавь короткую заметку...",
   "Track daily leaks. Small leaks sink big wallets.": "Записывай утечки каждый день. Малые утечки топят большие кошельки.",
   "Expense tracked": "Расход записан",
@@ -3310,11 +3350,44 @@ const quickAddPresets = [
 ];
 
 const NEED_TYPE_HELP: Record<NeedType, string> = {
-  Needed: "Needed = necessary. It protects accuracy and does not count as a leak.",
-  Maybe: "Maybe = grey zone. $BROKE counts half of it as leak pressure.",
-  "Not needed": "Not needed = full leak. It lowers Wallet HP and powers Save/Growth insights.",
-
+  Needed: "Survival cost = necessary. It protects accuracy and does not count as a leak.",
+  Maybe: "Grey zone = questionable. $BROKE counts half of it as leak pressure.",
+  "Not needed": "Full leak = avoidable. It lowers Wallet HP and powers Save/Growth insights.",
 };
+
+const NEED_TYPE_LABELS: Record<NeedType, { title: string; subtitle: string }> = {
+  Needed: { title: "Survival cost", subtitle: "necessary" },
+  Maybe: { title: "Grey zone", subtitle: "questionable" },
+  "Not needed": { title: "Full leak", subtitle: "avoidable" },
+};
+
+const LEAK_TRIGGER_CHIPS = [
+  { id: "stress", label: "Stress", tag: "#stress", hint: "pressure buy" },
+  { id: "boredom", label: "Boredom", tag: "#boredom", hint: "nothing to do" },
+  { id: "impulse", label: "Impulse", tag: "#impulse", hint: "fast decision" },
+  { id: "after-payday", label: "After payday", tag: "#after-payday", hint: "money just landed" },
+  { id: "late-night", label: "Late night", tag: "#late-night", hint: "low discipline" },
+  { id: "social-pressure", label: "Social pressure", tag: "#social-pressure", hint: "others pushed it" },
+  { id: "weekend", label: "Weekend", tag: "#weekend", hint: "weekend mode" },
+  { id: "habit", label: "Habit", tag: "#habit", hint: "repeat loop" },
+] as const;
+
+type LeakTriggerId = (typeof LEAK_TRIGGER_CHIPS)[number]["id"];
+
+const LEAK_TRIGGER_TAGS = LEAK_TRIGGER_CHIPS.map((trigger) => trigger.tag);
+
+function buildNoteWithLeakTriggers(note: string, selectedTriggers: LeakTriggerId[]) {
+  const trimmedNote = note.trim();
+  const selectedTags = LEAK_TRIGGER_CHIPS
+    .filter((trigger) => selectedTriggers.includes(trigger.id))
+    .map((trigger) => trigger.tag);
+
+  const cleanedNote = LEAK_TRIGGER_TAGS.reduce((nextNote, tag) => {
+    return nextNote.replace(new RegExp(`\\s*${tag.replace("#", "#")}(?=\\s|$)`, "gi"), "");
+  }, trimmedNote).trim();
+
+  return [cleanedNote, ...selectedTags].filter(Boolean).join(" ").trim();
+}
 
 const defaultChallengeTemplates: ChallengeTemplate[] = [
   {
@@ -4965,6 +5038,12 @@ const EMOTIONAL_LEAK_KEYWORDS = [
   "emotional",
   "emotion",
   "reward",
+  "social pressure",
+  "social-pressure",
+  "habit",
+  "after-payday",
+  "late-night",
+  "weekend",
   "нерв",
   "нервы",
   "стресс",
@@ -4990,6 +5069,21 @@ function getLeakNoteTrigger(expense: Expense) {
   if (!note) return "";
 
   return EMOTIONAL_LEAK_KEYWORDS.find((keyword) => note.includes(keyword)) || "";
+}
+
+function expenseHasLeakTriggerTag(expense: Expense, triggerId: LeakTriggerId) {
+  const trigger = LEAK_TRIGGER_CHIPS.find((item) => item.id === triggerId);
+  if (!trigger) return false;
+
+  return expense.note.toLowerCase().includes(trigger.tag.toLowerCase());
+}
+
+function getLeakTriggerLabelsFromNote(expense: Expense) {
+  const note = expense.note.toLowerCase();
+
+  return LEAK_TRIGGER_CHIPS
+    .filter((trigger) => note.includes(trigger.tag.toLowerCase()))
+    .map((trigger) => trigger.label);
 }
 
 function getAfterPaydayDayIndex(date: Date, settings: Settings) {
@@ -5034,10 +5128,21 @@ function buildLeakPatternSignals(expenses: Expense[], settings: Settings): LeakP
     });
   };
 
-  const lateNightExpenses = monthLeakExpenses.filter(isLateNightExpense);
-  const weekendExpenses = monthLeakExpenses.filter((expense) => isWeekendDate(new Date(expense.createdAt)));
-  const afterPaydayExpenses = monthLeakExpenses.filter((expense) => getAfterPaydayDayIndex(new Date(expense.createdAt), settings) > 0);
-  const emotionalExpenses = monthLeakExpenses.filter((expense) => Boolean(getLeakNoteTrigger(expense)));
+  const lateNightExpenses = monthLeakExpenses.filter(
+    (expense) => isLateNightExpense(expense) || expenseHasLeakTriggerTag(expense, "late-night")
+  );
+  const weekendExpenses = monthLeakExpenses.filter(
+    (expense) => isWeekendDate(new Date(expense.createdAt)) || expenseHasLeakTriggerTag(expense, "weekend")
+  );
+  const afterPaydayExpenses = monthLeakExpenses.filter(
+    (expense) => getAfterPaydayDayIndex(new Date(expense.createdAt), settings) > 0 || expenseHasLeakTriggerTag(expense, "after-payday")
+  );
+  const emotionalTriggerIds: LeakTriggerId[] = ["stress", "boredom", "impulse", "social-pressure", "habit"];
+  const emotionalExpenses = monthLeakExpenses.filter(
+    (expense) =>
+      Boolean(getLeakNoteTrigger(expense)) ||
+      emotionalTriggerIds.some((triggerId) => expenseHasLeakTriggerTag(expense, triggerId))
+  );
 
   if (lateNightExpenses.length >= 2 || sumLeakExpenses(lateNightExpenses) >= totalLeaks * 0.25) {
     makeSignal(
@@ -5073,7 +5178,13 @@ function buildLeakPatternSignals(expenses: Expense[], settings: Settings): LeakP
   }
 
   if (emotionalExpenses.length >= 1) {
-    const triggerNames = Array.from(new Set(emotionalExpenses.map(getLeakNoteTrigger).filter(Boolean))).slice(0, 3);
+    const triggerNames = Array.from(
+      new Set(
+        emotionalExpenses
+          .flatMap((expense) => [getLeakNoteTrigger(expense), ...getLeakTriggerLabelsFromNote(expense)])
+          .filter(Boolean)
+      )
+    ).slice(0, 3);
 
     makeSignal(
       "emotional",
@@ -6961,6 +7072,7 @@ export default function Home() {
   const [note, setNote] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Coffee");
   const [expenseType, setExpenseType] = useState<NeedType>("Needed");
+  const [selectedLeakTriggers, setSelectedLeakTriggers] = useState<LeakTriggerId[]>([]);
   const [lastTrackedExpense, setLastTrackedExpense] = useState<Expense | null>(null);
   const [leakReflection, setLeakReflection] = useState<LeakReflection | null>(null);
 
@@ -7376,12 +7488,14 @@ export default function Home() {
 
     if (value <= 0) return;
 
+    const noteWithTriggers = buildNoteWithLeakTriggers(note, selectedLeakTriggers);
+
     const expense: Expense = {
       id: uid(),
       amount: value,
       category: selectedCategory,
       needType: expenseType,
-      note,
+      note: noteWithTriggers,
       createdAt: new Date().toISOString(),
       currency: settings.currency,
     };
@@ -7394,6 +7508,7 @@ export default function Home() {
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
     setAmount("");
     setNote("");
+    setSelectedLeakTriggers([]);
     setExpenseType("Needed");
     setActiveTab("add");
 
@@ -7441,6 +7556,7 @@ export default function Home() {
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
     setAmount("");
     setNote("");
+    setSelectedLeakTriggers([]);
     setSelectedCategory(category);
     setExpenseType(needType);
     setActiveTab("home");
@@ -7866,6 +7982,8 @@ export default function Home() {
             setSelectedCategory={setSelectedCategory}
             expenseType={expenseType}
             setExpenseType={setExpenseType}
+            selectedLeakTriggers={selectedLeakTriggers}
+            setSelectedLeakTriggers={setSelectedLeakTriggers}
             lastTrackedExpense={lastTrackedExpense}
             onAdd={addExpense}
             onBack={goHome}
@@ -12680,6 +12798,8 @@ function AddExpenseScreen({
   setSelectedCategory,
   expenseType,
   setExpenseType,
+  selectedLeakTriggers,
+  setSelectedLeakTriggers,
   lastTrackedExpense,
   onAdd,
   onBack,
@@ -12694,22 +12814,49 @@ function AddExpenseScreen({
   setSelectedCategory: (value: string) => void;
   expenseType: NeedType;
   setExpenseType: (value: NeedType) => void;
+  selectedLeakTriggers: LeakTriggerId[];
+  setSelectedLeakTriggers: (value: LeakTriggerId[]) => void;
   lastTrackedExpense: Expense | null;
   onAdd: () => void;
   onBack: () => void;
   onHelp: () => void;
 }) {
+  const triggerPreview = selectedLeakTriggers.length
+    ? LEAK_TRIGGER_CHIPS
+        .filter((trigger) => selectedLeakTriggers.includes(trigger.id))
+        .map((trigger) => trigger.label)
+        .join(" · ")
+    : "No trigger selected yet";
+
+  function toggleLeakTrigger(triggerId: LeakTriggerId) {
+    triggerHaptic("light");
+    setSelectedLeakTriggers(
+      selectedLeakTriggers.includes(triggerId)
+        ? selectedLeakTriggers.filter((id) => id !== triggerId)
+        : [...selectedLeakTriggers, triggerId]
+    );
+  }
+
   return (
     <form
-      className="screen"
+      className="screen track-leak-screen"
       onSubmit={(event) => {
         event.preventDefault();
         onAdd();
       }}
     >
-      <Header title="Add Expense" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
+      <Header title="Track Leak" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
-      <section className="amount-box">
+      <section className="track-leak-hero">
+        <div>
+          <span>Behavior mode</span>
+          <strong>Track the trigger, not only the amount.</strong>
+          <p>Amount shows the damage. Decision type and trigger chips help Pattern Lab explain why it happened.</p>
+        </div>
+        <img src={A.addFrog} alt="" />
+      </section>
+
+      <section className="amount-box track-leak-amount">
         <label>Amount</label>
         <div className="amount-input">
           <span>{currencySymbol(settings.currency)}</span>
@@ -12724,12 +12871,12 @@ function AddExpenseScreen({
           />
           <b>{settings.currency}</b>
         </div>
-        <p className="tiny-note">New expenses are now saved with their original currency.</p>
+        <p className="tiny-note">New records are saved with their original currency.</p>
       </section>
 
       <section className="quick-add-panel">
         <div className="section-title">
-          <span>Quick Add</span>
+          <span>Quick leak presets</span>
           <small>amount stays editable</small>
         </div>
 
@@ -12754,7 +12901,7 @@ function AddExpenseScreen({
       </section>
 
       <section>
-        <label className="field-label">Category</label>
+        <label className="field-label">Leak category</label>
         <div className="category-grid">
           {categories.map((cat) => (
             <button
@@ -12770,42 +12917,79 @@ function AddExpenseScreen({
         </div>
       </section>
 
-      <section>
-        <label className="field-label">Was it needed?</label>
-        <div className="choice-row">
-          {(["Needed", "Not needed", "Maybe"] as NeedType[]).map((type) => (
-            <button
-              type="button"
-              key={type}
-              onClick={() => setExpenseType(type)}
-              className={expenseType === type ? "choice active" : "choice"}
-            >
-              {type}
-            </button>
-          ))}
+      <section className="decision-panel">
+        <label className="field-label">Decision type</label>
+        <div className="choice-row decision-choice-row">
+          {(["Needed", "Maybe", "Not needed"] as NeedType[]).map((type) => {
+            const label = NEED_TYPE_LABELS[type];
+            const tone = type === "Needed" ? "survival" : type === "Maybe" ? "grey" : "leak";
+
+            return (
+              <button
+                type="button"
+                key={type}
+                onClick={() => setExpenseType(type)}
+                className={`choice decision-choice ${tone} ${expenseType === type ? "active" : ""}`}
+              >
+                <strong>{label.title}</strong>
+                <small>{label.subtitle}</small>
+              </button>
+            );
+          })}
         </div>
         <p className="tiny-note">{NEED_TYPE_HELP[expenseType]}</p>
       </section>
 
-      <section className="note-box">
+      <section className="trigger-panel">
+        <div className="section-title">
+          <span>Trigger chips</span>
+          <small>optional, but useful</small>
+        </div>
+
+        <div className="trigger-chip-grid">
+          {LEAK_TRIGGER_CHIPS.map((trigger) => {
+            const active = selectedLeakTriggers.includes(trigger.id);
+
+            return (
+              <button
+                type="button"
+                key={trigger.id}
+                className={active ? "trigger-chip active" : "trigger-chip"}
+                onClick={() => toggleLeakTrigger(trigger.id)}
+              >
+                <span>{trigger.label}</span>
+                <small>{trigger.hint}</small>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="trigger-preview">
+          <span>Pattern context</span>
+          <strong>{triggerPreview}</strong>
+        </p>
+        <p className="tiny-note">Selected triggers are saved into the note as tags so Leak Pattern Lab can read them.</p>
+      </section>
+
+      <section className="note-box track-note-box">
         <input
           value={note}
-          placeholder="Add a quick note..."
+          placeholder="Add context... e.g. tired after work"
           onChange={(event) => setNote(event.target.value)}
         />
         <img src={A.pencil} alt="" />
       </section>
 
-      <button className="primary-btn" type="submit">
+      <button className="primary-btn track-leak-submit" type="submit">
         <span>+</span>
-        Add Expense
+        Track Leak
       </button>
 
       <ExpenseImpactCard settings={settings} expense={lastTrackedExpense} />
 
       <div className="tiny-note">
         <img src={A.addFrog} alt="" />
-        <span>Track daily leaks. Small leaks sink big wallets.</span>
+        <span>Track honestly. The app cannot detect a pattern without context.</span>
       </div>
     </form>
   );
