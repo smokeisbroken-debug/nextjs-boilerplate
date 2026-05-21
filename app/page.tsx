@@ -13265,14 +13265,19 @@ function ShareResultCard({
           </div>
         </div>
 
-        <div className="public-share-meta">
-          <strong>
-            Leak:{" "}
-            {identityStats.biggestLeakAmount > 0
-              ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
-              : "none"}
-          </strong>
-          <strong>Hours lost: {identityStats.lifeHoursLost}h</strong>
+        <div className="public-share-meta public-share-meta-safe">
+          <div>
+            <span>Biggest leak</span>
+            <strong>
+              {identityStats.biggestLeakAmount > 0
+                ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
+                : "none"}
+            </strong>
+          </div>
+          <div>
+            <span>Life hours lost</span>
+            <strong>{identityStats.lifeHoursLost}h</strong>
+          </div>
         </div>
 
         <div className="public-share-savings">

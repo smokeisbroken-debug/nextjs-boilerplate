@@ -1,13 +1,14 @@
-# v59.6.2 — Growth Typing Stability Hotfix
+# v59.6.3 — Share Card Text Crop Hotfix
 
-Patch-only hotfix on top of v59.6.1.
+Patch-only hotfix for the public share card PNG.
 
-## User-facing fix
-- Growth plan inputs should no longer delete or overwrite letters while the user types.
-- Growth fields now stay stable during active typing.
-- Saved plan tracking, Debt Payment Tracker, and Home Habit Leaks remain unchanged.
+## What changed
+- Fixed incomplete/cropped text in the downloaded public share card.
+- Rebuilt the "Biggest leak" / "Life hours lost" area into safe two-card rows.
+- Added CSS guards so share-card text wraps cleanly before the "Potential yearly savings" block.
 
-## Technical scope
-- Stabilized Growth screen input handling against cloud/app-state sync during active typing.
-- Debounced Growth planner cloud sync while preserving local-first saves.
-- No Supabase migration required.
+## No backend changes
+- No API changes
+- No Supabase migration
+- No Telegram webhook changes
+- No stored data changes

@@ -1,26 +1,19 @@
-# v59.6.2 — Growth Typing Stability Hotfix
+# v59.6.3 — Share Card Text Crop Hotfix
 
 ## Purpose
-Fix Growth tab text input instability reported by users: characters sometimes disappeared or were overwritten while typing into Growth plan fields.
+Community feedback showed the downloaded public share card can crop the line around biggest leak / life hours lost. This hotfix makes that section structurally safe and readable.
 
 ## Files changed
 - app/page.tsx
 - app/globals.css
-- app/api/broke/route.ts
 - README.md
 - PROJECT_ORDER.md
 - TESTING.md
 
 ## Not changed
+- API routes
 - Supabase schema
 - migrations
 - Telegram webhook
-- Growth formulas
-- Debt formulas
-- Home Habit Leak calculations
-- stored data format
-
-## Deployment
-1. Replace files from this patch.
-2. Deploy to Vercel.
-3. Test Growth typing in Telegram WebView and browser.
+- calculations
+- stored user data
