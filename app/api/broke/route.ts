@@ -288,6 +288,7 @@ type HomeHabitLeakEntry = {
   label: string;
   createdAt: string;
   note?: string;
+  stackKey?: string;
 };
 
 type AppState = {
@@ -1264,12 +1265,36 @@ function normalizeHomeHabitLeakType(input?: unknown): HomeHabitLeakType {
     : "custom";
 }
 
+function cleanHomeHabitLeakLabel(input?: unknown, fallback = "Home leak") {
+  const cleaned = String(input || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 42);
+
+  if (!cleaned) return fallback;
+
+  return cleaned;
+}
+
+function homeHabitLeakStackKey(label: string) {
+  return cleanHomeHabitLeakLabel(label)
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9а-яё\s-]/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalizeHomeHabitLeakEntry(input: Partial<HomeHabitLeakEntry>): HomeHabitLeakEntry {
+  const type = normalizeHomeHabitLeakType(input.type);
+  const label = cleanHomeHabitLeakLabel(input.label, "Home leak");
+  const stackKey = cleanHomeHabitLeakLabel(input.stackKey, homeHabitLeakStackKey(label));
+
   return {
     id: input.id || newId(),
-    type: normalizeHomeHabitLeakType(input.type),
-    label: String(input.label || "Home leak"),
+    type,
+    label,
     createdAt: input.createdAt || new Date().toISOString(),
+    stackKey,
     ...(input.note ? { note: String(input.note) } : {}),
   };
 }

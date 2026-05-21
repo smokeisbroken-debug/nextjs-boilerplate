@@ -297,6 +297,7 @@ type HomeHabitLeakEntry = {
   label: string;
   createdAt: string;
   note?: string;
+  stackKey?: string;
 };
 
 type HomeHabitLeakInsight = {
@@ -17513,15 +17514,37 @@ function normalizeHomeHabitLeakType(input?: unknown): HomeHabitLeakType {
     : "custom";
 }
 
+function cleanHomeHabitLeakLabel(input?: unknown, fallback = "Home leak") {
+  const cleaned = String(input || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 42);
+
+  if (!cleaned) return fallback;
+
+  return cleaned;
+}
+
+function homeHabitLeakStackKey(label: string) {
+  return cleanHomeHabitLeakLabel(label)
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9а-яё\s-]/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function normalizeHomeHabitLeakEntry(input: Partial<HomeHabitLeakEntry>): HomeHabitLeakEntry {
   const type = normalizeHomeHabitLeakType(input.type);
   const preset = HOME_HABIT_LEAK_PRESETS.find((item) => item.type === type);
+  const label = cleanHomeHabitLeakLabel(input.label, preset?.label || "Home leak");
+  const stackKey = cleanHomeHabitLeakLabel(input.stackKey, homeHabitLeakStackKey(label));
 
   return {
     id: input.id || uid(),
     type,
-    label: String(input.label || preset?.label || "Home leak"),
+    label,
     createdAt: input.createdAt || new Date().toISOString(),
+    stackKey,
     ...(input.note ? { note: String(input.note) } : {}),
   };
 }
@@ -17558,8 +17581,11 @@ function buildHomeHabitLeakInsight(items: HomeHabitLeakEntry[]): HomeHabitLeakIn
   weekAgo.setHours(0, 0, 0, 0);
 
   const weeklyItems = items.filter((item) => new Date(item.createdAt).getTime() >= weekAgo.getTime());
+  const stackLabels: Record<string, string> = {};
   const counts = weeklyItems.reduce<Record<string, number>>((acc, item) => {
-    acc[item.label] = (acc[item.label] || 0) + 1;
+    const stackKey = item.stackKey || homeHabitLeakStackKey(item.label);
+    stackLabels[stackKey] = stackLabels[stackKey] || item.label;
+    acc[stackKey] = (acc[stackKey] || 0) + 1;
     return acc;
   }, {});
   const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
@@ -17575,7 +17601,7 @@ function buildHomeHabitLeakInsight(items: HomeHabitLeakEntry[]): HomeHabitLeakIn
 
   return {
     weeklyCount: weeklyItems.length,
-    topLabel: top?.[0] || "No home leak yet",
+    topLabel: top ? stackLabels[top[0]] || "Home leak" : "No home leak yet",
     topCount: top?.[1] || 0,
     lateNightCount,
     weekendCount,
@@ -18276,6 +18302,35 @@ function HomeHabitLeaksPanel({
   onRemoveLeak: (id: string) => void;
 }) {
   const latestItems = items.slice(0, 5);
+  const [customHomeHabitName, setCustomHomeHabitName] = useState("");
+  const customHomeHabitLabel = cleanHomeHabitLeakLabel(customHomeHabitName, "");
+
+  const weeklyStacks = useMemo(() => {
+    const now = new Date();
+    const weekAgo = new Date(now);
+    weekAgo.setDate(now.getDate() - 6);
+    weekAgo.setHours(0, 0, 0, 0);
+
+    const counts = items
+      .filter((item) => new Date(item.createdAt).getTime() >= weekAgo.getTime())
+      .reduce<Record<string, { label: string; count: number }>>((acc, item) => {
+        const stackKey = item.stackKey || homeHabitLeakStackKey(item.label);
+        if (!acc[stackKey]) {
+          acc[stackKey] = { label: item.label, count: 0 };
+        }
+        acc[stackKey].count += 1;
+        return acc;
+      }, {});
+
+    return Object.values(counts).sort((a, b) => b.count - a.count).slice(0, 5);
+  }, [items]);
+
+  function logCustomHomeHabit() {
+    if (!customHomeHabitLabel) return;
+
+    onLogLeak({ type: "custom", label: customHomeHabitLabel });
+    setCustomHomeHabitName("");
+  }
 
   return (
     <section className="home-habit-leaks-panel">
@@ -18312,13 +18367,41 @@ function HomeHabitLeaksPanel({
       </div>
 
       <div className="home-habit-quick-row">
-        {HOME_HABIT_LEAK_PRESETS.map((preset) => (
+        {HOME_HABIT_LEAK_PRESETS.filter((preset) => preset.type !== "custom").map((preset) => (
           <button type="button" key={preset.type} onClick={() => onLogLeak(preset)}>
             <span>{preset.label}</span>
             <small>{preset.hint}</small>
           </button>
         ))}
       </div>
+
+      <div className="home-habit-custom-form">
+        <div>
+          <span>Custom home leak</span>
+          <small>Write your own habit. Same names stack together.</small>
+        </div>
+        <input
+          value={customHomeHabitName}
+          onChange={(event) => setCustomHomeHabitName(event.target.value)}
+          placeholder="Example: garage light, long shower, laptop left on"
+          maxLength={42}
+        />
+        <button type="button" onClick={logCustomHomeHabit} disabled={!customHomeHabitLabel}>
+          Log custom
+        </button>
+      </div>
+
+      {weeklyStacks.length > 0 && (
+        <div className="home-habit-stack-list">
+          <span>This week stacks</span>
+          {weeklyStacks.map((stack) => (
+            <article key={homeHabitLeakStackKey(stack.label)}>
+              <strong>{stack.label}</strong>
+              <small>{stack.count}x</small>
+            </article>
+          ))}
+        </div>
+      )}
 
       {latestItems.length > 0 ? (
         <div className="home-habit-log">

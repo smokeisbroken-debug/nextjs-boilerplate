@@ -1,20 +1,7 @@
-# v59.6 — Home Habit Leaks
+# v59.6.1 — Home Habit Custom Stack Hotfix
 
-## Goal
-Add the community-requested household habit leak tracker without forcing exact utility-cost math too early.
-
-## User-facing behavior
-Users can log small home drains such as:
-- Lights left on
-- Fan running
-- TV nobody watches
-- Water running
-- Devices left on
-- AC/heater waste
-- Fridge left open
-- Other home leak
-
-The app then summarizes the habit pattern instead of pretending to know exact money lost.
+## Purpose
+Users should be able to create custom Home Habit Leak names and see them stack by name.
 
 ## Files changed
 - app/page.tsx
@@ -24,7 +11,9 @@ The app then summarizes the habit pattern instead of pretending to know exact mo
 - PROJECT_ORDER.md
 - TESTING.md
 
-## Data storage
-Home habit leaks are stored inside the existing app state payload and localStorage fallback.
-
-No Supabase migration is required for this version.
+## Not changed
+- Supabase schema
+- migrations
+- Telegram webhook
+- expense calculations
+- security/RLS
