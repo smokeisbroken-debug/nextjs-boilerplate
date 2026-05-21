@@ -272,10 +272,29 @@ type DebtRadarItem = {
   paymentHistory?: DebtPaymentEntry[];
 };
 
+type HomeHabitLeakType =
+  | "lights"
+  | "fan"
+  | "tv"
+  | "water"
+  | "charger"
+  | "ac-heater"
+  | "fridge"
+  | "custom";
+
+type HomeHabitLeakEntry = {
+  id: string;
+  type: HomeHabitLeakType;
+  label: string;
+  createdAt: string;
+  note?: string;
+};
+
 type AppState = {
   growthSimulations: GrowthSimulation[];
   growthPlanner: GrowthPlannerState;
   debtRadarItems: DebtRadarItem[];
+  homeHabitLeaks: HomeHabitLeakEntry[];
   updatedAt?: string;
 };
 
@@ -582,6 +601,7 @@ const defaultAppState: AppState = {
   growthSimulations: [],
   growthPlanner: defaultGrowthPlannerState,
   debtRadarItems: defaultDebtRadarItems,
+  homeHabitLeaks: [],
 };
 
 const defaultChallengeTemplates: ChallengeTemplate[] = [
@@ -1234,6 +1254,26 @@ function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
   };
 }
 
+const HOME_HABIT_LEAK_TYPES = ["lights", "fan", "tv", "water", "charger", "ac-heater", "fridge", "custom"] as const;
+
+function normalizeHomeHabitLeakType(input?: unknown): HomeHabitLeakType {
+  const value = String(input || "custom");
+
+  return HOME_HABIT_LEAK_TYPES.includes(value as HomeHabitLeakType)
+    ? (value as HomeHabitLeakType)
+    : "custom";
+}
+
+function normalizeHomeHabitLeakEntry(input: Partial<HomeHabitLeakEntry>): HomeHabitLeakEntry {
+  return {
+    id: input.id || newId(),
+    type: normalizeHomeHabitLeakType(input.type),
+    label: String(input.label || "Home leak"),
+    createdAt: input.createdAt || new Date().toISOString(),
+    ...(input.note ? { note: String(input.note) } : {}),
+  };
+}
+
 function normalizeAppState(input?: Partial<AppState> | null): AppState {
   return {
     growthSimulations: Array.isArray(input?.growthSimulations)
@@ -1243,6 +1283,9 @@ function normalizeAppState(input?: Partial<AppState> | null): AppState {
     debtRadarItems: Array.isArray(input?.debtRadarItems)
       ? input.debtRadarItems.map(normalizeDebtRadarItem).slice(0, 12)
       : defaultDebtRadarItems,
+    homeHabitLeaks: Array.isArray(input?.homeHabitLeaks)
+      ? input.homeHabitLeaks.map(normalizeHomeHabitLeakEntry).slice(0, 80)
+      : [],
     updatedAt: input?.updatedAt || new Date().toISOString(),
   };
 }

@@ -1,18 +1,25 @@
-# v59.5 — Debt Payment Tracker
+# v59.6 — Home Habit Leaks
 
-Patch-only update from v59.4 / v59.3.4 line.
+Patch-only update based on v59.5.
 
-## User-facing changes
-- Fixes the Growth saved plans layout so clickable plans no longer collapse into vertical text on mobile.
-- Adds Debt Payment Tracker inside Debt & Bills Radar.
-- Debt items now show Paid Status: Unpaid, Partial Pay, or Paid.
-- Users can log Partial Pay amounts.
-- Users can mark a debt as Full Pay to clear the remaining debt.
-- Debt items now keep a private Receipt History Log.
-- Existing Debt & Bills Radar items remain compatible.
+## What changed
+- Added **Home Habit Leaks** inside Save.
+- Users can log household habit leaks without entering exact money values.
+- Quick logs include lights, fan, TV, water, devices/chargers, AC/heater, fridge, and custom home leak.
+- The app shows weekly awareness signals:
+  - logged this week
+  - biggest home leak
+  - late-night/weekend timing signal
+  - repeat read
+  - recent home leak log
+- Home habit leaks sync through the existing app state payload.
 
-## Technical scope
-- Uses existing app state payload / Debt Radar state.
-- No Supabase migration required.
-- No new API route required.
-- `/api/broke` normalization was updated to preserve debt payment history during sync.
+## Not changed
+- No Supabase migration.
+- No new table.
+- No Telegram webhook changes.
+- No expense calculation rewrite.
+- No public sharing of home habit details.
+
+## Why no money estimates yet
+The feature is awareness-first. Exact bill/tariff estimation can be added later after users have enough habit logs and optional bill details.

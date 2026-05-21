@@ -1,7 +1,20 @@
-# v59.5 — Debt Payment Tracker
+# v59.6 — Home Habit Leaks
 
-## Reason
-Community requested debt paid status, partial/full payment tracking, due timeframe visibility, and receipt history.
+## Goal
+Add the community-requested household habit leak tracker without forcing exact utility-cost math too early.
+
+## User-facing behavior
+Users can log small home drains such as:
+- Lights left on
+- Fan running
+- TV nobody watches
+- Water running
+- Devices left on
+- AC/heater waste
+- Fridge left open
+- Other home leak
+
+The app then summarizes the habit pattern instead of pretending to know exact money lost.
 
 ## Files changed
 - app/page.tsx
@@ -11,18 +24,7 @@ Community requested debt paid status, partial/full payment tracking, due timefra
 - PROJECT_ORDER.md
 - TESTING.md
 
-## What changed
-1. Growth saved plans mobile layout fix.
-2. Debt items now have payment status.
-3. Partial Pay action logs a payment and reduces remaining debt.
-4. Full Pay action clears remaining debt and logs the final payment.
-5. Receipt History Log appears for debts with logged payments.
-6. API normalization preserves `paymentHistory` in app state sync.
+## Data storage
+Home habit leaks are stored inside the existing app state payload and localStorage fallback.
 
-## Not changed
-- Supabase schema
-- migrations
-- Telegram webhook
-- security/RLS
-- expenses table
-- pattern history table
+No Supabase migration is required for this version.

@@ -281,6 +281,34 @@ type DebtRadarItem = {
   paymentHistory?: DebtPaymentEntry[];
 };
 
+type HomeHabitLeakType =
+  | "lights"
+  | "fan"
+  | "tv"
+  | "water"
+  | "charger"
+  | "ac-heater"
+  | "fridge"
+  | "custom";
+
+type HomeHabitLeakEntry = {
+  id: string;
+  type: HomeHabitLeakType;
+  label: string;
+  createdAt: string;
+  note?: string;
+};
+
+type HomeHabitLeakInsight = {
+  weeklyCount: number;
+  topLabel: string;
+  topCount: number;
+  lateNightCount: number;
+  weekendCount: number;
+  activeDays: number;
+  repeatLabel: string;
+};
+
 type DebtRadarTotals = {
   debtMonthly: number;
   billMonthly: number;
@@ -302,6 +330,7 @@ type CloudAppState = {
   growthSimulations: GrowthSimulation[];
   growthPlanner: GrowthPlannerState;
   debtRadarItems: DebtRadarItem[];
+  homeHabitLeaks: HomeHabitLeakEntry[];
   updatedAt?: string;
 };
 
@@ -17463,6 +17492,109 @@ function writeDebtRadarItems(items: DebtRadarItem[]) {
   }
 }
 
+const HOME_HABIT_LEAK_KEY = "broke-home-habit-leaks-v1";
+
+const HOME_HABIT_LEAK_PRESETS: Array<{ type: HomeHabitLeakType; label: string; hint: string }> = [
+  { type: "lights", label: "Lights left on", hint: "empty room" },
+  { type: "fan", label: "Fan running", hint: "running too long" },
+  { type: "tv", label: "TV nobody watches", hint: "background drain" },
+  { type: "water", label: "Water running", hint: "too long" },
+  { type: "charger", label: "Devices left on", hint: "chargers / plugs" },
+  { type: "ac-heater", label: "AC / heater waste", hint: "temperature leak" },
+  { type: "fridge", label: "Fridge left open", hint: "small repeat leak" },
+  { type: "custom", label: "Other home leak", hint: "custom habit" },
+];
+
+function normalizeHomeHabitLeakType(input?: unknown): HomeHabitLeakType {
+  const value = String(input || "custom");
+
+  return HOME_HABIT_LEAK_PRESETS.some((preset) => preset.type === value)
+    ? (value as HomeHabitLeakType)
+    : "custom";
+}
+
+function normalizeHomeHabitLeakEntry(input: Partial<HomeHabitLeakEntry>): HomeHabitLeakEntry {
+  const type = normalizeHomeHabitLeakType(input.type);
+  const preset = HOME_HABIT_LEAK_PRESETS.find((item) => item.type === type);
+
+  return {
+    id: input.id || uid(),
+    type,
+    label: String(input.label || preset?.label || "Home leak"),
+    createdAt: input.createdAt || new Date().toISOString(),
+    ...(input.note ? { note: String(input.note) } : {}),
+  };
+}
+
+function readHomeHabitLeaks(): HomeHabitLeakEntry[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(HOME_HABIT_LEAK_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Partial<HomeHabitLeakEntry>[]) : null;
+
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.map(normalizeHomeHabitLeakEntry).slice(0, 80);
+  } catch {
+    return [];
+  }
+}
+
+function writeHomeHabitLeaks(items: HomeHabitLeakEntry[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(HOME_HABIT_LEAK_KEY, JSON.stringify(items.slice(0, 80)));
+  } catch {
+    // Home habit leaks are awareness-first and optional.
+  }
+}
+
+function buildHomeHabitLeakInsight(items: HomeHabitLeakEntry[]): HomeHabitLeakInsight {
+  const now = new Date();
+  const weekAgo = new Date(now);
+  weekAgo.setDate(now.getDate() - 6);
+  weekAgo.setHours(0, 0, 0, 0);
+
+  const weeklyItems = items.filter((item) => new Date(item.createdAt).getTime() >= weekAgo.getTime());
+  const counts = weeklyItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item.label] = (acc[item.label] || 0) + 1;
+    return acc;
+  }, {});
+  const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  const lateNightCount = weeklyItems.filter((item) => {
+    const hour = new Date(item.createdAt).getHours();
+    return hour >= 22 || hour < 5;
+  }).length;
+  const weekendCount = weeklyItems.filter((item) => {
+    const day = new Date(item.createdAt).getDay();
+    return day === 0 || day === 6;
+  }).length;
+  const activeDays = new Set(weeklyItems.map((item) => dayKey(new Date(item.createdAt)))).size;
+
+  return {
+    weeklyCount: weeklyItems.length,
+    topLabel: top?.[0] || "No home leak yet",
+    topCount: top?.[1] || 0,
+    lateNightCount,
+    weekendCount,
+    activeDays,
+    repeatLabel:
+      weeklyItems.length === 0
+        ? "Log one habit to unlock patterns."
+        : activeDays >= 5
+          ? "This repeats almost every day."
+          : top && top[1] >= 3
+            ? "One home habit is repeating."
+            : lateNightCount >= 2
+              ? "Late-night home leaks are showing up."
+              : weekendCount >= 2
+                ? "Weekend home leaks are showing up."
+                : "Awareness is starting to build.",
+  };
+}
+
 function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudAppState {
   return {
     growthSimulations: Array.isArray(input?.growthSimulations)
@@ -17472,6 +17604,9 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
     debtRadarItems: Array.isArray(input?.debtRadarItems)
       ? input.debtRadarItems.map(normalizeDebtRadarItem).slice(0, 12)
       : defaultDebtRadarItems,
+    homeHabitLeaks: Array.isArray(input?.homeHabitLeaks)
+      ? input.homeHabitLeaks.map(normalizeHomeHabitLeakEntry).slice(0, 80)
+      : [],
     updatedAt: input?.updatedAt,
   };
 }
@@ -17481,6 +17616,7 @@ function readLocalCloudAppState(): CloudAppState {
     growthSimulations: readGrowthSimulations(),
     growthPlanner: readGrowthPlannerState(),
     debtRadarItems: readDebtRadarItems(),
+    homeHabitLeaks: readHomeHabitLeaks(),
     updatedAt: new Date().toISOString(),
   });
 }
@@ -17492,6 +17628,7 @@ function writeLocalCloudAppState(input: Partial<CloudAppState>) {
   writeGrowthSimulations(appState.growthSimulations);
   writeGrowthPlannerState(appState.growthPlanner);
   writeDebtRadarItems(appState.debtRadarItems);
+  writeHomeHabitLeaks(appState.homeHabitLeaks);
   window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
 }
 
@@ -18127,6 +18264,89 @@ function SurvivalModePanel({
   );
 }
 
+function HomeHabitLeaksPanel({
+  items,
+  insight,
+  onLogLeak,
+  onRemoveLeak,
+}: {
+  items: HomeHabitLeakEntry[];
+  insight: HomeHabitLeakInsight;
+  onLogLeak: (preset: { type: HomeHabitLeakType; label: string }) => void;
+  onRemoveLeak: (id: string) => void;
+}) {
+  const latestItems = items.slice(0, 5);
+
+  return (
+    <section className="home-habit-leaks-panel">
+      <div className="home-habit-hero">
+        <div>
+          <span>Home Habit Leaks</span>
+          <strong>Awareness first. Exact money later.</strong>
+          <p>
+            Log small household drains like lights, fan, TV, water, chargers or AC. $BROKE tracks the habit pattern before trying to estimate the bill.
+          </p>
+        </div>
+        <aside>
+          <b>{insight.weeklyCount}</b>
+          <small>logged this week</small>
+        </aside>
+      </div>
+
+      <div className="home-habit-insight-grid">
+        <article>
+          <span>Biggest home leak</span>
+          <strong>{insight.topLabel}</strong>
+          <small>{insight.topCount > 0 ? `${insight.topCount}x this week` : "no pattern yet"}</small>
+        </article>
+        <article>
+          <span>Timing signal</span>
+          <strong>{insight.lateNightCount > insight.weekendCount ? "Late night" : insight.weekendCount > 0 ? "Weekend" : "Building"}</strong>
+          <small>{insight.lateNightCount} late · {insight.weekendCount} weekend</small>
+        </article>
+        <article>
+          <span>Repeat read</span>
+          <strong>{insight.activeDays} active days</strong>
+          <small>{insight.repeatLabel}</small>
+        </article>
+      </div>
+
+      <div className="home-habit-quick-row">
+        {HOME_HABIT_LEAK_PRESETS.map((preset) => (
+          <button type="button" key={preset.type} onClick={() => onLogLeak(preset)}>
+            <span>{preset.label}</span>
+            <small>{preset.hint}</small>
+          </button>
+        ))}
+      </div>
+
+      {latestItems.length > 0 ? (
+        <div className="home-habit-log">
+          <span>Recent home leaks</span>
+          {latestItems.map((item) => (
+            <article key={item.id}>
+              <div>
+                <strong>{item.label}</strong>
+                <small>
+                  {new Date(item.createdAt).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })} · {new Date(item.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+                </small>
+              </div>
+              <button type="button" onClick={() => onRemoveLeak(item.id)} aria-label={`Remove ${item.label}`}>
+                ×
+              </button>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="home-habit-empty">
+          <strong>No home habit leaks logged yet.</strong>
+          <p>Tap one chip when you notice a household drain. The pattern gets useful after a few real logs.</p>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function WhatIfScreen({
   settings,
   setSettings,
@@ -18167,6 +18387,9 @@ function WhatIfScreen({
   const [debtRadarItems, setDebtRadarItems] = useState<DebtRadarItem[]>(() =>
     readDebtRadarItems()
   );
+  const [homeHabitLeaks, setHomeHabitLeaks] = useState<HomeHabitLeakEntry[]>(() =>
+    readHomeHabitLeaks()
+  );
   const debtRadarCurrencySources = useMemo(
     () => debtRadarItems.flatMap((item) => [item.currency, item.remainingCurrency]),
     [debtRadarItems]
@@ -18186,8 +18409,14 @@ function WhatIfScreen({
   }, [debtRadarItems]);
 
   useEffect(() => {
+    writeHomeHabitLeaks(homeHabitLeaks);
+    onAppStateChange?.();
+  }, [homeHabitLeaks]);
+
+  useEffect(() => {
     function applySyncedAppState() {
       setDebtRadarItems(readDebtRadarItems());
+      setHomeHabitLeaks(readHomeHabitLeaks());
     }
 
     window.addEventListener(CLOUD_APP_STATE_SYNC_EVENT, applySyncedAppState);
@@ -18200,6 +18429,10 @@ function WhatIfScreen({
   const debtRadarTotals = useMemo(
     () => getDebtRadarTotals(debtRadarItems, settings, debtRadarRateState.rates),
     [debtRadarItems, settings, debtRadarRateState.rates]
+  );
+  const homeHabitLeakInsight = useMemo(
+    () => buildHomeHabitLeakInsight(homeHabitLeaks),
+    [homeHabitLeaks]
   );
 
   const cards = useMemo<CategorySummary[]>(() => {
@@ -18328,6 +18561,24 @@ function WhatIfScreen({
         publicProofMode: value,
       },
     }));
+  }
+
+  function logHomeHabitLeak(preset: { type: HomeHabitLeakType; label: string }) {
+    setHomeHabitLeaks((current) => [
+      normalizeHomeHabitLeakEntry({
+        id: uid(),
+        type: preset.type,
+        label: preset.label,
+        createdAt: new Date().toISOString(),
+      }),
+      ...current,
+    ].slice(0, 80));
+    triggerHaptic("light");
+  }
+
+  function removeHomeHabitLeak(id: string) {
+    setHomeHabitLeaks((current) => current.filter((item) => item.id !== id));
+    triggerHaptic("light");
   }
 
   function updateDebtRadarItem(id: string, patch: Partial<DebtRadarItem>) {
@@ -18485,6 +18736,22 @@ function WhatIfScreen({
           onRemoveItem={removeDebtRadarItem}
           onAddPayment={addDebtPayment}
           onMarkFullPaid={markDebtFullPaid}
+        />
+      </details>
+
+      <details className="clean-details home-habit-leaks-details" open>
+        <summary>
+          <div>
+            <span>Home Habit Leaks</span>
+            <small>Track household drains before exact bill math.</small>
+          </div>
+          <b>{homeHabitLeakInsight.weeklyCount}/week</b>
+        </summary>
+        <HomeHabitLeaksPanel
+          items={homeHabitLeaks}
+          insight={homeHabitLeakInsight}
+          onLogLeak={logHomeHabitLeak}
+          onRemoveLeak={removeHomeHabitLeak}
         />
       </details>
 

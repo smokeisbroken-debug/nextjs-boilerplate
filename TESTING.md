@@ -1,4 +1,4 @@
-# v59.5 — Testing
+# v59.6 — Testing
 
 Run:
 
@@ -8,21 +8,19 @@ npm run lint:quiet
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-Manual checks:
+Manual test:
 
-1. Open Growth.
-2. Check Saved plans on mobile width.
-3. Verify plan cards are readable and clickable.
-4. Open Save → Debt & Bills Radar.
-5. Add or edit a Debt item.
-6. Add Remaining debt.
-7. Use Partial Pay and verify remaining debt decreases.
-8. Use Full Pay and verify remaining debt becomes 0.
-9. Verify Receipt History Log appears.
-10. Reload app and confirm the payment history persists.
-11. Sync through Telegram/web account if available and confirm payment history remains.
+1. Open Save.
+2. Find Home Habit Leaks.
+3. Tap a few quick chips: Lights, Fan, TV, Water.
+4. Confirm weekly count updates.
+5. Confirm biggest home leak updates after repeated logs.
+6. Confirm late-night/weekend signal appears when relevant.
+7. Reload app and verify recent logs remain.
+8. If Telegram/cloud sync is active, verify logs do not disappear after sync.
+9. Remove a recent log and verify it disappears.
 
 Expected:
-- No layout collapse in saved Growth plans.
-- Debt paid status updates correctly.
-- Existing debt/bill/maintenance items still load.
+- No exact money is required.
+- No app crash if app_state_payload is missing or sync is unavailable.
+- Save screen remains usable on mobile.
