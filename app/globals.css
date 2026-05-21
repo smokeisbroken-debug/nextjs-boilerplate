@@ -18516,3 +18516,221 @@ html[lang="ru"] .trigger-preview strong {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.5 — Growth saved plan layout fix + Debt Payment Tracker */
+.growth-saved-list .growth-saved-plan-open {
+  width: 100%;
+  height: auto;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.growth-saved-list .growth-saved-plan-open > div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.growth-saved-list .growth-saved-plan-open strong,
+.growth-saved-list .growth-saved-plan-open span,
+.growth-saved-list .growth-saved-plan-open small {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.growth-saved-list .growth-saved-plan-open strong {
+  font-size: 15px;
+  line-height: 1.1;
+}
+
+.growth-saved-list .growth-saved-plan-open small span {
+  display: inline;
+  margin: 0;
+  color: var(--green);
+  font-size: inherit;
+  line-height: inherit;
+}
+
+.growth-saved-list article > button:last-child {
+  width: 38px;
+  height: 38px;
+  justify-self: end;
+  align-self: start;
+  border: 1px solid rgba(255, 79, 95, 0.35);
+  border-radius: 14px;
+  color: var(--red);
+  background: rgba(255, 79, 95, 0.08);
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.debt-payment-status-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.debt-payment-status-strip > div {
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.debt-payment-status-strip span,
+.debt-receipt-log > span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.25px;
+  text-transform: uppercase;
+}
+
+.debt-payment-status-strip strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 950;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.debt-payment-status-strip.paid > div:first-child strong {
+  color: var(--green);
+}
+
+.debt-payment-status-strip.partial > div:first-child strong {
+  color: var(--orange);
+}
+
+.debt-payment-status-strip.unpaid > div:first-child strong {
+  color: var(--red);
+}
+
+.debt-payment-tracker {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.debt-payment-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.debt-payment-actions input {
+  min-height: 40px;
+  border: 1px solid rgba(183, 255, 25, 0.16);
+  border-radius: 14px;
+  color: var(--text);
+  background: rgba(0, 0, 0, 0.24);
+  padding: 0 11px;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.debt-payment-actions button {
+  min-height: 40px;
+  border-radius: 14px;
+  padding: 0 12px;
+  border: 1px solid rgba(183, 255, 25, 0.22);
+  color: #071006;
+  background: linear-gradient(135deg, var(--green-2), var(--green-3));
+  font-size: 11px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.debt-payment-actions button:last-child {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.debt-receipt-log {
+  display: grid;
+  gap: 7px;
+  padding: 10px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.debt-receipt-log div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.debt-receipt-log div:first-of-type {
+  border-top: 0;
+}
+
+.debt-receipt-log strong {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.debt-receipt-log small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+@media (max-width: 430px) {
+  .growth-saved-list article {
+    grid-template-columns: minmax(0, 1fr) 38px;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .growth-saved-list .growth-saved-plan-open {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .growth-saved-list .growth-saved-plan-open img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .growth-saved-list .growth-saved-plan-open strong {
+    font-size: 14px;
+  }
+
+  .growth-saved-list .growth-saved-plan-open span,
+  .growth-saved-list .growth-saved-plan-open small {
+    font-size: 10.5px;
+    line-height: 1.25;
+  }
+
+  .debt-payment-status-strip,
+  .debt-payment-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .debt-payment-actions button {
+    width: 100%;
+  }
+}

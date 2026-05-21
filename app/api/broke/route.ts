@@ -251,6 +251,14 @@ type GrowthPlannerState = {
 type DebtRadarKind = "debt" | "bill" | "maintenance";
 type DebtRadarPriority = "low" | "medium" | "high";
 
+type DebtPaymentEntry = {
+  id: string;
+  amount: number;
+  createdAt: string;
+  note?: string;
+  currency?: Currency;
+};
+
 type DebtRadarItem = {
   id: string;
   name: string;
@@ -261,6 +269,7 @@ type DebtRadarItem = {
   priority: DebtRadarPriority;
   currency?: Currency;
   remainingCurrency?: Currency;
+  paymentHistory?: DebtPaymentEntry[];
 };
 
 type AppState = {
@@ -1178,6 +1187,21 @@ function normalizeGrowthPlannerState(input?: Partial<GrowthPlannerState> | null)
   };
 }
 
+function normalizeDebtPaymentEntry(input: Partial<DebtPaymentEntry>): DebtPaymentEntry | null {
+  const amount = Math.max(0, Number(input.amount || 0));
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+
+  const currency = normalizeOptionalCurrency(input.currency);
+
+  return {
+    id: input.id || newId(),
+    amount,
+    createdAt: input.createdAt || new Date().toISOString(),
+    note: input.note ? String(input.note) : undefined,
+    ...(currency ? { currency } : {}),
+  };
+}
+
 function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
   const kind: DebtRadarKind =
     input.kind === "debt" || input.kind === "bill" || input.kind === "maintenance"
@@ -1189,6 +1213,12 @@ function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
       : "medium";
   const currency = normalizeOptionalCurrency(input.currency);
   const remainingCurrency = normalizeOptionalCurrency(input.remainingCurrency);
+  const paymentHistory = Array.isArray(input.paymentHistory)
+    ? input.paymentHistory
+        .map(normalizeDebtPaymentEntry)
+        .filter((entry): entry is DebtPaymentEntry => Boolean(entry))
+        .slice(0, 30)
+    : [];
 
   return {
     id: input.id || newId(),
@@ -1200,6 +1230,7 @@ function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
     priority,
     ...(currency ? { currency } : {}),
     ...(remainingCurrency ? { remainingCurrency } : {}),
+    ...(paymentHistory.length > 0 ? { paymentHistory } : {}),
   };
 }
 

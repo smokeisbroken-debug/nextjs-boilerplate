@@ -1,31 +1,28 @@
-# v59.4 — Growth Plan Tracking Detail
+# v59.5 — Debt Payment Tracker
 
-## Goal
-Fix the user expectation that a selected Growth plan should be clickable and usable for ongoing tracking, not only for generating a picture/share card.
+## Reason
+Community requested debt paid status, partial/full payment tracking, due timeframe visibility, and receipt history.
+
+## Files changed
+- app/page.tsx
+- app/globals.css
+- app/api/broke/route.ts
+- README.md
+- PROJECT_ORDER.md
+- TESTING.md
 
 ## What changed
-1. Added structured progress entries to saved Growth simulations.
-2. Existing Growth plans normalize safely with empty progress history.
-3. Saved plans are clickable.
-4. Clicking a plan opens an Active tracking plan detail card.
-5. Detail card shows:
-   - goal value,
-   - tracked progress,
-   - next checkpoint,
-   - progress bar,
-   - receipt/progress history.
-6. Added actions:
-   - Add progress,
-   - Mark planned contribution,
-   - Update plan,
-   - Share card,
-   - Close.
+1. Growth saved plans mobile layout fix.
+2. Debt items now have payment status.
+3. Partial Pay action logs a payment and reduces remaining debt.
+4. Full Pay action clears remaining debt and logs the final payment.
+5. Receipt History Log appears for debts with logged payments.
+6. API normalization preserves `paymentHistory` in app state sync.
 
 ## Not changed
-- API routes
 - Supabase schema
 - migrations
 - Telegram webhook
 - security/RLS
-- existing expense data
-- Growth share card endpoint behavior
+- expenses table
+- pattern history table

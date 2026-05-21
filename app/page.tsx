@@ -260,6 +260,14 @@ type GrowthShareContext = {
 type DebtRadarKind = "debt" | "bill" | "maintenance";
 type DebtRadarPriority = "low" | "medium" | "high";
 
+type DebtPaymentEntry = {
+  id: string;
+  amount: number;
+  createdAt: string;
+  note?: string;
+  currency?: Currency;
+};
+
 type DebtRadarItem = {
   id: string;
   name: string;
@@ -270,6 +278,7 @@ type DebtRadarItem = {
   priority: DebtRadarPriority;
   currency?: Currency;
   remainingCurrency?: Currency;
+  paymentHistory?: DebtPaymentEntry[];
 };
 
 type DebtRadarTotals = {
@@ -8990,8 +8999,7 @@ function HelpGuideModal({
                 {section.body.map((line) => (
                   <span key={line}>{line}</span>
                 ))}
-              </div>
-            </article>
+              </div>            </article>
           ))}
         </div>
 
@@ -17383,6 +17391,21 @@ const defaultDebtRadarItems: DebtRadarItem[] = [
   },
 ];
 
+function normalizeDebtPaymentEntry(input: Partial<DebtPaymentEntry>): DebtPaymentEntry | null {
+  const amount = Math.max(0, safeNumber(String(input.amount ?? "")));
+  if (amount <= 0) return null;
+
+  const currency = normalizeOptionalCurrency(input.currency);
+
+  return {
+    id: input.id || uid(),
+    amount,
+    createdAt: input.createdAt || new Date().toISOString(),
+    note: input.note ? String(input.note) : undefined,
+    ...(currency ? { currency } : {}),
+  };
+}
+
 function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
   const kind: DebtRadarKind =
     input.kind === "debt" || input.kind === "bill" || input.kind === "maintenance"
@@ -17394,6 +17417,12 @@ function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
       : "medium";
   const currency = normalizeOptionalCurrency(input.currency);
   const remainingCurrency = normalizeOptionalCurrency(input.remainingCurrency);
+  const paymentHistory = Array.isArray(input.paymentHistory)
+    ? input.paymentHistory
+        .map(normalizeDebtPaymentEntry)
+        .filter((entry): entry is DebtPaymentEntry => Boolean(entry))
+        .slice(0, 30)
+    : [];
 
   return {
     id: input.id || uid(),
@@ -17405,6 +17434,7 @@ function normalizeDebtRadarItem(input: Partial<DebtRadarItem>): DebtRadarItem {
     priority,
     ...(currency ? { currency } : {}),
     ...(remainingCurrency ? { remainingCurrency } : {}),
+    ...(paymentHistory.length > 0 ? { paymentHistory } : {}),
   };
 }
 
@@ -17579,6 +17609,28 @@ function debtRadarPriorityLabel(priority: DebtRadarPriority) {
   return "Medium";
 }
 
+function getDebtPaidAmount(item: DebtRadarItem) {
+  return (item.paymentHistory || []).reduce((sum, entry) => sum + Math.max(0, safeNumber(String(entry.amount ?? ""))), 0);
+}
+
+function getDebtPaymentStatus(item: DebtRadarItem) {
+  if (item.kind !== "debt") return "Not debt";
+
+  const paid = getDebtPaidAmount(item);
+  const remaining = Math.max(0, safeNumber(item.remainingAmount));
+
+  if (remaining <= 0 && paid > 0) return "Paid";
+  if (paid > 0) return "Partial pay";
+  return "Unpaid";
+}
+
+function getDebtPaymentStatusClass(item: DebtRadarItem) {
+  const status = getDebtPaymentStatus(item);
+  if (status === "Paid") return "paid";
+  if (status === "Partial pay") return "partial";
+  return "unpaid";
+}
+
 function normalizeDebtRadarDueDay(value: string) {
   const digits = value.replace(/\D/g, "").slice(0, 2);
   if (!digits) return "";
@@ -17608,6 +17660,8 @@ function DebtBillsRadarPanel({
   onUpdateItem,
   onAddItem,
   onRemoveItem,
+  onAddPayment,
+  onMarkFullPaid,
 }: {
   items: DebtRadarItem[];
   totals: DebtRadarTotals;
@@ -17616,7 +17670,10 @@ function DebtBillsRadarPanel({
   onUpdateItem: (id: string, patch: Partial<DebtRadarItem>) => void;
   onAddItem: (kind: DebtRadarKind, name: string) => void;
   onRemoveItem: (id: string) => void;
+  onAddPayment: (id: string, amount: string) => void;
+  onMarkFullPaid: (id: string) => void;
 }) {
+  const [paymentDrafts, setPaymentDrafts] = useState<Record<string, string>>({});
   const income = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
   const pressureBase = income > 0 ? income : Math.max(fixedCosts + totals.totalMonthly, 1);
@@ -17718,6 +17775,10 @@ function DebtBillsRadarPanel({
           );
           const monthlyUsdNote = usdReferenceNoteFromDisplay(monthlyDisplay, settings, exchangeRates);
           const remainingUsdNote = usdReferenceNoteFromDisplay(remainingDisplay, settings, exchangeRates);
+          const paidAmount = getDebtPaidAmount(item);
+          const paymentStatus = getDebtPaymentStatus(item);
+          const paymentStatusClass = getDebtPaymentStatusClass(item);
+          const paymentDraft = paymentDrafts[item.id] || "";
           const itemMeta = [
             monthlyAmount > 0
               ? `${money(monthlyDisplay.amount, monthlyDisplay.currency)}/mo${monthlyUsdNote ? ` (${monthlyUsdNote})` : monthlyDisplay.converted ? ` (${originalMoneyNote(monthlyDisplay)})` : ""}`
@@ -17746,6 +17807,23 @@ function DebtBillsRadarPanel({
                   ×
                 </button>
               </div>
+
+              {item.kind === "debt" && (
+                <div className={`debt-payment-status-strip ${paymentStatusClass}`}>
+                  <div>
+                    <span>Paid status</span>
+                    <strong>{paymentStatus}</strong>
+                  </div>
+                  <div>
+                    <span>Paid so far</span>
+                    <strong>{money(paidAmount, item.remainingCurrency || item.currency || settings.currency)}</strong>
+                  </div>
+                  <div>
+                    <span>Due</span>
+                    <strong>{item.dueDay ? `Day ${item.dueDay}` : "No date"}</strong>
+                  </div>
+                </div>
+              )}
 
               <div className="debt-radar-fields">
                 <label>
@@ -17804,6 +17882,50 @@ function DebtBillsRadarPanel({
                   </select>
                 </label>
               </div>
+
+              {item.kind === "debt" && (
+                <div className="debt-payment-tracker">
+                  <div className="debt-payment-actions">
+                    <input
+                      inputMode="decimal"
+                      value={paymentDraft}
+                      placeholder={`Payment in ${item.remainingCurrency || item.currency || settings.currency}`}
+                      onChange={(event) =>
+                        setPaymentDrafts((current) => ({ ...current, [item.id]: event.target.value }))
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onAddPayment(item.id, paymentDraft);
+                        setPaymentDrafts((current) => ({ ...current, [item.id]: "" }));
+                      }}
+                    >
+                      Partial pay
+                    </button>
+                    <button type="button" onClick={() => onMarkFullPaid(item.id)}>
+                      Full pay
+                    </button>
+                  </div>
+
+                  {(item.paymentHistory || []).length > 0 && (
+                    <div className="debt-receipt-log">
+                      <span>Receipt history</span>
+                      {(item.paymentHistory || []).slice(0, 4).map((entry) => (
+                        <div key={entry.id}>
+                          <strong>{money(entry.amount, entry.currency || item.remainingCurrency || item.currency || settings.currency)}</strong>
+                          <small>
+                            {new Date(entry.createdAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </small>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </article>
           );
         })}
@@ -18235,6 +18357,71 @@ function WhatIfScreen({
     triggerHaptic("light");
   }
 
+  function addDebtPayment(id: string, amountValue: string) {
+    const amount = Math.max(0, safeNumber(amountValue));
+    if (amount <= 0) {
+      triggerHaptic("error");
+      return;
+    }
+
+    setDebtRadarItems((current) =>
+      current.map((item) => {
+        if (item.id !== id || item.kind !== "debt") return item;
+
+        const remainingBefore = Math.max(0, safeNumber(item.remainingAmount));
+        const paid = Math.min(amount, remainingBefore > 0 ? remainingBefore : amount);
+        const nextRemaining = Math.max(0, remainingBefore - paid);
+        const paymentCurrency = item.remainingCurrency || item.currency || settings.currency;
+        const entry: DebtPaymentEntry = {
+          id: uid(),
+          amount: paid,
+          currency: paymentCurrency,
+          createdAt: new Date().toISOString(),
+          note: "Partial pay",
+        };
+
+        return normalizeDebtRadarItem({
+          ...item,
+          remainingAmount: String(nextRemaining),
+          remainingCurrency: paymentCurrency,
+          paymentHistory: [entry, ...(item.paymentHistory || [])],
+        });
+      })
+    );
+
+    triggerHaptic("success");
+  }
+
+  function markDebtFullPaid(id: string) {
+    setDebtRadarItems((current) =>
+      current.map((item) => {
+        if (item.id !== id || item.kind !== "debt") return item;
+
+        const remaining = Math.max(0, safeNumber(item.remainingAmount));
+        const paymentCurrency = item.remainingCurrency || item.currency || settings.currency;
+        const entry =
+          remaining > 0
+            ? {
+                id: uid(),
+                amount: remaining,
+                currency: paymentCurrency,
+                createdAt: new Date().toISOString(),
+                note: "Full pay",
+              } satisfies DebtPaymentEntry
+            : null;
+
+        return normalizeDebtRadarItem({
+          ...item,
+          remainingAmount: "0",
+          remainingCurrency: paymentCurrency,
+          paymentHistory: entry ? [entry, ...(item.paymentHistory || [])] : item.paymentHistory || [],
+        });
+      })
+    );
+
+    triggerHaptic("success");
+  }
+
   function removeDebtRadarItem(id: string) {
     setDebtRadarItems((current) =>
       current.length <= 1 ? current : current.filter((item) => item.id !== id)
@@ -18296,6 +18483,8 @@ function WhatIfScreen({
           onUpdateItem={updateDebtRadarItem}
           onAddItem={addDebtRadarItem}
           onRemoveItem={removeDebtRadarItem}
+          onAddPayment={addDebtPayment}
+          onMarkFullPaid={markDebtFullPaid}
         />
       </details>
 

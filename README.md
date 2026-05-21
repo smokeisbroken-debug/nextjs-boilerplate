@@ -1,20 +1,18 @@
-# v59.4 — Growth Plan Tracking Detail
+# v59.5 — Debt Payment Tracker
 
-Patch-only update for the $BROKE / SmokeIsBroke Telegram Mini App.
+Patch-only update from v59.4 / v59.3.4 line.
 
-## User-facing change
-Saved Growth plans are now clickable and trackable. A chosen plan no longer ends at a share image: users can open the plan, see progress, add saved progress, mark a planned contribution, update the plan, view recent progress history, and share the card when needed.
+## User-facing changes
+- Fixes the Growth saved plans layout so clickable plans no longer collapse into vertical text on mobile.
+- Adds Debt Payment Tracker inside Debt & Bills Radar.
+- Debt items now show Paid Status: Unpaid, Partial Pay, or Paid.
+- Users can log Partial Pay amounts.
+- Users can mark a debt as Full Pay to clear the remaining debt.
+- Debt items now keep a private Receipt History Log.
+- Existing Debt & Bills Radar items remain compatible.
 
-## Files changed
-- `app/page.tsx`
-- `app/globals.css`
-- `README.md`
-- `PROJECT_ORDER.md`
-- `TESTING.md`
-
-## Backend
-No API route changes.
-No Supabase migration.
-No Telegram webhook change.
-
-Growth progress is stored inside the existing saved Growth simulation payload, so old saved plans stay compatible and normalize with an empty progress history.
+## Technical scope
+- Uses existing app state payload / Debt Radar state.
+- No Supabase migration required.
+- No new API route required.
+- `/api/broke` normalization was updated to preserve debt payment history during sync.
