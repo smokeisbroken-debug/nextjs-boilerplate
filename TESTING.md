@@ -1,4 +1,4 @@
-# v59.3.4 — Testing
+# v59.4 — Testing
 
 Run:
 
@@ -8,7 +8,19 @@ npm run lint:quiet
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-Expected result:
-- Home Status appears first under the header.
-- Wallet Snapshot appears below Home Status.
-- No regressions in Home navigation or Wallet Snapshot tabs.
+Expected:
+- TypeScript passes.
+- Quiet lint passes.
+- Production build passes.
+
+Manual checks:
+1. Open Growth.
+2. Create or save a Growth plan.
+3. Confirm the saved plan is clickable.
+4. Open the plan detail.
+5. Add a progress amount.
+6. Confirm the progress bar and receipt history update.
+7. Tap Mark planned contribution.
+8. Tap Update plan and confirm the builder fields load the selected plan.
+9. Tap Share card and confirm existing Growth share flow still works.
+10. Reload the app and confirm saved progress remains available.

@@ -1,8 +1,20 @@
-# v59.3.4 — Home Status Top Order Hotfix
+# v59.4 — Growth Plan Tracking Detail
 
-Patch-only hotfix.
+Patch-only update for the $BROKE / SmokeIsBroke Telegram Mini App.
 
-## What changed
-- Moved the compact **Home Status** hero to the top of the Home screen, directly under the header.
-- Wallet Snapshot block now comes after Home Status.
-- No API, Supabase, migration, webhook, or calculation changes.
+## User-facing change
+Saved Growth plans are now clickable and trackable. A chosen plan no longer ends at a share image: users can open the plan, see progress, add saved progress, mark a planned contribution, update the plan, view recent progress history, and share the card when needed.
+
+## Files changed
+- `app/page.tsx`
+- `app/globals.css`
+- `README.md`
+- `PROJECT_ORDER.md`
+- `TESTING.md`
+
+## Backend
+No API route changes.
+No Supabase migration.
+No Telegram webhook change.
+
+Growth progress is stored inside the existing saved Growth simulation payload, so old saved plans stay compatible and normalize with an empty progress history.

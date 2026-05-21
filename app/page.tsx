@@ -182,6 +182,13 @@ type IncomeStyle = "Monthly" | "Weekly" | "Daily" | "Allowance" | "Irregular";
 type GrowthFrequency = "daily" | "weekly" | "monthly";
 type GrowthRisk = "low" | "medium" | "high";
 
+type GrowthPlanProgressEntry = {
+  id: string;
+  amount: number;
+  createdAt: string;
+  note?: string;
+};
+
 type GrowthSimulation = {
   id: string;
   title: string;
@@ -193,6 +200,7 @@ type GrowthSimulation = {
   riskLevel: GrowthRisk;
   reinvest: boolean;
   createdAt: string;
+  progressEntries: GrowthPlanProgressEntry[];
 };
 
 type GrowthPoint = {
@@ -15436,6 +15444,21 @@ function growthRiskLabel(risk: GrowthRisk) {
   return "High risk";
 }
 
+function normalizeGrowthPlanProgressEntry(
+  input: Partial<GrowthPlanProgressEntry>
+): GrowthPlanProgressEntry | null {
+  const amount = Math.max(0, Number(input.amount) || 0);
+
+  if (amount <= 0) return null;
+
+  return {
+    id: input.id || uid(),
+    amount,
+    createdAt: input.createdAt || new Date().toISOString(),
+    ...(input.note ? { note: String(input.note) } : {}),
+  };
+}
+
 function normalizeGrowthSimulation(input: Partial<GrowthSimulation>): GrowthSimulation {
   return {
     id: input.id || uid(),
@@ -15448,6 +15471,14 @@ function normalizeGrowthSimulation(input: Partial<GrowthSimulation>): GrowthSimu
     riskLevel: input.riskLevel || "medium",
     reinvest: input.reinvest !== false,
     createdAt: input.createdAt || new Date().toISOString(),
+    progressEntries: Array.isArray(input.progressEntries)
+      ? input.progressEntries
+          .flatMap((entry) => {
+            const normalized = normalizeGrowthPlanProgressEntry(entry);
+            return normalized ? [normalized] : [];
+          })
+          .slice(0, 30)
+      : [],
   };
 }
 
@@ -15818,6 +15849,43 @@ function getGrowthFinal(simulation: GrowthSimulation, annualGrowthOverride?: num
     contributed: simulation.startingAmount,
     gain: 0,
   };
+}
+
+function getGrowthPlanProgress(simulation: GrowthSimulation) {
+  return sum((simulation.progressEntries || []).map((entry) => Math.max(0, Number(entry.amount) || 0)));
+}
+
+function getGrowthPlanTarget(simulation: GrowthSimulation) {
+  const final = getGrowthFinal(simulation);
+  const plannedRedirect = monthlyGrowthContribution(simulation) * simulation.durationMonths;
+
+  return Math.max(final.balance, plannedRedirect, simulation.startingAmount, 1);
+}
+
+function getGrowthPlanProgressPercent(simulation: GrowthSimulation) {
+  return clamp((getGrowthPlanProgress(simulation) / getGrowthPlanTarget(simulation)) * 100, 0, 100);
+}
+
+function getGrowthPlanNextCheckpoint(simulation: GrowthSimulation) {
+  const target = getGrowthPlanTarget(simulation);
+  const progress = getGrowthPlanProgress(simulation);
+  const checkpoints = [0.25, 0.5, 0.75, 1];
+  const checkpoint = checkpoints.find((point) => progress < target * point) || 1;
+  const checkpointAmount = target * checkpoint;
+
+  return {
+    label: `${Math.round(checkpoint * 100)}% checkpoint`,
+    amount: checkpointAmount,
+    remaining: Math.max(0, checkpointAmount - progress),
+  };
+}
+
+function getGrowthPlanLastProgressLabel(simulation: GrowthSimulation) {
+  const latest = (simulation.progressEntries || [])[0];
+
+  if (!latest) return "No progress logged yet";
+
+  return `Last logged ${new Date(latest.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
 }
 
 function getGrowthCases(simulation: GrowthSimulation) {
@@ -16225,6 +16293,8 @@ function GrowthLabScreen({
   const [realLifeTargets, setRealLifeTargets] = useState<GrowthManualTarget[]>(() =>
     readGrowthPlannerState().realLifeTargets
   );
+  const [activeGrowthPlanId, setActiveGrowthPlanId] = useState("");
+  const [growthProgressAmount, setGrowthProgressAmount] = useState("");
 
   useEffect(() => {
     return () => {
@@ -16267,6 +16337,13 @@ function GrowthLabScreen({
     };
   }, []);
 
+  useEffect(() => {
+    if (activeGrowthPlanId && !savedSimulations.some((simulation) => simulation.id === activeGrowthPlanId)) {
+      setActiveGrowthPlanId("");
+      setGrowthProgressAmount("");
+    }
+  }, [activeGrowthPlanId, savedSimulations]);
+
   const monthlyLeakExpenses = useMemo(() => getCurrentMonthExpenses(expenses), [expenses]);
   const growthCurrencySources = useMemo(
     () => [
@@ -16285,6 +16362,12 @@ function GrowthLabScreen({
     [monthlyLeakExpenses]
   );
   const topLeak = categorySummaries[0];
+  const activeGrowthPlan = savedSimulations.find((simulation) => simulation.id === activeGrowthPlanId) || null;
+  const activeGrowthPlanFinal = activeGrowthPlan ? getGrowthFinal(activeGrowthPlan) : null;
+  const activeGrowthPlanProgress = activeGrowthPlan ? getGrowthPlanProgress(activeGrowthPlan) : 0;
+  const activeGrowthPlanTarget = activeGrowthPlan ? getGrowthPlanTarget(activeGrowthPlan) : 1;
+  const activeGrowthPlanPercent = activeGrowthPlan ? getGrowthPlanProgressPercent(activeGrowthPlan) : 0;
+  const activeGrowthPlanCheckpoint = activeGrowthPlan ? getGrowthPlanNextCheckpoint(activeGrowthPlan) : null;
 
   const preview = useMemo(
     () =>
@@ -16501,7 +16584,10 @@ function GrowthLabScreen({
     const next = [simulation, ...savedSimulations].slice(0, 8);
 
     setSavedSimulations(next);
+    setActiveGrowthPlanId(simulation.id);
+    setGrowthProgressAmount("");
     writeGrowthSimulations(next);
+    notifyApp("Growth plan saved", "Open the saved plan to track progress, checkpoints, and next moves.");
     triggerHaptic("success");
   }
 
@@ -16510,6 +16596,51 @@ function GrowthLabScreen({
 
     setSavedSimulations(next);
     writeGrowthSimulations(next);
+    triggerHaptic("light");
+  }
+
+  function addGrowthPlanProgress(simulationId: string, rawAmount: string | number, note = "Manual progress") {
+    const amount = Math.max(0, Number(rawAmount) || 0);
+
+    if (amount <= 0) {
+      notifyApp("Add progress amount", "Enter what you saved or redirected first.");
+      return;
+    }
+
+    const next = savedSimulations.map((simulation) =>
+      simulation.id === simulationId
+        ? normalizeGrowthSimulation({
+            ...simulation,
+            progressEntries: [
+              { id: uid(), amount, createdAt: new Date().toISOString(), note },
+              ...(simulation.progressEntries || []),
+            ].slice(0, 30),
+          })
+        : simulation
+    );
+
+    setSavedSimulations(next);
+    writeGrowthSimulations(next);
+    setGrowthProgressAmount("");
+    notifyApp("Growth progress added", `${money(amount, settings.currency)} logged into this plan.`);
+    triggerHaptic("success");
+  }
+
+  function markOneGrowthContribution(simulation: GrowthSimulation) {
+    const amount = Math.max(1, monthlyGrowthContribution(simulation));
+    addGrowthPlanProgress(simulation.id, amount, "Planned contribution");
+  }
+
+  function loadGrowthPlanIntoBuilder(simulation: GrowthSimulation) {
+    setTitle(simulation.title);
+    setStartingAmount(String(simulation.startingAmount));
+    setContributionAmount(String(simulation.contributionAmount));
+    setContributionFrequency(simulation.contributionFrequency);
+    setDurationMonths(String(simulation.durationMonths));
+    setExpectedAnnualGrowth(String(simulation.expectedAnnualGrowth));
+    setRiskLevel(simulation.riskLevel);
+    setReinvest(simulation.reinvest);
+    notifyApp("Plan loaded", "Edit the numbers and save it as an updated version.");
     triggerHaptic("light");
   }
 
@@ -17071,10 +17202,10 @@ function GrowthLabScreen({
         </section>
       )}
 
-      <section className="growth-result-card">
+      <section className="growth-result-card growth-plan-tracker-card">
         <div className="section-title">
           <span>Saved plans</span>
-          <small>{savedSimulations.length}/8</small>
+          <small>{savedSimulations.length}/8 · clickable</small>
         </div>
 
         {savedSimulations.length === 0 && (
@@ -17085,26 +17216,129 @@ function GrowthLabScreen({
           </div>
         )}
 
+        {activeGrowthPlan && activeGrowthPlanFinal && activeGrowthPlanCheckpoint && (
+          <section className="growth-plan-detail-card">
+            <div className="growth-plan-detail-head">
+              <div>
+                <span>Active tracking plan</span>
+                <strong>{activeGrowthPlan.title}</strong>
+                <small>{getGrowthPlanLastProgressLabel(activeGrowthPlan)}</small>
+              </div>
+              <button type="button" onClick={() => setActiveGrowthPlanId("")}>Close</button>
+            </div>
+
+            <div className="growth-plan-detail-stats">
+              <div>
+                <span>Goal value</span>
+                <strong>{money(activeGrowthPlanTarget, settings.currency)}</strong>
+              </div>
+              <div>
+                <span>Tracked progress</span>
+                <strong>{money(activeGrowthPlanProgress, settings.currency)}</strong>
+              </div>
+              <div>
+                <span>Next checkpoint</span>
+                <strong>{activeGrowthPlanCheckpoint.label}</strong>
+              </div>
+            </div>
+
+            <div className="growth-plan-progress-bar" aria-label="Growth plan progress">
+              <i style={{ width: `${Math.max(4, activeGrowthPlanPercent)}%` }} />
+            </div>
+
+            <p>
+              Keep this plan alive by logging saved progress. Next checkpoint needs about{" "}
+              <strong>{money(activeGrowthPlanCheckpoint.remaining, settings.currency)}</strong> more.
+            </p>
+
+            <div className="growth-plan-progress-form">
+              <input
+                inputMode="decimal"
+                value={growthProgressAmount}
+                placeholder={`Add progress in ${settings.currency}`}
+                onChange={(event) => setGrowthProgressAmount(event.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => addGrowthPlanProgress(activeGrowthPlan.id, growthProgressAmount)}
+              >
+                Add progress
+              </button>
+            </div>
+
+            <div className="growth-plan-detail-actions">
+              <button type="button" onClick={() => markOneGrowthContribution(activeGrowthPlan)}>
+                Mark planned contribution
+              </button>
+              <button type="button" onClick={() => loadGrowthPlanIntoBuilder(activeGrowthPlan)}>
+                Update plan
+              </button>
+              <button type="button" onClick={() => void shareGrowthPlan(activeGrowthPlan)}>
+                Share card
+              </button>
+            </div>
+
+            {activeGrowthPlan.progressEntries.length > 0 && (
+              <div className="growth-plan-progress-log">
+                <span>Receipt history</span>
+                {activeGrowthPlan.progressEntries.slice(0, 3).map((entry) => (
+                  <div key={entry.id}>
+                    <strong>{money(entry.amount, settings.currency)}</strong>
+                    <small>
+                      {new Date(entry.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </small>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
         <div className="growth-saved-list">
           {savedSimulations.map((simulation) => {
             const result = getGrowthFinal(simulation);
+            const tracked = getGrowthPlanProgress(simulation);
+            const progressPercent = getGrowthPlanProgressPercent(simulation);
 
             return (
-              <article key={simulation.id}>
-                <img src={GROWTH_PUBLIC_ASSETS.market} alt="" onError={(event) => { event.currentTarget.src = A.progressFlame; }} />
-                <div>
-                  <strong>{simulation.title}</strong>
-                  <span>
-                    {money(simulation.contributionAmount, settings.currency)}{" "}
-                    {growthFrequencyLabel(simulation.contributionFrequency)} ·{" "}
-                    {simulation.durationMonths} months
-                  </span>
-                  <small>
-                    <span>Projected</span>: {money(result.balance, settings.currency)} ·{" "}
-                    <span>Redirected</span>: {money(result.contributed, settings.currency)}
-                  </small>
-                </div>
-                <button type="button" onClick={() => deleteSimulation(simulation.id)}>
+              <article
+                key={simulation.id}
+                className={activeGrowthPlanId === simulation.id ? "active" : ""}
+              >
+                <button
+                  type="button"
+                  className="growth-saved-plan-open"
+                  onClick={() => {
+                    setActiveGrowthPlanId(simulation.id);
+                    setGrowthProgressAmount("");
+                    triggerHaptic("light");
+                  }}
+                >
+                  <img
+                    src={GROWTH_PUBLIC_ASSETS.market}
+                    alt=""
+                    onError={(event) => { event.currentTarget.src = A.progressFlame; }}
+                  />
+                  <div>
+                    <strong>{simulation.title}</strong>
+                    <span>
+                      {money(simulation.contributionAmount, settings.currency)}{" "}
+                      {growthFrequencyLabel(simulation.contributionFrequency)} ·{" "}
+                      {simulation.durationMonths} months
+                    </span>
+                    <small>
+                      <span>Projected</span>: {money(result.balance, settings.currency)} ·{" "}
+                      <span>Tracked</span>: {money(tracked, settings.currency)}
+                    </small>
+                    <div className="growth-saved-mini-progress">
+                      <i style={{ width: `${Math.max(4, progressPercent)}%` }} />
+                    </div>
+                  </div>
+                </button>
+                <button type="button" onClick={() => deleteSimulation(simulation.id)} aria-label={`Delete ${simulation.title}`}>
                   ×
                 </button>
               </article>
