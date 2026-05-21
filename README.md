@@ -1,12 +1,13 @@
-# v59.6.1 — Home Habit Custom Stack Hotfix
+# v59.6.2 — Growth Typing Stability Hotfix
 
-Patch-only hotfix for v59.6.
+Patch-only hotfix on top of v59.6.1.
 
-## What changed
-- Added a custom input for Home Habit Leaks.
-- Users can now write their own home leak names instead of only using presets.
-- Custom leaks with the same normalized name stack together.
-- Added a weekly stack list so repeated custom habits are visible.
+## User-facing fix
+- Growth plan inputs should no longer delete or overwrite letters while the user types.
+- Growth fields now stay stable during active typing.
+- Saved plan tracking, Debt Payment Tracker, and Home Habit Leaks remain unchanged.
 
-## No Supabase migration
-Home Habit Leaks still use the existing app state payload and localStorage fallback.
+## Technical scope
+- Stabilized Growth screen input handling against cloud/app-state sync during active typing.
+- Debounced Growth planner cloud sync while preserving local-first saves.
+- No Supabase migration required.

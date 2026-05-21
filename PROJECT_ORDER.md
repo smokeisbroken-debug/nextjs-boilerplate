@@ -1,7 +1,7 @@
-# v59.6.1 — Home Habit Custom Stack Hotfix
+# v59.6.2 — Growth Typing Stability Hotfix
 
 ## Purpose
-Users should be able to create custom Home Habit Leak names and see them stack by name.
+Fix Growth tab text input instability reported by users: characters sometimes disappeared or were overwritten while typing into Growth plan fields.
 
 ## Files changed
 - app/page.tsx
@@ -15,5 +15,12 @@ Users should be able to create custom Home Habit Leak names and see them stack b
 - Supabase schema
 - migrations
 - Telegram webhook
-- expense calculations
-- security/RLS
+- Growth formulas
+- Debt formulas
+- Home Habit Leak calculations
+- stored data format
+
+## Deployment
+1. Replace files from this patch.
+2. Deploy to Vercel.
+3. Test Growth typing in Telegram WebView and browser.

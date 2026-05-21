@@ -16333,6 +16333,16 @@ function GrowthLabScreen({
   );
   const [activeGrowthPlanId, setActiveGrowthPlanId] = useState("");
   const [growthProgressAmount, setGrowthProgressAmount] = useState("");
+  const growthTypingLockUntilRef = useRef(0);
+  const growthPlannerSyncTimerRef = useRef<number | null>(null);
+
+  function lockGrowthTypingWindow(durationMs = 6000) {
+    growthTypingLockUntilRef.current = Date.now() + durationMs;
+  }
+
+  function isGrowthTypingLocked() {
+    return Date.now() < growthTypingLockUntilRef.current;
+  }
 
   useEffect(() => {
     return () => {
@@ -16355,11 +16365,26 @@ function GrowthLabScreen({
       savingGoalAmount,
       savingGoalCurrency,
     });
-    onAppStateChange?.();
+
+    if (growthPlannerSyncTimerRef.current) {
+      window.clearTimeout(growthPlannerSyncTimerRef.current);
+    }
+
+    growthPlannerSyncTimerRef.current = window.setTimeout(() => {
+      onAppStateChange?.();
+    }, 900);
+
+    return () => {
+      if (growthPlannerSyncTimerRef.current) {
+        window.clearTimeout(growthPlannerSyncTimerRef.current);
+      }
+    };
   }, [realLifeTargets, savingGoalName, savingGoalAmount, savingGoalCurrency]);
 
   useEffect(() => {
     function applySyncedAppState() {
+      if (isGrowthTypingLocked()) return;
+
       setSavedSimulations(readGrowthSimulations());
       const planner = readGrowthPlannerState();
       setRealLifeTargets(planner.realLifeTargets);
@@ -16761,7 +16786,11 @@ function GrowthLabScreen({
   }
 
   return (
-    <div className="screen growth-screen">
+    <div
+      className="screen growth-screen"
+      onFocusCapture={() => lockGrowthTypingWindow()}
+      onInputCapture={() => lockGrowthTypingWindow()}
+    >
       <Header title="$BROKE Growth Lab" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
       <section className="growth-hero-card">
