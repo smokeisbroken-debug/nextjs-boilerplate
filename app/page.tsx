@@ -13922,7 +13922,10 @@ function ShareResultCard({
 
         <div className="share-preview share-preview-social profile-selected-share-grid">
           {selectedShareMetrics.map((metric) => (
-            <div key={metric.label}>
+            <div
+              className={`profile-share-metric-card profile-share-metric-${metric.label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+              key={metric.label}
+            >
               <span>{metric.label}</span>
               <strong>{metric.value}</strong>
             </div>
@@ -20012,6 +20015,24 @@ function SettingsScreen({
       badgeCount: earnedBadgeCount,
     })
   );
+  const normalizedWalletAddressDraft = walletAddressDraft.trim();
+  const walletDraftHasValue = normalizedWalletAddressDraft.length > 0;
+  const walletDraftLooksValid = isLikelySolanaWalletAddress(normalizedWalletAddressDraft);
+  const walletDraftIsLinked = Boolean(
+    settings.wallet.walletAddress && settings.wallet.walletAddress === normalizedWalletAddressDraft
+  );
+  const walletReadyStateLabel = !walletDraftHasValue
+    ? "Paste your public wallet address. Never paste a seed phrase."
+    : walletDraftLooksValid
+      ? walletDraftIsLinked
+        ? "Wallet linked. You can recheck the latest $BROKE balance."
+        : "Address ready to check."
+      : "This does not look like a Solana address yet.";
+  const walletPrimaryCta = walletChecking
+    ? "Checking..."
+    : walletDraftIsLinked
+      ? "Recheck $BROKE balance"
+      : "Check $BROKE balance";
 
   function updateIdentityField<K extends keyof Settings["identity"]>(key: K, value: Settings["identity"][K]) {
     setSettings((prev) => ({
@@ -20048,6 +20069,34 @@ function SettingsScreen({
         ...next,
       }),
     }));
+  }
+
+  async function pasteWalletAddressFromClipboard() {
+    try {
+      const clipboardText = await navigator.clipboard.readText();
+      const nextAddress = clipboardText.trim();
+
+      if (!nextAddress) {
+        setWalletMessage("Clipboard is empty.");
+        return;
+      }
+
+      setWalletAddressDraft(nextAddress);
+      setWalletMessage(
+        isLikelySolanaWalletAddress(nextAddress)
+          ? "Address ready to check."
+          : "Pasted text does not look like a Solana wallet address yet."
+      );
+      triggerHaptic("light");
+    } catch {
+      setWalletMessage("Clipboard access is blocked. Paste the address manually.");
+    }
+  }
+
+  function clearWalletAddressDraft() {
+    setWalletAddressDraft("");
+    setWalletMessage("");
+    triggerHaptic("light");
   }
 
   async function checkBrokeWalletBalance() {
@@ -20204,17 +20253,67 @@ function SettingsScreen({
             <b>{settings.wallet.walletAddress ? formatHolderPercent(settings.wallet.percentOfSupply) : "Not linked"}</b>
           </div>
 
-          <label className="wallet-address-field">
-            <span>Solana wallet address</span>
-            <input
-              value={walletAddressDraft}
-              placeholder="Paste wallet address"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              onChange={(event) => setWalletAddressDraft(event.target.value)}
-            />
-          </label>
+          <div
+            className={`wallet-address-control ${
+              !walletDraftHasValue ? "empty" : walletDraftLooksValid ? "ready" : "needs-fix"
+            }`}
+          >
+            <label className="wallet-address-field">
+              <span>Paste Solana wallet address</span>
+              <input
+                value={walletAddressDraft}
+                placeholder="Example: 8x3...Kp9"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                onChange={(event) => {
+                  setWalletAddressDraft(event.target.value);
+                  setWalletMessage("");
+                }}
+              />
+            </label>
+
+            <div className="wallet-address-helper-row">
+              <span>{walletReadyStateLabel}</span>
+              <div className="wallet-address-mini-actions">
+                <button type="button" onClick={pasteWalletAddressFromClipboard}>Paste</button>
+                <button type="button" onClick={clearWalletAddressDraft} disabled={!walletDraftHasValue}>Clear</button>
+              </div>
+            </div>
+          </div>
+
+          {settings.wallet.walletAddress && (
+            <section className="wallet-linked-result-card">
+              <div>
+                <span>Wallet linked</span>
+                <strong>{compactWalletAddress(settings.wallet.walletAddress)}</strong>
+                <small>{settings.wallet.lastCheckedAt ? `Last checked ${new Date(settings.wallet.lastCheckedAt).toLocaleString()}` : "Saved as read-only watch wallet."}</small>
+              </div>
+              <b>{settings.wallet.holderTier.label}</b>
+            </section>
+          )}
+
+          <div className="wallet-balance-actions wallet-primary-actions">
+            <button
+              type="button"
+              className={`primary ${walletDraftLooksValid ? "ready" : ""}`}
+              onClick={checkBrokeWalletBalance}
+              disabled={!walletDraftLooksValid || walletChecking}
+            >
+              {walletPrimaryCta}
+            </button>
+            {settings.wallet.walletAddress && (
+              <button type="button" onClick={unlinkWallet}>
+                Remove wallet
+              </button>
+            )}
+          </div>
+
+          <div className="wallet-security-note-grid">
+            <span>Read-only check</span>
+            <span>No seed phrase</span>
+            <span>No transaction</span>
+          </div>
 
           <div className="wallet-balance-status-grid">
             <article>
@@ -20227,21 +20326,10 @@ function SettingsScreen({
               <small>{settings.wallet.holderTier.range}</small>
             </article>
             <article>
-              <span>Wallet</span>
-              <strong>{compactWalletAddress(settings.wallet.walletAddress)}</strong>
-              <small>{settings.wallet.lastCheckedAt ? `Checked ${new Date(settings.wallet.lastCheckedAt).toLocaleDateString()}` : "Not checked yet"}</small>
+              <span>Supply share</span>
+              <strong>{formatHolderPercent(settings.wallet.percentOfSupply)}</strong>
+              <small>{settings.wallet.walletAddress ? "Based on checked balance." : "Link a wallet first."}</small>
             </article>
-          </div>
-
-          <div className="wallet-balance-actions">
-            <button type="button" className="primary" onClick={checkBrokeWalletBalance} disabled={walletChecking}>
-              {walletChecking ? "Checking..." : "Check $BROKE balance"}
-            </button>
-            {settings.wallet.walletAddress && (
-              <button type="button" onClick={unlinkWallet}>
-                Remove wallet
-              </button>
-            )}
           </div>
 
           <div className="wallet-holder-privacy-toggles">

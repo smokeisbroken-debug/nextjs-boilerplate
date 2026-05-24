@@ -1,38 +1,19 @@
-# v59.12 — Wallet Balance Foundation
+# v59.12.1 — Wallet UX & Share Preview Polish
 
-Patch-only update for $BROKE Life Tracker.
+Patch-only update for the $BROKE Telegram Mini App.
 
 ## What changed
-- Added Profile → Wallet & $BROKE balance.
-- Users can paste a Solana wallet address and check read-only $BROKE token balance.
-- Added holder tier display based on percentage of visible token supply:
-  - Tadpole: <0.05%
-  - Frog: 0.05–0.25%
-  - Strong Frog: 0.25–0.75%
-  - Shark Frog: 0.75–2%
-  - Whale Frog: 2–5%
-  - Leviathan Frog: 5%+
-- Added privacy toggles for holder tier and exact token balance.
-- Added Holder tier as an optional Share Studio item.
-- Added `/api/wallet/balance` read-only balance endpoint.
+- Wallet address flow is clearer in Profile / Personal Cabinet.
+- `Check $BROKE balance` button is now disabled until a valid-looking Solana address is entered.
+- Valid address state now shows `Address ready to check`.
+- Added `Paste` and `Clear` actions for the wallet address field.
+- Added a clear linked-wallet result block with wallet, holder tier, and last checked time.
+- Added trust notes: read-only check, no seed phrase, no transaction.
+- Polished Profile share preview so long values such as BROKE balance and Biggest leak do not crop as easily.
 
-## Security notes
-- No seed phrase.
-- No private key.
-- No approval transaction.
-- No token transfer.
-- No staking or custody.
-- This is read-only balance tracking through Solana RPC.
-
-## Environment
-Optional:
-
-```txt
-BROKE_TOKEN_MINT=9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray
-SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
-```
-
-The app has a default token mint fallback, but setting `BROKE_TOKEN_MINT` in Vercel is cleaner.
-
-## Supabase
-No migration is required for this patch. Wallet display state is saved through the existing settings payload.
+## What did not change
+- No Supabase migration.
+- No token transaction logic.
+- No wallet signing.
+- No custody / staking / claim logic.
+- Holder tiers remain unchanged.

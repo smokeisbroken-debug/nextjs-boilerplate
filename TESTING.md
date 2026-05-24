@@ -1,6 +1,6 @@
-# v59.12 — Testing
+# v59.12.1 Testing
 
-Run locally:
+Run:
 
 ```bash
 npm run typecheck
@@ -10,18 +10,13 @@ NEXT_TELEMETRY_DISABLED=1 npm run build
 
 Manual checks:
 
-1. Open Profile.
-2. Find Wallet & $BROKE balance.
-3. Paste a valid Solana wallet address.
-4. Press Check $BROKE balance.
-5. Confirm balance, holder tier and percent update.
-6. Toggle holder privacy controls.
-7. Open Share Studio.
-8. Select Holder tier.
-9. Open share card and confirm holder display follows privacy toggles.
-10. Reload app and confirm wallet settings remain saved.
-
-Security regression:
-- App must never ask for seed phrase.
-- App must never request token approval or transaction signing.
-- Balance check must be read-only.
+1. Open Profile / Personal Cabinet.
+2. Scroll to Wallet & $BROKE balance.
+3. Confirm the check button is disabled when the address field is empty.
+4. Paste a valid Solana address.
+5. Confirm `Address ready to check` appears and the CTA becomes bright.
+6. Tap `Check $BROKE balance`.
+7. Confirm linked wallet result, holder tier, and balance appear.
+8. Test `Paste`, `Clear`, and `Remove wallet`.
+9. Open Share Studio preview.
+10. Confirm BROKE balance and Biggest leak do not crop on mobile.
