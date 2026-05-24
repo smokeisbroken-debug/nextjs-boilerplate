@@ -1,19 +1,15 @@
-# v59.8.1 — Share Studio Button Placement Hotfix
+# v59.8.2 — Profile Order & Category Names Hotfix
 
-## Goal
-Move the share action closer to the Share Studio settings so users can configure what they show and immediately open/preview the public profile card in the same place.
+## Purpose
+Small UX cleanup after user testing:
+1. Identity Setup should appear before Share Studio.
+2. Smart Category Names should allow users to clear a default label without the input auto-filling it back.
 
 ## Files changed
 - app/page.tsx
-- app/globals.css
-- app/api/broke/route.ts
 - README.md
 - PROJECT_ORDER.md
 - TESTING.md
 
-## Not changed
-- Supabase schema
-- migrations
-- Telegram webhook
-- stored user data
-- calculations
+## No backend changes
+No API, Supabase, migration, webhook, or data-model changes.

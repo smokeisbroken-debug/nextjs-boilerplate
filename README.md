@@ -1,14 +1,15 @@
-# v59.8.1 — Share Studio Button Placement Hotfix
+# v59.8.2 — Profile Order & Category Names Hotfix
 
-Patch-only update from v59.8 stable.
+Patch-only hotfix on top of v59.8.1.
 
 ## What changed
-- Added the main **Open share card** button directly inside Profile → Share Studio.
-- Added inline share-card preview inside the same Share Studio block.
-- Users no longer need to search Home for the profile share card after choosing checkboxes.
-- Kept existing Home share-card panel for compatibility with onboarding/daily routine flows.
+- Moved **Identity Setup** above **Share Studio** in Profile / Personal Cabinet.
+- Fixed **Smart Category Names** input behavior so an intentionally cleared label stays empty in the input instead of being immediately refilled by the default category name.
 
-## No backend changes
-- No Supabase migration.
-- No API behavior changes.
-- No Telegram webhook changes.
+## Not changed
+- API routes
+- Supabase schema
+- migrations
+- Telegram webhook
+- calculations
+- stored expense data

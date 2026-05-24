@@ -19570,6 +19570,67 @@ function SettingsScreen({
           <span><b>Hides</b> income, real balance, payday and private debt details by default.</span>
         </div>
 
+        <details className="profile-identity-editor">
+          <summary>
+            <span>Identity setup</span>
+            <b>{profileConnectionLabel}</b>
+          </summary>
+
+          <label>
+            <span>Nickname</span>
+            <input
+              value={settings.identity.nickname}
+              placeholder={fallbackProfileName}
+              onChange={(event) => updateIdentityField("nickname", event.target.value)}
+            />
+          </label>
+
+          <label>
+            <span>Status line</span>
+            <input
+              value={settings.identity.statusText}
+              placeholder="Broke, but self-aware"
+              onChange={(event) => updateIdentityField("statusText", event.target.value)}
+            />
+          </label>
+
+          <div className="profile-avatar-options">
+            {profileAvatarOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={settings.identity.avatarPreset === option.id ? "active" : ""}
+                onClick={() => updateIdentityField("avatarPreset", option.id)}
+              >
+                <img src={option.image} alt="" />
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="profile-identity-style-panel">
+            <div>
+              <span>Identity style</span>
+              <strong>Choose how your $BROKE profile should feel.</strong>
+            </div>
+            <div className="profile-identity-style-options">
+              {profileIdentityStyles.map((style) => (
+                <button
+                  key={style.id}
+                  type="button"
+                  className={settings.identity.identityStyle === style.id ? "active" : ""}
+                  onClick={() => updateIdentityField("identityStyle", style.id)}
+                >
+                  <b>{style.badge}</b>
+                  <strong>{style.label}</strong>
+                  <small>{style.description}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        </details>
+
+
         <section className="profile-share-studio-card">
           <div className="profile-share-studio-head">
             <div>
@@ -19652,66 +19713,6 @@ function SettingsScreen({
             </div>
           )}
         </section>
-
-        <details className="profile-identity-editor">
-          <summary>
-            <span>Identity setup</span>
-            <b>{profileConnectionLabel}</b>
-          </summary>
-
-          <label>
-            <span>Nickname</span>
-            <input
-              value={settings.identity.nickname}
-              placeholder={fallbackProfileName}
-              onChange={(event) => updateIdentityField("nickname", event.target.value)}
-            />
-          </label>
-
-          <label>
-            <span>Status line</span>
-            <input
-              value={settings.identity.statusText}
-              placeholder="Broke, but self-aware"
-              onChange={(event) => updateIdentityField("statusText", event.target.value)}
-            />
-          </label>
-
-          <div className="profile-avatar-options">
-            {profileAvatarOptions.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={settings.identity.avatarPreset === option.id ? "active" : ""}
-                onClick={() => updateIdentityField("avatarPreset", option.id)}
-              >
-                <img src={option.image} alt="" />
-                <span>{option.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <div className="profile-identity-style-panel">
-            <div>
-              <span>Identity style</span>
-              <strong>Choose how your $BROKE profile should feel.</strong>
-            </div>
-            <div className="profile-identity-style-options">
-              {profileIdentityStyles.map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  className={settings.identity.identityStyle === style.id ? "active" : ""}
-                  onClick={() => updateIdentityField("identityStyle", style.id)}
-                >
-                  <b>{style.badge}</b>
-                  <strong>{style.label}</strong>
-                  <small>{style.description}</small>
-                </button>
-              ))}
-            </div>
-          </div>
-        </details>
 
         <div className="profile-cabinet-note compact-profile-note">
           <span>Settings below.</span>
@@ -20150,7 +20151,7 @@ function SettingsScreen({
                 <div>
                   <span>{cat.name}</span>
                   <input
-                    value={settings.categoryNames[cat.name] || cat.name}
+                    value={settings.categoryNames[cat.name] ?? cat.name}
                     placeholder={cat.name}
                     onChange={(event) => updateCategoryName(cat.name, event.target.value)}
                   />
