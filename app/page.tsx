@@ -3686,11 +3686,87 @@ function getIdentityStyleMeta(style: Settings["identity"]["identityStyle"]) {
   }
 }
 
-function getProfileShareSlotLimit(walletHp: number) {
-  if (walletHp >= 90) return 5;
-  if (walletHp >= 75) return 4;
-  if (walletHp >= 55) return 3;
-  return 2;
+type HolderProfileReward = {
+  id: string;
+  label: string;
+  detail: string;
+  minBalance: number;
+  kind: "slot" | "cosmetic" | "proof";
+};
+
+const holderProfileRewards: HolderProfileReward[] = [
+  {
+    id: "custom-avatar",
+    label: "Custom avatar",
+    detail: "Upload your own avatar when a verified wallet holds 500K+ BROKE.",
+    minBalance: 500_000,
+    kind: "cosmetic",
+  },
+  {
+    id: "bonus-slot-1",
+    label: "+1 public display slot",
+    detail: "Show one extra Profile / Share Studio item on public cards.",
+    minBalance: 500_000,
+    kind: "slot",
+  },
+  {
+    id: "proof-glow",
+    label: "Holder proof frame",
+    detail: "Adds a stronger verified-holder identity treatment in Profile.",
+    minBalance: 1_000_000,
+    kind: "proof",
+  },
+  {
+    id: "bonus-slot-2",
+    label: "+2 public display slots",
+    detail: "Unlocks more room for badges, streak, holder tier, and Survival Score.",
+    minBalance: 1_000_000,
+    kind: "slot",
+  },
+  {
+    id: "elite-holder-style",
+    label: "Elite holder profile style",
+    detail: "A premium profile/cosmetic lane for verified 5M+ BROKE holders.",
+    minBalance: 5_000_000,
+    kind: "cosmetic",
+  },
+  {
+    id: "bonus-slot-3",
+    label: "+3 public display slots",
+    detail: "Maximum public display flexibility for verified high-conviction holders.",
+    minBalance: 5_000_000,
+    kind: "slot",
+  },
+];
+
+function getVerifiedHolderSlotBonus(wallet?: WalletLinkSettings | null) {
+  if (!wallet?.isVerified) return 0;
+  if (wallet.brokeBalance >= 5_000_000) return 3;
+  if (wallet.brokeBalance >= 1_000_000) return 2;
+  if (wallet.brokeBalance >= CUSTOM_AVATAR_UNLOCK_BALANCE) return 1;
+  return 0;
+}
+
+function getProfileShareSlotLimit(walletHp: number, wallet?: WalletLinkSettings | null) {
+  const base = walletHp >= 90 ? 5 : walletHp >= 75 ? 4 : walletHp >= 55 ? 3 : 2;
+  return Math.min(profileShareItemIds.length, base + getVerifiedHolderSlotBonus(wallet));
+}
+
+function getHolderProfileRewardState(wallet: WalletLinkSettings) {
+  const unlocked = holderProfileRewards.filter(
+    (reward) => wallet.isVerified && wallet.brokeBalance >= reward.minBalance
+  );
+  const next = holderProfileRewards.find(
+    (reward) => !wallet.isVerified || wallet.brokeBalance < reward.minBalance
+  );
+
+  return {
+    unlocked,
+    next,
+    unlockedCount: unlocked.length,
+    totalCount: holderProfileRewards.length,
+    slotBonus: getVerifiedHolderSlotBonus(wallet),
+  };
 }
 
 function getProfileShareItemMeta(id: ProfileShareItemId) {
@@ -3717,7 +3793,7 @@ function getProfileShareItemMeta(id: ProfileShareItemId) {
 }
 
 function getEnabledProfileShareItems(settings: Settings, walletHp: number) {
-  const limit = getProfileShareSlotLimit(walletHp);
+  const limit = getProfileShareSlotLimit(walletHp, settings.wallet);
   const selected = normalizeProfileShareSettings(settings.shareProfile).enabledItems;
   return selected.slice(0, limit);
 }
@@ -20084,7 +20160,7 @@ function SettingsScreen({
     : webAuth.authenticated
       ? "Web linked"
       : "Local profile";
-  const shareSlotLimit = getProfileShareSlotLimit(settingsWalletHp);
+  const shareSlotLimit = getProfileShareSlotLimit(settingsWalletHp, settings.wallet);
   const enabledShareProfileItems = normalizeProfileShareSettings(settings.shareProfile).enabledItems;
   const visibleShareProfileItems = getEnabledProfileShareItems(settings, settingsWalletHp);
   const earnedBadgeCount = badges.filter((badge) => badge.earned).length;
@@ -20132,6 +20208,13 @@ function SettingsScreen({
     : walletDraftIsLinked
       ? "Recheck $BROKE balance"
       : "Check $BROKE balance";
+  const holderRewardState = getHolderProfileRewardState(settings.wallet);
+  const nextHolderRewardGap = holderRewardState.next
+    ? Math.max(0, holderRewardState.next.minBalance - settings.wallet.brokeBalance)
+    : 0;
+  const holderRewardSummary = settings.wallet.isVerified
+    ? `${holderRewardState.unlockedCount}/${holderRewardState.totalCount} holder rewards unlocked`
+    : "Verify wallet to unlock holder rewards";
   const walletProofLabel = settings.wallet.isVerified
     ? "Verified holder"
     : settings.wallet.walletAddress
@@ -20822,6 +20905,45 @@ function SettingsScreen({
             </div>
           </section>
 
+          <section className={`holder-rewards-card ${settings.wallet.isVerified ? "verified" : "locked"}`}>
+            <div className="holder-rewards-head">
+              <div>
+                <span>Holder rewards</span>
+                <strong>{holderRewardSummary}</strong>
+                <small>
+                  {settings.wallet.isVerified
+                    ? holderRewardState.next
+                      ? `Next unlock: ${holderRewardState.next.label} at ${formatTokenAmount(holderRewardState.next.minBalance)}.`
+                      : "All current holder profile rewards are unlocked."
+                    : "Watching a wallet can show balance. Rewards require ownership proof."}
+                </small>
+              </div>
+              <b>{holderRewardState.slotBonus > 0 ? `+${holderRewardState.slotBonus} slots` : "Proof first"}</b>
+            </div>
+
+            <div className="holder-reward-grid">
+              {holderProfileRewards.map((reward) => {
+                const unlocked = settings.wallet.isVerified && settings.wallet.brokeBalance >= reward.minBalance;
+
+                return (
+                  <article className={unlocked ? "unlocked" : "locked"} key={reward.id}>
+                    <span>{unlocked ? "Unlocked" : formatTokenAmount(reward.minBalance)}</span>
+                    <strong>{reward.label}</strong>
+                    <small>{reward.detail}</small>
+                  </article>
+                );
+              })}
+            </div>
+
+            {holderRewardState.next && (
+              <p>
+                {settings.wallet.isVerified
+                  ? `Need ${formatTokenAmount(nextHolderRewardGap)} more BROKE for the next holder profile unlock.`
+                  : "Verify wallet ownership before public holder perks, custom avatar, or extra display slots activate."}
+              </p>
+            )}
+          </section>
+
           <div className="wallet-security-note-grid">
             <span>Read-only balance</span>
             <span>Message signature only</span>
@@ -20872,7 +20994,7 @@ function SettingsScreen({
             <div>
               <span>Share Studio</span>
               <strong>Choose what your public card shows.</strong>
-              <small>One main profile card. Private money stays hidden by default.</small>
+              <small>Wallet HP + verified holder balance unlock more public display slots.</small>
             </div>
             <b>{visibleShareProfileItems.length}/{shareSlotLimit} slots</b>
           </div>
@@ -20901,7 +21023,7 @@ function SettingsScreen({
                     onChange={() => toggleProfileShareItem(id)}
                   />
                   <span>{meta.label}</span>
-                  <small>{lockedBySlots ? "Raise Wallet HP to unlock more slots." : meta.detail}</small>
+                  <small>{lockedBySlots ? "Raise Wallet HP or verify holder balance to unlock more slots." : meta.detail}</small>
                 </label>
               );
             })}

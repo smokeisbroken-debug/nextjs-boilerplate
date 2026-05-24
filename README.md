@@ -1,19 +1,20 @@
-# v59.15.1 — Identity Setup Clickability Hotfix
+# v59.16 — Token-Gated Profile Rewards
 
-Patch-only hotfix from v59.15.
+Patch-only release based on v59.15.1.
 
 ## What changed
-- Made **Identity Setup** visually look like a clickable/editable control instead of a plain section title.
-- Added a brighter highlighted header treatment.
-- Added a visible `Edit ›` CTA on the Identity Setup summary.
-- Added an open state that changes the CTA to `Close`.
-- Kept Identity Setup directly under Personal Cabinet.
+- Adds a **Holder rewards** card inside Profile → Wallet & $BROKE balance.
+- Public display slots now get verified-holder bonuses:
+  - verified 500K+ BROKE: +1 public display slot
+  - verified 1M+ BROKE: +2 public display slots
+  - verified 5M+ BROKE: +3 public display slots
+- Adds visible locked/unlocked holder reward cards for custom avatar, extra public display slots, holder proof frame, and elite holder style.
+- Share Studio copy now explains that Wallet HP and verified holder balance unlock more display slots.
+- Unlocks require a **verified wallet**, not just a watched wallet address.
 
 ## Not changed
-- API routes
-- Supabase schema
-- Migrations
-- Wallet verification logic
-- Avatar upload logic
-- Share Studio logic
-- User data
+- No API changes.
+- No Supabase migration.
+- No wallet transaction logic.
+- No staking, claim, transfer, or custody.
+- No avatar upload endpoint changes.

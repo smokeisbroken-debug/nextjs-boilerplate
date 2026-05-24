@@ -21990,3 +21990,134 @@ html[lang="ru"] .trigger-preview strong {
     padding: 8px 9px;
   }
 }
+
+/* v59.16 — Token-Gated Profile Rewards */
+.holder-rewards-card {
+  margin: 10px 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  padding: 12px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(166, 255, 47, 0.08), transparent 42%),
+    rgba(0, 0, 0, 0.18);
+  display: grid;
+  gap: 10px;
+}
+
+.holder-rewards-card.verified {
+  border-color: rgba(166, 255, 47, 0.3);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(166, 255, 47, 0.14), transparent 44%),
+    rgba(166, 255, 47, 0.045);
+}
+
+.holder-rewards-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.holder-rewards-head div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.holder-rewards-head span {
+  color: var(--neon);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.holder-rewards-head strong {
+  color: #fff;
+  font-size: 0.98rem;
+  line-height: 1.12;
+}
+
+.holder-rewards-head small,
+.holder-rewards-card p {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.74rem;
+  line-height: 1.32;
+  font-weight: 750;
+}
+
+.holder-rewards-head > b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(166, 255, 47, 0.28);
+  border-radius: 999px;
+  padding: 7px 9px;
+  color: var(--neon);
+  background: rgba(166, 255, 47, 0.09);
+  font-size: 0.74rem;
+  font-weight: 950;
+}
+
+.holder-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.holder-reward-grid article {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  border-radius: 16px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  display: grid;
+  gap: 3px;
+}
+
+.holder-reward-grid article.unlocked {
+  border-color: rgba(166, 255, 47, 0.34);
+  background: rgba(166, 255, 47, 0.08);
+}
+
+.holder-reward-grid article.locked {
+  opacity: 0.72;
+}
+
+.holder-reward-grid span {
+  color: var(--neon);
+  font-size: 0.62rem;
+  font-weight: 950;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.holder-reward-grid strong {
+  color: #fff;
+  font-size: 0.82rem;
+  line-height: 1.12;
+}
+
+.holder-reward-grid small {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  line-height: 1.22;
+  font-weight: 720;
+}
+
+@media (max-width: 520px) {
+  .holder-rewards-card {
+    border-radius: 16px;
+    padding: 10px;
+  }
+
+  .holder-rewards-head {
+    flex-direction: column;
+  }
+
+  .holder-rewards-head > b {
+    width: fit-content;
+  }
+
+  .holder-reward-grid {
+    grid-template-columns: 1fr;
+  }
+}
