@@ -1,18 +1,28 @@
-# v59.7.1 — Profile Header Foundation
+# v59.7.2 — Profile Settings Sections Cleanup
 
-Patch-only update.
+Patch-only update for the $BROKE / SmokeIsBroke Telegram Mini App.
 
 ## What changed
-- Settings tab is visually moved toward **Profile / Personal Cabinet**.
-- Bottom navigation label is now **Profile** instead of Settings.
-- Added a compact profile card at the top of the tab.
-- Added nickname, status line, and avatar preset controls.
-- Added quick profile stats: Wallet HP, Survival, and Streak.
-- Added a clear note that all old settings remain below.
+- Keeps the v59.7.1 Personal Cabinet profile header.
+- Groups the existing settings into compact Profile sections.
+- Adds a clear Profile settings hub under the cabinet card.
+- Old settings are not removed.
+- Existing logic, saved values, and storage behavior are preserved.
+
+## New Profile sections
+- Quick Setup
+- Money Setup
+- Currency & Repair
+- Privacy & Public Proof
+- Personalization
+- Notifications & Sync
+- Progress Vault
+- Data & Records
 
 ## Not changed
 - No API changes.
 - No Supabase migration.
 - No Telegram webhook changes.
-- No old settings removed.
-- No custom photo upload yet.
+- No custom photo upload.
+- No old data rewrite.
+- No calculation changes.

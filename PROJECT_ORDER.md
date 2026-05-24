@@ -1,7 +1,12 @@
-# v59.7.1 — Profile Header Foundation
+# v59.7.2 — Profile Settings Sections Cleanup
 
 ## Goal
-Start converting the technical Settings tab into a more useful **Profile / Personal Cabinet** without removing existing settings.
+Make Profile / Personal Cabinet cleaner, more compact, and easier to understand without deleting any old settings.
+
+## Scope
+- Reorganized Settings/Profile content into logical expandable sections.
+- Preserved old controls and existing setting update handlers.
+- Added styling for the Profile settings hub and section cards.
 
 ## Files changed
 - app/page.tsx
@@ -10,13 +15,9 @@ Start converting the technical Settings tab into a more useful **Profile / Perso
 - PROJECT_ORDER.md
 - TESTING.md
 
-## User-facing changes
-- Settings nav label becomes Profile.
-- Profile header appears at the top.
-- User can set nickname, status line, and frog avatar preset.
-- Old settings still stay below the new profile header.
-
-## Next staged steps
-- v59.7.2: compact grouped settings sections.
-- v59.7.3: stronger avatar/public identity polish.
-- v59.8: custom avatar upload, only if needed.
+## Explicitly not included
+- Supabase schema changes
+- API changes
+- Telegram webhook changes
+- Custom avatar/photo upload
+- New profile storage model

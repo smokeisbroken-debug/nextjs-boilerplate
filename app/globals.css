@@ -19337,3 +19337,202 @@ html[lang="ru"] .trigger-preview strong {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* ===== V59.7.2 PROFILE SETTINGS SECTIONS CLEANUP ===== */
+.profile-settings-hub {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+}
+
+.profile-settings-hub-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 15px;
+  border: 1px solid rgba(168, 255, 48, 0.14);
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(14, 26, 17, 0.94), rgba(5, 10, 7, 0.94));
+}
+
+.profile-settings-hub-heading div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.profile-settings-hub-heading span,
+.profile-section-summary span {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.profile-settings-hub-heading strong {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.profile-settings-hub-heading b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(168, 255, 48, 0.24);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--accent);
+  background: rgba(168, 255, 48, 0.08);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.profile-settings-section {
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 24px;
+  background: rgba(9, 15, 11, 0.88);
+  overflow: hidden;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22);
+}
+
+.profile-settings-section[open] {
+  border-color: rgba(168, 255, 48, 0.18);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(168, 255, 48, 0.075), transparent 34%),
+    rgba(9, 15, 11, 0.92);
+}
+
+.profile-section-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 15px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.profile-section-summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile-section-summary div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.profile-section-summary small {
+  color: rgba(244, 247, 240, 0.62);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.profile-section-summary b {
+  align-self: start;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
+  padding: 7px 9px;
+  color: rgba(244, 247, 240, 0.72);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.profile-settings-section[open] > .profile-section-summary b {
+  border-color: rgba(168, 255, 48, 0.26);
+  color: var(--accent);
+  background: rgba(168, 255, 48, 0.08);
+}
+
+.profile-section-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 12px 12px;
+}
+
+.profile-section-stack {
+  gap: 10px;
+}
+
+.profile-section-body > .life-profile-card,
+.profile-section-body > .settings-group,
+.profile-section-body > .clean-details,
+.profile-section-body > .tech-details,
+.profile-section-menu {
+  margin: 0;
+}
+
+.profile-section-body .life-profile-card {
+  border-radius: 20px;
+  border-color: rgba(168, 255, 48, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.profile-section-body .clean-details,
+.profile-section-body .tech-details {
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.profile-section-menu {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.profile-section-menu .menu-line,
+.profile-section-menu .menu-button {
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.profile-section-menu .currency-repair-details {
+  margin: 0;
+}
+
+.profile-settings-section.quick-setup .profile-section-summary b {
+  text-transform: uppercase;
+}
+
+.profile-settings-section.data-security-tools .profile-section-menu .danger {
+  border-color: rgba(255, 101, 101, 0.26);
+  background: rgba(255, 101, 101, 0.08);
+}
+
+@media (max-width: 430px) {
+  .profile-settings-hub {
+    gap: 10px;
+  }
+
+  .profile-settings-hub-heading {
+    align-items: start;
+    padding: 13px;
+    border-radius: 20px;
+  }
+
+  .profile-settings-hub-heading b {
+    display: none;
+  }
+
+  .profile-settings-section {
+    border-radius: 22px;
+  }
+
+  .profile-section-summary {
+    padding: 13px;
+  }
+
+  .profile-section-summary b {
+    max-width: 116px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .profile-section-body {
+    padding: 0 10px 10px;
+  }
+}

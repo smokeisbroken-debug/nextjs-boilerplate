@@ -19326,6 +19326,24 @@ function SettingsScreen({
         </div>
       </section>
 
+      <section className="profile-settings-hub" aria-label="Profile settings sections">
+        <div className="profile-settings-hub-heading">
+          <div>
+            <span>Profile settings</span>
+            <strong>Your app, wallet setup, privacy and data tools.</strong>
+          </div>
+          <b>All old settings kept</b>
+        </div>
+
+        <details className="profile-settings-section quick-setup" open>
+          <summary className="profile-section-summary">
+            <div>
+              <span>Quick Setup</span>
+              <small>Language, region, life mode, currency mode and basic profile rules.</small>
+            </div>
+            <b>{settings.language.toUpperCase()} · {settings.currency}</b>
+          </summary>
+          <div className="profile-section-body">
       <LifeProfileEditor
         settings={settings}
         setSettings={setSettings}
@@ -19334,95 +19352,18 @@ function SettingsScreen({
         conversionSourceCount={conversionSourceCount}
         oldCurrencyRepairCount={oldExpenseCount}
       />
-
-      <details className="clean-details settings-clean-details" open>
-        <summary>
-          <div>
-            <span>Public Proof Mode</span>
-            <small>Hide sensitive numbers on public cards.</small>
           </div>
-          <b>{settings.privacy.publicProofMode ? "ON" : "OFF"}</b>
-        </summary>
+        </details>
 
-        <section className="settings-group public-proof-settings">
-          <div className="public-proof-switch-row">
-            <img
-              src={PREMIUM_VISUAL_PACK.publicProofLock}
-              alt=""
-              onError={(event) => {
-                event.currentTarget.src = A.export;
-              }}
-            />
+        <details className="profile-settings-section money-setup">
+          <summary className="profile-section-summary">
             <div>
-              <strong>Public Proof Mode</strong>
-              <span>
-                When ON, share cards hide exact private numbers like real balance,
-                payday date, safe budget and private savings estimates.
-              </span>
+              <span>Money Setup</span>
+              <small>Income, payday and fixed life costs that power Wallet HP.</small>
             </div>
-
-            <button
-              type="button"
-              className={settings.privacy.publicProofMode ? "active" : ""}
-              onClick={() => updatePublicProofMode(!settings.privacy.publicProofMode)}
-            >
-              {settings.privacy.publicProofMode ? "ON" : "OFF"}
-            </button>
-          </div>
-
-          <div className="public-proof-info-grid">
-            <div>
-              <span>Still visible</span>
-              <strong>Status, HP, score, patterns</strong>
-            </div>
-            <div>
-              <span>Hidden</span>
-              <strong>Balance, payday, exact private amounts</strong>
-            </div>
-          </div>
-        </section>
-      </details>
-
-      <details className="clean-details settings-clean-details">
-        <summary>
-          <div>
-            <span>Smart Category Names</span>
-            <small>Rename categories without breaking history.</small>
-          </div>
-          <b>Personal</b>
-        </summary>
-
-        <section className="settings-group smart-category-settings">
-          <div className="smart-category-explain">
-            <strong>Labels only</strong>
-            <span>
-              This changes how categories look in the app. Old expenses stay connected
-              to the same category key, so history and patterns do not break.
-            </span>
-          </div>
-
-          <div className="smart-category-list">
-            {categories.map((cat) => (
-              <label className="smart-category-row" key={cat.name}>
-                <img src={cat.icon} alt="" />
-                <div>
-                  <span>{cat.name}</span>
-                  <input
-                    value={settings.categoryNames[cat.name] || cat.name}
-                    placeholder={cat.name}
-                    onChange={(event) => updateCategoryName(cat.name, event.target.value)}
-                  />
-                </div>
-              </label>
-            ))}
-          </div>
-
-          <button type="button" className="smart-category-reset" onClick={resetCategoryNames}>
-            Reset category names
-          </button>
-        </section>
-      </details>
-
+            <b>{money(totalIncome - fixedCosts, settings.currency)} free</b>
+          </summary>
+          <div className="profile-section-body profile-section-stack">
       <details className="clean-details settings-clean-details">
         <summary>
           <div>
@@ -19486,7 +19427,6 @@ function SettingsScreen({
         </label>
         </section>
       </details>
-
       <details className="clean-details settings-clean-details">
         <summary>
           <div>
@@ -19574,8 +19514,19 @@ function SettingsScreen({
         </small>
         </section>
       </details>
+          </div>
+        </details>
 
-      <section className="settings-menu">
+        <details className="profile-settings-section currency-tools">
+          <summary className="profile-section-summary">
+            <div>
+              <span>Currency & Repair</span>
+              <small>Display currency, conversion helpers and old data repair tools.</small>
+            </div>
+            <b>{settings.currencyMode === "convert" ? "Convert" : "Display"}</b>
+          </summary>
+          <div className="profile-section-body">
+            <section className="settings-menu profile-section-menu">
         <div className="menu-line">
           <img src={A.currency} alt="" />
           <div>
@@ -19599,7 +19550,6 @@ function SettingsScreen({
           </div>
           <b>›</b>
         </div>
-
         <details className="clean-details settings-clean-details currency-repair-details">
           <summary>
             <div>
@@ -19688,7 +19638,144 @@ function SettingsScreen({
             </small>
           </section>
         </details>
+            </section>
+          </div>
+        </details>
 
+        <details className="profile-settings-section privacy-tools">
+          <summary className="profile-section-summary">
+            <div>
+              <span>Privacy & Public Proof</span>
+              <small>Control what public cards and leaderboards can show.</small>
+            </div>
+            <b>{settings.privacy.publicProofMode ? "Protected" : "Exact"}</b>
+          </summary>
+          <div className="profile-section-body profile-section-stack">
+      <details className="clean-details settings-clean-details" open>
+        <summary>
+          <div>
+            <span>Public Proof Mode</span>
+            <small>Hide sensitive numbers on public cards.</small>
+          </div>
+          <b>{settings.privacy.publicProofMode ? "ON" : "OFF"}</b>
+        </summary>
+
+        <section className="settings-group public-proof-settings">
+          <div className="public-proof-switch-row">
+            <img
+              src={PREMIUM_VISUAL_PACK.publicProofLock}
+              alt=""
+              onError={(event) => {
+                event.currentTarget.src = A.export;
+              }}
+            />
+            <div>
+              <strong>Public Proof Mode</strong>
+              <span>
+                When ON, share cards hide exact private numbers like real balance,
+                payday date, safe budget and private savings estimates.
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className={settings.privacy.publicProofMode ? "active" : ""}
+              onClick={() => updatePublicProofMode(!settings.privacy.publicProofMode)}
+            >
+              {settings.privacy.publicProofMode ? "ON" : "OFF"}
+            </button>
+          </div>
+
+          <div className="public-proof-info-grid">
+            <div>
+              <span>Still visible</span>
+              <strong>Status, HP, score, patterns</strong>
+            </div>
+            <div>
+              <span>Hidden</span>
+              <strong>Balance, payday, exact private amounts</strong>
+            </div>
+          </div>
+        </section>
+      </details>
+            <section className="settings-menu profile-section-menu">
+        <button
+          className="menu-line menu-button"
+          disabled={leaderboardLoading}
+          onClick={() => onToggleLeaderboard(!publicLeaderboard)}
+        >
+          <img src={A.challengeTrophy} alt="" />
+          <div>
+            <strong>Public Leaderboard</strong>
+            <span>{publicLeaderboard ? "Visible" : "Private"}</span>
+          </div>
+          <i className={publicLeaderboard ? "toggle" : "toggle off"} />
+        </button>
+            </section>
+          </div>
+        </details>
+
+        <details className="profile-settings-section identity-tools">
+          <summary className="profile-section-summary">
+            <div>
+              <span>Personalization</span>
+              <small>Category names and labels that make the tracker feel like yours.</small>
+            </div>
+            <b>Labels</b>
+          </summary>
+          <div className="profile-section-body profile-section-stack">
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <div>
+            <span>Smart Category Names</span>
+            <small>Rename categories without breaking history.</small>
+          </div>
+          <b>Personal</b>
+        </summary>
+
+        <section className="settings-group smart-category-settings">
+          <div className="smart-category-explain">
+            <strong>Labels only</strong>
+            <span>
+              This changes how categories look in the app. Old expenses stay connected
+              to the same category key, so history and patterns do not break.
+            </span>
+          </div>
+
+          <div className="smart-category-list">
+            {categories.map((cat) => (
+              <label className="smart-category-row" key={cat.name}>
+                <img src={cat.icon} alt="" />
+                <div>
+                  <span>{cat.name}</span>
+                  <input
+                    value={settings.categoryNames[cat.name] || cat.name}
+                    placeholder={cat.name}
+                    onChange={(event) => updateCategoryName(cat.name, event.target.value)}
+                  />
+                </div>
+              </label>
+            ))}
+          </div>
+
+          <button type="button" className="smart-category-reset" onClick={resetCategoryNames}>
+            Reset category names
+          </button>
+        </section>
+      </details>
+          </div>
+        </details>
+
+        <details className="profile-settings-section reminder-sync-tools">
+          <summary className="profile-section-summary">
+            <div>
+              <span>Notifications & Sync</span>
+              <small>Daily reminder, Telegram connection and cloud status.</small>
+            </div>
+            <b>{settings.dailyReminder ? "Reminder on" : profileConnectionLabel}</b>
+          </summary>
+          <div className="profile-section-body profile-section-stack">
+            <section className="settings-menu profile-section-menu">
         <button
           className="menu-line menu-button"
           onClick={() =>
@@ -19705,26 +19792,60 @@ function SettingsScreen({
           </div>
           <i className={settings.dailyReminder ? "toggle" : "toggle off"} />
         </button>
+            </section>
+      <details className="tech-details">
+        <summary>Sync & connection details</summary>
+        <TelegramMiniStatus
+          telegram={telegram}
+          webAuth={webAuth}
+          cloudStatus={cloudStatus}
+          cloudError={cloudError}
+        />
+      </details>
+          </div>
+        </details>
 
+        <details className="profile-settings-section progress-vault-tools">
+          <summary className="profile-section-summary">
+            <div>
+              <span>Progress Vault</span>
+              <small>Streak progress and badges earned from real activity.</small>
+            </div>
+            <b>{badges.filter((badge) => badge.earned).length}/{badges.length}</b>
+          </summary>
+          <div className="profile-section-body profile-section-stack">
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <span>Streak Progress</span>
+          <b>{streak.currentStreak} days</b>
+        </summary>
+        <StreakSettingsPanel streak={streak} />
+      </details>
+      <details className="clean-details settings-clean-details">
+        <summary>
+          <span>Badge Vault</span>
+          <b>{badges.filter((badge) => badge.earned).length}/{badges.length}</b>
+        </summary>
+        <BadgeVaultPanel badges={badges} />
+      </details>
+          </div>
+        </details>
+
+        <details className="profile-settings-section data-security-tools">
+          <summary className="profile-section-summary">
+            <div>
+              <span>Data & Records</span>
+              <small>Tracked records, latest activity and delete-data controls.</small>
+            </div>
+            <b>{expenses.length} records</b>
+          </summary>
+          <div className="profile-section-body profile-section-stack">
+            <section className="settings-menu profile-section-menu">
         <MenuLine
           icon={A.categories}
           label="Tracked Expenses"
           value={`${expenses.length} total · ${currentMonthExpenses.length} this month`}
         />
-
-        <button
-          className="menu-line menu-button"
-          disabled={leaderboardLoading}
-          onClick={() => onToggleLeaderboard(!publicLeaderboard)}
-        >
-          <img src={A.challengeTrophy} alt="" />
-          <div>
-            <strong>Public Leaderboard</strong>
-            <span>{publicLeaderboard ? "Visible" : "Private"}</span>
-          </div>
-          <i className={publicLeaderboard ? "toggle" : "toggle off"} />
-        </button>
-
         <button className="menu-line menu-button danger" onClick={onReset}>
           <img src={A.deleteData} alt="" />
           <div>
@@ -19733,24 +19854,7 @@ function SettingsScreen({
           </div>
           <b>›</b>
         </button>
-      </section>
-
-      <details className="clean-details settings-clean-details">
-        <summary>
-          <span>Streak Progress</span>
-          <b>{streak.currentStreak} days</b>
-        </summary>
-        <StreakSettingsPanel streak={streak} />
-      </details>
-
-      <details className="clean-details settings-clean-details">
-        <summary>
-          <span>Badge Vault</span>
-          <b>{badges.filter((badge) => badge.earned).length}/{badges.length}</b>
-        </summary>
-        <BadgeVaultPanel badges={badges} />
-      </details>
-
+            </section>
       <details className="clean-details settings-clean-details">
         <summary>
           <span>Tracked Expenses</span>
@@ -19783,7 +19887,6 @@ function SettingsScreen({
           />
         </section>
       </details>
-
       <details className="clean-details settings-clean-details">
         <summary>
           <span>Latest Records</span>
@@ -19802,16 +19905,9 @@ function SettingsScreen({
           />
         </section>
       </details>
-
-      <details className="tech-details">
-        <summary>Sync & connection details</summary>
-        <TelegramMiniStatus
-          telegram={telegram}
-          webAuth={webAuth}
-          cloudStatus={cloudStatus}
-          cloudError={cloudError}
-        />
-      </details>
+          </div>
+        </details>
+      </section>
     </div>
   );
 }
