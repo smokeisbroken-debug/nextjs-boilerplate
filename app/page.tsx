@@ -396,6 +396,7 @@ type WalletLinkSettings = {
   percentOfSupply: number;
   holderTier: HolderTier;
   lastCheckedAt: string;
+  verifiedAt: string;
   showHolderStatus: boolean;
   showTokenBalance: boolean;
 };
@@ -1155,6 +1156,7 @@ const defaultWalletLinkSettings: WalletLinkSettings = {
   percentOfSupply: 0,
   holderTier: defaultHolderTier,
   lastCheckedAt: "",
+  verifiedAt: "",
   showHolderStatus: true,
   showTokenBalance: false,
 };
@@ -3491,6 +3493,7 @@ function normalizeWalletLinkSettings(input?: Partial<WalletLinkSettings> | null)
     percentOfSupply: Math.max(0, safeNumber(String(input?.percentOfSupply ?? 0))),
     holderTier: normalizeHolderTier(input?.holderTier),
     lastCheckedAt: String(input?.lastCheckedAt || ""),
+    verifiedAt: String(input?.verifiedAt || ""),
     showHolderStatus: input?.showHolderStatus !== false,
     showTokenBalance: Boolean(input?.showTokenBalance),
   };
@@ -19875,6 +19878,7 @@ function SettingsScreen({
   const [profileShareCardOpen, setProfileShareCardOpen] = useState(false);
   const [walletAddressDraft, setWalletAddressDraft] = useState(settings.wallet.walletAddress);
   const [walletChecking, setWalletChecking] = useState(false);
+  const [walletVerifying, setWalletVerifying] = useState(false);
   const [walletMessage, setWalletMessage] = useState("");
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState("");
@@ -20006,7 +20010,8 @@ function SettingsScreen({
   const selectedProfileAvatar =
     profileAvatarOptions.find((item) => item.id === settings.identity.avatarPreset) || profileAvatarOptions[0];
   const selectedProfileAvatarImage = getPublicProfileAvatarImage(settings);
-  const customAvatarUnlocked = settings.wallet.brokeBalance >= CUSTOM_AVATAR_UNLOCK_BALANCE;
+  const customAvatarBalanceReady = settings.wallet.brokeBalance >= CUSTOM_AVATAR_UNLOCK_BALANCE;
+  const customAvatarUnlocked = settings.wallet.isVerified && customAvatarBalanceReady;
   const customAvatarUnlockGap = Math.max(0, CUSTOM_AVATAR_UNLOCK_BALANCE - settings.wallet.brokeBalance);
   const profileIdentityStyles: Array<{
     id: Settings["identity"]["identityStyle"];
@@ -20075,6 +20080,11 @@ function SettingsScreen({
     : walletDraftIsLinked
       ? "Recheck $BROKE balance"
       : "Check $BROKE balance";
+  const walletProofLabel = settings.wallet.isVerified
+    ? "Verified holder"
+    : settings.wallet.walletAddress
+      ? "Watched wallet · verify to unlock holder perks"
+      : "No wallet linked";
 
   function updateIdentityField<K extends keyof Settings["identity"]>(key: K, value: Settings["identity"][K]) {
     setSettings((prev) => ({
@@ -20182,8 +20192,9 @@ function SettingsScreen({
         percentOfSupply: Math.max(0, safeNumber(String(data.percentOfSupply ?? 0))),
         holderTier: normalizeHolderTier(data.holderTier),
         lastCheckedAt: data.checkedAt || new Date().toISOString(),
-        isVerified: Boolean(data.verified),
-        provider: data.verified ? "verified" : "watch",
+        isVerified: walletAddress === settings.wallet.walletAddress ? settings.wallet.isVerified : Boolean(data.verified),
+        provider: walletAddress === settings.wallet.walletAddress && settings.wallet.isVerified ? "verified" : data.verified ? "verified" : "watch",
+        verifiedAt: walletAddress === settings.wallet.walletAddress ? settings.wallet.verifiedAt : "",
       });
       setWalletMessage("$BROKE balance updated. This is read-only tracking.");
       notifyApp("Wallet checked", "Read-only $BROKE balance updated.", "info");
@@ -20204,12 +20215,155 @@ function SettingsScreen({
     triggerHaptic("light");
   }
 
+  function getSolanaWalletProvider() {
+    const candidateWindow = window as unknown as {
+      solana?: {
+        isPhantom?: boolean;
+        connect?: () => Promise<{ publicKey?: { toString: () => string } }>;
+        publicKey?: { toString: () => string };
+        signMessage?: (message: Uint8Array, encoding?: string) => Promise<Uint8Array | { signature?: Uint8Array }>;
+      };
+      phantom?: {
+        solana?: {
+          connect?: () => Promise<{ publicKey?: { toString: () => string } }>;
+          publicKey?: { toString: () => string };
+          signMessage?: (message: Uint8Array, encoding?: string) => Promise<Uint8Array | { signature?: Uint8Array }>;
+        };
+      };
+    };
+
+    return candidateWindow.solana || candidateWindow.phantom?.solana || null;
+  }
+
+  function signatureToBase64(signatureResult: Uint8Array | { signature?: Uint8Array }) {
+    const signatureBytes = signatureResult instanceof Uint8Array ? signatureResult : signatureResult.signature;
+
+    if (!signatureBytes) {
+      throw new Error("Wallet did not return a signature.");
+    }
+
+    let binary = "";
+    signatureBytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+
+    return window.btoa(binary);
+  }
+
+  async function verifyWalletOwnership() {
+    const walletAddress = walletAddressDraft.trim();
+
+    if (!isLikelySolanaWalletAddress(walletAddress)) {
+      setWalletMessage("Paste a valid Solana wallet address first.");
+      notifyApp("Invalid wallet", "Paste a valid Solana address before verification.", "info");
+      return;
+    }
+
+    const provider = getSolanaWalletProvider();
+
+    if (!provider?.connect || !provider.signMessage) {
+      setWalletMessage("Wallet verification needs a Solana wallet browser/extension with message signing. You can still use watch-only balance.");
+      notifyApp("Wallet provider not found", "Open with Phantom/Solflare or a wallet browser to verify ownership.", "info");
+      return;
+    }
+
+    setWalletVerifying(true);
+    setWalletMessage("Waiting for wallet signature. No transaction will be sent.");
+
+    try {
+      const connected = await provider.connect();
+      const connectedAddress = connected.publicKey?.toString() || provider.publicKey?.toString() || "";
+
+      if (!connectedAddress) {
+        throw new Error("Wallet did not return a public address.");
+      }
+
+      if (connectedAddress !== walletAddress) {
+        throw new Error(`Connected wallet is ${compactWalletAddress(connectedAddress)}. Paste that address or switch wallets.`);
+      }
+
+      const nonceResponse = await fetch("/api/wallet/verify/nonce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress,
+          initData: telegram.isTelegram ? telegram.initData : "",
+        }),
+      });
+      const nonceData = (await nonceResponse.json()) as {
+        ok?: boolean;
+        error?: string;
+        nonce?: string;
+        message?: string;
+      };
+
+      if (!nonceResponse.ok || !nonceData.ok || !nonceData.message || !nonceData.nonce) {
+        throw new Error(nonceData.error || "Could not start wallet verification.");
+      }
+
+      const encodedMessage = new TextEncoder().encode(nonceData.message);
+      const signatureResult = await provider.signMessage(encodedMessage, "utf8");
+      const signature = signatureToBase64(signatureResult);
+
+      const confirmResponse = await fetch("/api/wallet/verify/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress,
+          nonce: nonceData.nonce,
+          message: nonceData.message,
+          signature,
+          initData: telegram.isTelegram ? telegram.initData : "",
+        }),
+      });
+      const confirmData = (await confirmResponse.json()) as {
+        ok?: boolean;
+        error?: string;
+        walletAddress?: string;
+        balance?: number;
+        percentOfSupply?: number;
+        holderTier?: HolderTier;
+        checkedAt?: string;
+        verifiedAt?: string;
+        verified?: boolean;
+      };
+
+      if (!confirmResponse.ok || !confirmData.ok || !confirmData.verified) {
+        throw new Error(confirmData.error || "Could not verify wallet ownership.");
+      }
+
+      updateWalletSettings({
+        walletAddress: confirmData.walletAddress || walletAddress,
+        brokeBalance: Math.max(0, safeNumber(String(confirmData.balance ?? settings.wallet.brokeBalance))),
+        percentOfSupply: Math.max(0, safeNumber(String(confirmData.percentOfSupply ?? settings.wallet.percentOfSupply))),
+        holderTier: normalizeHolderTier(confirmData.holderTier || settings.wallet.holderTier),
+        lastCheckedAt: confirmData.checkedAt || new Date().toISOString(),
+        isVerified: true,
+        provider: "verified",
+        verifiedAt: confirmData.verifiedAt || new Date().toISOString(),
+      });
+      setWalletMessage("Wallet verified. Holder unlocks are now available for this wallet.");
+      notifyApp("Wallet verified", "Holder status is now ownership-verified.", "info");
+      triggerHaptic("success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Wallet verification failed.";
+      setWalletMessage(message);
+      notifyApp("Verification failed", message, "info");
+    } finally {
+      setWalletVerifying(false);
+    }
+  }
+
   async function uploadCustomAvatar(file: File | null) {
     if (!file || avatarUploading) return;
 
     if (!customAvatarUnlocked) {
-      setAvatarMessage(`Custom avatar unlocks at ${formatTokenAmount(CUSTOM_AVATAR_UNLOCK_BALANCE)}. Need ${formatTokenAmount(customAvatarUnlockGap)} more.`);
-      notifyApp("Avatar locked", "Hold at least 500K BROKE to unlock custom avatar upload.", "info");
+      setAvatarMessage(
+        settings.wallet.isVerified
+          ? `Custom avatar unlocks at ${formatTokenAmount(CUSTOM_AVATAR_UNLOCK_BALANCE)}. Need ${formatTokenAmount(customAvatarUnlockGap)} more.`
+          : "Verify wallet ownership before uploading a custom avatar."
+      );
+      notifyApp("Avatar locked", "Verify a 500K+ BROKE wallet to unlock custom avatar upload.", "info");
       return;
     }
 
@@ -20394,14 +20548,22 @@ function SettingsScreen({
             <div className="custom-avatar-unlock-head">
               <div>
                 <span>Custom avatar</span>
-                <strong>{customAvatarUnlocked ? "Unlocked by holder balance" : "Unlocks at 500K BROKE"}</strong>
+                <strong>
+                  {customAvatarUnlocked
+                    ? "Unlocked by verified holder balance"
+                    : settings.wallet.isVerified
+                      ? "Unlocks at 500K BROKE"
+                      : "Verify wallet ownership"}
+                </strong>
                 <small>
                   {customAvatarUnlocked
                     ? "Upload your own profile image for Profile and share cards."
-                    : `Need ${formatTokenAmount(customAvatarUnlockGap)} more to unlock custom upload.`}
+                    : settings.wallet.isVerified
+                      ? `Need ${formatTokenAmount(customAvatarUnlockGap)} more to unlock custom upload.`
+                      : "A watched wallet can show balance. Custom avatar unlocks only after ownership proof."}
                 </small>
               </div>
-              <b>{customAvatarUnlocked ? "Unlocked" : "Locked"}</b>
+              <b>{customAvatarUnlocked ? "Unlocked" : settings.wallet.isVerified ? "Locked" : "Verify"}</b>
             </div>
 
             {settings.identity.customAvatarUrl && (
@@ -20435,7 +20597,7 @@ function SettingsScreen({
               )}
             </div>
 
-            <p>PNG, JPG or WebP · max 2 MB · read-only holder check · no transaction.</p>
+            <p>PNG, JPG or WebP · max 2 MB · verified 500K+ holder only · no transaction.</p>
             {avatarMessage && <small className="custom-avatar-message">{avatarMessage}</small>}
           </section>
 
@@ -20531,13 +20693,19 @@ function SettingsScreen({
           </div>
 
           {settings.wallet.walletAddress && (
-            <section className="wallet-linked-result-card">
+            <section className={`wallet-linked-result-card ${settings.wallet.isVerified ? "verified" : "watched"}`}>
               <div>
-                <span>Wallet linked</span>
+                <span>{settings.wallet.isVerified ? "Verified wallet" : "Watched wallet"}</span>
                 <strong>{compactWalletAddress(settings.wallet.walletAddress)}</strong>
-                <small>{settings.wallet.lastCheckedAt ? `Last checked ${new Date(settings.wallet.lastCheckedAt).toLocaleString()}` : "Saved as read-only watch wallet."}</small>
+                <small>
+                  {settings.wallet.isVerified && settings.wallet.verifiedAt
+                    ? `Verified ${new Date(settings.wallet.verifiedAt).toLocaleString()}`
+                    : settings.wallet.lastCheckedAt
+                      ? `Last checked ${new Date(settings.wallet.lastCheckedAt).toLocaleString()} · verify for holder unlocks`
+                      : "Saved as read-only watch wallet."}
+                </small>
               </div>
-              <b>{settings.wallet.holderTier.label}</b>
+              <b>{settings.wallet.isVerified ? "Verified" : settings.wallet.holderTier.label}</b>
             </section>
           )}
 
@@ -20546,9 +20714,17 @@ function SettingsScreen({
               type="button"
               className={`primary ${walletDraftLooksValid ? "ready" : ""}`}
               onClick={checkBrokeWalletBalance}
-              disabled={!walletDraftLooksValid || walletChecking}
+              disabled={!walletDraftLooksValid || walletChecking || walletVerifying}
             >
               {walletPrimaryCta}
+            </button>
+            <button
+              type="button"
+              className={`wallet-verify-cta ${settings.wallet.isVerified ? "verified" : ""}`}
+              onClick={verifyWalletOwnership}
+              disabled={!walletDraftLooksValid || walletChecking || walletVerifying}
+            >
+              {walletVerifying ? "Verifying..." : settings.wallet.isVerified ? "Verified" : "Verify wallet"}
             </button>
             {settings.wallet.walletAddress && (
               <button type="button" onClick={unlinkWallet}>
@@ -20557,9 +20733,18 @@ function SettingsScreen({
             )}
           </div>
 
+          <div className={`wallet-proof-status ${settings.wallet.isVerified ? "verified" : "watched"}`}>
+            <strong>{walletProofLabel}</strong>
+            <small>
+              {settings.wallet.isVerified
+                ? "Holder unlocks can use this wallet. Signature proof does not move tokens."
+                : "Balance display is watch-only. Custom avatar and future holder perks require verification."}
+            </small>
+          </div>
+
           <div className="wallet-security-note-grid">
-            <span>Read-only check</span>
-            <span>No seed phrase</span>
+            <span>Read-only balance</span>
+            <span>Message signature only</span>
             <span>No transaction</span>
           </div>
 

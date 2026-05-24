@@ -288,6 +288,34 @@ function getSupabaseServiceKey() {
   return getEnv("SUPABASE_SERVICE_ROLE_KEY");
 }
 
+async function hasVerifiedWalletLink(userId: number, walletAddress: string) {
+  const supabaseBase = getSupabaseBaseUrl();
+  const serviceKey = getSupabaseServiceKey();
+  const params = new URLSearchParams({
+    select: "id,is_verified,verified_at",
+    telegram_user_id: `eq.${userId}`,
+    wallet_address: `eq.${walletAddress}`,
+    is_verified: "eq.true",
+    limit: "1",
+  });
+
+  const response = await fetch(`${supabaseBase}/rest/v1/broke_wallet_links?${params.toString()}`, {
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Wallet verification table is not ready: ${text}`);
+  }
+
+  const rows = (await response.json()) as Array<{ id?: string; is_verified?: boolean; verified_at?: string }>;
+  return Boolean(rows[0]?.is_verified);
+}
+
 function avatarExtension(type: string) {
   if (type === "image/jpeg") return "jpg";
   if (type === "image/webp") return "webp";
@@ -341,6 +369,18 @@ export async function POST(request: NextRequest) {
 
     if (image.size > MAX_AVATAR_BYTES) {
       return json({ ok: false, error: "Avatar image must be 2 MB or less." }, 413);
+    }
+
+    const hasVerifiedWallet = await hasVerifiedWalletLink(user.id, walletAddress);
+
+    if (!hasVerifiedWallet) {
+      return json(
+        {
+          ok: false,
+          error: "Verify wallet ownership before uploading a custom avatar.",
+        },
+        403
+      );
     }
 
     const balanceResult = await checkBrokeBalance(walletAddress);
