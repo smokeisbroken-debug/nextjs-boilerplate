@@ -1,17 +1,18 @@
-# v59.13.2 — Share Card Render Fit Hotfix
+# v59.13.3 — Identity + Avatar CTA Hotfix
 
 Patch-only hotfix.
 
 ## What changed
-- Fixed Profile share-card metric text cropping in preview/downloaded image.
-- Reduced metric typography pressure for Survival, Wallet HP, Top, Status, Holder tier, and other selected Share Studio items.
-- Improved Holder tier / token balance display fit inside the card.
-- Added capture-safe CSS so html2canvas renders text with safer line-height and padding.
+- Moved **Identity Setup** directly under the Personal Cabinet top block, before stats, Public Identity Preview, Wallet balance, and Share Studio.
+- Kept Custom Avatar inside Identity Setup.
+- Made **Upload avatar** much more visible as a primary green CTA.
+- Improved locked/unlocked custom avatar button contrast on mobile.
 
 ## Not changed
-- API
-- Supabase
+- API routes
+- Supabase schema
 - migrations
-- wallet balance check logic
-- custom avatar upload logic
-- Share Studio selection logic
+- wallet balance logic
+- custom avatar upload endpoint behavior
+- Share Studio logic
+- stored user data

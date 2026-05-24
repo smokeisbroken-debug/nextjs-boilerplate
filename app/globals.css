@@ -21617,3 +21617,71 @@ html[lang="ru"] .trigger-preview strong {
     line-height: 1.22 !important;
   }
 }
+
+/* v59.13.3 — Identity order + avatar CTA visibility hotfix */
+.profile-cabinet-card > .profile-identity-editor {
+  order: -1;
+  margin-top: 14px;
+  margin-bottom: 12px;
+  border-color: rgba(166, 255, 47, 0.24);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(166, 255, 47, 0.08), transparent 34%),
+    rgba(0, 0, 0, 0.24);
+}
+
+.profile-identity-editor summary {
+  min-height: 54px;
+}
+
+.profile-identity-editor summary span {
+  font-size: 0.82rem;
+  color: #d9ff54;
+}
+
+.custom-avatar-actions label,
+.custom-avatar-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  line-height: 1.1;
+}
+
+.custom-avatar-actions label.primary,
+.custom-avatar-actions label.primary:active,
+.custom-avatar-actions label.primary:focus-visible {
+  border-color: rgba(217, 255, 84, 0.72) !important;
+  background: linear-gradient(135deg, #d9ff54 0%, #a6ff2f 48%, #7fe600 100%) !important;
+  color: #071100 !important;
+  box-shadow:
+    0 0 0 1px rgba(217, 255, 84, 0.22),
+    0 12px 26px rgba(166, 255, 47, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+}
+
+.custom-avatar-actions label.primary span {
+  color: #071100 !important;
+  font-weight: 950;
+  text-shadow: none !important;
+}
+
+.custom-avatar-actions label.disabled {
+  border-color: rgba(166, 255, 47, 0.22) !important;
+  background: rgba(166, 255, 47, 0.09) !important;
+  color: rgba(217, 255, 84, 0.72) !important;
+  opacity: 1 !important;
+}
+
+.custom-avatar-actions label.disabled span {
+  color: rgba(217, 255, 84, 0.72) !important;
+}
+
+@media (max-width: 430px) {
+  .profile-cabinet-card > .profile-identity-editor {
+    margin-top: 12px;
+  }
+
+  .custom-avatar-actions {
+    grid-template-columns: 1fr;
+  }
+}

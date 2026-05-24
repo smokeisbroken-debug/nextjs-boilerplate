@@ -1,13 +1,14 @@
-# v59.13.2 — Share Card Render Fit Hotfix
+# v59.13.3 — Identity + Avatar CTA Hotfix
 
-## Purpose
-Public Profile share cards were cropping text after holder tier / balance display was added. This hotfix only adjusts CSS so selected share-card metrics render cleanly in both the in-app preview and generated image.
+## Reason
+User feedback showed that Identity Setup was visually too low again after wallet/custom-avatar changes, and the Upload avatar button was too dark to notice.
 
 ## Files changed
+- app/page.tsx
 - app/globals.css
 - README.md
 - PROJECT_ORDER.md
 - TESTING.md
 
 ## Deployment
-Replace the files and deploy normally.
+Replace the patch files and deploy on Vercel. No SQL or environment changes required.

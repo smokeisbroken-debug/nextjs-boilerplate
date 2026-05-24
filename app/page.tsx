@@ -20347,6 +20347,120 @@ function SettingsScreen({
           <b>{settingsStatusLabel}</b>
         </div>
 
+        <details className="profile-identity-editor">
+          <summary>
+            <span>Identity setup</span>
+            <b>{profileConnectionLabel}</b>
+          </summary>
+
+          <label>
+            <span>Nickname</span>
+            <input
+              value={settings.identity.nickname}
+              placeholder={fallbackProfileName}
+              onChange={(event) => updateIdentityField("nickname", event.target.value)}
+            />
+          </label>
+
+          <label>
+            <span>Status line</span>
+            <input
+              value={settings.identity.statusText}
+              placeholder="Broke, but self-aware"
+              onChange={(event) => updateIdentityField("statusText", event.target.value)}
+            />
+          </label>
+
+          <div className="profile-avatar-options">
+            {profileAvatarOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={settings.identity.avatarPreset === option.id && !settings.identity.customAvatarUrl ? "active" : ""}
+                onClick={() => {
+                  updateIdentityField("avatarPreset", option.id);
+                  if (settings.identity.customAvatarUrl) {
+                    removeCustomAvatar();
+                  }
+                }}
+              >
+                <img src={option.image} alt="" />
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <section className={`custom-avatar-unlock-card ${customAvatarUnlocked ? "unlocked" : "locked"}`}>
+            <div className="custom-avatar-unlock-head">
+              <div>
+                <span>Custom avatar</span>
+                <strong>{customAvatarUnlocked ? "Unlocked by holder balance" : "Unlocks at 500K BROKE"}</strong>
+                <small>
+                  {customAvatarUnlocked
+                    ? "Upload your own profile image for Profile and share cards."
+                    : `Need ${formatTokenAmount(customAvatarUnlockGap)} more to unlock custom upload.`}
+                </small>
+              </div>
+              <b>{customAvatarUnlocked ? "Unlocked" : "Locked"}</b>
+            </div>
+
+            {settings.identity.customAvatarUrl && (
+              <div className="custom-avatar-current">
+                <img src={settings.identity.customAvatarUrl} alt="Custom avatar" />
+                <div>
+                  <strong>Custom avatar active</strong>
+                  <small>{settings.identity.customAvatarUpdatedAt ? `Updated ${new Date(settings.identity.customAvatarUpdatedAt).toLocaleDateString()}` : "Used on public profile and share cards."}</small>
+                </div>
+              </div>
+            )}
+
+            <div className="custom-avatar-actions">
+              <label className={customAvatarUnlocked && !avatarUploading ? "primary" : "disabled"}>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={!customAvatarUnlocked || avatarUploading}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null;
+                    void uploadCustomAvatar(file);
+                    event.currentTarget.value = "";
+                  }}
+                />
+                <span>{avatarUploading ? "Uploading..." : "Upload avatar"}</span>
+              </label>
+              {settings.identity.customAvatarUrl && (
+                <button type="button" onClick={removeCustomAvatar}>
+                  Use preset instead
+                </button>
+              )}
+            </div>
+
+            <p>PNG, JPG or WebP · max 2 MB · read-only holder check · no transaction.</p>
+            {avatarMessage && <small className="custom-avatar-message">{avatarMessage}</small>}
+          </section>
+
+          <div className="profile-identity-style-panel">
+            <div>
+              <span>Identity style</span>
+              <strong>Choose how your $BROKE profile should feel.</strong>
+            </div>
+            <div className="profile-identity-style-options">
+              {profileIdentityStyles.map((style) => (
+                <button
+                  key={style.id}
+                  type="button"
+                  className={settings.identity.identityStyle === style.id ? "active" : ""}
+                  onClick={() => updateIdentityField("identityStyle", style.id)}
+                >
+                  <b>{style.badge}</b>
+                  <strong>{style.label}</strong>
+                  <small>{style.description}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+        </details>
+
         <div className="profile-cabinet-stats">
           <article>
             <span>Wallet HP</span>
@@ -20487,121 +20601,6 @@ function SettingsScreen({
 
           {walletMessage && <p className="wallet-balance-message">{walletMessage}</p>}
         </section>
-
-        <details className="profile-identity-editor">
-          <summary>
-            <span>Identity setup</span>
-            <b>{profileConnectionLabel}</b>
-          </summary>
-
-          <label>
-            <span>Nickname</span>
-            <input
-              value={settings.identity.nickname}
-              placeholder={fallbackProfileName}
-              onChange={(event) => updateIdentityField("nickname", event.target.value)}
-            />
-          </label>
-
-          <label>
-            <span>Status line</span>
-            <input
-              value={settings.identity.statusText}
-              placeholder="Broke, but self-aware"
-              onChange={(event) => updateIdentityField("statusText", event.target.value)}
-            />
-          </label>
-
-          <div className="profile-avatar-options">
-            {profileAvatarOptions.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={settings.identity.avatarPreset === option.id && !settings.identity.customAvatarUrl ? "active" : ""}
-                onClick={() => {
-                  updateIdentityField("avatarPreset", option.id);
-                  if (settings.identity.customAvatarUrl) {
-                    removeCustomAvatar();
-                  }
-                }}
-              >
-                <img src={option.image} alt="" />
-                <span>{option.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <section className={`custom-avatar-unlock-card ${customAvatarUnlocked ? "unlocked" : "locked"}`}>
-            <div className="custom-avatar-unlock-head">
-              <div>
-                <span>Custom avatar</span>
-                <strong>{customAvatarUnlocked ? "Unlocked by holder balance" : "Unlocks at 500K BROKE"}</strong>
-                <small>
-                  {customAvatarUnlocked
-                    ? "Upload your own profile image for Profile and share cards."
-                    : `Need ${formatTokenAmount(customAvatarUnlockGap)} more to unlock custom upload.`}
-                </small>
-              </div>
-              <b>{customAvatarUnlocked ? "Unlocked" : "Locked"}</b>
-            </div>
-
-            {settings.identity.customAvatarUrl && (
-              <div className="custom-avatar-current">
-                <img src={settings.identity.customAvatarUrl} alt="Custom avatar" />
-                <div>
-                  <strong>Custom avatar active</strong>
-                  <small>{settings.identity.customAvatarUpdatedAt ? `Updated ${new Date(settings.identity.customAvatarUpdatedAt).toLocaleDateString()}` : "Used on public profile and share cards."}</small>
-                </div>
-              </div>
-            )}
-
-            <div className="custom-avatar-actions">
-              <label className={customAvatarUnlocked && !avatarUploading ? "primary" : "disabled"}>
-                <input
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  disabled={!customAvatarUnlocked || avatarUploading}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0] || null;
-                    void uploadCustomAvatar(file);
-                    event.currentTarget.value = "";
-                  }}
-                />
-                <span>{avatarUploading ? "Uploading..." : "Upload avatar"}</span>
-              </label>
-              {settings.identity.customAvatarUrl && (
-                <button type="button" onClick={removeCustomAvatar}>
-                  Use preset instead
-                </button>
-              )}
-            </div>
-
-            <p>PNG, JPG or WebP · max 2 MB · read-only holder check · no transaction.</p>
-            {avatarMessage && <small className="custom-avatar-message">{avatarMessage}</small>}
-          </section>
-
-          <div className="profile-identity-style-panel">
-            <div>
-              <span>Identity style</span>
-              <strong>Choose how your $BROKE profile should feel.</strong>
-            </div>
-            <div className="profile-identity-style-options">
-              {profileIdentityStyles.map((style) => (
-                <button
-                  key={style.id}
-                  type="button"
-                  className={settings.identity.identityStyle === style.id ? "active" : ""}
-                  onClick={() => updateIdentityField("identityStyle", style.id)}
-                >
-                  <b>{style.badge}</b>
-                  <strong>{style.label}</strong>
-                  <small>{style.description}</small>
-                </button>
-              ))}
-            </div>
-          </div>
-        </details>
-
 
         <section className="profile-share-studio-card">
           <div className="profile-share-studio-head">

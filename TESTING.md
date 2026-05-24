@@ -1,4 +1,4 @@
-# v59.13.2 Testing
+# v59.13.3 — Testing
 
 Run:
 
@@ -8,9 +8,11 @@ npm run lint:quiet
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-Manual checks:
-1. Profile → Share Studio → Preview here.
-2. Enable Survival, Wallet HP, Top, Status, Holder tier.
-3. Verify labels and values are not cropped.
-4. Generate/download/share the card.
-5. Verify the generated image has no cut-off metric text.
+Expected:
+- Profile opens normally.
+- Identity Setup is directly below Personal Cabinet top area.
+- Wallet & $BROKE balance appears below Identity Setup.
+- Share Studio appears below Wallet.
+- Custom Avatar stays inside Identity Setup.
+- Upload avatar CTA is clearly visible when unlocked.
+- Locked custom avatar state is still readable.
