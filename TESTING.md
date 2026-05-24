@@ -1,4 +1,4 @@
-# v59.10 — Testing
+# v59.11 Testing
 
 Run:
 
@@ -10,10 +10,11 @@ NEXT_TELEMETRY_DISABLED=1 npm run build
 
 Manual checks:
 
-1. Open Save.
-2. Confirm **Pattern Challenge Coach** appears above Challenges.
-3. With no useful pattern data, it should show a learning/waiting state.
-4. With tracked leak patterns, it should suggest a relevant challenge.
-5. Start recommended challenge.
-6. Confirm existing active challenge flow still works.
-7. Confirm Profile / Share Studio is unchanged.
+1. Open Home.
+2. Find Weekly Behavior Report.
+3. Confirm the Safe Weekly Share Card appears inside the report.
+4. Confirm it does not show income, real balance, payday, or debt details.
+5. Tap Copy safe text.
+6. Tap Share weekly card.
+7. Confirm image generation/share/download works in Telegram WebView.
+8. Change Profile → Share Studio checkboxes and confirm selected public items appear in the weekly card.

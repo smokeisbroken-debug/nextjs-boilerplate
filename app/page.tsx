@@ -10378,6 +10378,10 @@ function DashboardScreen({
         settings={settings}
         weeklyPatternSummary={weeklyPatternSummary}
         patternHistory={patternHistory}
+        walletHp={summary.walletHp}
+        identityStats={identityStats}
+        leaderboard={leaderboard}
+        shareInitData={telegram.isTelegram ? telegram.initData : ""}
         onOpenChart={onOpenChart}
         onOpenAdd={onOpenAdd}
       />
@@ -10589,12 +10593,20 @@ function WeeklyBehaviorReportHomeCard({
   settings,
   weeklyPatternSummary,
   patternHistory,
+  walletHp,
+  identityStats,
+  leaderboard,
+  shareInitData,
   onOpenChart,
   onOpenAdd,
 }: {
   settings: Settings;
   weeklyPatternSummary: WeeklyPatternSummary;
   patternHistory: PatternHistoryRecord[];
+  walletHp: number;
+  identityStats: V2IdentityStats;
+  leaderboard: LeaderboardState | null;
+  shareInitData: string;
   onOpenChart: () => void;
   onOpenAdd: () => void;
 }) {
@@ -10610,26 +10622,83 @@ function WeeklyBehaviorReportHomeCard({
         ? `Leak pressure is down ${Math.abs(pressureDelta)}% vs ${previousRead.periodLabel}.`
         : `Leak pressure is almost flat vs ${previousRead.periodLabel}.`
     : "Track this week and next week to unlock comparison.";
+  const [weeklyShareCopied, setWeeklyShareCopied] = useState(false);
+  const [weeklyImageSharing, setWeeklyImageSharing] = useState(false);
+  const weeklyShareCardRef = useRef<HTMLDivElement | null>(null);
   const reportTitle =
     weeklyPatternSummary.confidence === "Waiting"
       ? "Weekly report needs a few honest leaks"
       : weeklyPatternSummary.strongestPattern || weeklyPatternSummary.headline;
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityStatus = getPublicIdentityStatus(settings);
+  const publicIdentityStyle = getIdentityStyleMeta(settings.identity.identityStyle);
+  const publicIdentityAvatar = getProfileAvatarImage(settings.identity.avatarPreset);
+  const selectedShareMetrics = getEnabledProfileShareItems(settings, walletHp)
+    .map((id) =>
+      buildProfileShareMetric({
+        id,
+        settings,
+        walletHp,
+        identityStats,
+        leaderboard,
+      })
+    )
+    .slice(0, 4);
   const shareText = [
-    "My $BROKE weekly behavior report:",
+    `${publicIdentityName} on $BROKE`,
+    `${publicIdentityStyle.label} · ${publicIdentityStatus}`,
+    "",
+    "My weekly behavior report:",
     reportTitle,
     strongestCard ? `Top signal: ${strongestCard.label}` : "Top signal: still learning",
     `Pressure: ${weeklyPatternSummary.leakPressure}%`,
+    `Next move: ${weeklyPatternSummary.nextMove}`,
+    "",
+    ...selectedShareMetrics.map((metric) => `${metric.label}: ${metric.value}`),
+    "",
+    "No income. No real balance. No debt details.",
     "Broke, but self-aware.",
-  ].join("\n");
+  ].filter(Boolean).join("\n");
 
   async function copySafeReport() {
     triggerHaptic("light");
 
     try {
       await navigator.clipboard?.writeText(shareText);
-      notifyApp("Weekly report copied", "Safe text copied without private income or balance.");
+      setWeeklyShareCopied(true);
+      window.setTimeout(() => setWeeklyShareCopied(false), 1600);
+      notifyApp("Weekly report copied", "Safe text copied without income, real balance or debt details.");
     } catch {
       notifyApp("Copy unavailable", "Open Chart and copy the report manually.");
+    }
+  }
+
+  async function shareWeeklyImage() {
+    if (!weeklyShareCardRef.current || weeklyImageSharing) return;
+
+    try {
+      triggerHaptic("light");
+      markDailyRoutineAction("sharedProgress");
+      setWeeklyImageSharing(true);
+
+      const imageFile = await createShareImageFileFromElement(weeklyShareCardRef.current);
+      const nativeShared = await tryNativeImageShare(imageFile);
+
+      if (nativeShared) {
+        return;
+      }
+
+      try {
+        await sendShareImageViaBot(imageFile, shareInitData, shareText);
+        notifyApp("Weekly card sent", "Open your Telegram bot chat and forward it anywhere.");
+      } catch {
+        downloadImageFile(imageFile);
+        notifyApp("PNG downloaded", "Telegram WebView could not send directly, so the weekly card was saved as a file.");
+      }
+    } catch {
+      notifyApp("Sharing unavailable", "Weekly image sharing was cancelled or is not supported by this browser.");
+    } finally {
+      setWeeklyImageSharing(false);
     }
   }
 
@@ -10677,12 +10746,66 @@ function WeeklyBehaviorReportHomeCard({
         <strong>{weeklyPatternSummary.nextMove}</strong>
       </div>
 
-      <div className="weekly-behavior-home-actions">
+      <section className={`safe-weekly-share-card identity-share-style-${settings.identity.identityStyle || "classic"}`} ref={weeklyShareCardRef}>
+        <div className="safe-weekly-share-top">
+          <div className="safe-weekly-share-identity">
+            <img src={publicIdentityAvatar} alt="" />
+            <div>
+              <span>$BROKE WEEKLY</span>
+              <strong>{publicIdentityName}</strong>
+              <small>{publicIdentityStatus}</small>
+            </div>
+          </div>
+          <b>{publicIdentityStyle.badge}</b>
+        </div>
+
+        <div className="safe-weekly-share-main">
+          <span>Weekly pattern</span>
+          <strong>{reportTitle}</strong>
+          <p>{weeklyPatternSummary.nextMove}</p>
+        </div>
+
+        <div className="safe-weekly-share-grid">
+          <article>
+            <span>Confidence</span>
+            <strong>{weeklyPatternSummary.confidence}</strong>
+          </article>
+          <article>
+            <span>Pressure</span>
+            <strong>{weeklyPatternSummary.leakPressure}%</strong>
+          </article>
+          <article>
+            <span>Top signal</span>
+            <strong>{strongestCard?.label || "Learning"}</strong>
+          </article>
+        </div>
+
+        {selectedShareMetrics.length > 0 && (
+          <div className="safe-weekly-share-profile-grid">
+            {selectedShareMetrics.map((metric) => (
+              <article key={metric.label}>
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <footer>
+          <span>No income · No real balance · No debt details</span>
+          <b>Broke, but self-aware.</b>
+        </footer>
+      </section>
+
+      <div className="weekly-behavior-home-actions safe-weekly-share-actions">
         <button type="button" className="primary" onClick={onOpenChart}>
           Open full report
         </button>
         <button type="button" onClick={copySafeReport}>
-          Copy safe text
+          {weeklyShareCopied ? "Copied" : "Copy safe text"}
+        </button>
+        <button type="button" onClick={shareWeeklyImage}>
+          {weeklyImageSharing ? "Preparing image..." : "Share weekly card"}
         </button>
         {weeklyPatternSummary.confidence === "Waiting" && (
           <button type="button" onClick={onOpenAdd}>

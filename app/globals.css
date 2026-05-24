@@ -20667,3 +20667,195 @@ html[lang="ru"] .trigger-preview strong {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.11 Safe Weekly Share Card */
+.safe-weekly-share-card {
+  position: relative;
+  overflow: hidden;
+  margin-top: 14px;
+  border-radius: 24px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 14% 0%, rgba(184, 255, 76, 0.22), transparent 32%),
+    linear-gradient(145deg, rgba(12, 24, 14, 0.98), rgba(4, 9, 5, 0.98));
+  border: 1px solid rgba(190, 255, 96, 0.2);
+  box-shadow: 0 22px 52px rgba(0, 0, 0, 0.32);
+}
+
+.safe-weekly-share-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.06), transparent 34%),
+    radial-gradient(circle at 90% 12%, rgba(126, 227, 47, 0.16), transparent 30%);
+}
+
+.safe-weekly-share-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.safe-weekly-share-top,
+.safe-weekly-share-identity,
+.safe-weekly-share-grid,
+.safe-weekly-share-profile-grid,
+.safe-weekly-share-card footer {
+  display: flex;
+  align-items: center;
+}
+
+.safe-weekly-share-top {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.safe-weekly-share-identity {
+  min-width: 0;
+  gap: 10px;
+}
+
+.safe-weekly-share-identity img {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+}
+
+.safe-weekly-share-identity div {
+  min-width: 0;
+}
+
+.safe-weekly-share-identity span,
+.safe-weekly-share-main span,
+.safe-weekly-share-grid span,
+.safe-weekly-share-profile-grid span,
+.safe-weekly-share-card footer span {
+  display: block;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.safe-weekly-share-identity strong,
+.safe-weekly-share-main strong,
+.safe-weekly-share-grid strong,
+.safe-weekly-share-profile-grid strong {
+  display: block;
+  margin-top: 3px;
+  color: #f7ffe9;
+  line-height: 1.12;
+  word-break: break-word;
+}
+
+.safe-weekly-share-identity strong {
+  font-size: 1rem;
+}
+
+.safe-weekly-share-identity small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.76rem;
+  line-height: 1.2;
+}
+
+.safe-weekly-share-top > b {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(184, 255, 76, 0.14);
+  color: #cfff74;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.safe-weekly-share-main {
+  margin-top: 14px;
+  border-radius: 18px;
+  padding: 13px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.safe-weekly-share-main strong {
+  font-size: 1.2rem;
+}
+
+.safe-weekly-share-main p {
+  margin: 7px 0 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.safe-weekly-share-grid,
+.safe-weekly-share-profile-grid {
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.safe-weekly-share-grid article,
+.safe-weekly-share-profile-grid article {
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 16px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.safe-weekly-share-grid strong,
+.safe-weekly-share-profile-grid strong {
+  font-size: 0.9rem;
+}
+
+.safe-weekly-share-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.safe-weekly-share-card footer {
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.safe-weekly-share-card footer b {
+  flex: 0 0 auto;
+  color: #d9ff8c;
+  font-size: 0.78rem;
+}
+
+.safe-weekly-share-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 520px) {
+  .safe-weekly-share-card {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .safe-weekly-share-grid,
+  .safe-weekly-share-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .safe-weekly-share-grid {
+    display: grid;
+  }
+
+  .safe-weekly-share-card footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

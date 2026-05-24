@@ -1,7 +1,10 @@
-# v59.10 — Pattern-Based Challenges
+# v59.11 — Safe Weekly Share Card
 
-## Purpose
-After v59.9 Weekly Behavior Report, challenges should no longer feel disconnected from behavior insights. This patch adds a recommendation layer in Save.
+## Goal
+Create one clean weekly behavior share card that continues the Profile Share Studio direction while staying privacy-safe.
+
+## User value
+Users can share a weekly pattern/status card without exposing private financial data.
 
 ## Files changed
 - app/page.tsx
@@ -10,16 +13,18 @@ After v59.9 Weekly Behavior Report, challenges should no longer feel disconnecte
 - PROJECT_ORDER.md
 - TESTING.md
 
-## What changed
-- Added pattern-to-challenge recommendation helper.
-- Added Pattern Challenge Coach card in Save.
-- Recommended challenge can be started from the card.
-- Waiting state guides users to track more leaks with context.
+## Privacy rule
+The weekly card must not expose:
+- income
+- real balance
+- payday
+- private debt details
 
-## Not changed
-- API routes
-- Supabase schema
-- migrations
-- Telegram webhook
-- stored expense data
-- Profile / Share Studio logic
+It may show:
+- public identity
+- weekly behavior pattern
+- confidence
+- pressure %
+- top signal
+- next move
+- Share Studio selected public items
