@@ -1,12 +1,13 @@
-# v59.7.2 — Profile Settings Sections Cleanup
+# v59.7.3 — Avatar Presets + Identity Style
 
 ## Goal
-Make Profile / Personal Cabinet cleaner, more compact, and easier to understand without deleting any old settings.
+Make the Profile / Personal Cabinet feel more personal without adding risky custom photo upload yet.
 
-## Scope
-- Reorganized Settings/Profile content into logical expandable sections.
-- Preserved old controls and existing setting update handlers.
-- Added styling for the Profile settings hub and section cards.
+## User-facing changes
+- Users can choose a profile identity style, not only an avatar.
+- Profile header now shows a compact public identity preview.
+- Personalization section shows the current identity style.
+- The app keeps all previous settings and controls.
 
 ## Files changed
 - app/page.tsx
@@ -15,9 +16,7 @@ Make Profile / Personal Cabinet cleaner, more compact, and easier to understand 
 - PROJECT_ORDER.md
 - TESTING.md
 
-## Explicitly not included
-- Supabase schema changes
-- API changes
-- Telegram webhook changes
-- Custom avatar/photo upload
-- New profile storage model
+## Deployment
+Replace the patch files and deploy to Vercel.
+
+No Supabase SQL is required.

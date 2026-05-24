@@ -1,28 +1,24 @@
-# v59.7.2 — Profile Settings Sections Cleanup
+# v59.7.3 — Avatar Presets + Identity Style
 
 Patch-only update for the $BROKE / SmokeIsBroke Telegram Mini App.
 
 ## What changed
-- Keeps the v59.7.1 Personal Cabinet profile header.
-- Groups the existing settings into compact Profile sections.
-- Adds a clear Profile settings hub under the cabinet card.
-- Old settings are not removed.
-- Existing logic, saved values, and storage behavior are preserved.
-
-## New Profile sections
-- Quick Setup
-- Money Setup
-- Currency & Repair
-- Privacy & Public Proof
-- Personalization
-- Notifications & Sync
-- Progress Vault
-- Data & Records
+- Expanded the Profile / Personal Cabinet identity layer.
+- Added identity style presets:
+  - Classic BROKE
+  - Clean profile
+  - Proof mode
+  - Private mode
+  - Builder mode
+- Added a public identity preview inside the Profile header.
+- Added a selected identity style badge to the Personal Cabinet card.
+- Added an identity style summary inside the Personalization section.
+- Kept existing avatar presets, nickname, status line, Profile sections and old settings.
 
 ## Not changed
 - No API changes.
 - No Supabase migration.
 - No Telegram webhook changes.
 - No custom photo upload.
-- No old data rewrite.
-- No calculation changes.
+- No old settings removed.
+- No stored data rewrite.

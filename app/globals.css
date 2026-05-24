@@ -19536,3 +19536,181 @@ html[lang="ru"] .trigger-preview strong {
     padding: 0 10px 10px;
   }
 }
+
+/* ===== V59.7.3 AVATAR PRESETS + IDENTITY STYLE ===== */
+.profile-cabinet-card.identity-style-clean {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.08), transparent 34%),
+    linear-gradient(145deg, rgba(15, 24, 18, 0.96), rgba(5, 12, 8, 0.95));
+}
+
+.profile-cabinet-card.identity-style-proof {
+  border-color: rgba(168, 255, 48, 0.34);
+  background:
+    radial-gradient(circle at 10% 6%, rgba(168, 255, 48, 0.2), transparent 36%),
+    radial-gradient(circle at 92% 12%, rgba(255, 204, 102, 0.12), transparent 30%),
+    linear-gradient(145deg, rgba(18, 38, 18, 0.97), rgba(5, 12, 8, 0.95));
+}
+
+.profile-cabinet-card.identity-style-stealth {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(145deg, rgba(11, 14, 13, 0.98), rgba(3, 6, 5, 0.96));
+}
+
+.profile-cabinet-card.identity-style-builder {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(168, 255, 48, 0.14), transparent 34%),
+    radial-gradient(circle at 88% 10%, rgba(100, 180, 255, 0.1), transparent 28%),
+    linear-gradient(145deg, rgba(13, 31, 25, 0.97), rgba(4, 11, 8, 0.95));
+}
+
+.profile-style-pill {
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid rgba(168, 255, 48, 0.2);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: rgba(168, 255, 48, 0.9);
+  background: rgba(168, 255, 48, 0.07);
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  font-style: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-public-preview,
+.identity-style-summary-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(168, 255, 48, 0.14);
+  border-radius: 20px;
+  background: rgba(168, 255, 48, 0.055);
+}
+
+.profile-public-preview div,
+.identity-style-summary-card div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.profile-public-preview span,
+.identity-style-summary-card span,
+.profile-identity-style-panel > div > span {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.profile-public-preview strong,
+.identity-style-summary-card strong,
+.profile-identity-style-panel > div > strong {
+  color: var(--text);
+  font-size: 0.98rem;
+  line-height: 1.1;
+}
+
+.profile-public-preview small,
+.identity-style-summary-card small {
+  color: rgba(244, 247, 240, 0.64);
+  font-size: 0.78rem;
+  line-height: 1.32;
+}
+
+.profile-public-preview > b,
+.identity-style-summary-card > b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(168, 255, 48, 0.24);
+  border-radius: 999px;
+  padding: 7px 9px;
+  color: var(--accent);
+  background: rgba(0, 0, 0, 0.22);
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.profile-identity-style-panel {
+  display: grid;
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.profile-identity-style-panel > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.profile-identity-style-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.profile-identity-style-options button {
+  min-width: 0;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 11px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(244, 247, 240, 0.74);
+}
+
+.profile-identity-style-options button.active {
+  border-color: rgba(168, 255, 48, 0.44);
+  background: rgba(168, 255, 48, 0.11);
+  color: var(--accent);
+}
+
+.profile-identity-style-options b {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: 8px;
+  border: 1px solid rgba(168, 255, 48, 0.18);
+  border-radius: 999px;
+  padding: 4px 7px;
+  color: var(--accent);
+  background: rgba(168, 255, 48, 0.06);
+  font-size: 0.64rem;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-identity-style-options strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.1;
+}
+
+.profile-identity-style-options small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(244, 247, 240, 0.58);
+  font-size: 0.72rem;
+  line-height: 1.28;
+}
+
+@media (max-width: 430px) {
+  .profile-public-preview,
+  .identity-style-summary-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .profile-identity-style-options {
+    grid-template-columns: 1fr;
+  }
+}

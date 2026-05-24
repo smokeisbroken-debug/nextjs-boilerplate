@@ -427,6 +427,7 @@ type Settings = {
   identity: {
     nickname: string;
     avatarPreset: "default" | "wallet" | "survivor" | "degen" | "stealth";
+    identityStyle: "classic" | "clean" | "proof" | "stealth" | "builder";
     statusText: string;
   };
   categoryNames: Record<string, string>;
@@ -1110,6 +1111,7 @@ const defaultSettings: Settings = {
   identity: {
     nickname: "",
     avatarPreset: "default",
+    identityStyle: "classic",
     statusText: "Broke, but self-aware",
   },
   categoryNames: defaultCategoryNames,
@@ -19200,6 +19202,20 @@ function SettingsScreen({
   ];
   const selectedProfileAvatar =
     profileAvatarOptions.find((item) => item.id === settings.identity.avatarPreset) || profileAvatarOptions[0];
+  const profileIdentityStyles: Array<{
+    id: Settings["identity"]["identityStyle"];
+    label: string;
+    badge: string;
+    description: string;
+  }> = [
+    { id: "classic", label: "Classic BROKE", badge: "Self-aware", description: "Default public identity for most users." },
+    { id: "clean", label: "Clean profile", badge: "Low noise", description: "Minimal profile look with less visual pressure." },
+    { id: "proof", label: "Proof mode", badge: "Progress", description: "For users who want stats and proof to stand out." },
+    { id: "stealth", label: "Private mode", badge: "Quiet", description: "Keeps the identity feeling more private and controlled." },
+    { id: "builder", label: "Builder mode", badge: "Fixing leaks", description: "For users treating $BROKE like a personal improvement system." },
+  ];
+  const selectedIdentityStyle =
+    profileIdentityStyles.find((item) => item.id === settings.identity.identityStyle) || profileIdentityStyles[0];
   const profileConnectionLabel = telegram.isTelegram
     ? "Telegram Mini App"
     : webAuth.authenticated
@@ -19253,7 +19269,7 @@ function SettingsScreen({
     <div className="screen">
       <Header title="Profile" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
-      <section className="profile-cabinet-card">
+      <section className={`profile-cabinet-card identity-style-${settings.identity.identityStyle || "classic"}`}>
         <div className="profile-cabinet-top">
           <div className="profile-avatar-frame">
             <img src={selectedProfileAvatar.image} alt="Profile avatar" />
@@ -19262,6 +19278,7 @@ function SettingsScreen({
             <span>Personal Cabinet</span>
             <strong>{profileNickname}</strong>
             <p>{profileStatusText}</p>
+            <em className="profile-style-pill">{selectedIdentityStyle.label} · {selectedIdentityStyle.badge}</em>
           </div>
           <b>{settingsStatusLabel}</b>
         </div>
@@ -19279,6 +19296,15 @@ function SettingsScreen({
             <span>Streak</span>
             <strong>{streak.currentStreak}d</strong>
           </article>
+        </div>
+
+        <div className="profile-public-preview">
+          <div>
+            <span>Public identity preview</span>
+            <strong>{profileNickname}</strong>
+            <small>{settings.privacy.publicProofMode ? "Public proof can show status, HP and patterns without private balances." : "Private mode keeps public proof quieter until you enable it."}</small>
+          </div>
+          <b>{selectedIdentityStyle.badge}</b>
         </div>
 
         <details className="profile-identity-editor">
@@ -19317,6 +19343,27 @@ function SettingsScreen({
                 <span>{option.label}</span>
               </button>
             ))}
+          </div>
+
+          <div className="profile-identity-style-panel">
+            <div>
+              <span>Identity style</span>
+              <strong>Choose how your $BROKE profile should feel.</strong>
+            </div>
+            <div className="profile-identity-style-options">
+              {profileIdentityStyles.map((style) => (
+                <button
+                  key={style.id}
+                  type="button"
+                  className={settings.identity.identityStyle === style.id ? "active" : ""}
+                  onClick={() => updateIdentityField("identityStyle", style.id)}
+                >
+                  <b>{style.badge}</b>
+                  <strong>{style.label}</strong>
+                  <small>{style.description}</small>
+                </button>
+              ))}
+            </div>
           </div>
         </details>
 
@@ -19724,6 +19771,14 @@ function SettingsScreen({
             <b>Labels</b>
           </summary>
           <div className="profile-section-body profile-section-stack">
+            <section className="identity-style-summary-card">
+              <div>
+                <span>Current identity style</span>
+                <strong>{selectedIdentityStyle.label}</strong>
+                <small>{selectedIdentityStyle.description}</small>
+              </div>
+              <b>{selectedIdentityStyle.badge}</b>
+            </section>
       <details className="clean-details settings-clean-details">
         <summary>
           <div>
