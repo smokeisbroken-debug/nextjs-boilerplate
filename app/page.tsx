@@ -332,6 +332,9 @@ type CloudAppState = {
   growthPlanner: GrowthPlannerState;
   debtRadarItems: DebtRadarItem[];
   homeHabitLeaks: HomeHabitLeakEntry[];
+  dailyRoutineActions?: DailyRoutineActions;
+  dailyRoutineReward?: DailyRoutineRewardState;
+  localLeakMission?: LocalLeakMission | null;
   updatedAt?: string;
 };
 
@@ -430,6 +433,7 @@ type Settings = {
     identityStyle: "classic" | "clean" | "proof" | "stealth" | "builder";
     statusText: string;
   };
+  shareProfile: ProfileShareSettings;
   categoryNames: Record<string, string>;
 };
 
@@ -774,6 +778,25 @@ type DailyRoutineActions = {
   sharedProgress: boolean;
 };
 
+type DailyRoutineRewardState = {
+  date: string;
+  claimed: boolean;
+};
+
+type ProfileShareItemId =
+  | "survival"
+  | "walletHp"
+  | "streak"
+  | "badges"
+  | "rank"
+  | "biggestLeak"
+  | "lifeHours"
+  | "status";
+
+type ProfileShareSettings = {
+  enabledItems: ProfileShareItemId[];
+};
+
 type ReturnHookAction = "add_leak" | "check_chart" | "share_result" | "keep_streak";
 
 type ReturnHookGoal = {
@@ -914,6 +937,7 @@ declare global {
 const STORAGE_KEY = "broke-life-tracker-v1";
 const LEAK_MISSION_KEY = "broke-local-leak-mission-v1";
 const ONBOARDING_KEY = "broke-life-tracker-onboarding-completed-v1";
+const LOCAL_APP_STATE_CHANGE_EVENT = "broke-local-app-state-change";
 const PROJECT_X_URL = "https://x.com/SmokeIsBroke";
 const PROJECT_TG_URL = "https://t.me/SmokeIsBrokeSol";
 const TELEGRAM_WEB_APP_SCRIPT = "https://telegram.org/js/telegram-web-app.js";
@@ -1060,6 +1084,21 @@ const defaultCategoryNames: Record<string, string> = {
   Custom: "Custom",
 };
 
+const profileShareItemIds = [
+  "survival",
+  "walletHp",
+  "streak",
+  "badges",
+  "rank",
+  "biggestLeak",
+  "lifeHours",
+  "status",
+] as const satisfies readonly ProfileShareItemId[];
+
+const defaultProfileShareSettings: ProfileShareSettings = {
+  enabledItems: ["survival", "walletHp", "streak", "badges"],
+};
+
 const defaultSettings: Settings = {
   currency: defaultCurrency,
   currencyMode: "display",
@@ -1114,6 +1153,7 @@ const defaultSettings: Settings = {
     identityStyle: "classic",
     statusText: "Broke, but self-aware",
   },
+  shareProfile: defaultProfileShareSettings,
   categoryNames: defaultCategoryNames,
 };
 
@@ -3361,6 +3401,22 @@ function LanguageRuntime({ language }: { language: Language }) {
 
 
 
+function normalizeProfileShareSettings(input?: Partial<ProfileShareSettings> | null): ProfileShareSettings {
+  const enabledItems = Array.isArray(input?.enabledItems)
+    ? input.enabledItems
+        .map((item) => String(item))
+        .filter((item): item is ProfileShareItemId =>
+          profileShareItemIds.includes(item as ProfileShareItemId)
+        )
+    : defaultProfileShareSettings.enabledItems;
+
+  const uniqueItems = Array.from(new Set(enabledItems));
+
+  return {
+    enabledItems: uniqueItems.length > 0 ? uniqueItems.slice(0, 8) : defaultProfileShareSettings.enabledItems,
+  };
+}
+
 function normalizeSettings(input?: Partial<Settings> | null): Settings {
   return {
     ...defaultSettings,
@@ -3401,6 +3457,7 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
       ...defaultSettings.identity,
       ...(input?.identity || {}),
     },
+    shareProfile: normalizeProfileShareSettings(input?.shareProfile),
     categoryNames: {
       ...defaultCategoryNames,
       ...(input?.categoryNames || {}),
@@ -3435,6 +3492,82 @@ function getIdentityStyleMeta(style: Settings["identity"]["identityStyle"]) {
       return { label: "Builder mode", badge: "Fixing leaks" };
     default:
       return { label: "Classic BROKE", badge: "Self-aware" };
+  }
+}
+
+function getProfileShareSlotLimit(walletHp: number) {
+  if (walletHp >= 90) return 5;
+  if (walletHp >= 75) return 4;
+  if (walletHp >= 55) return 3;
+  return 2;
+}
+
+function getProfileShareItemMeta(id: ProfileShareItemId) {
+  switch (id) {
+    case "survival":
+      return { label: "Survival Score", detail: "Best all-in public signal." };
+    case "walletHp":
+      return { label: "Wallet HP", detail: "Current wallet pressure." };
+    case "streak":
+      return { label: "Streak", detail: "Discipline display." };
+    case "badges":
+      return { label: "Badges", detail: "Trophy display." };
+    case "rank":
+      return { label: "Leaderboard", detail: "Public rank if enabled." };
+    case "biggestLeak":
+      return { label: "Biggest leak", detail: "Category only in Proof Mode." };
+    case "lifeHours":
+      return { label: "Life hours", detail: "Time cost of leaks." };
+    case "status":
+      return { label: "Status", detail: "Stable / pressure state." };
+  }
+}
+
+function getEnabledProfileShareItems(settings: Settings, walletHp: number) {
+  const limit = getProfileShareSlotLimit(walletHp);
+  const selected = normalizeProfileShareSettings(settings.shareProfile).enabledItems;
+  return selected.slice(0, limit);
+}
+
+function buildProfileShareMetric({
+  id,
+  settings,
+  walletHp,
+  identityStats,
+  leaderboard,
+  badgeCount,
+}: {
+  id: ProfileShareItemId;
+  settings: Settings;
+  walletHp: number;
+  identityStats: V2IdentityStats;
+  leaderboard: LeaderboardState | null;
+  badgeCount?: number;
+}) {
+  const shareStats = getShareLeaderboardStats(leaderboard);
+
+  switch (id) {
+    case "survival":
+      return { label: "Survival", value: `${identityStats.weeklySurvivalScore}/100` };
+    case "walletHp":
+      return { label: "Wallet HP", value: `${walletHp}/100` };
+    case "streak":
+      return { label: "Streak", value: `${shareStats.currentStreak || 0}d` };
+    case "badges":
+      return { label: "Badges", value: `${badgeCount ?? shareStats.badgeCount}` };
+    case "rank":
+      return { label: "Top", value: shareStats.rankLabel };
+    case "biggestLeak":
+      return {
+        label: "Biggest leak",
+        value: identityStats.biggestLeakAmount > 0
+          ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
+          : "none",
+      };
+    case "lifeHours":
+      return { label: "Hours lost", value: `${identityStats.lifeHoursLost}h` };
+    case "status":
+      return { label: "Status", value: identityStats.status };
   }
 }
 
@@ -4098,11 +4231,12 @@ function readDailyRoutineActions(date = dayKey(new Date())): DailyRoutineActions
   }
 }
 
-function writeDailyRoutineActions(actions: DailyRoutineActions) {
+function writeDailyRoutineActions(actions: DailyRoutineActions, notifyChange = true) {
   if (typeof window === "undefined") return;
 
   try {
     window.localStorage.setItem(DAILY_ROUTINE_ACTIONS_KEY, JSON.stringify(actions));
+    if (notifyChange) window.dispatchEvent(new Event(LOCAL_APP_STATE_CHANGE_EVENT));
   } catch {
     // Daily routine is optional. Ignore storage errors.
   }
@@ -4198,7 +4332,7 @@ function readDailyRoutineReward(date = dayKey(new Date())) {
   }
 }
 
-function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true) {
+function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true, notifyChange = true) {
   if (typeof window === "undefined") return;
 
   try {
@@ -4209,6 +4343,7 @@ function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true) {
         claimed,
       })
     );
+    if (notifyChange) window.dispatchEvent(new Event(LOCAL_APP_STATE_CHANGE_EVENT));
   } catch {
     // XP reward marker is optional. Ignore storage errors.
   }
@@ -6696,16 +6831,18 @@ function readLocalLeakMission(): LocalLeakMission | null {
   }
 }
 
-function writeLocalLeakMission(mission: LocalLeakMission | null) {
+function writeLocalLeakMission(mission: LocalLeakMission | null, notifyChange = true) {
   if (typeof window === "undefined") return;
 
   try {
     if (!mission) {
       window.localStorage.removeItem(LEAK_MISSION_KEY);
+      if (notifyChange) window.dispatchEvent(new Event(LOCAL_APP_STATE_CHANGE_EVENT));
       return;
     }
 
     window.localStorage.setItem(LEAK_MISSION_KEY, JSON.stringify(mission));
+    if (notifyChange) window.dispatchEvent(new Event(LOCAL_APP_STATE_CHANGE_EVENT));
   } catch {
     // Local mission is optional. Ignore storage errors.
   }
@@ -7631,6 +7768,18 @@ export default function Home() {
       }
     }, 800);
   }
+
+  useEffect(() => {
+    function syncLocalAppStateChange() {
+      queueCloudAppStateSync();
+    }
+
+    window.addEventListener(LOCAL_APP_STATE_CHANGE_EVENT, syncLocalAppStateChange);
+
+    return () => {
+      window.removeEventListener(LOCAL_APP_STATE_CHANGE_EVENT, syncLocalAppStateChange);
+    };
+  }, [loaded, cloudStatus, cloudAuthReady, cloudInitData]);
 
   useEffect(() => {
     function applyTelegramWebApp() {
@@ -10253,8 +10402,8 @@ function DashboardScreen({
       <details className="clean-details" id="share-result-card-panel">
         <summary>
           <div>
-            <span>Share Result</span>
-            <small>Create a clean public progress card.</small>
+            <span>Profile Share Card</span>
+            <small>Uses the slots selected in Profile.</small>
           </div>
           <b>Public card</b>
         </summary>
@@ -13021,6 +13170,18 @@ function buildShareText({
   exchangeRates?: ExchangeRateMap;
 }) {
   const shareStats = getShareLeaderboardStats(leaderboard);
+  const selectedShareItems = getEnabledProfileShareItems(settings, walletHp);
+  const selectedMetricLines = selectedShareItems.map((id) => {
+    const metric = buildProfileShareMetric({
+      id,
+      settings,
+      walletHp,
+      identityStats,
+      leaderboard,
+    });
+
+    return `${metric.label}: ${metric.value}`;
+  });
   const publicProofMode = settings.privacy.publicProofMode;
   const publicIdentityName = getPublicIdentityName(settings);
   const publicIdentityStatus = getPublicIdentityStatus(settings);
@@ -13040,22 +13201,8 @@ function buildShareText({
     "My wallet is not broken.",
     "It is leaking.",
     "",
-    `$BROKE Status: ${identityStats.status}`,
-    `Weekly Survival Score: ${identityStats.weeklySurvivalScore}/100`,
-    `Wallet HP: ${walletHp}/100`,
-    `Biggest leak: ${
-      identityStats.biggestLeakAmount > 0
-        ? publicProofMode
-          ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
-          : `${categoryDisplayLabel(settings, identityStats.biggestLeakCategory)} (${money(
-              identityStats.biggestLeakAmount,
-              settings.currency
-            )})`
-        : "none"
-    }`,
-    `Life hours lost: ${identityStats.lifeHoursLost}h`,
-    `$BROKE Score: ${shareStats.xp.toLocaleString("en-US")} XP`,
-    rankLine,
+    ...selectedMetricLines,
+    selectedShareItems.includes("rank") ? "" : rankLine,
     "",
     `Potential yearly savings: ${
       publicProofMode ? "hidden by Public Proof Mode" : money(potentialYearlySavings, settings.currency)
@@ -13190,19 +13337,19 @@ function ShareResultCard({
   shareInitData: string;
 }) {
   const [copied, setCopied] = useState(false);
-  const shareStatusLabel =
-    identityStats.status === "Leak Survivor"
-      ? "Survivor"
-      : identityStats.status === "Stable Wallet"
-        ? "Stable"
-        : identityStats.status === "Leak Pressure"
-          ? "Pressure"
-          : identityStats.status === "Doomspending Alert"
-            ? "Alert"
-            : identityStats.status;
   const [imageSharing, setImageSharing] = useState(false);
   const shareCardRef = useRef<HTMLDivElement | null>(null);
   const shareStats = getShareLeaderboardStats(leaderboard);
+  const selectedShareItems = getEnabledProfileShareItems(settings, walletHp);
+  const selectedShareMetrics = selectedShareItems.map((id) =>
+    buildProfileShareMetric({
+      id,
+      settings,
+      walletHp,
+      identityStats,
+      leaderboard,
+    })
+  );
   const publicIdentityName = getPublicIdentityName(settings);
   const publicIdentityStatus = getPublicIdentityStatus(settings);
   const publicIdentityStyle = getIdentityStyleMeta(settings.identity.identityStyle);
@@ -13323,38 +13470,13 @@ function ShareResultCard({
           <b className="profile-share-card-style-pill">{publicIdentityStyle.badge}</b>
         </div>
 
-        <div className="share-preview share-preview-social">
-          <div>
-            <span>Status</span>
-            <strong>{shareStatusLabel}</strong>
-          </div>
-          <div>
-            <span>Survival</span>
-            <strong>{identityStats.weeklySurvivalScore}/100</strong>
-          </div>
-          <div>
-            <span>Wallet HP</span>
-            <strong>{walletHp}/100</strong>
-          </div>
-          <div>
-            <span>Top</span>
-            <strong>{shareStats.rankLabel}</strong>
-          </div>
-        </div>
-
-        <div className="public-share-meta public-share-meta-safe">
-          <div>
-            <span>Biggest leak</span>
-            <strong>
-              {identityStats.biggestLeakAmount > 0
-                ? categoryDisplayLabel(settings, identityStats.biggestLeakCategory)
-                : "none"}
-            </strong>
-          </div>
-          <div>
-            <span>Life hours lost</span>
-            <strong>{identityStats.lifeHoursLost}h</strong>
-          </div>
+        <div className="share-preview share-preview-social profile-selected-share-grid">
+          {selectedShareMetrics.map((metric) => (
+            <div key={metric.label}>
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+            </div>
+          ))}
         </div>
 
         <div className="public-share-savings">
@@ -17733,6 +17855,20 @@ function buildHomeHabitLeakInsight(items: HomeHabitLeakEntry[]): HomeHabitLeakIn
 }
 
 function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudAppState {
+  const today = dayKey(new Date());
+  const routineActions = input?.dailyRoutineActions?.date
+    ? {
+        ...getDefaultDailyRoutineActions(input.dailyRoutineActions.date),
+        ...input.dailyRoutineActions,
+      }
+    : undefined;
+  const routineReward = input?.dailyRoutineReward?.date
+    ? {
+        date: input.dailyRoutineReward.date,
+        claimed: Boolean(input.dailyRoutineReward.claimed),
+      }
+    : undefined;
+
   return {
     growthSimulations: Array.isArray(input?.growthSimulations)
       ? input.growthSimulations.map(normalizeGrowthSimulation).slice(0, 8)
@@ -17744,16 +17880,24 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
     homeHabitLeaks: Array.isArray(input?.homeHabitLeaks)
       ? input.homeHabitLeaks.map(normalizeHomeHabitLeakEntry).slice(0, 80)
       : [],
+    ...(routineActions?.date === today ? { dailyRoutineActions: routineActions } : {}),
+    ...(routineReward?.date === today ? { dailyRoutineReward: routineReward } : {}),
+    localLeakMission: input?.localLeakMission || null,
     updatedAt: input?.updatedAt,
   };
 }
 
 function readLocalCloudAppState(): CloudAppState {
+  const today = dayKey(new Date());
+
   return normalizeCloudAppState({
     growthSimulations: readGrowthSimulations(),
     growthPlanner: readGrowthPlannerState(),
     debtRadarItems: readDebtRadarItems(),
     homeHabitLeaks: readHomeHabitLeaks(),
+    dailyRoutineActions: readDailyRoutineActions(today),
+    dailyRoutineReward: readDailyRoutineReward(today),
+    localLeakMission: readLocalLeakMission(),
     updatedAt: new Date().toISOString(),
   });
 }
@@ -17766,6 +17910,9 @@ function writeLocalCloudAppState(input: Partial<CloudAppState>) {
   writeGrowthPlannerState(appState.growthPlanner);
   writeDebtRadarItems(appState.debtRadarItems);
   writeHomeHabitLeaks(appState.homeHabitLeaks);
+  if (appState.dailyRoutineActions) writeDailyRoutineActions(appState.dailyRoutineActions, false);
+  if (appState.dailyRoutineReward) writeDailyRoutineReward(appState.dailyRoutineReward.date, appState.dailyRoutineReward.claimed, false);
+  if ("localLeakMission" in appState) writeLocalLeakMission(appState.localLeakMission || null, false);
   window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
 }
 
@@ -19282,6 +19429,36 @@ function SettingsScreen({
     : webAuth.authenticated
       ? "Web linked"
       : "Local profile";
+  const shareSlotLimit = getProfileShareSlotLimit(settingsWalletHp);
+  const enabledShareProfileItems = normalizeProfileShareSettings(settings.shareProfile).enabledItems;
+  const visibleShareProfileItems = getEnabledProfileShareItems(settings, settingsWalletHp);
+  const earnedBadgeCount = badges.filter((badge) => badge.earned).length;
+  const profileSharePreviewStats = {
+    weeklySurvivalScore: settingsSurvivalScore,
+    biggestLeakCategory: categorySummaries[0]?.category || "none",
+    biggestLeakAmount: categorySummaries[0]?.amount || 0,
+    weeklyLeaks: settingsTotalLeaks,
+    monthlyLeaks: settingsTotalLeaks,
+    lifeHoursLost: Math.round(
+      settingsTotalLeaks /
+        Math.max(1, getTotalIncome(settings) / Math.max(1, settings.profile.workHoursPerMonth || 160))
+    ),
+    status: settingsStatusLabel,
+    statusDetail: "Profile share preview",
+    doomAlertTitle: "",
+    doomAlertBody: "",
+    selfRoast: "",
+  } satisfies V2IdentityStats;
+  const profileSharePreviewMetrics = visibleShareProfileItems.map((id) =>
+    buildProfileShareMetric({
+      id,
+      settings,
+      walletHp: settingsWalletHp,
+      identityStats: profileSharePreviewStats,
+      leaderboard,
+      badgeCount: earnedBadgeCount,
+    })
+  );
 
   function updateIdentityField<K extends keyof Settings["identity"]>(key: K, value: Settings["identity"][K]) {
     setSettings((prev) => ({
@@ -19291,6 +19468,23 @@ function SettingsScreen({
         [key]: value,
       },
     }));
+  }
+
+  function toggleProfileShareItem(id: ProfileShareItemId) {
+    setSettings((prev) => {
+      const current = normalizeProfileShareSettings(prev.shareProfile).enabledItems;
+      const exists = current.includes(id);
+      const nextItems = exists
+        ? current.filter((item) => item !== id)
+        : [...current, id];
+
+      return {
+        ...prev,
+        shareProfile: normalizeProfileShareSettings({
+          enabledItems: nextItems.length > 0 ? nextItems : ["survival"],
+        }),
+      };
+    });
   }
 
   async function runOldDataCurrencyRepair() {
@@ -19373,6 +19567,47 @@ function SettingsScreen({
           <span><b>Shows</b> avatar, nickname, identity style, HP/status and safe patterns.</span>
           <span><b>Hides</b> income, real balance, payday and private debt details by default.</span>
         </div>
+
+        <section className="profile-share-studio-card">
+          <div className="profile-share-studio-head">
+            <div>
+              <span>Share Studio</span>
+              <strong>Choose what your public card shows.</strong>
+              <small>One main profile card. Private money stays hidden by default.</small>
+            </div>
+            <b>{visibleShareProfileItems.length}/{shareSlotLimit} slots</b>
+          </div>
+
+          <div className="profile-share-preview-grid">
+            {profileSharePreviewMetrics.map((metric) => (
+              <article key={metric.label}>
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+              </article>
+            ))}
+          </div>
+
+          <div className="profile-share-picker-grid">
+            {profileShareItemIds.map((id) => {
+              const meta = getProfileShareItemMeta(id);
+              const checked = enabledShareProfileItems.includes(id);
+              const lockedBySlots = !checked && visibleShareProfileItems.length >= shareSlotLimit;
+
+              return (
+                <label className={checked ? "active" : lockedBySlots ? "locked" : ""} key={id}>
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={lockedBySlots}
+                    onChange={() => toggleProfileShareItem(id)}
+                  />
+                  <span>{meta.label}</span>
+                  <small>{lockedBySlots ? "Raise Wallet HP to unlock more slots." : meta.detail}</small>
+                </label>
+              );
+            })}
+          </div>
+        </section>
 
         <details className="profile-identity-editor">
           <summary>

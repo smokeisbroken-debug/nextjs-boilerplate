@@ -1,20 +1,13 @@
-# v59.7.5 — Profile Polish & Mobile Cleanup
+# v59.8 — Profile Share Studio & Account State Cleanup
 
-Patch-only update for the Profile / Personal Cabinet screen.
+Patch-only update built from the uploaded latest stable archive `nextjs-boilerplate-main(3).zip`.
 
-## User-facing changes
-- Personal Cabinet is more compact on mobile.
-- Public identity preview is shorter and cleaner.
-- Privacy explanation cards take less vertical space.
-- Profile Settings heading is shorter.
-- Settings sections stay collapsed by default for a cleaner first view.
-- Added safer bottom spacing so Profile content is not hidden behind the bottom nav.
+## Product changes
+- Adds one central **Share Studio** inside Profile / Personal Cabinet.
+- Users can choose which public profile items appear on their main share card.
+- Share card output now follows the Profile Share Studio selection.
+- Daily routine / mission state is included in account app-state sync so a second device should not reset completed routine steps back to local-only state.
+- Keeps Public Proof Mode private-first: income, real balance, payday, and private debt details remain hidden by default.
 
-## Not changed
-- API routes
-- Supabase schema
-- migrations
-- Telegram webhook
-- custom photo upload
-- calculations
-- stored user data
+## No migration required
+This uses existing `settings_payload` and `app_state_payload`.

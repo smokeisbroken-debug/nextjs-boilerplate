@@ -20089,3 +20089,175 @@ html[lang="ru"] .trigger-preview strong {
     justify-self: start;
   }
 }
+
+/* v59.8 Profile Share Studio + Account Routine Sync */
+.profile-share-studio-card {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(167, 255, 41, 0.22);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(9, 28, 13, 0.92), rgba(4, 10, 7, 0.86));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.profile-share-studio-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.profile-share-studio-head span {
+  display: block;
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profile-share-studio-head strong {
+  display: block;
+  margin-top: 4px;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.profile-share-studio-head small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.66);
+  line-height: 1.35;
+}
+
+.profile-share-studio-head > b {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(167, 255, 41, 0.13);
+  color: var(--accent);
+  font-size: 0.8rem;
+}
+
+.profile-share-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.profile-share-preview-grid article {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.profile-share-preview-grid span,
+.profile-selected-share-grid span {
+  display: block;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.profile-share-preview-grid strong,
+.profile-selected-share-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.profile-share-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.profile-share-picker-grid label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "check title"
+    "check detail";
+  column-gap: 8px;
+  row-gap: 2px;
+  align-items: start;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.profile-share-picker-grid label.active {
+  border-color: rgba(167, 255, 41, 0.5);
+  background: rgba(167, 255, 41, 0.1);
+}
+
+.profile-share-picker-grid label.locked {
+  opacity: 0.58;
+}
+
+.profile-share-picker-grid input {
+  grid-area: check;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  accent-color: #a7ff29;
+}
+
+.profile-share-picker-grid span {
+  grid-area: title;
+  color: #fff;
+  font-size: 0.83rem;
+  font-weight: 850;
+}
+
+.profile-share-picker-grid small {
+  grid-area: detail;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.profile-selected-share-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.profile-selected-share-grid > div {
+  min-height: 74px;
+}
+
+@media (max-width: 420px) {
+  .profile-share-studio-card {
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .profile-share-studio-head {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .profile-share-studio-head > b {
+    width: fit-content;
+  }
+
+  .profile-share-preview-grid,
+  .profile-share-picker-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-selected-share-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

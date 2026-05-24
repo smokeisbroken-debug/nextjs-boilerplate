@@ -153,6 +153,43 @@ type RegionPreset =
 type LifeMode = "Student" | "Worker" | "Freelancer" | "Living with family" | "No stable income";
 type IncomeStyle = "Monthly" | "Weekly" | "Daily" | "Allowance" | "Irregular";
 
+type ProfileShareItemId =
+  | "survival"
+  | "walletHp"
+  | "streak"
+  | "badges"
+  | "rank"
+  | "biggestLeak"
+  | "lifeHours"
+  | "status";
+
+type ProfileShareSettings = {
+  enabledItems: ProfileShareItemId[];
+};
+
+type DailyRoutineActions = {
+  date: string;
+  openedApp: boolean;
+  checkedChart: boolean;
+  checkedSave: boolean;
+  sharedProgress: boolean;
+};
+
+type DailyRoutineRewardState = {
+  date: string;
+  claimed: boolean;
+};
+
+type LocalLeakMission = {
+  id: string;
+  category: string;
+  startedAt: string;
+  endsAt: string;
+  baselineWeekly: number;
+  targetSpend: number;
+  createdAt: string;
+};
+
 type Settings = {
   currency: Currency;
   currencyMode: CurrencyMode;
@@ -201,6 +238,13 @@ type Settings = {
   privacy: {
     publicProofMode: boolean;
   };
+  identity: {
+    nickname: string;
+    avatarPreset: "default" | "wallet" | "survivor" | "degen" | "stealth";
+    identityStyle: "classic" | "clean" | "proof" | "stealth" | "builder";
+    statusText: string;
+  };
+  shareProfile: ProfileShareSettings;
   categoryNames: Record<string, string>;
 };
 
@@ -296,6 +340,9 @@ type AppState = {
   growthPlanner: GrowthPlannerState;
   debtRadarItems: DebtRadarItem[];
   homeHabitLeaks: HomeHabitLeakEntry[];
+  dailyRoutineActions?: DailyRoutineActions;
+  dailyRoutineReward?: DailyRoutineRewardState;
+  localLeakMission?: LocalLeakMission | null;
   updatedAt?: string;
 };
 
@@ -485,6 +532,21 @@ const defaultCategoryNames: Record<string, string> = {
   Custom: "Custom",
 };
 
+const profileShareItemIds = [
+  "survival",
+  "walletHp",
+  "streak",
+  "badges",
+  "rank",
+  "biggestLeak",
+  "lifeHours",
+  "status",
+] as const satisfies readonly ProfileShareItemId[];
+
+const defaultProfileShareSettings: ProfileShareSettings = {
+  enabledItems: ["survival", "walletHp", "streak", "badges"],
+};
+
 const defaultSettings: Settings = {
   currency: defaultCurrency,
   currencyMode: "display",
@@ -533,6 +595,13 @@ const defaultSettings: Settings = {
   privacy: {
     publicProofMode: true,
   },
+  identity: {
+    nickname: "",
+    avatarPreset: "default",
+    identityStyle: "classic",
+    statusText: "Broke, but self-aware",
+  },
+  shareProfile: defaultProfileShareSettings,
   categoryNames: defaultCategoryNames,
 };
 
@@ -1299,6 +1368,57 @@ function normalizeHomeHabitLeakEntry(input: Partial<HomeHabitLeakEntry>): HomeHa
   };
 }
 
+function normalizeProfileShareSettings(input?: Partial<ProfileShareSettings> | null): ProfileShareSettings {
+  const enabledItems = Array.isArray(input?.enabledItems)
+    ? input.enabledItems
+        .map((item) => String(item))
+        .filter((item): item is ProfileShareItemId =>
+          profileShareItemIds.includes(item as ProfileShareItemId)
+        )
+    : defaultProfileShareSettings.enabledItems;
+
+  const uniqueItems = Array.from(new Set(enabledItems));
+
+  return {
+    enabledItems: uniqueItems.length > 0 ? uniqueItems.slice(0, 8) : defaultProfileShareSettings.enabledItems,
+  };
+}
+
+function normalizeDailyRoutineActions(input?: Partial<DailyRoutineActions> | null): DailyRoutineActions | undefined {
+  if (!input?.date) return undefined;
+
+  return {
+    date: String(input.date),
+    openedApp: Boolean(input.openedApp),
+    checkedChart: Boolean(input.checkedChart),
+    checkedSave: Boolean(input.checkedSave),
+    sharedProgress: Boolean(input.sharedProgress),
+  };
+}
+
+function normalizeDailyRoutineReward(input?: Partial<DailyRoutineRewardState> | null): DailyRoutineRewardState | undefined {
+  if (!input?.date) return undefined;
+
+  return {
+    date: String(input.date),
+    claimed: Boolean(input.claimed),
+  };
+}
+
+function normalizeLocalLeakMission(input?: Partial<LocalLeakMission> | null): LocalLeakMission | null {
+  if (!input?.id || !input.category || !input.startedAt || !input.endsAt) return null;
+
+  return {
+    id: String(input.id),
+    category: String(input.category),
+    startedAt: String(input.startedAt),
+    endsAt: String(input.endsAt),
+    baselineWeekly: Math.max(0, Number(input.baselineWeekly || 0)),
+    targetSpend: Math.max(0, Number(input.targetSpend || 0)),
+    createdAt: String(input.createdAt || input.startedAt),
+  };
+}
+
 function normalizeAppState(input?: Partial<AppState> | null): AppState {
   return {
     growthSimulations: Array.isArray(input?.growthSimulations)
@@ -1311,6 +1431,13 @@ function normalizeAppState(input?: Partial<AppState> | null): AppState {
     homeHabitLeaks: Array.isArray(input?.homeHabitLeaks)
       ? input.homeHabitLeaks.map(normalizeHomeHabitLeakEntry).slice(0, 80)
       : [],
+    ...(normalizeDailyRoutineActions(input?.dailyRoutineActions)
+      ? { dailyRoutineActions: normalizeDailyRoutineActions(input?.dailyRoutineActions) }
+      : {}),
+    ...(normalizeDailyRoutineReward(input?.dailyRoutineReward)
+      ? { dailyRoutineReward: normalizeDailyRoutineReward(input?.dailyRoutineReward) }
+      : {}),
+    localLeakMission: normalizeLocalLeakMission(input?.localLeakMission),
     updatedAt: input?.updatedAt || new Date().toISOString(),
   };
 }
@@ -1351,6 +1478,11 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
       ...defaultSettings.privacy,
       ...(input?.privacy || {}),
     },
+    identity: {
+      ...defaultSettings.identity,
+      ...(input?.identity || {}),
+    },
+    shareProfile: normalizeProfileShareSettings(input?.shareProfile),
     categoryNames: {
       ...defaultCategoryNames,
       ...(input?.categoryNames || {}),
