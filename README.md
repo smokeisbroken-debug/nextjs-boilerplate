@@ -1,17 +1,17 @@
-# v59.17 — Holder Reward Path Polish
+# v59.17.1 — Wallet Verify Fallback + Share Header Fit Hotfix
 
-Patch-only update built on v59.16.
+Patch-only hotfix from v59.17.
 
 ## What changed
-- Added a clearer holder reward path inside Profile → Wallet & $BROKE balance.
-- Users now see the next holder step: link wallet, verify wallet, reach 500K, 1M, or 5M BROKE.
-- Added compact milestone chips: Link → Verify → 500K+ → 1M+ → 5M+.
-- Added a Share Studio display-space coach so users understand why some public profile items are locked.
-- No token transactions, staking, claims, or transfers.
+- Wallet verification now handles missing wallet provider more clearly inside Telegram WebView.
+- If Phantom/Solflare provider is not injected, the app shows a helper card instead of only a toast.
+- Added quick actions: Open Phantom, Open Solflare, Copy app link.
+- Watch-only balance still works; holder unlocks still require verified ownership.
+- Profile share-card header has more safe vertical space so name/status text should not be cropped.
 
-## Files changed
-- app/page.tsx
-- app/globals.css
-- README.md
-- PROJECT_ORDER.md
-- TESTING.md
+## Not changed
+- No API changes.
+- No Supabase migration.
+- No wallet transaction logic.
+- No seed phrase/private key handling.
+- No token transfers, staking, claims, or custody.

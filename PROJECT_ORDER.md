@@ -1,20 +1,19 @@
-# v59.17 — Holder Reward Path Polish
+# v59.17.1 — Wallet Verify Fallback + Share Header Fit Hotfix
 
-## Goal
-Make the verified-holder reward system easier to understand after v59.16.
+## Purpose
+Fix two user-visible issues after v59.17:
+1. Telegram WebView can show `Wallet provider not found` when trying to verify wallet ownership.
+2. Profile share-card header text can be cropped in generated images.
 
-## Product improvements
-- Profile wallet block now explains the next holder action.
-- Reward path is visible as simple chips: Link, Verify, 500K+, 1M+, 5M+.
-- Share Studio now explains selected / available public display slots.
-- Users can understand whether they need Wallet HP, verified wallet ownership, or higher $BROKE balance to show more public profile items.
+## Files changed
+- app/page.tsx
+- app/globals.css
+- README.md
+- PROJECT_ORDER.md
+- TESTING.md
 
-## Not changed
-- API routes
-- Supabase schema
-- migrations
-- wallet verification backend
-- avatar upload endpoint
-- token balance checking logic
-- user data
-- transactions / staking / claims
+## Deployment
+Replace the files and deploy normally.
+
+## Supabase
+No SQL required.

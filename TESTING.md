@@ -1,4 +1,4 @@
-# v59.17 Testing
+# v59.17.1 Testing
 
 Run:
 
@@ -9,10 +9,9 @@ NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
 Manual checks:
-1. Open Profile → Wallet & $BROKE balance.
-2. With no wallet: holder coach should say to link a public wallet.
-3. With watched wallet: holder coach should say to verify ownership.
-4. With verified wallet under 500K: holder coach should show the next unlock and gap.
-5. With verified wallet over 500K/1M/5M: milestone chips should update.
-6. Open Profile → Share Studio and confirm display-space coach shows selected / available slots.
-7. Confirm Share Studio checkboxes still respect the display-slot limit.
+1. Profile → Wallet & $BROKE balance.
+2. Paste wallet address and check balance.
+3. Press Verify wallet inside Telegram WebView where no provider exists.
+4. Confirm helper card appears with Open Phantom / Open Solflare / Copy app link.
+5. Confirm watch-only balance still remains visible.
+6. Generate Profile share card and confirm name/status/header text is not cropped.

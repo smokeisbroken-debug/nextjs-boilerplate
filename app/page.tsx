@@ -20008,6 +20008,7 @@ function SettingsScreen({
   const [walletChecking, setWalletChecking] = useState(false);
   const [walletVerifying, setWalletVerifying] = useState(false);
   const [walletMessage, setWalletMessage] = useState("");
+  const [walletProviderHelpOpen, setWalletProviderHelpOpen] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState("");
 
@@ -20301,6 +20302,7 @@ function SettingsScreen({
       }
 
       setWalletAddressDraft(nextAddress);
+      setWalletProviderHelpOpen(false);
       setWalletMessage(
         isLikelySolanaWalletAddress(nextAddress)
           ? "Address ready to check."
@@ -20314,6 +20316,7 @@ function SettingsScreen({
 
   function clearWalletAddressDraft() {
     setWalletAddressDraft("");
+    setWalletProviderHelpOpen(false);
     setWalletMessage("");
     triggerHaptic("light");
   }
@@ -20328,6 +20331,7 @@ function SettingsScreen({
     }
 
     setWalletChecking(true);
+    setWalletProviderHelpOpen(false);
     setWalletMessage("");
 
     try {
@@ -20377,6 +20381,7 @@ function SettingsScreen({
 
   function unlinkWallet() {
     setWalletAddressDraft("");
+    setWalletProviderHelpOpen(false);
     updateWalletSettings(defaultWalletLinkSettings);
     setWalletMessage("Wallet removed from this profile.");
     triggerHaptic("light");
@@ -20417,6 +20422,40 @@ function SettingsScreen({
     return window.btoa(binary);
   }
 
+  function getCurrentAppUrlForWalletBrowser() {
+    if (typeof window === "undefined") return "";
+    return window.location.href;
+  }
+
+  function openWalletBrowser(provider: "phantom" | "solflare") {
+    const currentUrl = getCurrentAppUrlForWalletBrowser();
+
+    if (!currentUrl) return;
+
+    triggerHaptic("light");
+
+    if (provider === "phantom") {
+      const phantomUrl = `https://phantom.app/ul/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent(window.location.origin)}`;
+      openExternalUrl(phantomUrl);
+      return;
+    }
+
+    const solflareUrl = `https://solflare.com/ul/v1/browse/${encodeURIComponent(currentUrl)}?ref=${encodeURIComponent(window.location.origin)}`;
+    openExternalUrl(solflareUrl);
+  }
+
+  async function copyWalletVerifyLink() {
+    try {
+      await navigator.clipboard.writeText(getCurrentAppUrlForWalletBrowser());
+      setWalletMessage("App link copied. Open it inside Phantom/Solflare browser, then press Verify wallet again.");
+      notifyApp("Link copied", "Open the app link inside a Solana wallet browser to verify ownership.", "info");
+      triggerHaptic("success");
+    } catch {
+      setWalletMessage("Could not copy the app link. Open this app inside Phantom/Solflare browser to verify ownership.");
+      notifyApp("Copy blocked", "Open this app inside Phantom/Solflare browser to verify ownership.", "info");
+    }
+  }
+
   async function verifyWalletOwnership() {
     const walletAddress = walletAddressDraft.trim();
 
@@ -20429,11 +20468,13 @@ function SettingsScreen({
     const provider = getSolanaWalletProvider();
 
     if (!provider?.connect || !provider.signMessage) {
-      setWalletMessage("Wallet verification needs a Solana wallet browser/extension with message signing. You can still use watch-only balance.");
-      notifyApp("Wallet provider not found", "Open with Phantom/Solflare or a wallet browser to verify ownership.", "info");
+      setWalletProviderHelpOpen(true);
+      setWalletMessage("Balance is linked as watch-only. To verify ownership, open this app inside Phantom, Solflare, or another Solana wallet browser and press Verify wallet again.");
+      notifyApp("Verification needs wallet browser", "Watch-only balance still works. Holder unlocks need a wallet browser with message signing.", "info");
       return;
     }
 
+    setWalletProviderHelpOpen(false);
     setWalletVerifying(true);
     setWalletMessage("Waiting for wallet signature. No transaction will be sent.");
 
@@ -20908,6 +20949,21 @@ function SettingsScreen({
                 : "Balance display is watch-only. Custom avatar and future holder perks require verification."}
             </small>
           </div>
+
+          {walletProviderHelpOpen && !settings.wallet.isVerified && (
+            <section className="wallet-provider-help-card">
+              <div>
+                <span>Wallet provider not found</span>
+                <strong>Open inside a wallet browser to verify.</strong>
+                <small>Telegram can show the app without Phantom/Solflare injected. Balance check stays watch-only; verification needs message signing.</small>
+              </div>
+              <div className="wallet-provider-help-actions">
+                <button type="button" onClick={() => openWalletBrowser("phantom")}>Open Phantom</button>
+                <button type="button" onClick={() => openWalletBrowser("solflare")}>Open Solflare</button>
+                <button type="button" onClick={copyWalletVerifyLink}>Copy app link</button>
+              </div>
+            </section>
+          )}
 
           <section className={`holder-proof-dashboard ${settings.wallet.isVerified ? "verified" : "watched"}`}>
             <div className="holder-proof-dashboard-head">

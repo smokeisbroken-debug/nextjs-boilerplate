@@ -22258,3 +22258,147 @@ html[lang="ru"] .trigger-preview strong {
     width: fit-content;
   }
 }
+
+/* v59.17.1 — Wallet Verify Fallback + Share Header Fit */
+.wallet-provider-help-card {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 12px;
+  padding: 12px;
+  border: 1px solid rgba(255, 210, 87, 0.22);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 210, 87, 0.12), transparent 36%),
+    rgba(0, 0, 0, 0.22);
+}
+
+.wallet-provider-help-card span {
+  display: block;
+  color: #ffe19b;
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.wallet-provider-help-card strong {
+  display: block;
+  margin-top: 4px;
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1.12;
+}
+
+.wallet-provider-help-card small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.wallet-provider-help-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.wallet-provider-help-actions button {
+  min-height: 40px;
+  border: 1px solid rgba(255, 210, 87, 0.18);
+  border-radius: 14px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.055);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.wallet-provider-help-actions button:first-child {
+  color: #061006;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--neon), #d9ff54);
+}
+
+.public-share-image-card .profile-share-card-top {
+  min-height: 94px !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  margin-bottom: 14px !important;
+}
+
+.public-share-image-card .profile-share-card-identity {
+  align-items: flex-start !important;
+  min-height: 70px !important;
+}
+
+.public-share-image-card .profile-share-card-identity > div {
+  min-width: 0 !important;
+  padding-top: 2px !important;
+}
+
+.public-share-image-card .profile-share-card-identity strong {
+  display: block !important;
+  max-width: 210px !important;
+  color: #fff !important;
+  font-size: 16px !important;
+  line-height: 1.12 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  overflow-wrap: anywhere !important;
+}
+
+.public-share-image-card .profile-share-card-identity small {
+  max-width: 210px !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-height: 1.18 !important;
+  min-height: 26px !important;
+}
+
+.public-share-image-card .profile-share-card-style-pill {
+  align-self: flex-start !important;
+  max-width: 104px !important;
+  white-space: normal !important;
+  text-align: center !important;
+  line-height: 1.1 !important;
+}
+
+.public-share-image-card .profile-selected-share-grid {
+  margin-top: 4px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-top,
+.share-capture-safe .profile-share-card-top {
+  min-height: 104px !important;
+  margin-bottom: 16px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity small,
+.share-capture-safe .profile-share-card-identity small {
+  min-height: 30px !important;
+  line-height: 1.2 !important;
+}
+
+@media (max-width: 430px) {
+  .wallet-provider-help-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .public-share-image-card .profile-share-card-top {
+    min-height: 90px !important;
+  }
+
+  .public-share-image-card .profile-share-card-identity strong,
+  .public-share-image-card .profile-share-card-identity small {
+    max-width: 160px !important;
+  }
+
+  .public-share-image-card .profile-share-card-style-pill {
+    max-width: 92px !important;
+    font-size: 9.5px !important;
+  }
+}
