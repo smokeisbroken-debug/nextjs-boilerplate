@@ -19434,22 +19434,22 @@ function SettingsScreen({
           </div>
         </details>
 
-        <div className="profile-cabinet-note">
-          <span>All settings stay below.</span>
-          <small>Money setup, currency, privacy, Telegram sync, notifications, and data tools were not removed.</small>
+        <div className="profile-cabinet-note compact-profile-note">
+          <span>Settings below.</span>
+          <small>Money, currency, privacy, sync and data tools stayed.</small>
         </div>
       </section>
 
       <section className="profile-settings-hub" aria-label="Profile settings sections">
-        <div className="profile-settings-hub-heading">
+        <div className="profile-settings-hub-heading compact-settings-heading">
           <div>
             <span>Profile settings</span>
-            <strong>Your app, wallet setup, privacy and data tools.</strong>
+            <strong>Wallet setup, privacy, sync and data.</strong>
           </div>
-          <b>All old settings kept</b>
+          <b>Everything kept</b>
         </div>
 
-        <details className="profile-settings-section quick-setup" open>
+        <details className="profile-settings-section quick-setup">
           <summary className="profile-section-summary">
             <div>
               <span>Quick Setup</span>

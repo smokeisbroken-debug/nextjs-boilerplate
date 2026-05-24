@@ -1,16 +1,20 @@
-# v59.7.4 — Profile Share Identity Prep
+# v59.7.5 — Profile Polish & Mobile Cleanup
 
-Patch-only update for Profile / Personal Cabinet.
+Patch-only update for the Profile / Personal Cabinet screen.
 
-## What changed
-- Profile now has a clearer public identity preview.
-- Share Result card now uses the user's Profile identity: nickname, avatar preset, status line and identity style badge.
-- Share text now starts with the user's public $BROKE identity.
-- Privacy copy is clearer: public identity can be shown while private balances stay hidden.
+## User-facing changes
+- Personal Cabinet is more compact on mobile.
+- Public identity preview is shorter and cleaner.
+- Privacy explanation cards take less vertical space.
+- Profile Settings heading is shorter.
+- Settings sections stay collapsed by default for a cleaner first view.
+- Added safer bottom spacing so Profile content is not hidden behind the bottom nav.
 
 ## Not changed
-- No API changes.
-- No Supabase migration.
-- No Telegram webhook changes.
-- No custom photo upload yet.
-- No private debt details are added to share cards.
+- API routes
+- Supabase schema
+- migrations
+- Telegram webhook
+- custom photo upload
+- calculations
+- stored user data

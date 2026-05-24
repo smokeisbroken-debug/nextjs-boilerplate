@@ -1,7 +1,7 @@
-# v59.7.4 — Profile Share Identity Prep
+# v59.7.5 — Profile Polish & Mobile Cleanup
 
-## Purpose
-Prepare Profile identity for future share cards without adding custom photo upload or backend changes.
+## Goal
+Polish the Profile / Personal Cabinet mobile layout after v59.7.4.
 
 ## Files changed
 - app/page.tsx
@@ -11,12 +11,15 @@ Prepare Profile identity for future share cards without adding custom photo uplo
 - TESTING.md
 
 ## Scope
-- Public identity preview inside Profile.
-- Share Result card reads nickname/avatar/style from Profile settings.
-- Public Proof Mode privacy language remains visible.
+- Compact mobile Personal Cabinet layout.
+- Cleaner Public identity preview.
+- Shorter Profile Settings copy.
+- Settings sections collapsed by default.
+- Bottom nav safe spacing.
 
 ## Out of scope
-- Supabase Storage.
-- User photo upload.
-- New database tables.
-- Debt share cards.
+- API changes
+- Supabase changes
+- migrations
+- custom avatar/photo upload
+- data model changes
