@@ -1,19 +1,19 @@
-# v59.15 — Holder Proof Profile Polish
+# v59.15.1 — Identity Setup Clickability Hotfix
 
-Patch-only update from the v59.14.1 working checkpoint.
+Patch-only hotfix from v59.15.
 
 ## What changed
-- Holder display is now stricter and clearer after wallet verification was introduced.
-- Public Share Studio holder metric now requires a verified wallet before showing holder tier.
-- Watched wallets can still check balance, but public holder proof stays locked until verification.
-- Profile wallet block now includes a compact Holder Proof dashboard.
-- Added next holder tier progress with a progress bar and clear next-tier target.
-- Share-card holder display now says Verified holder instead of showing raw range when exact balance is private.
+- Made **Identity Setup** visually look like a clickable/editable control instead of a plain section title.
+- Added a brighter highlighted header treatment.
+- Added a visible `Edit ›` CTA on the Identity Setup summary.
+- Added an open state that changes the CTA to `Close`.
+- Kept Identity Setup directly under Personal Cabinet.
 
 ## Not changed
-- No API route changes.
-- No Supabase schema changes.
-- No migration required.
-- No wallet transactions.
-- No token transfers.
-- No custom avatar upload logic changes.
+- API routes
+- Supabase schema
+- Migrations
+- Wallet verification logic
+- Avatar upload logic
+- Share Studio logic
+- User data
