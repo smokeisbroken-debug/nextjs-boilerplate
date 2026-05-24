@@ -8651,6 +8651,8 @@ export default function Home() {
             badges={badges}
             walletInsights={walletInsights}
             chartDays={chartDays}
+            weeklyPatternSummary={currentWeeklyPatternSummary}
+            patternHistory={patternHistory}
             leaderboard={leaderboard}
             expenses={currentMonthExpenses.slice(0, 6)}
             routineExpenses={currentMonthExpenses}
@@ -10002,6 +10004,8 @@ function DashboardScreen({
   badges,
   walletInsights,
   chartDays,
+  weeklyPatternSummary,
+  patternHistory,
   leaderboard,
   expenses,
   routineExpenses,
@@ -10037,6 +10041,8 @@ function DashboardScreen({
   badges: BadgeItem[];
   walletInsights: WalletInsight[];
   chartDays: ChartPoint[];
+  weeklyPatternSummary: WeeklyPatternSummary;
+  patternHistory: PatternHistoryRecord[];
   leaderboard: LeaderboardState | null;
   expenses: Expense[];
   routineExpenses: Expense[];
@@ -10273,6 +10279,14 @@ function DashboardScreen({
         onOpenChart={onOpenChart}
       />
 
+      <WeeklyBehaviorReportHomeCard
+        settings={settings}
+        weeklyPatternSummary={weeklyPatternSummary}
+        patternHistory={patternHistory}
+        onOpenChart={onOpenChart}
+        onOpenAdd={onOpenAdd}
+      />
+
       {allExpenses.length === 0 && (
         <section className="first-user-clarity-card">
           <div>
@@ -10472,6 +10486,116 @@ function DashboardScreen({
         <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
       </details>
     </div>
+  );
+}
+
+
+function WeeklyBehaviorReportHomeCard({
+  settings,
+  weeklyPatternSummary,
+  patternHistory,
+  onOpenChart,
+  onOpenAdd,
+}: {
+  settings: Settings;
+  weeklyPatternSummary: WeeklyPatternSummary;
+  patternHistory: PatternHistoryRecord[];
+  onOpenChart: () => void;
+  onOpenAdd: () => void;
+}) {
+  const currentWeekKey = getIsoWeekPatternKey();
+  const previousRead = patternHistory.find((record) => record.periodKey !== currentWeekKey) || null;
+  const strongestCard = weeklyPatternSummary.cards[0] || null;
+  const secondaryCard = weeklyPatternSummary.cards[1] || null;
+  const pressureDelta = previousRead ? weeklyPatternSummary.leakPressure - previousRead.leakPressure : 0;
+  const comparisonText = previousRead
+    ? pressureDelta > 6
+      ? `Leak pressure is up ${pressureDelta}% vs ${previousRead.periodLabel}.`
+      : pressureDelta < -6
+        ? `Leak pressure is down ${Math.abs(pressureDelta)}% vs ${previousRead.periodLabel}.`
+        : `Leak pressure is almost flat vs ${previousRead.periodLabel}.`
+    : "Track this week and next week to unlock comparison.";
+  const reportTitle =
+    weeklyPatternSummary.confidence === "Waiting"
+      ? "Weekly report needs a few honest leaks"
+      : weeklyPatternSummary.strongestPattern || weeklyPatternSummary.headline;
+  const shareText = [
+    "My $BROKE weekly behavior report:",
+    reportTitle,
+    strongestCard ? `Top signal: ${strongestCard.label}` : "Top signal: still learning",
+    `Pressure: ${weeklyPatternSummary.leakPressure}%`,
+    "Broke, but self-aware.",
+  ].join("\n");
+
+  async function copySafeReport() {
+    triggerHaptic("light");
+
+    try {
+      await navigator.clipboard?.writeText(shareText);
+      notifyApp("Weekly report copied", "Safe text copied without private income or balance.");
+    } catch {
+      notifyApp("Copy unavailable", "Open Chart and copy the report manually.");
+    }
+  }
+
+  return (
+    <section className={`weekly-behavior-home-card ${weeklyPatternSummary.tone}`}>
+      <div className="weekly-behavior-home-head">
+        <div>
+          <span>Weekly Behavior Report</span>
+          <strong>{reportTitle}</strong>
+          <p>{weeklyPatternSummary.body}</p>
+        </div>
+        <b>{weeklyPatternSummary.confidence}</b>
+      </div>
+
+      <div className="weekly-behavior-home-grid">
+        <article>
+          <span>Pattern</span>
+          <strong>{strongestCard?.label || "Learning"}</strong>
+          <small>{strongestCard?.title || "Use trigger chips to teach the app."}</small>
+        </article>
+        <article>
+          <span>Pressure</span>
+          <strong>{weeklyPatternSummary.leakPressure}%</strong>
+          <small>{money(weeklyPatternSummary.totalLeaks, settings.currency)} weekly leaks</small>
+        </article>
+        <article>
+          <span>Change</span>
+          <strong>{previousRead ? (pressureDelta > 0 ? "+" : "") + `${pressureDelta}%` : "new"}</strong>
+          <small>{comparisonText}</small>
+        </article>
+      </div>
+
+      <div className="weekly-behavior-home-signals">
+        {strongestCard && (
+          <span className={strongestCard.severity}>{strongestCard.label}: {strongestCard.value}</span>
+        )}
+        {secondaryCard && (
+          <span className={secondaryCard.severity}>{secondaryCard.label}: {secondaryCard.value}</span>
+        )}
+        {!strongestCard && <span>Waiting for 3–4 useful records</span>}
+      </div>
+
+      <div className="weekly-behavior-next-move">
+        <small>One next move</small>
+        <strong>{weeklyPatternSummary.nextMove}</strong>
+      </div>
+
+      <div className="weekly-behavior-home-actions">
+        <button type="button" className="primary" onClick={onOpenChart}>
+          Open full report
+        </button>
+        <button type="button" onClick={copySafeReport}>
+          Copy safe text
+        </button>
+        {weeklyPatternSummary.confidence === "Waiting" && (
+          <button type="button" onClick={onOpenAdd}>
+            Track leak
+          </button>
+        )}
+      </div>
+    </section>
   );
 }
 

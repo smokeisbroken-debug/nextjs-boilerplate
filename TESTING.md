@@ -1,4 +1,4 @@
-# v59.8.2 Testing
+# v59.9 — Testing
 
 Run:
 
@@ -9,10 +9,12 @@ NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
 Manual checks:
-1. Open Profile / Personal Cabinet.
-2. Confirm Identity Setup appears above Share Studio.
-3. Open Smart Category Names.
-4. Clear a standard category label input.
-5. Confirm the input does not immediately refill with the default label.
-6. Type a custom label and confirm it stays saved.
-7. Use Reset category names to restore defaults.
+
+1. Open Home.
+2. Confirm **Weekly Behavior Report** appears below Today's Focus.
+3. With no/low data, confirm it says the report is still learning.
+4. Add a few Grey-zone / Full-leak records with trigger chips.
+5. Confirm Weekly Behavior Report updates with pattern, pressure, and next move.
+6. Tap **Open full report** and confirm Chart opens.
+7. Tap **Copy safe text** and confirm toast feedback appears.
+8. Confirm no private income or real balance appears in copied text.

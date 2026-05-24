@@ -1,15 +1,16 @@
-# v59.8.2 — Profile Order & Category Names Hotfix
+# v59.9 — Weekly Behavior Report
 
-Patch-only hotfix on top of v59.8.1.
+Patch-only product update based on the stable v59.8.2 line.
 
 ## What changed
-- Moved **Identity Setup** above **Share Studio** in Profile / Personal Cabinet.
-- Fixed **Smart Category Names** input behavior so an intentionally cleared label stays empty in the input instead of being immediately refilled by the default category name.
+- Adds a new **Weekly Behavior Report** card on Home.
+- Shows this week's strongest behavior pattern, confidence, leak pressure, and one next move.
+- Adds lightweight week-over-week comparison using saved Pattern History when available.
+- Adds a safe public text copy action that avoids private income and real balance.
+- Keeps the full detailed pattern analysis inside Chart / Leak Pattern Lab.
 
-## Not changed
-- API routes
-- Supabase schema
-- migrations
-- Telegram webhook
-- calculations
-- stored expense data
+## No backend changes
+- No API changes.
+- No Supabase migration.
+- No Telegram webhook changes.
+- No stored-data rewrite.

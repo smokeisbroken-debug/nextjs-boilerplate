@@ -1,15 +1,28 @@
-# v59.8.2 — Profile Order & Category Names Hotfix
+# v59.9 — Weekly Behavior Report
 
-## Purpose
-Small UX cleanup after user testing:
-1. Identity Setup should appear before Share Studio.
-2. Smart Category Names should allow users to clear a default label without the input auto-filling it back.
+## Goal
+Turn existing Pattern History and Leak Pattern Lab data into a clearer weekly user-facing report on Home.
 
 ## Files changed
 - app/page.tsx
+- app/globals.css
 - README.md
 - PROJECT_ORDER.md
 - TESTING.md
 
-## No backend changes
-No API, Supabase, migration, webhook, or data-model changes.
+## User-facing behavior
+- Home now includes Weekly Behavior Report after Today's Focus.
+- The card summarizes:
+  - strongest pattern;
+  - leak pressure;
+  - comparison vs previous saved week if available;
+  - one next move;
+  - safe share/copy text.
+
+## Not changed
+- API routes
+- Supabase schema
+- migrations
+- Telegram webhook
+- settings data
+- expense data
