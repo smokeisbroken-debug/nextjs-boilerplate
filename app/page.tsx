@@ -453,6 +453,8 @@ type Settings = {
     avatarPreset: "default" | "wallet" | "survivor" | "degen" | "stealth";
     identityStyle: "classic" | "clean" | "proof" | "stealth" | "builder";
     statusText: string;
+    customAvatarUrl: string;
+    customAvatarUpdatedAt: string;
   };
   shareProfile: ProfileShareSettings;
   wallet: WalletLinkSettings;
@@ -1157,6 +1159,9 @@ const defaultWalletLinkSettings: WalletLinkSettings = {
   showTokenBalance: false,
 };
 
+const CUSTOM_AVATAR_UNLOCK_BALANCE = 500_000;
+const CUSTOM_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+
 const defaultSettings: Settings = {
   currency: defaultCurrency,
   currencyMode: "display",
@@ -1210,6 +1215,8 @@ const defaultSettings: Settings = {
     avatarPreset: "default",
     identityStyle: "classic",
     statusText: "Broke, but self-aware",
+    customAvatarUrl: "",
+    customAvatarUpdatedAt: "",
   },
   shareProfile: defaultProfileShareSettings,
   wallet: defaultWalletLinkSettings,
@@ -3606,6 +3613,10 @@ function getProfileAvatarImage(preset: Settings["identity"]["avatarPreset"]) {
     default:
       return A.appFrog;
   }
+}
+
+function getPublicProfileAvatarImage(settings: Settings) {
+  return settings.identity.customAvatarUrl || getProfileAvatarImage(settings.identity.avatarPreset);
 }
 
 function getIdentityStyleMeta(style: Settings["identity"]["identityStyle"]) {
@@ -10764,7 +10775,7 @@ function WeeklyBehaviorReportHomeCard({
   const publicIdentityName = getPublicIdentityName(settings);
   const publicIdentityStatus = getPublicIdentityStatus(settings);
   const publicIdentityStyle = getIdentityStyleMeta(settings.identity.identityStyle);
-  const publicIdentityAvatar = getProfileAvatarImage(settings.identity.avatarPreset);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
   const selectedShareMetrics = getEnabledProfileShareItems(settings, walletHp)
     .map((id) =>
       buildProfileShareMetric({
@@ -13828,7 +13839,7 @@ function ShareResultCard({
   const publicIdentityName = getPublicIdentityName(settings);
   const publicIdentityStatus = getPublicIdentityStatus(settings);
   const publicIdentityStyle = getIdentityStyleMeta(settings.identity.identityStyle);
-  const publicIdentityAvatar = getProfileAvatarImage(settings.identity.avatarPreset);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
   const publicIdentityPrivacyLine = getSharePrivacyLine(settings);
   const potentialYearlySavingsUsdNote = settings.privacy.publicProofMode
     ? ""
@@ -19865,6 +19876,8 @@ function SettingsScreen({
   const [walletAddressDraft, setWalletAddressDraft] = useState(settings.wallet.walletAddress);
   const [walletChecking, setWalletChecking] = useState(false);
   const [walletMessage, setWalletMessage] = useState("");
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarMessage, setAvatarMessage] = useState("");
 
   useEffect(() => {
     setRepairCurrency(settings.currency);
@@ -19992,6 +20005,9 @@ function SettingsScreen({
   ];
   const selectedProfileAvatar =
     profileAvatarOptions.find((item) => item.id === settings.identity.avatarPreset) || profileAvatarOptions[0];
+  const selectedProfileAvatarImage = getPublicProfileAvatarImage(settings);
+  const customAvatarUnlocked = settings.wallet.brokeBalance >= CUSTOM_AVATAR_UNLOCK_BALANCE;
+  const customAvatarUnlockGap = Math.max(0, CUSTOM_AVATAR_UNLOCK_BALANCE - settings.wallet.brokeBalance);
   const profileIdentityStyles: Array<{
     id: Settings["identity"]["identityStyle"];
     label: string;
@@ -20188,6 +20204,98 @@ function SettingsScreen({
     triggerHaptic("light");
   }
 
+  async function uploadCustomAvatar(file: File | null) {
+    if (!file || avatarUploading) return;
+
+    if (!customAvatarUnlocked) {
+      setAvatarMessage(`Custom avatar unlocks at ${formatTokenAmount(CUSTOM_AVATAR_UNLOCK_BALANCE)}. Need ${formatTokenAmount(customAvatarUnlockGap)} more.`);
+      notifyApp("Avatar locked", "Hold at least 500K BROKE to unlock custom avatar upload.", "info");
+      return;
+    }
+
+    if (!settings.wallet.walletAddress) {
+      setAvatarMessage("Link and check a wallet first.");
+      notifyApp("Wallet required", "Check your $BROKE balance before uploading a custom avatar.", "info");
+      return;
+    }
+
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setAvatarMessage("Use PNG, JPG or WebP only.");
+      return;
+    }
+
+    if (file.size > CUSTOM_AVATAR_MAX_BYTES) {
+      setAvatarMessage("Avatar image must be 2 MB or less.");
+      return;
+    }
+
+    setAvatarUploading(true);
+    setAvatarMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("walletAddress", settings.wallet.walletAddress);
+      formData.append("initData", telegram.isTelegram ? telegram.initData : "");
+
+      const response = await fetch("/api/avatar/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        avatarUrl?: string;
+        checkedAt?: string;
+        balance?: number;
+        percentOfSupply?: number;
+        holderTier?: HolderTier;
+      };
+
+      if (!response.ok || !data.ok || !data.avatarUrl) {
+        throw new Error(data.error || "Avatar upload failed.");
+      }
+
+      setSettings((prev) => ({
+        ...prev,
+        identity: {
+          ...prev.identity,
+          customAvatarUrl: data.avatarUrl || "",
+          customAvatarUpdatedAt: data.checkedAt || new Date().toISOString(),
+        },
+        wallet: normalizeWalletLinkSettings({
+          ...prev.wallet,
+          brokeBalance: Math.max(0, safeNumber(String(data.balance ?? prev.wallet.brokeBalance))),
+          percentOfSupply: Math.max(0, safeNumber(String(data.percentOfSupply ?? prev.wallet.percentOfSupply))),
+          holderTier: normalizeHolderTier(data.holderTier || prev.wallet.holderTier),
+          lastCheckedAt: data.checkedAt || prev.wallet.lastCheckedAt,
+        }),
+      }));
+      setAvatarMessage("Custom avatar uploaded. It will be used on profile and share cards.");
+      notifyApp("Avatar updated", "Your custom avatar is now active.", "info");
+      triggerHaptic("success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Avatar upload failed.";
+      setAvatarMessage(message);
+      notifyApp("Avatar upload failed", message, "info");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
+  function removeCustomAvatar() {
+    setSettings((prev) => ({
+      ...prev,
+      identity: {
+        ...prev.identity,
+        customAvatarUrl: "",
+        customAvatarUpdatedAt: "",
+      },
+    }));
+    setAvatarMessage("Custom avatar removed. Preset avatar is active again.");
+    triggerHaptic("light");
+  }
+
   async function runOldDataCurrencyRepair() {
     const confirmed = window.confirm(
       repairScope === "all"
@@ -20228,7 +20336,7 @@ function SettingsScreen({
       <section className={`profile-cabinet-card identity-style-${settings.identity.identityStyle || "classic"}`}>
         <div className="profile-cabinet-top">
           <div className="profile-avatar-frame">
-            <img src={selectedProfileAvatar.image} alt="Profile avatar" />
+            <img src={selectedProfileAvatarImage} alt="Profile avatar" />
           </div>
           <div className="profile-cabinet-copy">
             <span>Personal Cabinet</span>
@@ -20255,7 +20363,7 @@ function SettingsScreen({
         </div>
 
         <div className="profile-public-preview profile-share-identity-preview">
-          <img className="profile-public-preview-avatar" src={selectedProfileAvatar.image} alt="Public identity avatar" />
+          <img className="profile-public-preview-avatar" src={selectedProfileAvatarImage} alt="Public identity avatar" />
           <div>
             <span>Public identity preview</span>
             <strong>{profileNickname}</strong>
@@ -20409,14 +20517,68 @@ function SettingsScreen({
               <button
                 key={option.id}
                 type="button"
-                className={settings.identity.avatarPreset === option.id ? "active" : ""}
-                onClick={() => updateIdentityField("avatarPreset", option.id)}
+                className={settings.identity.avatarPreset === option.id && !settings.identity.customAvatarUrl ? "active" : ""}
+                onClick={() => {
+                  updateIdentityField("avatarPreset", option.id);
+                  if (settings.identity.customAvatarUrl) {
+                    removeCustomAvatar();
+                  }
+                }}
               >
                 <img src={option.image} alt="" />
                 <span>{option.label}</span>
               </button>
             ))}
           </div>
+
+          <section className={`custom-avatar-unlock-card ${customAvatarUnlocked ? "unlocked" : "locked"}`}>
+            <div className="custom-avatar-unlock-head">
+              <div>
+                <span>Custom avatar</span>
+                <strong>{customAvatarUnlocked ? "Unlocked by holder balance" : "Unlocks at 500K BROKE"}</strong>
+                <small>
+                  {customAvatarUnlocked
+                    ? "Upload your own profile image for Profile and share cards."
+                    : `Need ${formatTokenAmount(customAvatarUnlockGap)} more to unlock custom upload.`}
+                </small>
+              </div>
+              <b>{customAvatarUnlocked ? "Unlocked" : "Locked"}</b>
+            </div>
+
+            {settings.identity.customAvatarUrl && (
+              <div className="custom-avatar-current">
+                <img src={settings.identity.customAvatarUrl} alt="Custom avatar" />
+                <div>
+                  <strong>Custom avatar active</strong>
+                  <small>{settings.identity.customAvatarUpdatedAt ? `Updated ${new Date(settings.identity.customAvatarUpdatedAt).toLocaleDateString()}` : "Used on public profile and share cards."}</small>
+                </div>
+              </div>
+            )}
+
+            <div className="custom-avatar-actions">
+              <label className={customAvatarUnlocked && !avatarUploading ? "primary" : "disabled"}>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  disabled={!customAvatarUnlocked || avatarUploading}
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null;
+                    void uploadCustomAvatar(file);
+                    event.currentTarget.value = "";
+                  }}
+                />
+                <span>{avatarUploading ? "Uploading..." : "Upload avatar"}</span>
+              </label>
+              {settings.identity.customAvatarUrl && (
+                <button type="button" onClick={removeCustomAvatar}>
+                  Use preset instead
+                </button>
+              )}
+            </div>
+
+            <p>PNG, JPG or WebP · max 2 MB · read-only holder check · no transaction.</p>
+            {avatarMessage && <small className="custom-avatar-message">{avatarMessage}</small>}
+          </section>
 
           <div className="profile-identity-style-panel">
             <div>

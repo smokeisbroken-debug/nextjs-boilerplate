@@ -21321,3 +21321,165 @@ html[lang="ru"] .trigger-preview strong {
 .wallet-balance-status-grid article strong {
   overflow-wrap: anywhere;
 }
+
+/* v59.13 — Custom Avatar Unlock */
+.custom-avatar-unlock-card {
+  margin: 0 12px 12px;
+  border: 1px solid rgba(166, 255, 47, 0.16);
+  border-radius: 20px;
+  padding: 12px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(166, 255, 47, 0.08), transparent 34%),
+    rgba(0, 0, 0, 0.2);
+  display: grid;
+  gap: 10px;
+}
+
+.custom-avatar-unlock-card.unlocked {
+  border-color: rgba(166, 255, 47, 0.36);
+  box-shadow: inset 0 0 22px rgba(166, 255, 47, 0.05);
+}
+
+.custom-avatar-unlock-card.locked {
+  border-color: rgba(255, 255, 255, 0.1);
+  opacity: 0.9;
+}
+
+.custom-avatar-unlock-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.custom-avatar-unlock-head div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.custom-avatar-unlock-head span {
+  color: var(--neon);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.custom-avatar-unlock-head strong,
+.custom-avatar-current strong {
+  color: #fff;
+  font-size: 0.95rem;
+  line-height: 1.1;
+}
+
+.custom-avatar-unlock-head small,
+.custom-avatar-current small,
+.custom-avatar-unlock-card p,
+.custom-avatar-message {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.custom-avatar-unlock-head > b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(166, 255, 47, 0.28);
+  border-radius: 999px;
+  padding: 7px 9px;
+  color: var(--neon);
+  background: rgba(166, 255, 47, 0.08);
+  font-size: 0.74rem;
+}
+
+.custom-avatar-unlock-card.locked .custom-avatar-unlock-head > b {
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.custom-avatar-current {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(166, 255, 47, 0.13);
+  border-radius: 16px;
+  padding: 9px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.custom-avatar-current img {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid rgba(166, 255, 47, 0.24);
+}
+
+.custom-avatar-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.custom-avatar-actions label,
+.custom-avatar-actions button {
+  border: 1px solid rgba(166, 255, 47, 0.2);
+  border-radius: 15px;
+  padding: 11px 12px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+  font-weight: 900;
+  text-align: center;
+  cursor: pointer;
+}
+
+.custom-avatar-actions label.primary {
+  color: #102000;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--neon), #d9ff54);
+}
+
+.custom-avatar-actions label.disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.custom-avatar-actions input {
+  display: none;
+}
+
+.custom-avatar-unlock-card p {
+  margin: 0;
+}
+
+.custom-avatar-message {
+  display: block;
+  border: 1px solid rgba(166, 255, 47, 0.12);
+  border-radius: 14px;
+  padding: 8px 10px;
+  background: rgba(166, 255, 47, 0.05);
+}
+
+.profile-avatar-frame img,
+.profile-public-preview-avatar,
+.profile-share-card-avatar,
+.safe-weekly-share-identity img {
+  object-fit: cover;
+}
+
+@media (max-width: 430px) {
+  .custom-avatar-unlock-card {
+    margin-inline: 10px;
+    padding: 10px;
+  }
+
+  .custom-avatar-unlock-head {
+    flex-direction: column;
+  }
+
+  .custom-avatar-actions {
+    grid-template-columns: 1fr;
+  }
+}

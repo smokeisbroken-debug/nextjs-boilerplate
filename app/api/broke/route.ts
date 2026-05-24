@@ -243,6 +243,8 @@ type Settings = {
     avatarPreset: "default" | "wallet" | "survivor" | "degen" | "stealth";
     identityStyle: "classic" | "clean" | "proof" | "stealth" | "builder";
     statusText: string;
+    customAvatarUrl: string;
+    customAvatarUpdatedAt: string;
   };
   shareProfile: ProfileShareSettings;
   categoryNames: Record<string, string>;
@@ -600,6 +602,8 @@ const defaultSettings: Settings = {
     avatarPreset: "default",
     identityStyle: "classic",
     statusText: "Broke, but self-aware",
+    customAvatarUrl: "",
+    customAvatarUpdatedAt: "",
   },
   shareProfile: defaultProfileShareSettings,
   categoryNames: defaultCategoryNames,
