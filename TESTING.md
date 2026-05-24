@@ -1,4 +1,4 @@
-# v59.6.3 — Testing
+# v59.7.1 — Testing
 
 Run:
 
@@ -8,9 +8,13 @@ npm run lint:quiet
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-Manual check:
-1. Open the app.
-2. Open Share Result / public card.
-3. Download or send clean image to Telegram.
-4. Confirm "Biggest leak" and "Life hours lost" are complete and do not overlap the savings block.
-5. Check with a long category name and large hours value.
+Manual QA:
+
+1. Open Profile tab.
+2. Confirm profile card appears at the top.
+3. Change nickname.
+4. Change status line.
+5. Choose different avatar preset.
+6. Check that old settings remain visible below.
+7. Reload app and confirm settings still sync normally.
+8. Confirm no old Settings controls were removed.

@@ -424,6 +424,11 @@ type Settings = {
   privacy: {
     publicProofMode: boolean;
   };
+  identity: {
+    nickname: string;
+    avatarPreset: "default" | "wallet" | "survivor" | "degen" | "stealth";
+    statusText: string;
+  };
   categoryNames: Record<string, string>;
 };
 
@@ -1101,6 +1106,11 @@ const defaultSettings: Settings = {
   },
   privacy: {
     publicProofMode: true,
+  },
+  identity: {
+    nickname: "",
+    avatarPreset: "default",
+    statusText: "Broke, but self-aware",
   },
   categoryNames: defaultCategoryNames,
 };
@@ -3385,6 +3395,10 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
       ...defaultSettings.privacy,
       ...(input?.privacy || {}),
     },
+    identity: {
+      ...defaultSettings.identity,
+      ...(input?.identity || {}),
+    },
     categoryNames: {
       ...defaultCategoryNames,
       ...(input?.categoryNames || {}),
@@ -3979,7 +3993,7 @@ const navItems: {
   { id: "chart", label: "Chart", icon: "/nav-chart.png" },
   { id: "growth", label: "Growth", icon: "/nav-growth.png" },
   { id: "whatif", label: "Save", icon: "/nav-save.png" },
-  { id: "settings", label: "Settings", icon: "/nav-settings.png" },
+  { id: "settings", label: "Profile", icon: "/nav-settings.png" },
 ];
 
 function uid() {
@@ -19158,6 +19172,50 @@ function SettingsScreen({
     }));
   }
 
+  const settingsWalletPressureBase = Math.max(totalIncome - fixedCosts, 1);
+  const settingsTotalLeaks = sumLeakExpenses(currentMonthExpenses);
+  const settingsWalletHp = clamp(
+    100 - Math.round((settingsTotalLeaks / settingsWalletPressureBase) * 100),
+    5,
+    100
+  );
+  const settingsSurvivalScore = clamp(
+    100 - Math.round((monthSpent / settingsWalletPressureBase) * 70),
+    1,
+    100
+  );
+  const settingsStatusLabel = settingsWalletHp >= 80 ? "Stable" : settingsWalletHp >= 55 ? "Watch zone" : "Pressure";
+  const telegramProfileUser = telegram.user || webAuth.user;
+  const fallbackProfileName = telegramProfileUser?.username
+    ? `@${telegramProfileUser.username}`
+    : [telegramProfileUser?.first_name, telegramProfileUser?.last_name].filter(Boolean).join(" ") || "Broke survivor";
+  const profileNickname = settings.identity.nickname.trim() || fallbackProfileName;
+  const profileStatusText = settings.identity.statusText.trim() || "Broke, but self-aware";
+  const profileAvatarOptions: Array<{ id: Settings["identity"]["avatarPreset"]; label: string; image: string }> = [
+    { id: "default", label: "Default frog", image: A.appFrog },
+    { id: "wallet", label: "Wallet frog", image: A.walletMascot },
+    { id: "survivor", label: "Survivor", image: A.streakFrog },
+    { id: "degen", label: "Degen", image: A.homeMascot },
+    { id: "stealth", label: "Private", image: A.walletHp },
+  ];
+  const selectedProfileAvatar =
+    profileAvatarOptions.find((item) => item.id === settings.identity.avatarPreset) || profileAvatarOptions[0];
+  const profileConnectionLabel = telegram.isTelegram
+    ? "Telegram Mini App"
+    : webAuth.authenticated
+      ? "Web linked"
+      : "Local profile";
+
+  function updateIdentityField<K extends keyof Settings["identity"]>(key: K, value: Settings["identity"][K]) {
+    setSettings((prev) => ({
+      ...prev,
+      identity: {
+        ...prev.identity,
+        [key]: value,
+      },
+    }));
+  }
+
   async function runOldDataCurrencyRepair() {
     const confirmed = window.confirm(
       repairScope === "all"
@@ -19193,7 +19251,80 @@ function SettingsScreen({
 
   return (
     <div className="screen">
-      <Header title="Settings" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
+      <Header title="Profile" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
+
+      <section className="profile-cabinet-card">
+        <div className="profile-cabinet-top">
+          <div className="profile-avatar-frame">
+            <img src={selectedProfileAvatar.image} alt="Profile avatar" />
+          </div>
+          <div className="profile-cabinet-copy">
+            <span>Personal Cabinet</span>
+            <strong>{profileNickname}</strong>
+            <p>{profileStatusText}</p>
+          </div>
+          <b>{settingsStatusLabel}</b>
+        </div>
+
+        <div className="profile-cabinet-stats">
+          <article>
+            <span>Wallet HP</span>
+            <strong>{settingsWalletHp}/100</strong>
+          </article>
+          <article>
+            <span>Survival</span>
+            <strong>{settingsSurvivalScore}/100</strong>
+          </article>
+          <article>
+            <span>Streak</span>
+            <strong>{streak.currentStreak}d</strong>
+          </article>
+        </div>
+
+        <details className="profile-identity-editor">
+          <summary>
+            <span>Identity setup</span>
+            <b>{profileConnectionLabel}</b>
+          </summary>
+
+          <label>
+            <span>Nickname</span>
+            <input
+              value={settings.identity.nickname}
+              placeholder={fallbackProfileName}
+              onChange={(event) => updateIdentityField("nickname", event.target.value)}
+            />
+          </label>
+
+          <label>
+            <span>Status line</span>
+            <input
+              value={settings.identity.statusText}
+              placeholder="Broke, but self-aware"
+              onChange={(event) => updateIdentityField("statusText", event.target.value)}
+            />
+          </label>
+
+          <div className="profile-avatar-options">
+            {profileAvatarOptions.map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                className={settings.identity.avatarPreset === option.id ? "active" : ""}
+                onClick={() => updateIdentityField("avatarPreset", option.id)}
+              >
+                <img src={option.image} alt="" />
+                <span>{option.label}</span>
+              </button>
+            ))}
+          </div>
+        </details>
+
+        <div className="profile-cabinet-note">
+          <span>All settings stay below.</span>
+          <small>Money setup, currency, privacy, Telegram sync, notifications, and data tools were not removed.</small>
+        </div>
+      </section>
 
       <LifeProfileEditor
         settings={settings}

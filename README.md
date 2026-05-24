@@ -1,14 +1,18 @@
-# v59.6.3 — Share Card Text Crop Hotfix
+# v59.7.1 — Profile Header Foundation
 
-Patch-only hotfix for the public share card PNG.
+Patch-only update.
 
 ## What changed
-- Fixed incomplete/cropped text in the downloaded public share card.
-- Rebuilt the "Biggest leak" / "Life hours lost" area into safe two-card rows.
-- Added CSS guards so share-card text wraps cleanly before the "Potential yearly savings" block.
+- Settings tab is visually moved toward **Profile / Personal Cabinet**.
+- Bottom navigation label is now **Profile** instead of Settings.
+- Added a compact profile card at the top of the tab.
+- Added nickname, status line, and avatar preset controls.
+- Added quick profile stats: Wallet HP, Survival, and Streak.
+- Added a clear note that all old settings remain below.
 
-## No backend changes
-- No API changes
-- No Supabase migration
-- No Telegram webhook changes
-- No stored data changes
+## Not changed
+- No API changes.
+- No Supabase migration.
+- No Telegram webhook changes.
+- No old settings removed.
+- No custom photo upload yet.

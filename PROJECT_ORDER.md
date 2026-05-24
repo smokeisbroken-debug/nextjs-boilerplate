@@ -1,7 +1,7 @@
-# v59.6.3 — Share Card Text Crop Hotfix
+# v59.7.1 — Profile Header Foundation
 
-## Purpose
-Community feedback showed the downloaded public share card can crop the line around biggest leak / life hours lost. This hotfix makes that section structurally safe and readable.
+## Goal
+Start converting the technical Settings tab into a more useful **Profile / Personal Cabinet** without removing existing settings.
 
 ## Files changed
 - app/page.tsx
@@ -10,10 +10,13 @@ Community feedback showed the downloaded public share card can crop the line aro
 - PROJECT_ORDER.md
 - TESTING.md
 
-## Not changed
-- API routes
-- Supabase schema
-- migrations
-- Telegram webhook
-- calculations
-- stored user data
+## User-facing changes
+- Settings nav label becomes Profile.
+- Profile header appears at the top.
+- User can set nickname, status line, and frog avatar preset.
+- Old settings still stay below the new profile header.
+
+## Next staged steps
+- v59.7.2: compact grouped settings sections.
+- v59.7.3: stronger avatar/public identity polish.
+- v59.8: custom avatar upload, only if needed.
