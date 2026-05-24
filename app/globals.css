@@ -21483,3 +21483,137 @@ html[lang="ru"] .trigger-preview strong {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.13.2 — Profile Share Card Render Fit Hotfix */
+.public-share-image-card .profile-selected-share-grid {
+  align-items: stretch !important;
+  gap: 10px !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card {
+  min-width: 0 !important;
+  min-height: 112px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  padding: 14px 12px !important;
+  overflow: hidden !important;
+  border-radius: 19px !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card span {
+  display: block !important;
+  max-width: 100% !important;
+  color: rgba(244, 247, 240, 0.68) !important;
+  font-size: 9.5px !important;
+  line-height: 1.18 !important;
+  letter-spacing: 0.45px !important;
+  font-weight: 950 !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  white-space: normal !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card strong {
+  display: block !important;
+  max-width: 100% !important;
+  margin-top: 0 !important;
+  color: var(--neon) !important;
+  font-size: 18px !important;
+  line-height: 1.18 !important;
+  letter-spacing: -0.35px !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong,
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier strong,
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder strong {
+  font-size: 17px !important;
+  line-height: 1.16 !important;
+  letter-spacing: -0.45px !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card small {
+  display: block !important;
+  max-width: 100% !important;
+  margin-top: 0 !important;
+  color: rgba(244, 247, 240, 0.74) !important;
+  font-size: 10.5px !important;
+  line-height: 1.2 !important;
+  font-weight: 850 !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  overflow-wrap: anywhere !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier small,
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder small {
+  color: rgba(183, 255, 25, 0.9) !important;
+  font-size: 10.5px !important;
+}
+
+.profile-share-studio-inline-card .public-share-image-card {
+  padding-bottom: 18px !important;
+}
+
+.profile-share-studio-inline-card .public-share-savings {
+  margin-top: 12px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-card,
+.share-capture-safe .profile-selected-share-grid .profile-share-metric-card {
+  min-height: 118px !important;
+  padding-top: 15px !important;
+  padding-bottom: 15px !important;
+  break-inside: avoid !important;
+  page-break-inside: avoid !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-card strong,
+.share-capture-safe .profile-selected-share-grid .profile-share-metric-card strong {
+  line-height: 1.22 !important;
+}
+
+@media (max-width: 430px) {
+  .profile-share-studio-inline-card .public-share-image-card {
+    padding: 14px 12px 18px !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid {
+    gap: 9px !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-card {
+    min-height: 104px !important;
+    padding: 12px 10px !important;
+    border-radius: 17px !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-card span {
+    font-size: 8.8px !important;
+    line-height: 1.2 !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-card strong {
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong,
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier strong,
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-holder strong {
+    font-size: 15.5px !important;
+    line-height: 1.18 !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-card small {
+    font-size: 9.6px !important;
+    line-height: 1.22 !important;
+  }
+}

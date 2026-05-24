@@ -1,22 +1,17 @@
-# v59.13 — Custom Avatar Unlock
+# v59.13.2 — Share Card Render Fit Hotfix
 
-Patch-only update for the $BROKE / SmokeIsBroke Telegram Mini App.
-
-## User-facing change
-Users can upload a custom profile/share-card avatar only after the checked wallet balance reaches at least **500,000 BROKE**.
+Patch-only hotfix.
 
 ## What changed
-- Added custom avatar unlock card in Profile → Identity Setup.
-- Added holder-gated avatar upload.
-- Custom avatar appears in Profile, Public identity preview, Share Result, and Safe Weekly Share Card.
-- Preset avatars remain as fallback.
-- Added server-side upload endpoint: `app/api/avatar/upload/route.ts`.
-- Added Supabase Storage bucket setup SQL.
+- Fixed Profile share-card metric text cropping in preview/downloaded image.
+- Reduced metric typography pressure for Survival, Wallet HP, Top, Status, Holder tier, and other selected Share Studio items.
+- Improved Holder tier / token balance display fit inside the card.
+- Added capture-safe CSS so html2canvas renders text with safer line-height and padding.
 
-## Safety
-- Read-only holder check.
-- No seed phrase.
-- No transaction.
-- No token transfer.
-- PNG/JPG/WebP only.
-- Max upload size: 2 MB.
+## Not changed
+- API
+- Supabase
+- migrations
+- wallet balance check logic
+- custom avatar upload logic
+- Share Studio selection logic

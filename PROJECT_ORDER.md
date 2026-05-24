@@ -1,31 +1,13 @@
-# v59.13 — Custom Avatar Unlock
+# v59.13.2 — Share Card Render Fit Hotfix
 
 ## Purpose
-Add token-holder utility to Profile personalization: custom avatar upload unlocks at 500,000 BROKE.
+Public Profile share cards were cropping text after holder tier / balance display was added. This hotfix only adjusts CSS so selected share-card metrics render cleanly in both the in-app preview and generated image.
 
 ## Files changed
-- app/page.tsx
 - app/globals.css
-- app/api/broke/route.ts
-- app/api/avatar/upload/route.ts
-- supabase/migrations/20260524_v59_13_custom_avatar_storage_bucket.sql
 - README.md
 - PROJECT_ORDER.md
 - TESTING.md
 
-## Deploy order
-1. Run Supabase Storage bucket SQL.
-2. Replace files from this patch.
-3. Deploy on Vercel.
-4. Confirm required env vars exist.
-5. Test Profile → Identity Setup → Custom avatar.
-
-## Required env
-- SUPABASE_URL
-- SUPABASE_SERVICE_ROLE_KEY
-- TELEGRAM_BOT_TOKEN
-
-## Optional env
-- WEB_AUTH_SECRET
-- BROKE_TOKEN_MINT
-- SOLANA_RPC_URL
+## Deployment
+Replace the files and deploy normally.
