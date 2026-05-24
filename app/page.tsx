@@ -20222,6 +20222,36 @@ function SettingsScreen({
       : "No wallet linked";
   const holderProofStatusLabel = getHolderProofLabel(settings.wallet);
   const holderNextTierProgress = getNextHolderTierProgress(settings.wallet);
+  const holderCoachState = !settings.wallet.walletAddress
+    ? {
+        badge: "Step 1",
+        title: "Link a public wallet",
+        body: "Paste a Solana address to watch $BROKE balance. Unlocks stay closed until ownership is verified.",
+        tone: "empty",
+      }
+    : !settings.wallet.isVerified
+      ? {
+          badge: "Step 2",
+          title: "Verify ownership",
+          body: "Watched wallets can show balance, but profile rewards, holder proof and custom avatar need a signed message.",
+          tone: "watched",
+        }
+      : holderRewardState.next
+        ? {
+            badge: "Next unlock",
+            title: holderRewardState.next.label,
+            body: `Need ${formatTokenAmount(nextHolderRewardGap)} more BROKE for the next verified-holder profile reward.`,
+            tone: "verified",
+          }
+        : {
+            badge: "Max path",
+            title: "All current holder rewards unlocked",
+            body: "Use Share Studio to decide which proof, stats and identity items appear publicly.",
+            tone: "verified",
+          };
+  const shareSlotCoachText = visibleShareProfileItems.length >= shareSlotLimit
+    ? "Your public slots are full. Raise Wallet HP or verified holder balance to unlock more display space."
+    : `You can add ${shareSlotLimit - visibleShareProfileItems.length} more public item${shareSlotLimit - visibleShareProfileItems.length === 1 ? "" : "s"}.`;
 
   function updateIdentityField<K extends keyof Settings["identity"]>(key: K, value: Settings["identity"][K]) {
     setSettings((prev) => ({
@@ -20944,6 +20974,21 @@ function SettingsScreen({
             )}
           </section>
 
+          <section className={`holder-next-move-card ${holderCoachState.tone}`}>
+            <div>
+              <span>{holderCoachState.badge}</span>
+              <strong>{holderCoachState.title}</strong>
+              <small>{holderCoachState.body}</small>
+            </div>
+            <div className="holder-next-move-steps" aria-label="Holder reward path">
+              <i className={settings.wallet.walletAddress ? "done" : ""}>Link</i>
+              <i className={settings.wallet.isVerified ? "done" : ""}>Verify</i>
+              <i className={customAvatarUnlocked ? "done" : ""}>500K+</i>
+              <i className={settings.wallet.isVerified && settings.wallet.brokeBalance >= 1_000_000 ? "done" : ""}>1M+</i>
+              <i className={settings.wallet.isVerified && settings.wallet.brokeBalance >= 5_000_000 ? "done" : ""}>5M+</i>
+            </div>
+          </section>
+
           <div className="wallet-security-note-grid">
             <span>Read-only balance</span>
             <span>Message signature only</span>
@@ -20997,6 +21042,15 @@ function SettingsScreen({
               <small>Wallet HP + verified holder balance unlock more public display slots.</small>
             </div>
             <b>{visibleShareProfileItems.length}/{shareSlotLimit} slots</b>
+          </div>
+
+          <div className="profile-share-slot-coach">
+            <div>
+              <span>Public display space</span>
+              <strong>{visibleShareProfileItems.length}/{shareSlotLimit} selected</strong>
+              <small>{shareSlotCoachText}</small>
+            </div>
+            <b>{holderRewardState.slotBonus > 0 ? `Verified holder +${holderRewardState.slotBonus}` : "Wallet HP path"}</b>
           </div>
 
           <div className="profile-share-preview-grid">

@@ -1,17 +1,20 @@
-# v59.16 — Token-Gated Profile Rewards
+# v59.17 — Holder Reward Path Polish
 
 ## Goal
-Turn verified $BROKE holder balance into a clean profile progression system without adding financial actions.
+Make the verified-holder reward system easier to understand after v59.16.
 
-## User-facing result
-Verified holders unlock more public profile/share display space and profile cosmetic rewards. Watched wallets can still show read-only balance, but cannot unlock holder rewards.
+## Product improvements
+- Profile wallet block now explains the next holder action.
+- Reward path is visible as simple chips: Link, Verify, 500K+, 1M+, 5M+.
+- Share Studio now explains selected / available public display slots.
+- Users can understand whether they need Wallet HP, verified wallet ownership, or higher $BROKE balance to show more public profile items.
 
-## Files changed
-- app/page.tsx
-- app/globals.css
-- README.md
-- PROJECT_ORDER.md
-- TESTING.md
-
-## Deployment
-Replace the files and deploy to Vercel. No SQL or env changes required.
+## Not changed
+- API routes
+- Supabase schema
+- migrations
+- wallet verification backend
+- avatar upload endpoint
+- token balance checking logic
+- user data
+- transactions / staking / claims

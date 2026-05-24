@@ -1,20 +1,17 @@
-# v59.16 — Token-Gated Profile Rewards
+# v59.17 — Holder Reward Path Polish
 
-Patch-only release based on v59.15.1.
+Patch-only update built on v59.16.
 
 ## What changed
-- Adds a **Holder rewards** card inside Profile → Wallet & $BROKE balance.
-- Public display slots now get verified-holder bonuses:
-  - verified 500K+ BROKE: +1 public display slot
-  - verified 1M+ BROKE: +2 public display slots
-  - verified 5M+ BROKE: +3 public display slots
-- Adds visible locked/unlocked holder reward cards for custom avatar, extra public display slots, holder proof frame, and elite holder style.
-- Share Studio copy now explains that Wallet HP and verified holder balance unlock more display slots.
-- Unlocks require a **verified wallet**, not just a watched wallet address.
+- Added a clearer holder reward path inside Profile → Wallet & $BROKE balance.
+- Users now see the next holder step: link wallet, verify wallet, reach 500K, 1M, or 5M BROKE.
+- Added compact milestone chips: Link → Verify → 500K+ → 1M+ → 5M+.
+- Added a Share Studio display-space coach so users understand why some public profile items are locked.
+- No token transactions, staking, claims, or transfers.
 
-## Not changed
-- No API changes.
-- No Supabase migration.
-- No wallet transaction logic.
-- No staking, claim, transfer, or custody.
-- No avatar upload endpoint changes.
+## Files changed
+- app/page.tsx
+- app/globals.css
+- README.md
+- PROJECT_ORDER.md
+- TESTING.md
