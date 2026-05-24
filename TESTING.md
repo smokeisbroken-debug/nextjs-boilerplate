@@ -1,4 +1,4 @@
-# v59.12.1 Testing
+# v59.12.2 — Testing
 
 Run:
 
@@ -9,14 +9,8 @@ NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
 Manual checks:
-
-1. Open Profile / Personal Cabinet.
-2. Scroll to Wallet & $BROKE balance.
-3. Confirm the check button is disabled when the address field is empty.
-4. Paste a valid Solana address.
-5. Confirm `Address ready to check` appears and the CTA becomes bright.
-6. Tap `Check $BROKE balance`.
-7. Confirm linked wallet result, holder tier, and balance appear.
-8. Test `Paste`, `Clear`, and `Remove wallet`.
-9. Open Share Studio preview.
-10. Confirm BROKE balance and Biggest leak do not crop on mobile.
+1. Profile → Wallet & $BROKE balance shows compact token amounts.
+2. Profile → Share Studio includes Holder tier.
+3. Public share card shows `Holder tier` instead of a cropped `BROKE balance` label.
+4. If exact token balance is allowed, balance appears as compact secondary detail such as `15M BROKE`.
+5. Biggest leak and holder fields do not overflow the public card.

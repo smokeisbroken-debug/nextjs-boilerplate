@@ -21285,3 +21285,39 @@ html[lang="ru"] .trigger-preview strong {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.12.2 — Holder Display & Share Card Polish */
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card small,
+.safe-weekly-share-profile-grid article small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier strong,
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder strong {
+  font-size: 20px !important;
+  line-height: 1.04 !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier small,
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder small {
+  color: var(--neon);
+  font-size: 0.72rem;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card {
+  min-height: 118px !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card span {
+  letter-spacing: 0.02em !important;
+}
+
+.wallet-balance-status-grid article strong {
+  overflow-wrap: anywhere;
+}

@@ -829,6 +829,12 @@ type ProfileShareSettings = {
   enabledItems: ProfileShareItemId[];
 };
 
+type ProfileShareMetric = {
+  label: string;
+  value: string;
+  detail?: string;
+};
+
 type ReturnHookAction = "add_leak" | "check_chart" | "share_result" | "keep_streak";
 
 type ReturnHookGoal = {
@@ -3493,10 +3499,27 @@ function compactWalletAddress(value: string) {
   return `${trimmed.slice(0, 4)}…${trimmed.slice(-4)}`;
 }
 
-function formatTokenAmount(value: number) {
+function formatTokenAmount(value: number, mode: "compact" | "full" = "compact") {
   if (!Number.isFinite(value) || value <= 0) return "0 BROKE";
-  const maximumFractionDigits = value >= 1 ? 2 : 6;
-  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits }).format(value)} BROKE`;
+
+  if (mode === "full") {
+    return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)} BROKE`;
+  }
+
+  const formatScaled = (scaled: number, suffix: string) => {
+    const maximumFractionDigits = scaled >= 100 ? 0 : scaled >= 10 ? 1 : 1;
+    const formatted = new Intl.NumberFormat("en-US", {
+      maximumFractionDigits,
+      minimumFractionDigits: 0,
+    }).format(scaled);
+    return `${formatted}${suffix} BROKE`;
+  };
+
+  if (value >= 1_000_000_000) return formatScaled(value / 1_000_000_000, "B");
+  if (value >= 1_000_000) return formatScaled(value / 1_000_000, "M");
+  if (value >= 1_000) return formatScaled(value / 1_000, "K");
+
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: value >= 1 ? 0 : 4 }).format(value)} BROKE`;
 }
 
 function formatHolderPercent(value: number) {
@@ -3650,7 +3673,7 @@ function buildProfileShareMetric({
   identityStats: V2IdentityStats;
   leaderboard: LeaderboardState | null;
   badgeCount?: number;
-}) {
+}): ProfileShareMetric {
   const shareStats = getShareLeaderboardStats(leaderboard);
 
   switch (id) {
@@ -3677,13 +3700,14 @@ function buildProfileShareMetric({
       return { label: "Status", value: identityStats.status };
     case "holder":
       if (!settings.wallet.showHolderStatus || !settings.wallet.walletAddress) {
-        return { label: "Holder", value: "private" };
+        return { label: "Holder tier", value: "private" };
       }
       return {
-        label: settings.wallet.showTokenBalance ? "BROKE balance" : "Holder",
-        value: settings.wallet.showTokenBalance
+        label: "Holder tier",
+        value: settings.wallet.holderTier.label,
+        detail: settings.wallet.showTokenBalance
           ? formatTokenAmount(settings.wallet.brokeBalance)
-          : settings.wallet.holderTier.label,
+          : settings.wallet.holderTier.range,
       };
   }
 }
@@ -10762,7 +10786,7 @@ function WeeklyBehaviorReportHomeCard({
     `Pressure: ${weeklyPatternSummary.leakPressure}%`,
     `Next move: ${weeklyPatternSummary.nextMove}`,
     "",
-    ...selectedShareMetrics.map((metric) => `${metric.label}: ${metric.value}`),
+    ...selectedShareMetrics.map((metric) => `${metric.label}: ${metric.value}${metric.detail ? ` (${metric.detail})` : ""}`),
     "",
     "No income. No real balance. No debt details.",
     "Broke, but self-aware.",
@@ -10894,6 +10918,7 @@ function WeeklyBehaviorReportHomeCard({
               <article key={metric.label}>
                 <span>{metric.label}</span>
                 <strong>{metric.value}</strong>
+                {metric.detail && <small>{metric.detail}</small>}
               </article>
             ))}
           </div>
@@ -13928,6 +13953,7 @@ function ShareResultCard({
             >
               <span>{metric.label}</span>
               <strong>{metric.value}</strong>
+              {metric.detail && <small>{metric.detail}</small>}
             </div>
           ))}
         </div>

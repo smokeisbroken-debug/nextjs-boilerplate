@@ -1,19 +1,15 @@
-# v59.12.1 — Wallet UX & Share Preview Polish
+# v59.12.2 — Holder Display & Share Card Polish
 
-Patch-only update for the $BROKE Telegram Mini App.
+Patch-only update focused on the wallet/share display layer.
 
 ## What changed
-- Wallet address flow is clearer in Profile / Personal Cabinet.
-- `Check $BROKE balance` button is now disabled until a valid-looking Solana address is entered.
-- Valid address state now shows `Address ready to check`.
-- Added `Paste` and `Clear` actions for the wallet address field.
-- Added a clear linked-wallet result block with wallet, holder tier, and last checked time.
-- Added trust notes: read-only check, no seed phrase, no transaction.
-- Polished Profile share preview so long values such as BROKE balance and Biggest leak do not crop as easily.
+- Rounded large `$BROKE` balances for cleaner profile/share display, for example `15M BROKE` instead of long decimal values.
+- Share cards now show `Holder tier` as the main public wallet signal.
+- If the user allows exact token balance publicly, the compact token balance appears as secondary detail under the holder tier.
+- Public share card metric layout was tightened for holder tier, token balance, and long leak/category names.
 
-## What did not change
+## Not changed
 - No Supabase migration.
-- No token transaction logic.
-- No wallet signing.
-- No custody / staking / claim logic.
-- Holder tiers remain unchanged.
+- No wallet transaction flow.
+- No seed phrase/private key logic.
+- No staking/claim/rewards logic.

@@ -1,15 +1,22 @@
-# v59.12.1 — Wallet UX & Share Preview Polish
+# v59.12.2 — Holder Display & Share Card Polish
 
-## Reason
-User feedback showed that after pasting a wallet address, it was not obvious what to do next. The share preview also cropped long public card values.
+## Purpose
+Clean up wallet holder display after v59.12.1. The public card should look cleaner and should prioritize holder tier instead of long exact token balances.
 
 ## Files changed
 - app/page.tsx
 - app/globals.css
-- app/api/wallet/balance/route.ts
 - README.md
 - PROJECT_ORDER.md
 - TESTING.md
 
-## Notes
-The wallet API route is included for patch completeness. The main change is UI/UX polish around the existing read-only balance flow.
+## Scope
+- Compact token amount formatting.
+- Holder tier display in share cards.
+- Share-card CSS polish for long wallet/category values.
+
+## Out of scope
+- Custom avatar upload.
+- Supabase Storage.
+- Token-gated uploads.
+- Wallet connect/signature verification.
