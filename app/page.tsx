@@ -19288,6 +19288,7 @@ function SettingsScreen({
   const [repairScope, setRepairScope] = useState<CurrencyRepairScope>("missing");
   const [repairBusy, setRepairBusy] = useState(false);
   const [repairMessage, setRepairMessage] = useState("");
+  const [profileShareCardOpen, setProfileShareCardOpen] = useState(false);
 
   useEffect(() => {
     setRepairCurrency(settings.currency);
@@ -19394,6 +19395,7 @@ function SettingsScreen({
     1,
     100
   );
+  const settingsRealBalance = totalIncome - fixedCosts - monthSpent;
   const settingsStatusLabel = settingsWalletHp >= 80 ? "Stable" : settingsWalletHp >= 55 ? "Watch zone" : "Pressure";
   const telegramProfileUser = telegram.user || webAuth.user;
   const fallbackProfileName = telegramProfileUser?.username
@@ -19607,6 +19609,48 @@ function SettingsScreen({
               );
             })}
           </div>
+
+          <div className="profile-share-studio-actions">
+            <button
+              type="button"
+              className="primary"
+              onClick={() => {
+                setProfileShareCardOpen(true);
+                triggerHaptic("light");
+              }}
+            >
+              Open share card
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setProfileShareCardOpen((value) => !value);
+                triggerHaptic("light");
+              }}
+            >
+              {profileShareCardOpen ? "Hide preview" : "Preview here"}
+            </button>
+          </div>
+
+          <p className="profile-share-studio-note">
+            This is the main place to choose and open your public profile card. You do not need to search for it on Home.
+          </p>
+
+          {profileShareCardOpen && (
+            <div className="profile-share-studio-inline-card">
+              <ShareResultCard
+                settings={settings}
+                walletHp={settingsWalletHp}
+                totalLeaks={settingsTotalLeaks}
+                realBalance={settingsRealBalance}
+                potentialYearlySavings={settingsTotalLeaks * 12}
+                leaderboard={leaderboard}
+                identityStats={profileSharePreviewStats}
+                exchangeRates={exchangeRates}
+                shareInitData={telegram.isTelegram ? telegram.initData : ""}
+              />
+            </div>
+          )}
         </section>
 
         <details className="profile-identity-editor">

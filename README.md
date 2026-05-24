@@ -1,13 +1,14 @@
-# v59.8 — Profile Share Studio & Account State Cleanup
+# v59.8.1 — Share Studio Button Placement Hotfix
 
-Patch-only update built from the uploaded latest stable archive `nextjs-boilerplate-main(3).zip`.
+Patch-only update from v59.8 stable.
 
-## Product changes
-- Adds one central **Share Studio** inside Profile / Personal Cabinet.
-- Users can choose which public profile items appear on their main share card.
-- Share card output now follows the Profile Share Studio selection.
-- Daily routine / mission state is included in account app-state sync so a second device should not reset completed routine steps back to local-only state.
-- Keeps Public Proof Mode private-first: income, real balance, payday, and private debt details remain hidden by default.
+## What changed
+- Added the main **Open share card** button directly inside Profile → Share Studio.
+- Added inline share-card preview inside the same Share Studio block.
+- Users no longer need to search Home for the profile share card after choosing checkboxes.
+- Kept existing Home share-card panel for compatibility with onboarding/daily routine flows.
 
-## No migration required
-This uses existing `settings_payload` and `app_state_payload`.
+## No backend changes
+- No Supabase migration.
+- No API behavior changes.
+- No Telegram webhook changes.

@@ -20261,3 +20261,49 @@ html[lang="ru"] .trigger-preview strong {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* v59.8.1 Share Studio Button Placement Hotfix */
+.profile-share-studio-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.85fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.profile-share-studio-actions button {
+  min-height: 46px;
+  border: 1px solid rgba(167, 255, 41, 0.22);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  color: #fff;
+  font-weight: 900;
+}
+
+.profile-share-studio-actions button.primary {
+  background: linear-gradient(135deg, rgba(167, 255, 41, 0.96), rgba(112, 220, 20, 0.9));
+  color: #071006;
+  box-shadow: 0 16px 34px rgba(99, 255, 43, 0.18);
+}
+
+.profile-share-studio-note {
+  margin: 10px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.profile-share-studio-inline-card {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.profile-share-studio-inline-card .share-card {
+  margin: 0;
+}
+
+@media (max-width: 420px) {
+  .profile-share-studio-actions {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,4 @@
-# v59.8 — Testing
+# v59.8.1 Testing
 
 Run:
 
@@ -9,12 +9,9 @@ NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
 Manual checks:
-
-1. Open Profile.
-2. Find **Share Studio** inside Personal Cabinet.
-3. Toggle Survival Score, Wallet HP, Streak, Badges, Leaderboard, Biggest leak, Life hours, Status.
-4. Confirm selected items appear in the preview.
-5. Open Home → Profile Share Card / Share Result and confirm the share card follows the selected items.
-6. Complete Daily Routine steps on one logged-in device.
-7. Open the same account on another device and confirm completed routine state does not fall back to blank local state after sync.
-8. Confirm Public Proof Mode still hides private money details.
+1. Open Profile / Personal Cabinet.
+2. Open Share Studio.
+3. Change selected public-card checkboxes.
+4. Tap **Open share card**.
+5. Confirm the profile share card opens directly in the same Share Studio area.
+6. Confirm Home / Daily Routine share flow still works.
