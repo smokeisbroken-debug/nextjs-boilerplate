@@ -3408,6 +3408,51 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
   };
 }
 
+function getProfileAvatarImage(preset: Settings["identity"]["avatarPreset"]) {
+  switch (preset) {
+    case "wallet":
+      return A.walletMascot;
+    case "survivor":
+      return A.streakFrog;
+    case "degen":
+      return A.homeMascot;
+    case "stealth":
+      return A.walletHp;
+    default:
+      return A.appFrog;
+  }
+}
+
+function getIdentityStyleMeta(style: Settings["identity"]["identityStyle"]) {
+  switch (style) {
+    case "clean":
+      return { label: "Clean profile", badge: "Low noise" };
+    case "proof":
+      return { label: "Proof mode", badge: "Progress" };
+    case "stealth":
+      return { label: "Private mode", badge: "Quiet" };
+    case "builder":
+      return { label: "Builder mode", badge: "Fixing leaks" };
+    default:
+      return { label: "Classic BROKE", badge: "Self-aware" };
+  }
+}
+
+function getPublicIdentityName(settings: Settings, fallback = "Broke survivor") {
+  const name = settings.identity.nickname.trim();
+  return name || fallback;
+}
+
+function getPublicIdentityStatus(settings: Settings) {
+  return settings.identity.statusText.trim() || "Broke, but self-aware";
+}
+
+function getSharePrivacyLine(settings: Settings) {
+  return settings.privacy.publicProofMode
+    ? "Private balances hidden by Public Proof Mode."
+    : "Exact progress is allowed by your current privacy settings.";
+}
+
 function applyRegionPreset(settings: Settings, region: RegionPreset): Settings {
   const preset = regionPresets[region];
 
@@ -12977,6 +13022,9 @@ function buildShareText({
 }) {
   const shareStats = getShareLeaderboardStats(leaderboard);
   const publicProofMode = settings.privacy.publicProofMode;
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityStatus = getPublicIdentityStatus(settings);
+  const publicIdentityStyle = getIdentityStyleMeta(settings.identity.identityStyle);
   const rankLine =
     shareStats.rank || shareStats.publicLeaderboard
       ? `Leaderboard: ${shareStats.rankLabel}`
@@ -12986,6 +13034,9 @@ function buildShareText({
     : "";
 
   return [
+    `${publicIdentityName} on $BROKE`,
+    `${publicIdentityStyle.label} · ${publicIdentityStatus}`,
+    "",
     "My wallet is not broken.",
     "It is leaking.",
     "",
@@ -13010,6 +13061,7 @@ function buildShareText({
       publicProofMode ? "hidden by Public Proof Mode" : money(potentialYearlySavings, settings.currency)
     }`,
     !publicProofMode && potentialSavingsUsdNote ? `USD reference: ${potentialSavingsUsdNote}` : "",
+    getSharePrivacyLine(settings),
     "",
     "Find the leak before it becomes your lifestyle.",
   ].filter(Boolean).join("\n");
@@ -13151,6 +13203,11 @@ function ShareResultCard({
   const [imageSharing, setImageSharing] = useState(false);
   const shareCardRef = useRef<HTMLDivElement | null>(null);
   const shareStats = getShareLeaderboardStats(leaderboard);
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityStatus = getPublicIdentityStatus(settings);
+  const publicIdentityStyle = getIdentityStyleMeta(settings.identity.identityStyle);
+  const publicIdentityAvatar = getProfileAvatarImage(settings.identity.avatarPreset);
+  const publicIdentityPrivacyLine = getSharePrivacyLine(settings);
   const potentialYearlySavingsUsdNote = settings.privacy.publicProofMode
     ? ""
     : usdReferenceNote(potentialYearlySavings, settings.currency, settings, exchangeRates);
@@ -13248,18 +13305,22 @@ function ShareResultCard({
         <small>Telegram / X ready</small>
       </div>
 
-      <div className="public-share-image-card premium-share-card" ref={shareCardRef}>
+      <div className={`public-share-image-card premium-share-card identity-share-style-${settings.identity.identityStyle || "classic"}`} ref={shareCardRef}>
         <img
           className="premium-share-card-art"
           src={SHARE_CARD_PUBLIC_ASSETS.result}
           alt=""
         />
-        <div className="public-share-top">
-          <div>
-            <span>$BROKE IDENTITY</span>
-            <strong>Premium public card</strong>
+        <div className="public-share-top profile-share-card-top">
+          <div className="profile-share-card-identity">
+            <img className="profile-share-card-avatar" src={publicIdentityAvatar} alt="" />
+            <div>
+              <span>$BROKE PROFILE</span>
+              <strong>{publicIdentityName}</strong>
+              <small>{publicIdentityStatus}</small>
+            </div>
           </div>
-          <img src={A.walletMascot} alt="" />
+          <b className="profile-share-card-style-pill">{publicIdentityStyle.badge}</b>
         </div>
 
         <div className="share-preview share-preview-social">
@@ -13319,8 +13380,8 @@ function ShareResultCard({
       <div className="share-privacy-note">
         <span>
           {settings.privacy.publicProofMode
-            ? "Public Proof Mode is ON. Exact private numbers are hidden."
-            : "Public share hides income and real balance."}
+            ? `Public Proof Mode is ON. ${publicIdentityPrivacyLine}`
+            : `Profile identity is visible. ${publicIdentityPrivacyLine}`}
         </span>
       </div>
 
@@ -19298,13 +19359,19 @@ function SettingsScreen({
           </article>
         </div>
 
-        <div className="profile-public-preview">
+        <div className="profile-public-preview profile-share-identity-preview">
+          <img className="profile-public-preview-avatar" src={selectedProfileAvatar.image} alt="Public identity avatar" />
           <div>
             <span>Public identity preview</span>
             <strong>{profileNickname}</strong>
-            <small>{settings.privacy.publicProofMode ? "Public proof can show status, HP and patterns without private balances." : "Private mode keeps public proof quieter until you enable it."}</small>
+            <small>{profileStatusText}</small>
           </div>
           <b>{selectedIdentityStyle.badge}</b>
+        </div>
+
+        <div className="profile-share-safety-row">
+          <span><b>Shows</b> avatar, nickname, identity style, HP/status and safe patterns.</span>
+          <span><b>Hides</b> income, real balance, payday and private debt details by default.</span>
         </div>
 
         <details className="profile-identity-editor">

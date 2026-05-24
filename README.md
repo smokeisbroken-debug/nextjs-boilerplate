@@ -1,24 +1,16 @@
-# v59.7.3 — Avatar Presets + Identity Style
+# v59.7.4 — Profile Share Identity Prep
 
-Patch-only update for the $BROKE / SmokeIsBroke Telegram Mini App.
+Patch-only update for Profile / Personal Cabinet.
 
 ## What changed
-- Expanded the Profile / Personal Cabinet identity layer.
-- Added identity style presets:
-  - Classic BROKE
-  - Clean profile
-  - Proof mode
-  - Private mode
-  - Builder mode
-- Added a public identity preview inside the Profile header.
-- Added a selected identity style badge to the Personal Cabinet card.
-- Added an identity style summary inside the Personalization section.
-- Kept existing avatar presets, nickname, status line, Profile sections and old settings.
+- Profile now has a clearer public identity preview.
+- Share Result card now uses the user's Profile identity: nickname, avatar preset, status line and identity style badge.
+- Share text now starts with the user's public $BROKE identity.
+- Privacy copy is clearer: public identity can be shown while private balances stay hidden.
 
 ## Not changed
 - No API changes.
 - No Supabase migration.
 - No Telegram webhook changes.
-- No custom photo upload.
-- No old settings removed.
-- No stored data rewrite.
+- No custom photo upload yet.
+- No private debt details are added to share cards.

@@ -1,13 +1,7 @@
-# v59.7.3 — Avatar Presets + Identity Style
+# v59.7.4 — Profile Share Identity Prep
 
-## Goal
-Make the Profile / Personal Cabinet feel more personal without adding risky custom photo upload yet.
-
-## User-facing changes
-- Users can choose a profile identity style, not only an avatar.
-- Profile header now shows a compact public identity preview.
-- Personalization section shows the current identity style.
-- The app keeps all previous settings and controls.
+## Purpose
+Prepare Profile identity for future share cards without adding custom photo upload or backend changes.
 
 ## Files changed
 - app/page.tsx
@@ -16,7 +10,13 @@ Make the Profile / Personal Cabinet feel more personal without adding risky cust
 - PROJECT_ORDER.md
 - TESTING.md
 
-## Deployment
-Replace the patch files and deploy to Vercel.
+## Scope
+- Public identity preview inside Profile.
+- Share Result card reads nickname/avatar/style from Profile settings.
+- Public Proof Mode privacy language remains visible.
 
-No Supabase SQL is required.
+## Out of scope
+- Supabase Storage.
+- User photo upload.
+- New database tables.
+- Debt share cards.
