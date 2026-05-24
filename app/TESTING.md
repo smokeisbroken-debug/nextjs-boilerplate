@@ -1,139 +1,54 @@
-# $BROKE / SmokeIsBroke Manual Testing Checklist
+# v59.18 — Testing
 
-Use this checklist after every patch deploy.
-
-## 1. Basic load
-
-- Open the web app URL in a browser.
-- Open the Telegram Mini App from the bot.
-- Confirm there is no white screen.
-- Confirm the bottom navigation is visible.
-
-## 2. Navigation
-
-Check every tab:
-
-- Home
-- Add
-- Chart
-- Growth
-- Save
-- Settings
-
-Expected result: every tab opens without console-breaking behavior or blocked scrolling.
-
-## 3. Add expense
-
-Create a test expense:
-
-```txt
-Category: Coffee or Custom
-Amount: 5
-Type: Not needed
-```
-
-Expected result:
-
-- Expense is added.
-- Wallet HP/summary updates.
-- Chart reflects the expense.
-- Add helper text for Needed/Maybe/Not needed remains readable.
-
-## 4. Growth mobile layout
-
-On a phone or Telegram WebView, open Growth.
-
-Check:
-
-- Hero card is not hidden under the Telegram header.
-- Detected-leaks card is readable.
-- `Use detected leaks` does not overlap the amount.
-- Create leak plan section scrolls above the fixed bottom nav.
-
-## 5. Settings sync
-
-In Settings, change one safe test value:
-
-```txt
-Language / country / custom category name
-```
-
-Then reload the app and check the same value.
-
-Expected result:
-
-- Setting persists.
-- App does not reset user data.
-
-## 6. Telegram/Web sync
-
-If Telegram account linking is enabled:
-
-- Add one expense from Telegram Mini App.
-- Open the website.
-- Confirm the expense appears after sync.
-
-Then reverse the test:
-
-- Add one expense from the website.
-- Open Telegram Mini App.
-- Confirm the expense appears after sync.
-
-## 7. Share cards
-
-Test at least one share action:
-
-- Home result card
-- Save/Survival card
-- Growth goal card
-
-Expected result:
-
-- Image generation starts.
-- No crash/white screen.
-- Telegram/share flow does not block app use.
-
-## 8. Pre-deploy command
-
-Run before pushing a patch:
+Run:
 
 ```bash
-npm run verify
+npm run typecheck
+npm run lint:quiet
+NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-Expected result:
+## Manual checks
 
-```txt
-typecheck OK
-lint:quiet OK
-build OK
+### Wallet watch-only flow
+1. Open Profile → Wallet & $BROKE balance.
+2. Paste a valid Solana public address.
+3. Press `Check $BROKE balance`.
+4. Confirm balance/tier can display as watch-only.
+5. Confirm holder rewards and custom avatar remain locked until verification.
+
+### Telegram WebView provider help
+1. Open the app inside Telegram Mini App.
+2. Paste/check a wallet.
+3. Press `Verify wallet`.
+4. Confirm provider help appears if Telegram does not expose Phantom/Solflare/Backpack signing.
+5. Confirm the help card explains:
+   - open inside wallet browser;
+   - sign only text message;
+   - return and press `Sync verification`.
+
+### Wallet browser verification
+1. Open the app inside Phantom, Solflare, Backpack, or another Solana wallet browser.
+2. Press `Rescan provider`.
+3. Confirm the readiness card detects a signing provider when available.
+4. Press `Verify wallet`.
+5. Sign the message.
+6. Confirm the profile updates to verified.
+
+### Return-to-Telegram sync
+1. Complete verification in wallet browser.
+2. Return to Telegram Mini App.
+3. Confirm auto-sync updates status, or press `Sync verification`.
+4. Confirm holder rewards unlock only after verified status is synced.
+
+### Protected diagnostics
+1. Open:
+
+```bash
+/api/broke?check=supabase&key=YOUR_DIAGNOSTICS_SECRET
 ```
 
-
-## 9. Growth + Debt cloud sync
-
-After running the v57.0 Supabase migration:
-
-```sql
-alter table public.broke_settings
-  add column if not exists app_state_payload jsonb;
-```
-
-Test Growth:
-
-- Open Growth.
-- Add or edit a Target Coverage line.
-- Add a Personal Goal.
-- Save one Growth plan.
-- Open the app from the other surface: Telegram ↔ website.
-- Confirm the saved plan, targets, and goal appear.
-
-Test Debt Radar:
-
-- Open Save.
-- Add one Debt item and one Recurring bill.
-- Fill Monthly hit, due day, and priority.
-- Open the app from the other surface: Telegram ↔ website.
-- Confirm Debt & Bills Radar items appear.
-
-Expected result: Growth and Debt Radar data persist across website and Telegram after cloud sync.
+2. Confirm wallet tables are listed:
+   - `broke_wallet_links`
+   - `broke_wallet_verifications`
+3. If either returns non-OK, wallet verification SQL is missing or permissions need review.

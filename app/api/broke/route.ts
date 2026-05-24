@@ -3292,6 +3292,8 @@ export async function GET(request: NextRequest) {
       checkSupabaseTable("broke_community_messages"),
       checkSupabaseTable("broke_notification_logs"),
       checkSupabaseTable("broke_pattern_history"),
+      checkSupabaseTable("broke_wallet_links"),
+      checkSupabaseTable("broke_wallet_verifications"),
     ]);
 
     return NextResponse.json({

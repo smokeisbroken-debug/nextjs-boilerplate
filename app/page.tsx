@@ -20009,6 +20009,8 @@ function SettingsScreen({
   const [walletVerifying, setWalletVerifying] = useState(false);
   const [walletMessage, setWalletMessage] = useState("");
   const [walletProviderHelpOpen, setWalletProviderHelpOpen] = useState(false);
+  const [walletProviderName, setWalletProviderName] = useState("Browser check pending");
+  const [walletProviderDetected, setWalletProviderDetected] = useState(false);
   const [walletStatusRefreshing, setWalletStatusRefreshing] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState("");
@@ -20027,6 +20029,25 @@ function SettingsScreen({
 
     void refreshWalletVerificationStatus(true);
   }, [settings.wallet.walletAddress, telegram.isTelegram, telegram.initData, webAuth.user?.id]);
+
+  useEffect(() => {
+    function syncWalletProviderState() {
+      const detected = getDetectedSolanaWalletProvider();
+      setWalletProviderName(detected.label);
+      setWalletProviderDetected(Boolean(detected.provider?.connect && detected.provider.signMessage));
+    }
+
+    syncWalletProviderState();
+    const timer = window.setTimeout(syncWalletProviderState, 850);
+    window.addEventListener("focus", syncWalletProviderState);
+    window.addEventListener("visibilitychange", syncWalletProviderState);
+
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", syncWalletProviderState);
+      window.removeEventListener("visibilitychange", syncWalletProviderState);
+    };
+  }, []);
 
   function incomeClarityNote(key: keyof Settings["income"]) {
     return settingsMoneyClarityNote(
@@ -20217,6 +20238,16 @@ function SettingsScreen({
     : walletDraftIsLinked
       ? "Recheck $BROKE balance"
       : "Check $BROKE balance";
+  const walletProviderStatusText = walletProviderDetected
+    ? `${walletProviderName} detected · message signing should be available.`
+    : telegram.isTelegram
+      ? "Telegram browser usually cannot sign. Open the app inside Phantom, Solflare, Backpack, or another Solana wallet browser."
+      : "No injected Solana wallet detected in this browser yet.";
+  const walletVerificationFlowText = settings.wallet.isVerified
+    ? "This wallet is ownership-verified. Holder rewards can use this balance."
+    : settings.wallet.walletAddress
+      ? "Watch-only balance is saved. Verification needs one message signature, then Sync verification after returning."
+      : "First check balance as watch-only. Verification is the second step.";
   const holderRewardState = getHolderProfileRewardState(settings.wallet);
   const nextHolderRewardGap = holderRewardState.next
     ? Math.max(0, holderRewardState.next.minBalance - settings.wallet.brokeBalance)
@@ -20461,24 +20492,63 @@ function SettingsScreen({
     triggerHaptic("light");
   }
 
-  function getSolanaWalletProvider() {
+  type SolanaWalletProvider = {
+    isPhantom?: boolean;
+    isSolflare?: boolean;
+    isBackpack?: boolean;
+    connect?: () => Promise<{ publicKey?: { toString: () => string } }>;
+    publicKey?: { toString: () => string };
+    signMessage?: (message: Uint8Array, encoding?: string) => Promise<Uint8Array | { signature?: Uint8Array }>;
+  };
+
+  function getDetectedSolanaWalletProvider() {
+    if (typeof window === "undefined") {
+      return { provider: null as SolanaWalletProvider | null, label: "Browser check pending" };
+    }
+
     const candidateWindow = window as unknown as {
-      solana?: {
-        isPhantom?: boolean;
-        connect?: () => Promise<{ publicKey?: { toString: () => string } }>;
-        publicKey?: { toString: () => string };
-        signMessage?: (message: Uint8Array, encoding?: string) => Promise<Uint8Array | { signature?: Uint8Array }>;
-      };
-      phantom?: {
-        solana?: {
-          connect?: () => Promise<{ publicKey?: { toString: () => string } }>;
-          publicKey?: { toString: () => string };
-          signMessage?: (message: Uint8Array, encoding?: string) => Promise<Uint8Array | { signature?: Uint8Array }>;
-        };
-      };
+      solana?: SolanaWalletProvider;
+      phantom?: { solana?: SolanaWalletProvider };
+      solflare?: SolanaWalletProvider;
+      backpack?: { solana?: SolanaWalletProvider };
     };
 
-    return candidateWindow.solana || candidateWindow.phantom?.solana || null;
+    const provider =
+      candidateWindow.phantom?.solana ||
+      candidateWindow.backpack?.solana ||
+      candidateWindow.solflare ||
+      candidateWindow.solana ||
+      null;
+
+    if (!provider) return { provider: null, label: "No wallet provider detected" };
+    if (provider.isPhantom || candidateWindow.phantom?.solana === provider) return { provider, label: "Phantom" };
+    if (provider.isSolflare || candidateWindow.solflare === provider) return { provider, label: "Solflare" };
+    if (provider.isBackpack || candidateWindow.backpack?.solana === provider) return { provider, label: "Backpack" };
+
+    return { provider, label: "Solana wallet" };
+  }
+
+  function rescanWalletProvider() {
+    const detected = getDetectedSolanaWalletProvider();
+    const ready = Boolean(detected.provider?.connect && detected.provider.signMessage);
+    setWalletProviderName(detected.label);
+    setWalletProviderDetected(ready);
+    setWalletProviderHelpOpen(!ready && !settings.wallet.isVerified);
+    setWalletMessage(
+      ready
+        ? `${detected.label} detected. Press Verify wallet to sign the ownership message.`
+        : "No signing wallet detected here. Open this app inside a Solana wallet browser, then press Rescan provider."
+    );
+    notifyApp(
+      ready ? "Wallet provider ready" : "Wallet provider not found",
+      ready ? "Message signing should be available now." : "Open inside Phantom, Solflare, Backpack or another wallet browser.",
+      "info"
+    );
+    triggerHaptic("light");
+  }
+
+  function getSolanaWalletProvider() {
+    return getDetectedSolanaWalletProvider().provider;
   }
 
   function signatureToBase64(signatureResult: Uint8Array | { signature?: Uint8Array }) {
@@ -20542,8 +20612,11 @@ function SettingsScreen({
     const provider = getSolanaWalletProvider();
 
     if (!provider?.connect || !provider.signMessage) {
+      const detected = getDetectedSolanaWalletProvider();
+      setWalletProviderName(detected.label);
+      setWalletProviderDetected(false);
       setWalletProviderHelpOpen(true);
-      setWalletMessage("Balance is linked as watch-only. To verify ownership, open this app inside Phantom, Solflare, or another Solana wallet browser and press Verify wallet again.");
+      setWalletMessage("Balance is linked as watch-only. To verify ownership, open this app inside Phantom, Solflare, Backpack, or another Solana wallet browser, then press Verify wallet again.");
       notifyApp("Verification needs wallet browser", "Watch-only balance still works. Holder unlocks need a wallet browser with message signing.", "info");
       return;
     }
@@ -21040,12 +21113,28 @@ function SettingsScreen({
             </small>
           </div>
 
+          <section className={`wallet-provider-readiness-card ${walletProviderDetected ? "ready" : "missing"}`}>
+            <div>
+              <span>{walletProviderDetected ? "Provider ready" : "Provider help"}</span>
+              <strong>{walletProviderStatusText}</strong>
+              <small>{walletVerificationFlowText}</small>
+            </div>
+            <button type="button" onClick={rescanWalletProvider} disabled={walletVerifying || walletStatusRefreshing}>
+              Rescan provider
+            </button>
+          </section>
+
           {walletProviderHelpOpen && !settings.wallet.isVerified && (
             <section className="wallet-provider-help-card">
               <div>
                 <span>Wallet provider not found</span>
                 <strong>Open inside a wallet browser to verify.</strong>
-                <small>Telegram can show the app without Phantom/Solflare injected. If you already signed in a wallet browser, press Sync verification after returning here.</small>
+                <small>Telegram can show the app without Phantom/Solflare/Backpack injection. Watch-only balance still works here; holder unlocks need one message signature in a wallet browser.</small>
+              </div>
+              <div className="wallet-provider-step-list">
+                <article><b>1</b><span>Open this app link inside Phantom, Solflare, Backpack, or another Solana wallet browser.</span></article>
+                <article><b>2</b><span>Press Verify wallet and sign only the text message. No transaction, no token movement.</span></article>
+                <article><b>3</b><span>Return to Telegram/web and press Sync verification if the profile still shows watch-only.</span></article>
               </div>
               <div className="wallet-provider-help-actions">
                 <button type="button" onClick={() => openWalletBrowser("phantom")}>Open Phantom</button>
