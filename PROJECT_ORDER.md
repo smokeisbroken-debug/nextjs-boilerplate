@@ -1,30 +1,33 @@
-# v59.11 — Safe Weekly Share Card
+# v59.12 — Wallet Balance Foundation
 
-## Goal
-Create one clean weekly behavior share card that continues the Profile Share Studio direction while staying privacy-safe.
+## Purpose
+Add safe read-only $BROKE holder balance visibility to Profile / Personal Cabinet.
 
-## User value
-Users can share a weekly pattern/status card without exposing private financial data.
+## Scope
+- Profile wallet section.
+- Read-only wallet balance API.
+- Holder tier logic.
+- Share Studio holder item.
+- Privacy controls for holder status and exact token balance.
 
 ## Files changed
 - app/page.tsx
 - app/globals.css
+- app/api/wallet/balance/route.ts
 - README.md
 - PROJECT_ORDER.md
 - TESTING.md
 
-## Privacy rule
-The weekly card must not expose:
-- income
-- real balance
-- payday
-- private debt details
+## Not changed
+- Supabase schema
+- Telegram webhook
+- expense calculations
+- Debt Radar
+- rewards/claim logic
+- wallet transactions
 
-It may show:
-- public identity
-- weekly behavior pattern
-- confidence
-- pressure %
-- top signal
-- next move
-- Share Studio selected public items
+## Deployment
+1. Replace files from the patch.
+2. Optional: add `BROKE_TOKEN_MINT` and `SOLANA_RPC_URL` in Vercel env.
+3. Deploy on Vercel.
+4. Test Profile → Wallet & $BROKE balance.

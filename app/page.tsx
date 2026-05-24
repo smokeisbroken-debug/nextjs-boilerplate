@@ -379,6 +379,27 @@ type OnboardingStarterExpense = {
   note: string;
 };
 
+type HolderTierId = "none" | "tadpole" | "frog" | "strong" | "shark" | "whale" | "leviathan";
+
+type HolderTier = {
+  id: HolderTierId;
+  label: string;
+  range: string;
+  description: string;
+};
+
+type WalletLinkSettings = {
+  walletAddress: string;
+  isVerified: boolean;
+  provider: "watch" | "verified";
+  brokeBalance: number;
+  percentOfSupply: number;
+  holderTier: HolderTier;
+  lastCheckedAt: string;
+  showHolderStatus: boolean;
+  showTokenBalance: boolean;
+};
+
 type Settings = {
   currency: Currency;
   currencyMode: CurrencyMode;
@@ -434,6 +455,7 @@ type Settings = {
     statusText: string;
   };
   shareProfile: ProfileShareSettings;
+  wallet: WalletLinkSettings;
   categoryNames: Record<string, string>;
 };
 
@@ -800,7 +822,8 @@ type ProfileShareItemId =
   | "rank"
   | "biggestLeak"
   | "lifeHours"
-  | "status";
+  | "status"
+  | "holder";
 
 type ProfileShareSettings = {
   enabledItems: ProfileShareItemId[];
@@ -1102,10 +1125,30 @@ const profileShareItemIds = [
   "biggestLeak",
   "lifeHours",
   "status",
+  "holder",
 ] as const satisfies readonly ProfileShareItemId[];
 
 const defaultProfileShareSettings: ProfileShareSettings = {
   enabledItems: ["survival", "walletHp", "streak", "badges"],
+};
+
+const defaultHolderTier: HolderTier = {
+  id: "none",
+  label: "No BROKE yet",
+  range: "0%",
+  description: "No tracked $BROKE balance found for this wallet.",
+};
+
+const defaultWalletLinkSettings: WalletLinkSettings = {
+  walletAddress: "",
+  isVerified: false,
+  provider: "watch",
+  brokeBalance: 0,
+  percentOfSupply: 0,
+  holderTier: defaultHolderTier,
+  lastCheckedAt: "",
+  showHolderStatus: true,
+  showTokenBalance: false,
 };
 
 const defaultSettings: Settings = {
@@ -1163,6 +1206,7 @@ const defaultSettings: Settings = {
     statusText: "Broke, but self-aware",
   },
   shareProfile: defaultProfileShareSettings,
+  wallet: defaultWalletLinkSettings,
   categoryNames: defaultCategoryNames,
 };
 
@@ -3410,6 +3454,57 @@ function LanguageRuntime({ language }: { language: Language }) {
 
 
 
+function normalizeHolderTier(input?: Partial<HolderTier> | null): HolderTier {
+  const id = String(input?.id || defaultHolderTier.id) as HolderTierId;
+  const allowed: HolderTierId[] = ["none", "tadpole", "frog", "strong", "shark", "whale", "leviathan"];
+  return {
+    ...defaultHolderTier,
+    ...(input || {}),
+    id: allowed.includes(id) ? id : defaultHolderTier.id,
+    label: String(input?.label || defaultHolderTier.label),
+    range: String(input?.range || defaultHolderTier.range),
+    description: String(input?.description || defaultHolderTier.description),
+  };
+}
+
+function normalizeWalletLinkSettings(input?: Partial<WalletLinkSettings> | null): WalletLinkSettings {
+  return {
+    ...defaultWalletLinkSettings,
+    ...(input || {}),
+    walletAddress: String(input?.walletAddress || "").trim(),
+    isVerified: Boolean(input?.isVerified),
+    provider: input?.provider === "verified" ? "verified" : "watch",
+    brokeBalance: Math.max(0, safeNumber(String(input?.brokeBalance ?? 0))),
+    percentOfSupply: Math.max(0, safeNumber(String(input?.percentOfSupply ?? 0))),
+    holderTier: normalizeHolderTier(input?.holderTier),
+    lastCheckedAt: String(input?.lastCheckedAt || ""),
+    showHolderStatus: input?.showHolderStatus !== false,
+    showTokenBalance: Boolean(input?.showTokenBalance),
+  };
+}
+
+function isLikelySolanaWalletAddress(value: string) {
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value.trim());
+}
+
+function compactWalletAddress(value: string) {
+  const trimmed = value.trim();
+  if (trimmed.length <= 12) return trimmed || "Not linked";
+  return `${trimmed.slice(0, 4)}…${trimmed.slice(-4)}`;
+}
+
+function formatTokenAmount(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0 BROKE";
+  const maximumFractionDigits = value >= 1 ? 2 : 6;
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits }).format(value)} BROKE`;
+}
+
+function formatHolderPercent(value: number) {
+  if (!Number.isFinite(value) || value <= 0) return "0%";
+  if (value < 0.0001) return "<0.0001%";
+  return `${value.toFixed(value >= 1 ? 2 : 4)}%`;
+}
+
 function normalizeProfileShareSettings(input?: Partial<ProfileShareSettings> | null): ProfileShareSettings {
   const enabledItems = Array.isArray(input?.enabledItems)
     ? input.enabledItems
@@ -3467,6 +3562,7 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
       ...(input?.identity || {}),
     },
     shareProfile: normalizeProfileShareSettings(input?.shareProfile),
+    wallet: normalizeWalletLinkSettings(input?.wallet),
     categoryNames: {
       ...defaultCategoryNames,
       ...(input?.categoryNames || {}),
@@ -3529,6 +3625,8 @@ function getProfileShareItemMeta(id: ProfileShareItemId) {
       return { label: "Life hours", detail: "Time cost of leaks." };
     case "status":
       return { label: "Status", detail: "Stable / pressure state." };
+    case "holder":
+      return { label: "Holder tier", detail: "Read-only $BROKE wallet status." };
   }
 }
 
@@ -3577,6 +3675,16 @@ function buildProfileShareMetric({
       return { label: "Hours lost", value: `${identityStats.lifeHoursLost}h` };
     case "status":
       return { label: "Status", value: identityStats.status };
+    case "holder":
+      if (!settings.wallet.showHolderStatus || !settings.wallet.walletAddress) {
+        return { label: "Holder", value: "private" };
+      }
+      return {
+        label: settings.wallet.showTokenBalance ? "BROKE balance" : "Holder",
+        value: settings.wallet.showTokenBalance
+          ? formatTokenAmount(settings.wallet.brokeBalance)
+          : settings.wallet.holderTier.label,
+      };
   }
 }
 
@@ -3591,8 +3699,8 @@ function getPublicIdentityStatus(settings: Settings) {
 
 function getSharePrivacyLine(settings: Settings) {
   return settings.privacy.publicProofMode
-    ? "Private balances hidden by Public Proof Mode."
-    : "Exact progress is allowed by your current privacy settings.";
+    ? "Private cash numbers hidden by Public Proof Mode. Wallet display follows your holder privacy toggles."
+    : "Exact progress is allowed by your current privacy settings. Wallet display follows your holder privacy toggles.";
 }
 
 function applyRegionPreset(settings: Settings, region: RegionPreset): Settings {
@@ -19725,10 +19833,17 @@ function SettingsScreen({
   const [repairBusy, setRepairBusy] = useState(false);
   const [repairMessage, setRepairMessage] = useState("");
   const [profileShareCardOpen, setProfileShareCardOpen] = useState(false);
+  const [walletAddressDraft, setWalletAddressDraft] = useState(settings.wallet.walletAddress);
+  const [walletChecking, setWalletChecking] = useState(false);
+  const [walletMessage, setWalletMessage] = useState("");
 
   useEffect(() => {
     setRepairCurrency(settings.currency);
   }, [settings.currency]);
+
+  useEffect(() => {
+    setWalletAddressDraft(settings.wallet.walletAddress);
+  }, [settings.wallet.walletAddress]);
 
   function incomeClarityNote(key: keyof Settings["income"]) {
     return settingsMoneyClarityNote(
@@ -19925,6 +20040,79 @@ function SettingsScreen({
     });
   }
 
+  function updateWalletSettings(next: Partial<WalletLinkSettings>) {
+    setSettings((prev) => ({
+      ...prev,
+      wallet: normalizeWalletLinkSettings({
+        ...prev.wallet,
+        ...next,
+      }),
+    }));
+  }
+
+  async function checkBrokeWalletBalance() {
+    const walletAddress = walletAddressDraft.trim();
+
+    if (!isLikelySolanaWalletAddress(walletAddress)) {
+      setWalletMessage("Paste a valid Solana wallet address first.");
+      notifyApp("Invalid wallet", "Paste a valid Solana address. No seed phrase is ever needed.");
+      return;
+    }
+
+    setWalletChecking(true);
+    setWalletMessage("");
+
+    try {
+      const response = await fetch("/api/wallet/balance", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ walletAddress }),
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        walletAddress?: string;
+        balance?: number;
+        percentOfSupply?: number;
+        holderTier?: HolderTier;
+        checkedAt?: string;
+        verified?: boolean;
+      };
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Could not check $BROKE balance.");
+      }
+
+      updateWalletSettings({
+        walletAddress: data.walletAddress || walletAddress,
+        brokeBalance: Math.max(0, safeNumber(String(data.balance ?? 0))),
+        percentOfSupply: Math.max(0, safeNumber(String(data.percentOfSupply ?? 0))),
+        holderTier: normalizeHolderTier(data.holderTier),
+        lastCheckedAt: data.checkedAt || new Date().toISOString(),
+        isVerified: Boolean(data.verified),
+        provider: data.verified ? "verified" : "watch",
+      });
+      setWalletMessage("$BROKE balance updated. This is read-only tracking.");
+      notifyApp("Wallet checked", "Read-only $BROKE balance updated.", "info");
+      triggerHaptic("success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not check $BROKE balance.";
+      setWalletMessage(message);
+      notifyApp("Wallet check failed", message, "info");
+    } finally {
+      setWalletChecking(false);
+    }
+  }
+
+  function unlinkWallet() {
+    setWalletAddressDraft("");
+    updateWalletSettings(defaultWalletLinkSettings);
+    setWalletMessage("Wallet removed from this profile.");
+    triggerHaptic("light");
+  }
+
   async function runOldDataCurrencyRepair() {
     const confirmed = window.confirm(
       repairScope === "all"
@@ -20005,6 +20193,78 @@ function SettingsScreen({
           <span><b>Shows</b> avatar, nickname, identity style, HP/status and safe patterns.</span>
           <span><b>Hides</b> income, real balance, payday and private debt details by default.</span>
         </div>
+
+        <section className={`wallet-balance-foundation-card holder-tier-${settings.wallet.holderTier.id}`}>
+          <div className="wallet-balance-foundation-head">
+            <div>
+              <span>Wallet & $BROKE balance</span>
+              <strong>{settings.wallet.walletAddress ? settings.wallet.holderTier.label : "Read-only holder check"}</strong>
+              <small>No seed phrase. No transactions. Paste address only.</small>
+            </div>
+            <b>{settings.wallet.walletAddress ? formatHolderPercent(settings.wallet.percentOfSupply) : "Not linked"}</b>
+          </div>
+
+          <label className="wallet-address-field">
+            <span>Solana wallet address</span>
+            <input
+              value={walletAddressDraft}
+              placeholder="Paste wallet address"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              onChange={(event) => setWalletAddressDraft(event.target.value)}
+            />
+          </label>
+
+          <div className="wallet-balance-status-grid">
+            <article>
+              <span>$BROKE balance</span>
+              <strong>{formatTokenAmount(settings.wallet.brokeBalance)}</strong>
+            </article>
+            <article>
+              <span>Holder tier</span>
+              <strong>{settings.wallet.holderTier.label}</strong>
+              <small>{settings.wallet.holderTier.range}</small>
+            </article>
+            <article>
+              <span>Wallet</span>
+              <strong>{compactWalletAddress(settings.wallet.walletAddress)}</strong>
+              <small>{settings.wallet.lastCheckedAt ? `Checked ${new Date(settings.wallet.lastCheckedAt).toLocaleDateString()}` : "Not checked yet"}</small>
+            </article>
+          </div>
+
+          <div className="wallet-balance-actions">
+            <button type="button" className="primary" onClick={checkBrokeWalletBalance} disabled={walletChecking}>
+              {walletChecking ? "Checking..." : "Check $BROKE balance"}
+            </button>
+            {settings.wallet.walletAddress && (
+              <button type="button" onClick={unlinkWallet}>
+                Remove wallet
+              </button>
+            )}
+          </div>
+
+          <div className="wallet-holder-privacy-toggles">
+            <label>
+              <input
+                type="checkbox"
+                checked={settings.wallet.showHolderStatus}
+                onChange={(event) => updateWalletSettings({ showHolderStatus: event.target.checked })}
+              />
+              <span>Allow holder tier on profile/share cards</span>
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={settings.wallet.showTokenBalance}
+                onChange={(event) => updateWalletSettings({ showTokenBalance: event.target.checked })}
+              />
+              <span>Allow exact token balance publicly</span>
+            </label>
+          </div>
+
+          {walletMessage && <p className="wallet-balance-message">{walletMessage}</p>}
+        </section>
 
         <details className="profile-identity-editor">
           <summary>
