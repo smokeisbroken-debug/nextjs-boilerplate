@@ -551,6 +551,15 @@ type WeeklyPatternSummary = {
   cards: WeeklyPatternSummaryCard[];
 };
 
+type PatternChallengeRecommendation = {
+  template: ChallengeTemplate | null;
+  title: string;
+  reason: string;
+  focus: string;
+  nextMove: string;
+  urgency: "waiting" | "soft" | "strong";
+};
+
 type PatternHistoryRecord = {
   id?: string;
   periodType: "weekly";
@@ -5822,6 +5831,91 @@ function buildWeeklyPatternSummary(expenses: Expense[], settings: Settings): Wee
   };
 }
 
+function buildPatternChallengeRecommendation(
+  weeklyPatternSummary: WeeklyPatternSummary,
+  templates: ChallengeTemplate[],
+  categorySummaries: CategorySummary[]
+): PatternChallengeRecommendation {
+  const availableTemplates = templates.length ? templates : defaultChallengeTemplates;
+  const findTemplate = (...ids: string[]) =>
+    ids.map((id) => availableTemplates.find((template) => template.id === id)).find(Boolean) || null;
+  const topCategory = categorySummaries[0] || null;
+  const topCategoryName = (topCategory?.category || "").toLowerCase();
+  const strongestCard = weeklyPatternSummary.cards[0] || null;
+
+  let template = findTemplate("wallet_recovery_7");
+  let title = "Pattern-based challenge";
+  let reason = "The app needs a few more honest leaks before it can recommend a precise mission.";
+  let focus = "Track 3–5 leaks with trigger chips.";
+  let nextMove = "Track the next leak with context first. Challenge suggestion gets sharper after that.";
+  let urgency: PatternChallengeRecommendation["urgency"] = "waiting";
+
+  if (weeklyPatternSummary.confidence !== "Waiting") {
+    urgency = weeklyPatternSummary.tone === "danger" ? "strong" : "soft";
+    reason = weeklyPatternSummary.strongestPattern
+      ? `This week is showing ${weeklyPatternSummary.strongestPattern.toLowerCase()}.`
+      : weeklyPatternSummary.headline;
+    focus = strongestCard?.label || topCategory?.category || "Wallet recovery";
+    nextMove = weeklyPatternSummary.nextMove;
+  }
+
+  if (topCategoryName.includes("takeout")) {
+    template = findTemplate("no_takeout_3", "wallet_recovery_7");
+    title = "Takeout control mission";
+    focus = "Takeouts";
+  } else if (topCategoryName.includes("coffee")) {
+    template = findTemplate("coffee_control_7", "wallet_recovery_7");
+    title = "Coffee control mission";
+    focus = "Coffee";
+  } else if (topCategoryName.includes("smoking")) {
+    template = findTemplate("smoking_cut_7", "wallet_recovery_7");
+    title = "Smoking cut mission";
+    focus = "Smoking";
+  } else if (topCategoryName.includes("shopping")) {
+    template = findTemplate("shopping_freeze_7", "wallet_recovery_7");
+    title = "Shopping freeze mission";
+    focus = "Shopping";
+  } else if (topCategoryName.includes("subscription")) {
+    template = findTemplate("subscription_killer", "wallet_recovery_7");
+    title = "Subscription cleanup mission";
+    focus = "Subscriptions";
+  } else if (strongestCard?.id === "grey-zone") {
+    template = findTemplate("wallet_recovery_7");
+    title = "Grey-zone control mission";
+    focus = "Maybe decisions";
+  } else if (strongestCard?.id === "full-leak") {
+    template = findTemplate("wallet_recovery_7");
+    title = "Full-leak recovery mission";
+    focus = "Avoidable leaks";
+  } else if (strongestCard?.id === "weekend") {
+    template = findTemplate("wallet_recovery_7");
+    title = "Weekend leak guard";
+    focus = "Weekend timing";
+  } else if (strongestCard?.id === "late-night") {
+    template = findTemplate("wallet_recovery_7");
+    title = "Late-night leak guard";
+    focus = "Late-night timing";
+  } else if (strongestCard?.id === "after-payday") {
+    template = findTemplate("wallet_recovery_7");
+    title = "After-payday guard";
+    focus = "First days after income";
+  }
+
+  if (!template) {
+    template = availableTemplates[0] || null;
+  }
+
+  return {
+    template,
+    title,
+    reason,
+    focus,
+    nextMove,
+    urgency,
+  };
+}
+
+
 function getIsoWeekPatternKey(date = new Date()) {
   const current = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const day = current.getUTCDay() || 7;
@@ -8733,6 +8827,7 @@ export default function Home() {
             activeChallenge={activeChallenge}
             challengeProgress={challengeProgress}
             challengeLoading={challengeLoading}
+            weeklyPatternSummary={currentWeeklyPatternSummary}
             leaderboard={leaderboard}
             leaderboardLoading={leaderboardLoading}
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
@@ -15666,6 +15761,79 @@ function LeaderboardRow({
   );
 }
 
+
+function PatternChallengeCoachCard({
+  recommendation,
+  activeChallenge,
+  progress,
+  loading,
+  currency,
+  onStartChallenge,
+  onOpenAdd,
+}: {
+  recommendation: PatternChallengeRecommendation;
+  activeChallenge: UserChallenge | null;
+  progress: ChallengeProgress | null;
+  loading: boolean;
+  currency: Currency;
+  onStartChallenge: (challengeId: string) => void;
+  onOpenAdd: () => void;
+}) {
+  const template = recommendation.template;
+  const hasActiveChallenge = Boolean(activeChallenge || progress);
+  const waiting = recommendation.urgency === "waiting" || !template;
+
+  return (
+    <section className={`pattern-challenge-coach ${recommendation.urgency}`}>
+      <div className="pattern-challenge-coach-head">
+        <div>
+          <span>Pattern Challenge Coach</span>
+          <strong>{recommendation.title}</strong>
+          <p>{recommendation.reason}</p>
+        </div>
+        <b>{waiting ? "Learning" : "Recommended"}</b>
+      </div>
+
+      <div className="pattern-challenge-coach-grid">
+        <article>
+          <small>Focus</small>
+          <strong>{recommendation.focus}</strong>
+        </article>
+        <article>
+          <small>Mission</small>
+          <strong>{template ? template.title : "Track more leaks"}</strong>
+        </article>
+        <article>
+          <small>Limit</small>
+          <strong>{template ? money(template.maxSpend, currency) : "—"}</strong>
+        </article>
+      </div>
+
+      <div className="pattern-challenge-next-move">
+        <small>Next move</small>
+        <span>{recommendation.nextMove}</span>
+      </div>
+
+      <div className="pattern-challenge-actions">
+        {waiting ? (
+          <button type="button" onClick={onOpenAdd}>
+            Track leak with context
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={loading || hasActiveChallenge || !template}
+            onClick={() => template && onStartChallenge(template.id)}
+          >
+            {hasActiveChallenge ? "Finish active challenge first" : "Start recommended challenge"}
+          </button>
+        )}
+        <small>Suggestion is based on this week’s pattern, not private income or real balance.</small>
+      </div>
+    </section>
+  );
+}
+
 function ChallengesPanel({
   templates,
   activeChallenge,
@@ -18820,6 +18988,7 @@ function WhatIfScreen({
   activeChallenge,
   challengeProgress,
   challengeLoading,
+  weeklyPatternSummary,
   leaderboard,
   leaderboardLoading,
   shareInitData,
@@ -18837,6 +19006,7 @@ function WhatIfScreen({
   activeChallenge: UserChallenge | null;
   challengeProgress: ChallengeProgress | null;
   challengeLoading: boolean;
+  weeklyPatternSummary: WeeklyPatternSummary;
   leaderboard: LeaderboardState | null;
   leaderboardLoading: boolean;
   shareInitData: string;
@@ -18867,6 +19037,15 @@ function WhatIfScreen({
   }, [expenses]);
 
   const hasRealData = categorySummaries.length > 0;
+  const patternChallengeRecommendation = useMemo(
+    () =>
+      buildPatternChallengeRecommendation(
+        weeklyPatternSummary,
+        challengeTemplates.length ? challengeTemplates : defaultChallengeTemplates,
+        categorySummaries
+      ),
+    [weeklyPatternSummary, challengeTemplates, categorySummaries]
+  );
 
   useEffect(() => {
     writeDebtRadarItems(debtRadarItems);
@@ -19238,6 +19417,16 @@ function WhatIfScreen({
           </button>
         </section>
       )}
+
+      <PatternChallengeCoachCard
+        recommendation={patternChallengeRecommendation}
+        activeChallenge={activeChallenge}
+        progress={challengeProgress}
+        loading={challengeLoading}
+        currency={settings.currency}
+        onStartChallenge={onStartChallenge}
+        onOpenAdd={onOpenAdd}
+      />
 
       <details className="clean-details" open={Boolean(activeChallenge || challengeProgress)}>
         <summary>

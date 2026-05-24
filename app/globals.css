@@ -20521,3 +20521,149 @@ html[lang="ru"] .trigger-preview strong {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.10 — Pattern-Based Challenge Suggestions */
+.pattern-challenge-coach {
+  border: 1px solid rgba(175, 255, 74, 0.22);
+  border-radius: 24px;
+  padding: 16px;
+  margin: 14px 0;
+  background: linear-gradient(145deg, rgba(16, 30, 18, 0.95), rgba(9, 13, 11, 0.96));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+}
+
+.pattern-challenge-coach.strong {
+  border-color: rgba(255, 185, 84, 0.42);
+  background: linear-gradient(145deg, rgba(38, 26, 13, 0.96), rgba(12, 14, 10, 0.96));
+}
+
+.pattern-challenge-coach.waiting {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(145deg, rgba(20, 23, 20, 0.96), rgba(8, 10, 8, 0.96));
+}
+
+.pattern-challenge-coach-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.pattern-challenge-coach-head span,
+.pattern-challenge-next-move small,
+.pattern-challenge-coach-grid small {
+  display: block;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pattern-challenge-coach-head strong {
+  display: block;
+  margin-top: 4px;
+  color: #f6ffe7;
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+.pattern-challenge-coach-head p {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.pattern-challenge-coach-head b {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(175, 255, 74, 0.13);
+  color: #caff72;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pattern-challenge-coach-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pattern-challenge-coach-grid article {
+  min-width: 0;
+  border-radius: 16px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+.pattern-challenge-coach-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: #fff;
+  font-size: 0.86rem;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.pattern-challenge-next-move {
+  margin-top: 10px;
+  border-radius: 16px;
+  padding: 11px 12px;
+  background: rgba(175, 255, 74, 0.08);
+  border: 1px solid rgba(175, 255, 74, 0.14);
+}
+
+.pattern-challenge-next-move span {
+  display: block;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.pattern-challenge-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pattern-challenge-actions button {
+  width: 100%;
+  border: 0;
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #baff4f, #7ee32f);
+  color: #10150a;
+  font-weight: 900;
+  box-shadow: 0 12px 28px rgba(124, 227, 47, 0.18);
+}
+
+.pattern-challenge-actions button:disabled {
+  opacity: 0.55;
+  box-shadow: none;
+}
+
+.pattern-challenge-actions small {
+  color: rgba(255, 255, 255, 0.54);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+@media (max-width: 520px) {
+  .pattern-challenge-coach {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .pattern-challenge-coach-head {
+    flex-direction: column;
+  }
+
+  .pattern-challenge-coach-grid {
+    grid-template-columns: 1fr;
+  }
+}

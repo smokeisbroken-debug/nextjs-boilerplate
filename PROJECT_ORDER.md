@@ -1,7 +1,7 @@
-# v59.9 — Weekly Behavior Report
+# v59.10 — Pattern-Based Challenges
 
-## Goal
-Turn existing Pattern History and Leak Pattern Lab data into a clearer weekly user-facing report on Home.
+## Purpose
+After v59.9 Weekly Behavior Report, challenges should no longer feel disconnected from behavior insights. This patch adds a recommendation layer in Save.
 
 ## Files changed
 - app/page.tsx
@@ -10,19 +10,16 @@ Turn existing Pattern History and Leak Pattern Lab data into a clearer weekly us
 - PROJECT_ORDER.md
 - TESTING.md
 
-## User-facing behavior
-- Home now includes Weekly Behavior Report after Today's Focus.
-- The card summarizes:
-  - strongest pattern;
-  - leak pressure;
-  - comparison vs previous saved week if available;
-  - one next move;
-  - safe share/copy text.
+## What changed
+- Added pattern-to-challenge recommendation helper.
+- Added Pattern Challenge Coach card in Save.
+- Recommended challenge can be started from the card.
+- Waiting state guides users to track more leaks with context.
 
 ## Not changed
 - API routes
 - Supabase schema
 - migrations
 - Telegram webhook
-- settings data
-- expense data
+- stored expense data
+- Profile / Share Studio logic

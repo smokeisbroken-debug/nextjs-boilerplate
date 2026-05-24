@@ -1,16 +1,22 @@
-# v59.9 — Weekly Behavior Report
+# v59.10 — Pattern-Based Challenges
 
-Patch-only product update based on the stable v59.8.2 line.
+Patch-only update based on the current stable v59.9 line.
 
-## What changed
-- Adds a new **Weekly Behavior Report** card on Home.
-- Shows this week's strongest behavior pattern, confidence, leak pressure, and one next move.
-- Adds lightweight week-over-week comparison using saved Pattern History when available.
-- Adds a safe public text copy action that avoids private income and real balance.
-- Keeps the full detailed pattern analysis inside Chart / Leak Pattern Lab.
+## User-facing change
+The Save tab now includes a **Pattern Challenge Coach** that recommends a challenge from the user's weekly behavior pattern.
 
-## No backend changes
+Instead of making the user randomly pick a challenge, the app now uses existing weekly pattern data to suggest a focused mission.
+
+Examples:
+- Takeout leaks → Takeout control mission
+- Coffee leaks → Coffee control mission
+- Shopping leaks → Shopping freeze mission
+- Subscription pressure → Subscription cleanup mission
+- Grey-zone spending → Wallet recovery mission
+- Late-night/weekend/payday patterns → timing-aware wallet recovery mission
+
+## Technical notes
 - No API changes.
 - No Supabase migration.
 - No Telegram webhook changes.
-- No stored-data rewrite.
+- Uses existing Challenge API flow and existing Weekly Behavior Report / Pattern Lab data.
