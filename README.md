@@ -1,17 +1,14 @@
-# v59.17.1 — Wallet Verify Fallback + Share Header Fit Hotfix
+# v59.17.2 — Wallet Verification Sync Hotfix
 
-Patch-only hotfix from v59.17.
+Patch-only hotfix.
 
 ## What changed
-- Wallet verification now handles missing wallet provider more clearly inside Telegram WebView.
-- If Phantom/Solflare provider is not injected, the app shows a helper card instead of only a toast.
-- Added quick actions: Open Phantom, Open Solflare, Copy app link.
-- Watch-only balance still works; holder unlocks still require verified ownership.
-- Profile share-card header has more safe vertical space so name/status text should not be cropped.
+- Adds `/api/wallet/verify/status` to read the server-side verified wallet link for the logged-in user.
+- Profile now auto-syncs verified wallet status after returning from wallet-browser verification.
+- Adds a `Sync verification` action for Telegram Mini App cases where Phantom/Solflare verification completed outside the Telegram WebView.
+- Keeps watched-wallet balance available while holder unlocks remain gated behind verified ownership.
 
-## Not changed
-- No API changes.
+## No changes
 - No Supabase migration.
-- No wallet transaction logic.
-- No seed phrase/private key handling.
-- No token transfers, staking, claims, or custody.
+- No token transactions.
+- No staking, claims, transfers, or custody.

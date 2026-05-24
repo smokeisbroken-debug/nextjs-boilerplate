@@ -20009,6 +20009,7 @@ function SettingsScreen({
   const [walletVerifying, setWalletVerifying] = useState(false);
   const [walletMessage, setWalletMessage] = useState("");
   const [walletProviderHelpOpen, setWalletProviderHelpOpen] = useState(false);
+  const [walletStatusRefreshing, setWalletStatusRefreshing] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState("");
 
@@ -20019,6 +20020,13 @@ function SettingsScreen({
   useEffect(() => {
     setWalletAddressDraft(settings.wallet.walletAddress);
   }, [settings.wallet.walletAddress]);
+
+  useEffect(() => {
+    if (!settings.wallet.walletAddress) return;
+    if (!telegram.isTelegram && !webAuth.user) return;
+
+    void refreshWalletVerificationStatus(true);
+  }, [settings.wallet.walletAddress, telegram.isTelegram, telegram.initData, webAuth.user?.id]);
 
   function incomeClarityNote(key: keyof Settings["income"]) {
     return settingsMoneyClarityNote(
@@ -20291,6 +20299,71 @@ function SettingsScreen({
     }));
   }
 
+  async function refreshWalletVerificationStatus(silent = false) {
+    const walletAddress = (settings.wallet.walletAddress || walletAddressDraft).trim();
+
+    if (!isLikelySolanaWalletAddress(walletAddress) || walletStatusRefreshing) return;
+    if (!telegram.isTelegram && !webAuth.user) return;
+
+    setWalletStatusRefreshing(true);
+
+    try {
+      const response = await fetch("/api/wallet/verify/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress,
+          initData: telegram.isTelegram ? telegram.initData : "",
+        }),
+      });
+      const data = (await response.json()) as {
+        ok?: boolean;
+        error?: string;
+        walletAddress?: string;
+        verified?: boolean;
+        balance?: number;
+        percentOfSupply?: number;
+        holderTier?: HolderTier | null;
+        checkedAt?: string;
+        verifiedAt?: string;
+      };
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Could not sync wallet verification status.");
+      }
+
+      if (data.verified) {
+        updateWalletSettings({
+          walletAddress: data.walletAddress || walletAddress,
+          brokeBalance: Math.max(0, safeNumber(String(data.balance ?? settings.wallet.brokeBalance))),
+          percentOfSupply: Math.max(0, safeNumber(String(data.percentOfSupply ?? settings.wallet.percentOfSupply))),
+          holderTier: normalizeHolderTier(data.holderTier || settings.wallet.holderTier),
+          lastCheckedAt: data.checkedAt || settings.wallet.lastCheckedAt || new Date().toISOString(),
+          isVerified: true,
+          provider: "verified",
+          verifiedAt: data.verifiedAt || settings.wallet.verifiedAt || new Date().toISOString(),
+        });
+
+        if (!silent) {
+          setWalletMessage("Verified wallet status synced. Holder unlocks are active.");
+          notifyApp("Wallet synced", "Verified holder status is active in this app.", "info");
+          triggerHaptic("success");
+        }
+      } else if (!silent) {
+        setWalletMessage("This wallet is still watch-only in your account. Verify ownership to unlock holder perks.");
+        notifyApp("Watch-only wallet", "Balance is visible, but holder unlocks need wallet verification.", "info");
+      }
+    } catch (error) {
+      if (!silent) {
+        const message = error instanceof Error ? error.message : "Could not sync wallet verification status.";
+        setWalletMessage(message);
+        notifyApp("Sync failed", message, "info");
+      }
+    } finally {
+      setWalletStatusRefreshing(false);
+    }
+  }
+
   async function pasteWalletAddressFromClipboard() {
     try {
       const clipboardText = await navigator.clipboard.readText();
@@ -20367,6 +20440,7 @@ function SettingsScreen({
         provider: walletAddress === settings.wallet.walletAddress && settings.wallet.isVerified ? "verified" : data.verified ? "verified" : "watch",
         verifiedAt: walletAddress === settings.wallet.walletAddress ? settings.wallet.verifiedAt : "",
       });
+      void refreshWalletVerificationStatus(true);
       setWalletMessage("$BROKE balance updated. This is read-only tracking.");
       notifyApp("Wallet checked", "Read-only $BROKE balance updated.", "info");
       triggerHaptic("success");
@@ -20550,6 +20624,7 @@ function SettingsScreen({
         provider: "verified",
         verifiedAt: confirmData.verifiedAt || new Date().toISOString(),
       });
+      void refreshWalletVerificationStatus(true);
       setWalletMessage("Wallet verified. Holder unlocks are now available for this wallet.");
       notifyApp("Wallet verified", "Holder status is now ownership-verified.", "info");
       triggerHaptic("success");
@@ -20930,10 +21005,25 @@ function SettingsScreen({
               type="button"
               className={`wallet-verify-cta ${settings.wallet.isVerified ? "verified" : ""}`}
               onClick={verifyWalletOwnership}
-              disabled={!walletDraftLooksValid || walletChecking || walletVerifying}
+              disabled={!walletDraftLooksValid || walletChecking || walletVerifying || walletStatusRefreshing}
             >
-              {walletVerifying ? "Verifying..." : settings.wallet.isVerified ? "Verified" : "Verify wallet"}
+              {walletVerifying
+                ? "Verifying..."
+                : walletStatusRefreshing
+                  ? "Syncing..."
+                  : settings.wallet.isVerified
+                    ? "Verified"
+                    : "Verify wallet"}
             </button>
+            {settings.wallet.walletAddress && !settings.wallet.isVerified && (
+              <button
+                type="button"
+                onClick={() => refreshWalletVerificationStatus(false)}
+                disabled={walletChecking || walletVerifying || walletStatusRefreshing}
+              >
+                {walletStatusRefreshing ? "Syncing..." : "Sync verification"}
+              </button>
+            )}
             {settings.wallet.walletAddress && (
               <button type="button" onClick={unlinkWallet}>
                 Remove wallet
@@ -20955,7 +21045,7 @@ function SettingsScreen({
               <div>
                 <span>Wallet provider not found</span>
                 <strong>Open inside a wallet browser to verify.</strong>
-                <small>Telegram can show the app without Phantom/Solflare injected. Balance check stays watch-only; verification needs message signing.</small>
+                <small>Telegram can show the app without Phantom/Solflare injected. If you already signed in a wallet browser, press Sync verification after returning here.</small>
               </div>
               <div className="wallet-provider-help-actions">
                 <button type="button" onClick={() => openWalletBrowser("phantom")}>Open Phantom</button>

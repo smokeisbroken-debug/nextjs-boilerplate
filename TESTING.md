@@ -1,4 +1,4 @@
-# v59.17.1 Testing
+# v59.17.2 — Testing
 
 Run:
 
@@ -9,9 +9,10 @@ NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
 Manual checks:
+
 1. Profile → Wallet & $BROKE balance.
-2. Paste wallet address and check balance.
-3. Press Verify wallet inside Telegram WebView where no provider exists.
-4. Confirm helper card appears with Open Phantom / Open Solflare / Copy app link.
-5. Confirm watch-only balance still remains visible.
-6. Generate Profile share card and confirm name/status/header text is not cropped.
+2. Paste wallet and check balance.
+3. Press Verify wallet in Phantom/Solflare wallet browser.
+4. Return to Telegram Mini App.
+5. Profile should auto-sync to `Verified`, or press `Sync verification`.
+6. Custom avatar / holder rewards should unlock only after verified status is synced.
