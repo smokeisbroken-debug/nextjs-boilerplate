@@ -1,37 +1,19 @@
-# v59.14 — Verified Holder Guard
+# v59.15 — Holder Proof Profile Polish
 
 ## Goal
-
-Protect holder identity and future holder unlocks from wallet-address spoofing.
-
-## What changed
-
-- Added verified-vs-watched wallet state.
-- Added signed-message verification flow.
-- Added server-side verification tables.
-- Custom avatar upload now requires verified ownership, not only balance.
-- Existing read-only balance checking remains available.
+After v59.14 introduced watched vs verified wallets, public holder display needed to respect that distinction. This patch makes the profile/share layer cleaner and safer.
 
 ## Files changed
+- app/page.tsx
+- app/globals.css
+- README.md
+- PROJECT_ORDER.md
+- TESTING.md
 
-```txt
-app/page.tsx
-app/globals.css
-app/api/avatar/upload/route.ts
-app/api/wallet/verify/nonce/route.ts
-app/api/wallet/verify/confirm/route.ts
-supabase/migrations/20260524_v59_14_verified_holder_guard.sql
-supabase/review/20260524_v59_14_verified_holder_guard_audit.sql
-README.md
-PROJECT_ORDER.md
-TESTING.md
-```
+## Product behavior
+- Watch wallet: balance can be viewed, but public holder status says verification is needed.
+- Verified wallet: holder tier can be used in profile/share identity.
+- Holder Proof dashboard shows tier, verification state, and next-tier progress.
 
-## Not changed
-
-- Token transfers.
-- Staking.
-- Rewards/claims.
-- Wallet custody.
-- Expense calculations.
-- Share Studio item logic.
+## No backend changes
+This is a UI/logic polish patch only. It relies on the verification foundation from v59.14.

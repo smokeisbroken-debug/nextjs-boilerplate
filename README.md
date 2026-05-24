@@ -1,80 +1,19 @@
-# v59.14 — Verified Holder Guard
+# v59.15 — Holder Proof Profile Polish
 
-Patch-only package for the current stable $BROKE Mini App line.
+Patch-only update from the v59.14.1 working checkpoint.
 
-## Purpose
+## What changed
+- Holder display is now stricter and clearer after wallet verification was introduced.
+- Public Share Studio holder metric now requires a verified wallet before showing holder tier.
+- Watched wallets can still check balance, but public holder proof stays locked until verification.
+- Profile wallet block now includes a compact Holder Proof dashboard.
+- Added next holder tier progress with a progress bar and clear next-tier target.
+- Share-card holder display now says Verified holder instead of showing raw range when exact balance is private.
 
-This patch separates wallet balance display from ownership-based holder unlocks.
-
-Before this patch, a user could paste any public Solana wallet address and unlock holder features based only on its visible balance. This patch fixes that product/security gap by adding ownership verification.
-
-## User-facing changes
-
-- Wallet balance can still be checked as a read-only **watched wallet**.
-- Holder unlocks now require **verified wallet ownership**.
-- Profile → Wallet has a new **Verify wallet** button.
-- Verification uses a wallet message signature only.
-- No transaction, token transfer, seed phrase, or private key is involved.
-- Custom avatar upload now requires:
-  - verified wallet ownership;
-  - at least 500,000 BROKE balance.
-
-## Backend changes
-
-New routes:
-
-```txt
-app/api/wallet/verify/nonce/route.ts
-app/api/wallet/verify/confirm/route.ts
-```
-
-Updated route:
-
-```txt
-app/api/avatar/upload/route.ts
-```
-
-New Supabase tables:
-
-```txt
-broke_wallet_verifications
-broke_wallet_links
-```
-
-## Deployment order
-
-1. Run the Supabase migration.
-2. Replace files from this patch.
-3. Deploy to Vercel.
-4. Verify a wallet from Profile → Wallet & $BROKE balance.
-5. Run the audit SQL.
-
-## Supabase migration
-
-Run:
-
-```txt
-supabase/migrations/20260524_v59_14_verified_holder_guard.sql
-```
-
-Then audit:
-
-```txt
-supabase/review/20260524_v59_14_verified_holder_guard_audit.sql
-```
-
-## Required env
-
-```txt
-SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
-TELEGRAM_BOT_TOKEN
-```
-
-Recommended/optional:
-
-```txt
-WEB_AUTH_SECRET
-BROKE_TOKEN_MINT
-SOLANA_RPC_URL
-```
+## Not changed
+- No API route changes.
+- No Supabase schema changes.
+- No migration required.
+- No wallet transactions.
+- No token transfers.
+- No custom avatar upload logic changes.

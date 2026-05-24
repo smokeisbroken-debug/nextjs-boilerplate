@@ -21753,3 +21753,130 @@ html[lang="ru"] .trigger-preview strong {
   color: rgba(255, 255, 255, 0.68);
   background: rgba(255, 255, 255, 0.075);
 }
+
+/* v59.15 Holder Profile Card Polish */
+.holder-proof-dashboard {
+  margin: 10px 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  padding: 12px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(166, 255, 47, 0.08), transparent 38%),
+    rgba(0, 0, 0, 0.18);
+  display: grid;
+  gap: 10px;
+}
+
+.holder-proof-dashboard.verified {
+  border-color: rgba(166, 255, 47, 0.34);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(166, 255, 47, 0.16), transparent 42%),
+    rgba(166, 255, 47, 0.05);
+}
+
+.holder-proof-dashboard-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.holder-proof-dashboard-head div,
+.holder-tier-progress-card div {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.holder-proof-dashboard-head span,
+.holder-tier-progress-card span {
+  color: var(--neon);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.holder-proof-dashboard-head strong {
+  color: #fff;
+  font-size: 0.96rem;
+  line-height: 1.12;
+}
+
+.holder-proof-dashboard-head small,
+.holder-tier-progress-card small {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 0.74rem;
+  line-height: 1.32;
+  font-weight: 750;
+}
+
+.holder-proof-dashboard-head > b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(166, 255, 47, 0.28);
+  border-radius: 999px;
+  padding: 7px 9px;
+  color: var(--neon);
+  background: rgba(166, 255, 47, 0.09);
+  font-size: 0.74rem;
+  font-weight: 950;
+}
+
+.holder-tier-progress-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 10px;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.holder-tier-progress-card > strong {
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.holder-tier-progress-bar {
+  grid-column: 1 / -1;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.holder-tier-progress-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--neon), #e7ff75);
+  box-shadow: 0 0 18px rgba(166, 255, 47, 0.24);
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier strong {
+  font-size: 0.94rem;
+  line-height: 1.08;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier small {
+  font-size: 0.58rem;
+  line-height: 1.18;
+}
+
+@media (max-width: 520px) {
+  .holder-proof-dashboard {
+    border-radius: 16px;
+    padding: 10px;
+  }
+
+  .holder-proof-dashboard-head {
+    flex-direction: column;
+  }
+
+  .holder-proof-dashboard-head > b {
+    width: fit-content;
+  }
+}

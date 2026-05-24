@@ -3538,6 +3538,55 @@ function formatHolderPercent(value: number) {
   return `${value.toFixed(value >= 1 ? 2 : 4)}%`;
 }
 
+
+type HolderTierMilestone = {
+  id: HolderTierId;
+  label: string;
+  minPercent: number;
+};
+
+const holderTierMilestones: HolderTierMilestone[] = [
+  { id: "tadpole", label: "Tadpole", minPercent: 0.0001 },
+  { id: "frog", label: "Frog", minPercent: 0.05 },
+  { id: "strong", label: "Strong Frog", minPercent: 0.25 },
+  { id: "shark", label: "Shark Frog", minPercent: 0.75 },
+  { id: "whale", label: "Whale Frog", minPercent: 2 },
+  { id: "leviathan", label: "Leviathan Frog", minPercent: 5 },
+];
+
+function getNextHolderTierProgress(wallet: WalletLinkSettings) {
+  const currentPercent = Math.max(0, wallet.percentOfSupply || 0);
+  const currentIndex = holderTierMilestones.findIndex((tier) => tier.id === wallet.holderTier.id);
+  const nextTier = holderTierMilestones.find((tier) => tier.minPercent > currentPercent);
+
+  if (!nextTier) {
+    return {
+      label: "Top holder tier reached",
+      detail: "Leviathan proof is already unlocked.",
+      progress: 100,
+      nextLabel: "Max tier",
+    };
+  }
+
+  const previousTier = currentIndex >= 0 ? holderTierMilestones[currentIndex] : { minPercent: 0 };
+  const basePercent = Math.max(0, previousTier.minPercent || 0);
+  const span = Math.max(nextTier.minPercent - basePercent, 0.0001);
+  const progress = Math.max(0, Math.min(100, Math.round(((currentPercent - basePercent) / span) * 100)));
+
+  return {
+    label: `Next tier: ${nextTier.label}`,
+    detail: `Reach ${formatHolderPercent(nextTier.minPercent)} of supply to unlock the next holder tier.`,
+    progress,
+    nextLabel: nextTier.label,
+  };
+}
+
+function getHolderProofLabel(wallet: WalletLinkSettings) {
+  if (!wallet.walletAddress) return "No wallet linked";
+  if (wallet.isVerified) return "Verified holder proof";
+  return "Watch-only wallet";
+}
+
 function normalizeProfileShareSettings(input?: Partial<ProfileShareSettings> | null): ProfileShareSettings {
   const enabledItems = Array.isArray(input?.enabledItems)
     ? input.enabledItems
@@ -3663,7 +3712,7 @@ function getProfileShareItemMeta(id: ProfileShareItemId) {
     case "status":
       return { label: "Status", detail: "Stable / pressure state." };
     case "holder":
-      return { label: "Holder tier", detail: "Read-only $BROKE wallet status." };
+      return { label: "Holder tier", detail: "Verified $BROKE holder proof." };
   }
 }
 
@@ -3716,12 +3765,15 @@ function buildProfileShareMetric({
       if (!settings.wallet.showHolderStatus || !settings.wallet.walletAddress) {
         return { label: "Holder tier", value: "private" };
       }
+      if (!settings.wallet.isVerified) {
+        return { label: "Holder tier", value: "verify first", detail: "Watch-only wallet" };
+      }
       return {
         label: "Holder tier",
         value: settings.wallet.holderTier.label,
         detail: settings.wallet.showTokenBalance
           ? formatTokenAmount(settings.wallet.brokeBalance)
-          : settings.wallet.holderTier.range,
+          : "Verified holder",
       };
   }
 }
@@ -20085,6 +20137,8 @@ function SettingsScreen({
     : settings.wallet.walletAddress
       ? "Watched wallet · verify to unlock holder perks"
       : "No wallet linked";
+  const holderProofStatusLabel = getHolderProofLabel(settings.wallet);
+  const holderNextTierProgress = getNextHolderTierProgress(settings.wallet);
 
   function updateIdentityField<K extends keyof Settings["identity"]>(key: K, value: Settings["identity"][K]) {
     setSettings((prev) => ({
@@ -20741,6 +20795,32 @@ function SettingsScreen({
                 : "Balance display is watch-only. Custom avatar and future holder perks require verification."}
             </small>
           </div>
+
+          <section className={`holder-proof-dashboard ${settings.wallet.isVerified ? "verified" : "watched"}`}>
+            <div className="holder-proof-dashboard-head">
+              <div>
+                <span>Holder proof</span>
+                <strong>{holderProofStatusLabel}</strong>
+                <small>
+                  {settings.wallet.isVerified
+                    ? "This wallet can unlock holder identity features."
+                    : "Public holder perks stay locked until ownership is verified."}
+                </small>
+              </div>
+              <b>{settings.wallet.holderTier.label}</b>
+            </div>
+
+            <div className="holder-tier-progress-card">
+              <div>
+                <span>{holderNextTierProgress.label}</span>
+                <small>{holderNextTierProgress.detail}</small>
+              </div>
+              <strong>{holderNextTierProgress.progress}%</strong>
+              <div className="holder-tier-progress-bar" aria-hidden="true">
+                <i style={{ width: `${holderNextTierProgress.progress}%` }} />
+              </div>
+            </div>
+          </section>
 
           <div className="wallet-security-note-grid">
             <span>Read-only balance</span>
