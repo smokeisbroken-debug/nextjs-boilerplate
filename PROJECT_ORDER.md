@@ -1,24 +1,15 @@
-# Project Order
+# PROJECT ORDER — v59.19.1
 
-## Current stable target
+Current checkpoint: v59.19.1 Share Studio Brightness Hotfix.
 
-`v59.19 — Global Premium Style Foundation`
+## Previous checkpoint
 
-## Patch order
+v59.19 Global Premium Style Foundation.
 
-1. Start from the latest full project archive: `nextjs-boilerplate-main(4).zip`.
-2. Apply `v59.18 — Wallet Provider Help + Verification Stability` if it is not already deployed.
-3. Apply `v59.19 — Global Premium Style Foundation`.
-4. Run verification commands.
-5. Deploy to Vercel.
-6. Smoke-test the visual app flow on mobile Telegram and web.
+## This patch
 
-## Scope
+Selected Share Studio options were too bright after the global premium restyle. This patch makes active Share Studio picker cards dark/glass selected cards instead of full neon CTA blocks.
 
-This is a style-only foundation patch. It intentionally avoids backend, Supabase, wallet, holder-reward, and stored-data changes.
+## Do not treat this as a product logic patch
 
-## Next safe mechanics after this patch
-
-- Personal Cabinet layout refinement if the new global style needs tighter hierarchy.
-- Holder Rewards teaser UI only.
-- Verified Holder Reward Pool Foundation later, with ledger/snapshots before any real payout logic.
+No app mechanics, API routes, wallet verification, Supabase tables, token logic, or Telegram integrations were changed.

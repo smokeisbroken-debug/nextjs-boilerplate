@@ -1,33 +1,20 @@
-# v59.19 Testing Checklist
+# TESTING — v59.19.1 Share Studio Brightness Hotfix
+
+## Visual checks
+
+1. Open Profile / Personal Cabinet.
+2. Scroll to Share Studio.
+3. Select multiple public display items.
+4. Confirm selected items are readable dark selected cards, not full neon green blocks.
+5. Confirm unselected and locked items still look normal.
+6. Confirm bottom navigation and main CTAs remain unchanged.
 
 ## Build checks
+
+Recommended after applying patch:
 
 ```bash
 npm run typecheck
 npm run lint:quiet
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
-
-## Visual smoke test
-
-Check these areas on mobile width and desktop/web width:
-
-- Home hero and Today’s Focus.
-- Wallet Snapshot and Wallet HP.
-- Track Leak amount input, category buttons, need-type choices, trigger chips, and save CTA.
-- Wallet Pressure Chart and selected day details.
-- Leak Pattern Lab / Weekly Behavior Report.
-- Growth / Save / Debt & Bills Radar blocks.
-- Profile / Personal Cabinet.
-- Wallet provider help and Sync verification flow.
-- Share Studio and inline share preview.
-- Bottom navigation.
-- Help guide modal.
-
-## Share image safety
-
-Open/create share cards and confirm that image capture still renders text/card layers correctly. The patch avoids blur inside share-capture surfaces for this reason.
-
-## Expected result
-
-The app should feel like one premium dark dashboard system, not separate visual eras, while all existing behavior remains unchanged.

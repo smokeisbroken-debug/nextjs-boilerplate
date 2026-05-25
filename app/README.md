@@ -1,34 +1,30 @@
-# Smoke is Broke / $BROKE Life Tracker
+# $BROKE Life Tracker — v59.19.1 Share Studio Brightness Hotfix
 
-## Current checkpoint
+Patch-only update on top of v59.19 Global Premium Style Foundation.
 
-`v59.19 — Global Premium Style Foundation`
+## Scope
 
-This patch applies a shared premium visual system across the app while preserving the existing product logic from `v59.18 — Wallet Provider Help + Verification Stability`.
+This hotfix reduces the neon intensity of selected Share Studio options in Profile / Personal Cabinet.
 
-## What changed
+The rest of the premium global style remains unchanged.
 
-- Added a global premium dark dashboard visual layer.
-- Unified cards, heroes, panels, badges, inputs, buttons, tabs, modals, and bottom navigation.
-- Made Home, Track Leak, Chart, Growth, Save, Profile, onboarding, reports, and wallet/profile sections feel closer to one product style.
-- Added missing global CSS aliases for `--accent` and `--neon` to stabilize newer profile/wallet styles.
-- Preserved share-image capture safety by disabling blur effects inside share-capture surfaces.
+## Changed files
 
-## What did not change
+- `app/globals.css`
+- `README.md`
+- `PROJECT_ORDER.md`
+- `TESTING.md`
+- `app/README.md`
+- `app/PROJECT_ORDER.md`
+- `app/TESTING.md`
 
-- No API behavior changes.
-- No Supabase migration.
-- No wallet verification logic change.
-- No balance formula change.
-- No holder reward threshold change.
-- No avatar upload backend change.
-- No Telegram webhook change.
-- No stored data rewrite.
+## No logic changes
 
-## Verify
-
-```bash
-npm run typecheck
-npm run lint:quiet
-NEXT_TELEMETRY_DISABLED=1 npm run build
-```
+- No API changes
+- No Supabase migration
+- No wallet verification changes
+- No holder reward changes
+- No token balance logic changes
+- No avatar backend changes
+- No Telegram webhook changes
+- No stored data rewrite

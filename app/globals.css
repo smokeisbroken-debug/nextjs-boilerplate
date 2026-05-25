@@ -23066,3 +23066,30 @@ body {
     border-radius: 24px;
   }
 }
+
+/* v59.19.1 Share Studio Active State Brightness Hotfix
+   Keep the global premium style, but make selected Share Studio options look like
+   dark selected cards instead of full neon CTA blocks. */
+.profile-share-picker-grid label.active {
+  border-color: rgba(183, 255, 25, 0.36);
+  color: #f7ffe9;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(183, 255, 25, 0.095), rgba(255, 255, 255, 0.024)),
+    rgba(4, 14, 8, 0.78);
+  box-shadow:
+    0 0 18px rgba(183, 255, 25, 0.075),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.profile-share-picker-grid label.active span {
+  color: #f7ffe9;
+}
+
+.profile-share-picker-grid label.active small {
+  color: rgba(247, 255, 233, 0.66);
+}
+
+.profile-share-picker-grid label.active input {
+  accent-color: #9eff2f;
+}
