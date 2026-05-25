@@ -23093,3 +23093,413 @@ body {
 .profile-share-picker-grid label.active input {
   accent-color: #9eff2f;
 }
+
+/* v59.19.2 Card Premium Alignment Polish
+   Normalize card width, spacing, and content rhythm across the app without touching logic. */
+.screen :where(section, article, details)[class*="card"],
+.screen :where(section, article, details)[class*="hero"],
+.screen :where(.settings-group, .settings-menu, .clean-details, .tech-details, .tracked-panel, .recent-card, .share-card, .chart-preview, .big-chart, .volume, .day-card, .amount-input, .note-box) {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.screen :where(.hero, .home-compact-hero, .home-wallet-snapshot-card, .profile-cabinet-card, .profile-share-studio-card, .settings-group, .settings-menu, .clean-details, .tech-details, .weekly-behavior-home-card, .smart-home-focus-card, .first-journey-card, .daily-return-hook-card, .comeback-mode-card, .holder-proof-dashboard, .holder-rewards-card, .wallet-provider-readiness-card, .wallet-provider-help-card, .pattern-challenge-coach, .pattern-detector-card, .report-card, .growth-result-card, .debt-radar-hero, .debt-radar-card, .survival-card, .survival-mode-card, .share-card, .recent-card, .tracked-panel, .whatif-hero, .whatif-card, .savings-card, .whatif-total-card, .v58-empty-card, .life-profile-card) {
+  margin-left: auto;
+  margin-right: auto;
+  padding: clamp(13px, 3.45vw, 17px);
+  border-radius: var(--premium-radius-lg);
+  overflow: hidden;
+}
+
+.screen :where(.hero, .home-compact-hero, .profile-cabinet-card, .weekly-behavior-home-card, .smart-home-focus-card, .first-journey-card, .daily-return-hook-card, .comeback-mode-card, .holder-proof-dashboard, .holder-rewards-card, .wallet-provider-readiness-card, .wallet-provider-help-card, .profile-share-studio-card) {
+  border-radius: var(--premium-radius-xl);
+}
+
+.screen :where(.stats-grid, .compact-home-stats, .wallet-snapshot-primary-stats, .weekly-behavior-home-grid, .safe-weekly-share-grid, .safe-weekly-share-profile-grid, .smart-focus-metrics, .first-journey-grid, .return-hook-grid, .profile-cabinet-stats, .profile-share-preview-grid, .profile-selected-share-grid, .profile-share-picker-grid, .holder-reward-grid, .wallet-balance-status-grid, .wallet-security-note-grid, .pattern-detector-grid, .growth-field-grid, .report-metrics, .report-public-share-grid, .leak-reflection-mini-grid, .v58-onboarding-summary-grid, .v58-setup-status) {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  align-items: stretch;
+  gap: clamp(9px, 2.8vw, 12px);
+}
+
+.screen :where(.stats-grid, .compact-home-stats, .wallet-snapshot-primary-stats, .weekly-behavior-home-grid, .safe-weekly-share-grid, .safe-weekly-share-profile-grid, .smart-focus-metrics, .first-journey-grid, .return-hook-grid, .profile-cabinet-stats, .profile-share-preview-grid, .profile-selected-share-grid, .holder-reward-grid, .wallet-balance-status-grid, .pattern-detector-grid, .growth-field-grid, .report-metrics, .report-public-share-grid, .leak-reflection-mini-grid, .v58-onboarding-summary-grid, .v58-setup-status) > * {
+  min-width: 0;
+  height: 100%;
+}
+
+.screen :where(.stat-card, .wallet-snapshot-day-card, .wallet-snapshot-primary-stats article, .weekly-behavior-home-grid article, .safe-weekly-share-grid article, .safe-weekly-share-profile-grid article, .smart-focus-metrics article, .first-journey-grid article, .return-hook-grid article, .profile-share-preview-grid article, .profile-selected-share-grid > div, .profile-share-picker-grid label, .holder-reward-grid article, .wallet-balance-status-grid article, .wallet-security-note-grid span, .profile-cabinet-stats article, .pattern-detector-grid article, .candle-story-block article, .chart-premium-details-body article, .growth-field-grid article, .report-metrics article, .report-public-share-grid article, .leak-reflection-mini-grid article, .v58-onboarding-summary-grid article, .v58-setup-status article) {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 82px;
+  padding: clamp(11px, 3.1vw, 14px);
+  border-radius: 18px;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+}
+
+.screen :where(.stat-card, .profile-share-picker-grid label, .profile-selected-share-grid > div, .wallet-snapshot-day-card, .wallet-snapshot-primary-stats article, .weekly-behavior-home-grid article, .holder-reward-grid article, .wallet-balance-status-grid article, .profile-cabinet-stats article) {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.072), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015)),
+    rgba(2, 9, 5, 0.42);
+  border-color: rgba(183, 255, 25, 0.12);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.022),
+    0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.stat-card {
+  min-height: 122px;
+}
+
+.stat-top {
+  min-width: 0;
+  min-height: 38px;
+  margin-bottom: clamp(8px, 2.8vw, 12px);
+}
+
+.stat-top img {
+  flex: 0 0 auto;
+}
+
+.stat-top span,
+.screen :where(.profile-share-picker-grid span, .profile-selected-share-grid strong, .profile-share-preview-grid strong, .wallet-snapshot-primary-stats strong, .weekly-behavior-home-grid strong, .holder-reward-grid strong, .wallet-balance-status-grid strong, .profile-cabinet-stats strong) {
+  min-width: 0;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.stat-card strong {
+  max-width: 100%;
+  font-size: clamp(1.52rem, 7.3vw, 2.24rem);
+  line-height: 0.98;
+  letter-spacing: -0.065em;
+  overflow-wrap: anywhere;
+}
+
+.stat-card small,
+.screen :where(.profile-share-picker-grid small, .profile-selected-share-grid span, .profile-share-preview-grid span, .wallet-snapshot-primary-stats span, .weekly-behavior-home-grid span, .weekly-behavior-home-grid p, .holder-reward-grid span, .holder-reward-grid small, .wallet-balance-status-grid span, .wallet-balance-status-grid small, .profile-cabinet-stats span, .profile-cabinet-stats small) {
+  line-height: 1.28;
+}
+
+.profile-share-picker-grid label {
+  grid-template-columns: 20px minmax(0, 1fr);
+  column-gap: 10px;
+  min-height: 84px;
+}
+
+.profile-share-picker-grid label.active {
+  border-color: rgba(183, 255, 25, 0.34);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.13), transparent 42%),
+    linear-gradient(180deg, rgba(183, 255, 25, 0.075), rgba(255, 255, 255, 0.018)),
+    rgba(3, 12, 7, 0.82);
+  box-shadow:
+    0 0 16px rgba(183, 255, 25, 0.055),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.profile-share-picker-grid input {
+  width: 18px;
+  height: 18px;
+}
+
+.profile-section-menu button,
+.profile-share-studio-actions button,
+.wallet-provider-help-actions button,
+.wallet-provider-readiness-card button,
+.weekly-behavior-home-actions button,
+.safe-weekly-share-actions button,
+.growth-actions button,
+.comeback-actions button {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 430px) {
+  .screen :where(.hero, .home-compact-hero, .home-wallet-snapshot-card, .profile-cabinet-card, .profile-share-studio-card, .settings-group, .settings-menu, .clean-details, .tech-details, .weekly-behavior-home-card, .smart-home-focus-card, .first-journey-card, .daily-return-hook-card, .comeback-mode-card, .holder-proof-dashboard, .holder-rewards-card, .wallet-provider-readiness-card, .wallet-provider-help-card, .pattern-challenge-coach, .pattern-detector-card, .report-card, .growth-result-card, .debt-radar-hero, .debt-radar-card, .survival-card, .survival-mode-card, .share-card, .recent-card, .tracked-panel, .whatif-hero, .whatif-card, .savings-card, .whatif-total-card, .v58-empty-card, .life-profile-card) {
+    padding: 13px;
+    border-radius: 22px;
+  }
+
+  .stats-grid,
+  .compact-home-stats,
+  .wallet-snapshot-primary-stats,
+  .profile-cabinet-stats,
+  .profile-selected-share-grid,
+  .report-metrics,
+  .growth-field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .profile-share-picker-grid,
+  .profile-share-preview-grid,
+  .weekly-behavior-home-grid,
+  .safe-weekly-share-grid,
+  .safe-weekly-share-profile-grid,
+  .smart-focus-metrics,
+  .first-journey-grid,
+  .return-hook-grid,
+  .holder-reward-grid,
+  .wallet-balance-status-grid,
+  .pattern-detector-grid,
+  .leak-reflection-mini-grid,
+  .v58-onboarding-summary-grid,
+  .v58-setup-status {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    min-height: 116px;
+  }
+
+  .profile-share-picker-grid label,
+  .profile-selected-share-grid > div,
+  .wallet-snapshot-primary-stats article,
+  .profile-cabinet-stats article {
+    min-height: 76px;
+  }
+
+  .stat-top span {
+    font-size: clamp(0.78rem, 3.8vw, 0.95rem);
+  }
+}
+
+/* v59.19.3 Profile Compact Cabinet Hotfix */
+.profile-cabinet-card .profile-compact-details {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0 !important;
+  border-radius: 24px;
+}
+
+.profile-compact-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 76px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.profile-compact-summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile-compact-summary::after {
+  content: "Open";
+  flex: 0 0 auto;
+  border: 1px solid rgba(183, 255, 25, 0.2);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: rgba(220, 255, 180, 0.92);
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+.profile-compact-details[open] > .profile-compact-summary::after {
+  content: "Close";
+}
+
+.profile-compact-summary > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.profile-compact-summary span {
+  color: var(--neon);
+  font-size: 0.76rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profile-compact-summary strong {
+  color: #fff;
+  font-size: clamp(1rem, 4.6vw, 1.22rem);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.profile-compact-summary small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.24;
+}
+
+.profile-compact-summary > b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(183, 255, 25, 0.22);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--neon);
+  background: rgba(183, 255, 25, 0.08);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.profile-compact-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.profile-compact-details[open] > .profile-compact-summary {
+  border-bottom: 1px solid rgba(183, 255, 25, 0.11);
+  margin-bottom: 12px;
+}
+
+.profile-compact-details:not([open]) {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.018), 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.profile-share-safety-row {
+  gap: 8px;
+}
+
+.profile-share-safety-row span {
+  min-height: auto;
+  padding: 10px 12px;
+}
+
+.wallet-compact-body .wallet-address-control,
+.share-studio-compact-body .profile-share-slot-coach {
+  margin-top: 0;
+}
+
+.wallet-security-note-grid {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 7px !important;
+  margin: 8px 0 10px;
+}
+
+.wallet-security-note-grid span {
+  flex: 1 1 30%;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 8px 10px !important;
+  align-content: center !important;
+  border-radius: 999px !important;
+  font-size: 0.68rem !important;
+}
+
+.profile-share-preview-grid,
+.profile-share-picker-grid,
+.holder-reward-grid,
+.wallet-balance-status-grid {
+  gap: 8px !important;
+}
+
+.profile-share-preview-grid article,
+.profile-share-picker-grid label,
+.holder-reward-grid article,
+.wallet-balance-status-grid article,
+.profile-cabinet-stats article {
+  min-height: 70px !important;
+  padding: 11px 12px !important;
+}
+
+.holder-reward-grid small,
+.profile-share-picker-grid small {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.profile-share-studio-note {
+  margin-bottom: 0;
+  font-size: 0.82rem;
+  line-height: 1.34;
+}
+
+.profile-settings-hub {
+  gap: 10px;
+}
+
+.profile-settings-hub-heading.compact-settings-heading,
+.profile-settings-section:not([open]) .profile-section-summary {
+  min-height: 72px;
+  padding: 12px 14px;
+}
+
+.profile-section-summary small {
+  line-height: 1.25;
+}
+
+@media (max-width: 430px) {
+  .profile-cabinet-card {
+    gap: 12px;
+  }
+
+  .profile-compact-summary {
+    min-height: 70px;
+    padding: 12px 13px;
+    gap: 9px;
+  }
+
+  .profile-compact-summary small {
+    display: none;
+  }
+
+  .profile-compact-summary::after {
+    padding: 6px 8px;
+    font-size: 0.68rem;
+  }
+
+  .profile-compact-summary > b {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+  }
+
+  .profile-compact-body {
+    padding: 0 11px 12px;
+  }
+
+  .profile-share-preview-grid,
+  .holder-reward-grid,
+  .wallet-balance-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .profile-share-picker-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wallet-balance-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .wallet-balance-actions button,
+  .profile-share-studio-actions button {
+    min-height: 42px;
+    padding: 10px;
+  }
+
+  .profile-settings-hub-heading.compact-settings-heading,
+  .profile-settings-section:not([open]) .profile-section-summary {
+    min-height: 66px;
+    padding: 11px 12px;
+  }
+
+  .profile-section-summary small {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}

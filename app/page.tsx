@@ -21009,15 +21009,16 @@ function SettingsScreen({
           <span><b>Hides</b> income, real balance, payday and private debt details by default.</span>
         </div>
 
-        <section className={`wallet-balance-foundation-card holder-tier-${settings.wallet.holderTier.id}`}>
-          <div className="wallet-balance-foundation-head">
+        <details className={`wallet-balance-foundation-card profile-compact-details holder-tier-${settings.wallet.holderTier.id}`}>
+          <summary className="profile-compact-summary wallet-compact-summary">
             <div>
               <span>Wallet & $BROKE balance</span>
               <strong>{settings.wallet.walletAddress ? settings.wallet.holderTier.label : "Read-only holder check"}</strong>
-              <small>No seed phrase. No transactions. Paste address only.</small>
+              <small>{settings.wallet.isVerified ? "Verified wallet · rewards-ready proof" : settings.wallet.walletAddress ? "Watched wallet · tap to manage verification" : "Paste wallet · verify ownership later"}</small>
             </div>
-            <b>{settings.wallet.walletAddress ? formatHolderPercent(settings.wallet.percentOfSupply) : "Not linked"}</b>
-          </div>
+            <b>{settings.wallet.walletAddress ? formatHolderPercent(settings.wallet.percentOfSupply) : "Setup"}</b>
+          </summary>
+          <div className="profile-compact-body wallet-compact-body">
 
           <div
             className={`wallet-address-control ${
@@ -21267,17 +21268,19 @@ function SettingsScreen({
           </div>
 
           {walletMessage && <p className="wallet-balance-message">{walletMessage}</p>}
-        </section>
+          </div>
+        </details>
 
-        <section className="profile-share-studio-card">
-          <div className="profile-share-studio-head">
+        <details className="profile-share-studio-card profile-compact-details">
+          <summary className="profile-compact-summary share-studio-compact-summary">
             <div>
               <span>Share Studio</span>
-              <strong>Choose what your public card shows.</strong>
-              <small>Wallet HP + verified holder balance unlock more public display slots.</small>
+              <strong>Public card setup</strong>
+              <small>{visibleShareProfileItems.length}/{shareSlotLimit} selected · tap to edit public items</small>
             </div>
             <b>{visibleShareProfileItems.length}/{shareSlotLimit} slots</b>
-          </div>
+          </summary>
+          <div className="profile-compact-body share-studio-compact-body">
 
           <div className="profile-share-slot-coach">
             <div>
@@ -21359,11 +21362,12 @@ function SettingsScreen({
               />
             </div>
           )}
-        </section>
+          </div>
+        </details>
 
         <div className="profile-cabinet-note compact-profile-note">
-          <span>Settings below.</span>
-          <small>Money, currency, privacy, sync and data tools stayed.</small>
+          <span>More settings below</span>
+          <small>Collapsed by default to keep Profile easier to scan.</small>
         </div>
       </section>
 

@@ -1,30 +1,26 @@
-# $BROKE Life Tracker — v59.19.1 Share Studio Brightness Hotfix
+# $BROKE Life Tracker — v59.19.3 Profile Compact Cabinet Hotfix
 
-Patch-only update on top of v59.19 Global Premium Style Foundation.
+Patch-only polish on top of v59.19.2.
 
-## Scope
+## What changed
+- Profile / Personal Cabinet is now shorter and easier to scan.
+- Wallet & $BROKE Balance is collapsed by default into a premium summary row.
+- Share Studio is collapsed by default into a premium summary row.
+- Expanded wallet/share sections keep the same controls and logic, but use tighter spacing.
+- Wallet safety chips, holder reward cards, wallet metrics, Share Studio metrics, and settings summaries were made more compact on mobile.
+- The Share Studio dark/glass selected style from v59.19.1 is preserved.
 
-This hotfix reduces the neon intensity of selected Share Studio options in Profile / Personal Cabinet.
+## No changes
+- No API changes.
+- No Supabase migration.
+- No wallet verification logic changes.
+- No holder reward logic changes.
+- No balance formula changes.
+- No avatar backend changes.
+- No Telegram webhook changes.
+- No stored data rewrite.
 
-The rest of the premium global style remains unchanged.
-
-## Changed files
-
-- `app/globals.css`
-- `README.md`
-- `PROJECT_ORDER.md`
-- `TESTING.md`
-- `app/README.md`
-- `app/PROJECT_ORDER.md`
-- `app/TESTING.md`
-
-## No logic changes
-
-- No API changes
-- No Supabase migration
-- No wallet verification changes
-- No holder reward changes
-- No token balance logic changes
-- No avatar backend changes
-- No Telegram webhook changes
-- No stored data rewrite
+## Verification
+- TypeScript TSX transpile diagnostics pass for `app/page.tsx`.
+- CSS brace balance passes for `app/globals.css`.
+- Full npm checks were not rerun in this environment because the patch is UI/CSS-focused and the current workspace lacks installed dependencies.
