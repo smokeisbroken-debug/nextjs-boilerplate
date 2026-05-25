@@ -1,30 +1,34 @@
-# v59.19.6 Profile Share Card Header Crop Hotfix — Project Order
+# PROJECT ORDER — v59.20 Detailed Button Guide Replacement
 
-## Base
-Apply after:
-1. v59.18 Wallet Provider Help + Verification Stability
-2. v59.19 Global Premium Style Foundation
-3. v59.19.1 Share Studio Brightness Hotfix
-4. v59.19.2 Card Premium Alignment Polish
-5. v59.19.3 Profile Compact Cabinet Hotfix
-6. v59.19.4 Share Cards Premium Fit & Avatar Polish
-7. v59.19.5 Profile Share Card Export Fit Hotfix
+## Current patch
 
-## Scope
-Fix the Profile Share Card export result where the top/header area can look cropped after the width/fit adjustment. Keep the wider card, preserve custom/avatar display, and avoid changing any reward, wallet, API, or Supabase logic.
+`v59.20 — Detailed Button Guide Replacement`
 
-## Files changed
-- `app/globals.css`
-- `README.md`
-- `PROJECT_ORDER.md`
-- `TESTING.md`
-- `app/README.md`
-- `app/PROJECT_ORDER.md`
-- `app/TESTING.md`
+## Build target
 
-## Deployment order
-1. Apply the patch files.
-2. Run the recommended checks.
-3. Open Profile → Share Studio → Preview here.
-4. Generate/export the Profile Share Card PNG.
-5. Confirm the top border, avatar, `$BROKE PROFILE` pill, nickname, status line, and style badge are not cropped.
+Apply this patch on top of the latest confirmed v59.19.6 line.
+
+## What this patch does
+
+1. Replaces the old short guide with a much more detailed in-app guide.
+2. Keeps the guide inside the existing question-mark modal flow.
+3. Explains every major tab and important button/action in practical language.
+4. Renames the old Settings guide tab to Profile in the guide content, while preserving the internal `settings` tab id.
+5. Adds compact premium styling for long guide content.
+
+## What this patch intentionally does not do
+
+- No new mechanics
+- No reward pool logic
+- No API changes
+- No database changes
+- No wallet verification changes
+- No balance formula changes
+- No share-card export logic changes
+
+## Next recommended steps
+
+After this guide is deployed and visually checked, the next safe step is either:
+
+1. polish any guide wording based on user feedback, or
+2. continue with future holder reward ledger foundation when the product flow is ready.
