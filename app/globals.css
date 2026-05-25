@@ -22520,3 +22520,549 @@ html[lang="ru"] .trigger-preview strong {
     width: fit-content;
   }
 }
+
+/* ===== V59.19 GLOBAL PREMIUM STYLE FOUNDATION ===== */
+:root {
+  --accent: var(--green);
+  --neon: var(--green);
+  --premium-bg-1: #020503;
+  --premium-bg-2: #07110b;
+  --premium-panel: rgba(7, 16, 11, 0.88);
+  --premium-panel-strong: rgba(11, 24, 15, 0.94);
+  --premium-card-line: rgba(183, 255, 25, 0.13);
+  --premium-card-line-strong: rgba(183, 255, 25, 0.24);
+  --premium-soft-line: rgba(255, 255, 255, 0.075);
+  --premium-muted: rgba(244, 247, 240, 0.64);
+  --premium-faint: rgba(244, 247, 240, 0.42);
+  --premium-glow: rgba(183, 255, 25, 0.18);
+  --premium-gold: #ffe19b;
+  --premium-red: #ff6875;
+  --premium-radius-xl: 28px;
+  --premium-radius-lg: 22px;
+  --premium-radius-md: 17px;
+  --premium-shadow-card: 0 18px 44px rgba(0, 0, 0, 0.34), inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+  --premium-shadow-hero: 0 24px 58px rgba(0, 0, 0, 0.42), inset 0 0 30px rgba(183, 255, 25, 0.045);
+}
+
+html,
+body {
+  background: var(--premium-bg-1);
+}
+
+.app-shell {
+  background:
+    radial-gradient(circle at 10% -4%, rgba(183, 255, 25, 0.13), transparent 28%),
+    radial-gradient(circle at 92% 7%, rgba(103, 255, 42, 0.075), transparent 26%),
+    radial-gradient(circle at 50% 100%, rgba(183, 255, 25, 0.045), transparent 38%),
+    linear-gradient(180deg, #041006 0%, #020402 52%, #010201 100%);
+}
+
+.phone {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 13%),
+    radial-gradient(circle at 50% 0%, rgba(183, 255, 25, 0.13), transparent 27%),
+    radial-gradient(circle at 0% 26%, rgba(103, 255, 42, 0.055), transparent 28%),
+    linear-gradient(180deg, rgba(6, 18, 10, 0.98), rgba(2, 4, 2, 0.995));
+}
+
+.screen {
+  position: relative;
+}
+
+.screen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 58%);
+  opacity: 0.34;
+  z-index: 0;
+}
+
+.screen > * {
+  position: relative;
+  z-index: 1;
+}
+
+.screen-header {
+  margin-bottom: 16px;
+}
+
+.header-title {
+  color: #f7ffe9;
+  text-shadow: 0 0 18px rgba(183, 255, 25, 0.12);
+}
+
+.header-button,
+.help-modal-close,
+.tab-guide-tabs button,
+.switcher button,
+.wallet-snapshot-tabs button,
+.profile-section-summary,
+.clean-details summary,
+.tech-details summary {
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+}
+
+.header-button:active,
+.bottom-nav button:active,
+.primary-btn:active,
+.secondary-btn:active,
+.copy-share-btn:active,
+.profile-share-studio-actions button:active,
+.weekly-behavior-home-actions button:active,
+.safe-weekly-share-actions button:active,
+.growth-actions button:active,
+.comeback-actions button:active,
+.wallet-provider-help-actions button:active,
+.wallet-provider-readiness-card button:active {
+  transform: scale(0.985);
+}
+
+.hero,
+.home-compact-hero,
+.onboarding-card,
+.v58-onboarding-card,
+.first-session-promise-card,
+.v58-guidance-card,
+.v58-fast-start-card,
+.home-wallet-snapshot-card,
+.hp-card,
+.chart-preview,
+.damage-card,
+.weekly-behavior-home-card,
+.safe-weekly-share-card,
+.comeback-mode-card,
+.smart-home-focus-card,
+.first-journey-card,
+.daily-return-hook-card,
+.report-card,
+.report-public-share-card,
+.growth-result-card,
+.growth-field,
+.growth-goal-progress,
+.debt-radar-hero,
+.debt-radar-card,
+.settings-group,
+.settings-menu,
+.clean-details,
+.tech-details,
+.profile-cabinet-card,
+.profile-settings-hub-heading,
+.profile-settings-section,
+.profile-share-studio-card,
+.holder-proof-dashboard,
+.holder-rewards-card,
+.holder-next-move-card,
+.wallet-provider-readiness-card,
+.wallet-provider-help-card,
+.pattern-challenge-coach,
+.pattern-detector-card,
+.one-fix-state-note,
+.candle-story-block,
+.chart-premium-details,
+.v58-empty-card,
+.life-profile-card,
+.survival-card,
+.survival-mode-card,
+.share-card,
+.recent-card,
+.tracked-panel,
+.whatif-hero,
+.whatif-card,
+.savings-card,
+.whatif-total-card,
+.amount-input,
+.note-box,
+.big-chart,
+.volume,
+.day-card,
+.board,
+.menu-line,
+.menu-button {
+  border-color: var(--premium-card-line);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.08), transparent 34%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.014)),
+    var(--premium-panel);
+  box-shadow: var(--premium-shadow-card);
+  backdrop-filter: blur(10px);
+}
+
+.hero,
+.home-compact-hero,
+.profile-cabinet-card,
+.debt-radar-hero,
+.whatif-hero,
+.report-public-share-card,
+.safe-weekly-share-card,
+.weekly-behavior-home-card,
+.comeback-mode-card,
+.smart-home-focus-card,
+.first-journey-card,
+.daily-return-hook-card,
+.v58-onboarding-card,
+.first-session-promise-card {
+  border-color: var(--premium-card-line-strong);
+  box-shadow: var(--premium-shadow-hero);
+}
+
+.hero,
+.home-compact-hero {
+  padding: 16px;
+  border-radius: var(--premium-radius-xl);
+  overflow: hidden;
+}
+
+.hero h1,
+.home-compact-hero strong,
+.v58-hero-copy strong,
+.section-title span,
+.profile-cabinet-copy strong,
+.weekly-behavior-home-head strong,
+.safe-weekly-share-main strong,
+.comeback-hero strong,
+.smart-focus-hero strong,
+.first-journey-hero strong,
+.return-hook-hero strong,
+.report-head strong,
+.growth-result-card strong,
+.debt-radar-hero strong,
+.holder-rewards-head strong,
+.holder-proof-dashboard-head strong,
+.profile-share-studio-head strong {
+  color: #f7ffe9;
+  letter-spacing: -0.035em;
+}
+
+.home-mascot,
+.home-compact-mascot,
+.premium-share-card-art img,
+.profile-avatar-frame,
+.profile-share-card-avatar,
+.safe-weekly-share-avatar {
+  border-color: rgba(183, 255, 25, 0.24);
+  box-shadow:
+    0 0 34px rgba(183, 255, 25, 0.14),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.section-title,
+.wallet-snapshot-heading,
+.profile-share-studio-head,
+.holder-rewards-head,
+.holder-proof-dashboard-head,
+.wallet-provider-help-card > div:first-child,
+.weekly-behavior-home-head,
+.pattern-challenge-coach-head,
+.report-head,
+.v58-card-head,
+.comeback-hero,
+.smart-focus-hero,
+.first-journey-hero,
+.return-hook-hero {
+  align-items: flex-start;
+}
+
+.section-title span,
+.wallet-snapshot-heading span,
+.home-compact-kicker,
+.profile-cabinet-copy span,
+.profile-settings-hub-heading span,
+.profile-section-summary span,
+.profile-share-studio-head span,
+.holder-rewards-head span,
+.holder-proof-dashboard-head span,
+.wallet-provider-readiness-card span,
+.wallet-provider-help-card span,
+.weekly-behavior-home-head span,
+.pattern-challenge-coach-head span,
+.report-head span,
+.v58-card-head span,
+.comeback-hero span,
+.smart-focus-hero span,
+.first-journey-hero span,
+.return-hook-hero span,
+.field-label,
+.amount-box label {
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+}
+
+.section-title small,
+.profile-cabinet-copy p,
+.profile-settings-hub-heading small,
+.profile-section-summary small,
+.profile-share-studio-head small,
+.holder-rewards-head small,
+.holder-proof-dashboard-head small,
+.wallet-provider-readiness-card small,
+.wallet-provider-help-card small,
+.weekly-behavior-home-head p,
+.pattern-challenge-coach-head p,
+.report-head p,
+.v58-card-head p,
+.comeback-hero p,
+.smart-focus-hero p,
+.first-journey-hero p,
+.return-hook-hero p,
+.tiny-note,
+.usd-reference-note,
+.share-usd-reference-note,
+.converted-original-note,
+.currency-foundation-note,
+.wallet-balance-message,
+.profile-share-studio-note {
+  color: var(--premium-muted);
+}
+
+.stat-card,
+.wallet-snapshot-day-card,
+.wallet-snapshot-primary-stats article,
+.weekly-behavior-home-grid article,
+.safe-weekly-share-grid article,
+.safe-weekly-share-profile-grid article,
+.smart-focus-metrics article,
+.first-journey-grid article,
+.return-hook-grid article,
+.profile-share-preview-grid article,
+.profile-share-picker-grid label,
+.holder-reward-grid article,
+.wallet-balance-status-grid article,
+.wallet-security-note-grid span,
+.profile-cabinet-stats article,
+.pattern-detector-grid article,
+.candle-story-block article,
+.chart-premium-details-body article,
+.growth-field-grid article,
+.report-metrics article,
+.report-public-share-grid article,
+.leak-reflection-mini-grid article,
+.v58-onboarding-summary-grid article,
+.v58-setup-status article {
+  border-color: var(--premium-soft-line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.016)),
+    rgba(0, 0, 0, 0.2);
+  box-shadow: inset 0 0 0 1px rgba(183, 255, 25, 0.018);
+}
+
+.stat-card strong,
+.wallet-snapshot-day-card strong,
+.wallet-snapshot-primary-stats strong,
+.weekly-behavior-home-grid strong,
+.safe-weekly-share-grid strong,
+.safe-weekly-share-profile-grid strong,
+.smart-focus-metrics strong,
+.first-journey-grid strong,
+.return-hook-grid strong,
+.profile-share-preview-grid strong,
+.profile-selected-share-grid strong,
+.holder-reward-grid strong,
+.wallet-balance-status-grid strong,
+.profile-cabinet-stats strong,
+.report-metrics strong,
+.report-public-share-grid strong {
+  color: #f7ffe9;
+}
+
+.primary-btn,
+.v58-empty-primary,
+.copy-share-btn,
+.onboarding-actions button:not(.ghost),
+.v58-onboarding-actions button:not(.ghost),
+.profile-share-studio-actions button.primary,
+.weekly-behavior-home-actions button.primary,
+.safe-weekly-share-actions button.primary,
+.growth-actions button.primary,
+.comeback-actions button.primary,
+.return-hook-note button,
+.first-journey-bottom button,
+.smart-focus-note button {
+  border: 0;
+  color: #061006;
+  background:
+    linear-gradient(135deg, rgba(244, 255, 181, 0.96), rgba(183, 255, 25, 0.96) 42%, rgba(103, 255, 42, 0.9));
+  box-shadow:
+    0 14px 34px rgba(103, 255, 42, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.38);
+}
+
+.secondary-btn,
+.onboarding-actions button.ghost,
+.v58-onboarding-actions button.ghost,
+.profile-share-studio-actions button:not(.primary),
+.weekly-behavior-home-actions button:not(.primary),
+.safe-weekly-share-actions button:not(.primary),
+.growth-actions button:not(.primary),
+.comeback-actions button:not(.primary),
+.wallet-provider-help-actions button,
+.wallet-provider-readiness-card button,
+.menu-button,
+.menu-line button,
+.header-button {
+  border-color: rgba(183, 255, 25, 0.16);
+  color: #f7ffe9;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025)),
+    rgba(0, 0, 0, 0.18);
+}
+
+.choice,
+.cat,
+.currency-mode-options button,
+.profile-avatar-options button,
+.profile-chip-grid button,
+.profile-share-picker-grid label,
+.switcher,
+.wallet-snapshot-tabs,
+.tab-guide-tabs,
+.settings-select,
+.profile-select,
+.screen input,
+.screen select,
+.screen textarea {
+  border-color: rgba(255, 255, 255, 0.085);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.016)),
+    rgba(0, 0, 0, 0.22);
+  color: #f7ffe9;
+}
+
+.choice.active,
+.cat.active,
+.currency-mode-options button.active,
+.profile-avatar-options button.active,
+.profile-chip-grid button.active,
+.profile-share-picker-grid label.active,
+.switcher button.active,
+.wallet-snapshot-tabs button.active,
+.tab-guide-tabs button.active {
+  border-color: rgba(183, 255, 25, 0.5);
+  color: #071006;
+  background: linear-gradient(135deg, var(--green-2), var(--green-3));
+  box-shadow: 0 0 26px rgba(183, 255, 25, 0.16);
+}
+
+.amount-input,
+.note-box,
+.screen input,
+.screen select,
+.screen textarea {
+  outline: none;
+}
+
+.screen input:focus,
+.screen select:focus,
+.screen textarea:focus,
+.amount-input:focus-within,
+.note-box:focus-within {
+  border-color: rgba(183, 255, 25, 0.42);
+  box-shadow:
+    0 0 0 3px rgba(183, 255, 25, 0.08),
+    0 14px 34px rgba(0, 0, 0, 0.25);
+}
+
+.bottom-nav {
+  border-color: rgba(183, 255, 25, 0.18);
+  background:
+    linear-gradient(180deg, rgba(18, 36, 22, 0.92), rgba(4, 9, 6, 0.92));
+  box-shadow:
+    0 0 26px rgba(183, 255, 25, 0.12),
+    0 22px 54px rgba(0, 0, 0, 0.55),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.bottom-nav button.active {
+  background: rgba(183, 255, 25, 0.09);
+  box-shadow: inset 0 0 0 1px rgba(183, 255, 25, 0.12);
+}
+
+.bottom-nav button.active span {
+  color: var(--accent);
+}
+
+.app-toast,
+.help-modal,
+.tab-guide-modal,
+.leak-reflection-popup {
+  border-color: rgba(183, 255, 25, 0.16);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.1), transparent 34%),
+    linear-gradient(145deg, rgba(14, 28, 17, 0.98), rgba(4, 9, 6, 0.98));
+  box-shadow: var(--premium-shadow-hero);
+}
+
+.v58-empty-card,
+.empty-expenses {
+  border-style: solid;
+  opacity: 1;
+}
+
+.wallet-provider-help-card,
+.wallet-provider-readiness-card:not(.ready),
+.currency-repair-warning,
+.weekly-behavior-home-card.watch,
+.pattern-challenge-coach.strong {
+  border-color: rgba(255, 225, 155, 0.26);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 225, 155, 0.12), transparent 36%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.014)),
+    rgba(17, 14, 8, 0.9);
+}
+
+.weekly-behavior-home-card.danger,
+.pattern-item.high,
+.profile-settings-section.data-security-tools .profile-section-menu .danger {
+  border-color: rgba(255, 104, 117, 0.24);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(255, 104, 117, 0.12), transparent 36%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.014)),
+    rgba(17, 7, 8, 0.9);
+}
+
+.public-share-image-card,
+.share-capture-safe,
+.share-capture-safe * {
+  backdrop-filter: none !important;
+}
+
+@media (max-width: 430px) {
+  .hero,
+  .home-compact-hero,
+  .profile-cabinet-card,
+  .weekly-behavior-home-card,
+  .safe-weekly-share-card,
+  .comeback-mode-card,
+  .smart-home-focus-card,
+  .first-journey-card,
+  .daily-return-hook-card,
+  .profile-share-studio-card,
+  .settings-group,
+  .settings-menu,
+  .clean-details,
+  .tech-details {
+    border-radius: 22px;
+  }
+
+  .section-title span,
+  .wallet-snapshot-heading span,
+  .profile-share-studio-head span,
+  .holder-rewards-head span,
+  .holder-proof-dashboard-head span {
+    font-size: 0.66rem;
+  }
+
+  .bottom-nav {
+    bottom: 12px;
+    width: min(calc(100% - 24px), 428px);
+    border-radius: 24px;
+  }
+}

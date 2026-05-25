@@ -1,38 +1,24 @@
-# v59.18 — Wallet Provider Help + Verification Stability
+# Project Order
 
-## Purpose
-Make wallet verification clearer and more stable across Telegram WebView, normal web browsers, and Solana wallet browsers.
+## Current stable target
 
-The app already supported watch-only wallet checks and verified ownership through signed messages. This patch improves the user-facing bridge between those states so users understand why Telegram may show watch-only and how to complete verification safely.
+`v59.19 — Global Premium Style Foundation`
 
-## Files changed
-- `app/page.tsx`
-- `app/globals.css`
-- `app/api/broke/route.ts`
-- `README.md`
-- `PROJECT_ORDER.md`
-- `TESTING.md`
-- `app/README.md`
-- `app/PROJECT_ORDER.md`
-- `app/TESTING.md`
+## Patch order
 
-## Deploy order
-1. Replace the patch files.
-2. Deploy to Vercel.
-3. No SQL is required for this patch.
-4. Run diagnostics:
+1. Start from the latest full project archive: `nextjs-boilerplate-main(4).zip`.
+2. Apply `v59.18 — Wallet Provider Help + Verification Stability` if it is not already deployed.
+3. Apply `v59.19 — Global Premium Style Foundation`.
+4. Run verification commands.
+5. Deploy to Vercel.
+6. Smoke-test the visual app flow on mobile Telegram and web.
 
-```bash
-/api/broke?check=supabase&key=YOUR_DIAGNOSTICS_SECRET
-```
+## Scope
 
-5. Confirm that these wallet tables return `ok: true` if wallet verification is already installed in Supabase:
-   - `broke_wallet_links`
-   - `broke_wallet_verifications`
-6. Test Profile → Wallet & $BROKE balance from Telegram and from a Solana wallet browser.
+This is a style-only foundation patch. It intentionally avoids backend, Supabase, wallet, holder-reward, and stored-data changes.
 
-## Safety boundaries
-- Wallet verification remains message-signature only.
-- Users are never asked for seed phrases.
-- No transaction request is created.
-- Holder perks remain gated by verified wallet ownership, not watch-only addresses.
+## Next safe mechanics after this patch
+
+- Personal Cabinet layout refinement if the new global style needs tighter hierarchy.
+- Holder Rewards teaser UI only.
+- Verified Holder Reward Pool Foundation later, with ledger/snapshots before any real payout logic.
