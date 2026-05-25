@@ -24370,3 +24370,199 @@ body {
     border-radius: 11px;
   }
 }
+
+/* ===== V59.20.2 HOME COMPACT + SHARE CARD EXPORT SAFE TOP HOTFIX ===== */
+.home-compact-details.home-collapsed-section {
+  width: min(100%, var(--content-max, 640px));
+  max-width: 100%;
+  margin: 12px auto;
+  overflow: hidden;
+  padding: 0 !important;
+  border: 1px solid rgba(183, 255, 25, 0.14);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.09), transparent 42%),
+    linear-gradient(180deg, rgba(20, 38, 19, 0.82), rgba(5, 12, 8, 0.92));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+    0 16px 42px rgba(0, 0, 0, 0.22);
+}
+
+.home-compact-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 76px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.home-compact-summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-compact-summary::after {
+  content: "Open";
+  flex: 0 0 auto;
+  border: 1px solid rgba(183, 255, 25, 0.2);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: rgba(220, 255, 180, 0.92);
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+.home-compact-details[open] > .home-compact-summary::after {
+  content: "Close";
+}
+
+.home-compact-summary > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.home-compact-summary span {
+  color: var(--neon);
+  font-size: 0.76rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-compact-summary strong {
+  color: #fff;
+  font-size: clamp(1rem, 4.6vw, 1.22rem);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.home-compact-summary small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.24;
+}
+
+.home-compact-summary > b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(183, 255, 25, 0.22);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--neon);
+  background: rgba(183, 255, 25, 0.08);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.home-compact-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.home-compact-details[open] > .home-compact-summary {
+  border-bottom: 1px solid rgba(183, 255, 25, 0.11);
+  margin-bottom: 12px;
+}
+
+.home-wallet-snapshot-collapsible-body .wallet-snapshot-heading,
+.home-wallet-snapshot-collapsible-body .wallet-snapshot-primary-stats,
+.home-wallet-snapshot-collapsible-body .wallet-snapshot-tabs,
+.home-wallet-snapshot-collapsible-body .wallet-snapshot-day-card,
+.home-wallet-snapshot-collapsible-body .wallet-snapshot-more {
+  width: 100%;
+}
+
+.home-compact-details .smart-home-focus-card,
+.home-compact-details .weekly-behavior-report-card,
+.home-compact-details .comeback-mode-card {
+  margin: 0 !important;
+  max-width: 100% !important;
+}
+
+.home-compact-details:not([open]) {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.018),
+    0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+/* Export-safe breathing room for all major share cards. Prevents top identity rows from being clipped by html2canvas. */
+.share-capture-safe.premium-share-card,
+.share-capture-safe.public-share-image-card,
+.share-capture-safe.report-public-share-card,
+.share-capture-safe.mission-public-share-card,
+.share-capture-safe.weekly-review-share-card,
+.share-capture-safe.monthly-history-share-card,
+.share-capture-safe.survival-share-card,
+.share-capture-safe.safe-weekly-share-card,
+.share-capture-safe.growth-share-preview {
+  box-sizing: border-box !important;
+  padding-top: 42px !important;
+  scroll-margin-top: 42px !important;
+  overflow: visible !important;
+}
+
+.share-capture-safe .share-card-identity-top,
+.share-capture-safe .public-share-top,
+.share-capture-safe .report-public-share-top,
+.share-capture-safe .mission-public-share-top,
+.share-capture-safe .weekly-share-top,
+.share-capture-safe .monthly-share-top,
+.share-capture-safe .survival-share-top,
+.share-capture-safe .safe-weekly-share-identity,
+.share-capture-safe .profile-share-card-top {
+  padding-top: 2px !important;
+  margin-top: 0 !important;
+  overflow: visible !important;
+}
+
+.share-capture-safe .share-card-identity-line,
+.share-capture-safe .profile-share-card-identity,
+.share-capture-safe .safe-weekly-share-identity {
+  overflow: visible !important;
+}
+
+@media (max-width: 430px) {
+  .home-compact-details.home-collapsed-section {
+    margin: 10px auto;
+    border-radius: 23px;
+  }
+
+  .home-compact-summary {
+    min-height: 70px;
+    padding: 12px 13px;
+    gap: 9px;
+  }
+
+  .home-compact-summary small {
+    display: none;
+  }
+
+  .home-compact-summary::after,
+  .home-compact-summary > b {
+    padding: 6px 8px;
+    font-size: 0.68rem;
+  }
+
+  .home-compact-body {
+    padding: 0 11px 12px;
+  }
+
+  .share-capture-safe.premium-share-card,
+  .share-capture-safe.public-share-image-card,
+  .share-capture-safe.report-public-share-card,
+  .share-capture-safe.mission-public-share-card,
+  .share-capture-safe.weekly-review-share-card,
+  .share-capture-safe.monthly-history-share-card,
+  .share-capture-safe.survival-share-card,
+  .share-capture-safe.safe-weekly-share-card,
+  .share-capture-safe.growth-share-preview {
+    padding-top: 38px !important;
+  }
+}

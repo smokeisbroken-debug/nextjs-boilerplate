@@ -1,10 +1,10 @@
-# v59.20.1 — Button Guide Build Hotfix
+# v59.20.2 — Home Compact + Share Card Crop Hotfix
 
 Patch-only update for the $BROKE / SmokeIsBroke Telegram Mini App.
 
 ## Purpose
 
-Replaces the existing short in-app help guide with a much more detailed button-by-button user guide. The goal is to help new users understand what every main tab and important action is for before they touch money settings, wallet proof, share cards, charts, or rewards.
+This patch makes Home shorter and easier to scan, similar to the compact Personal Cabinet flow. It also adds a safer share-card export layout so major share cards stop clipping their top identity/header area during html2canvas capture.
 
 ## Files changed
 
@@ -19,43 +19,23 @@ Replaces the existing short in-app help guide with a much more detailed button-b
 
 ## Product changes
 
-- Replaced the old guide copy inside the question-mark help modal.
-- Added detailed guide tabs for:
-  - Home
-  - Add
-  - Chart
-  - Growth
-  - Save
-  - Profile
-- Each guide now explains the main buttons, cards, and actions on that screen.
-- Added clearer explanations for:
-  - bottom navigation
-  - Wallet HP
-  - Income / Life Cost / Money Leaks / Real Balance
-  - Today snapshot
-  - Track Leak amount/category/decision/trigger/note/save/delete flow
-  - Chart ranges, candles, candle detail, One Fix, Pattern Lab
-  - Growth targets, simulations, save plan, share card, no-investment disclaimer
-  - Save survival mode, leak cuts, challenges, leaderboard, Debt & Bills Radar
-  - Profile identity, wallet proof, provider help, holder rewards, Share Studio, privacy/settings
-- Updated guide modal styling to handle longer content with a more readable premium layout.
+- Wallet Snapshot on Home is collapsed by default.
+- Today’s Focus on Home is collapsed by default.
+- Weekly Behavior Report on Home is collapsed by default.
+- Comeback Mode on Home is collapsed by default when present.
+- Existing Home details such as missions, reports, insights, badges, recent expenses, and sync remain in collapsible sections.
+- Share-card export now uses safer scroll offsets and a taller clone viewport.
+- Major share cards receive extra export-safe top padding while captured.
+- Identity/avatar/header rows on share cards are allowed to breathe during capture.
 
-## Safety
+## Not changed
 
-No backend behavior changed.
-
-- No API changes
-- No Supabase migration
-- No wallet verification logic changes
-- No holder reward threshold changes
-- No token transfer logic
-- No avatar upload backend changes
-- No Telegram webhook changes
-- No stored data rewrite
-
-
-## v59.20.1 Build Hotfix
-
-- Fixed the detailed Profile guide icon reference by adding `profile` to `SHARE_CARD_PUBLIC_ASSETS`.
-- This resolves the TypeScript build error: `Property 'profile' does not exist on type ...`.
-- No API, Supabase, wallet, holder rewards, avatar backend, Telegram webhook, or stored-data changes.
+- No API changes.
+- No Supabase migration.
+- No wallet verification logic changes.
+- No holder reward logic changes.
+- No balance formula changes.
+- No avatar backend changes.
+- No Telegram webhook changes.
+- No stored data rewrite.
+- No new reward distribution logic.

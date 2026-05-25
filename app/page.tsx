@@ -10788,7 +10788,16 @@ function DashboardScreen({
       </section>
 
 
-      <section className="home-wallet-snapshot-card">
+      <details className="home-compact-details home-wallet-snapshot-card home-collapsed-section">
+        <summary className="home-compact-summary home-wallet-snapshot-summary">
+          <div>
+            <span>Wallet Snapshot</span>
+            <strong>{summary.walletHp}/100 HP · {money(summary.realBalance, settings.currency)} left</strong>
+            <small>Income, life cost, leaks, and day snapshots stay here.</small>
+          </div>
+          <b>Open</b>
+        </summary>
+        <div className="home-compact-body home-wallet-snapshot-collapsible-body">
         <div className="wallet-snapshot-heading">
           <div>
             <span>Wallet Snapshot for Today</span>
@@ -10879,29 +10888,54 @@ function DashboardScreen({
             </section>
           </section>
         </details>
-      </section>
+        </div>
+      </details>
 
 
-      <SmartHomeFocusCard
-        settings={settings}
-        summary={summary}
-        allExpenses={allExpenses}
-        identityStats={identityStats}
-        onOpenAdd={onOpenAdd}
-        onOpenChart={onOpenChart}
-      />
+      <details className="home-compact-details home-focus-details home-collapsed-section">
+        <summary className="home-compact-summary home-focus-summary">
+          <div>
+            <span>Today’s Focus</span>
+            <strong>{summary.todaySpent > 0 ? `${money(summary.todaySpent, settings.currency)} tracked today` : "No leak tracked today"}</strong>
+            <small>Next action, pressure signal, and the button to press next.</small>
+          </div>
+          <b>Open</b>
+        </summary>
+        <div className="home-compact-body">
+          <SmartHomeFocusCard
+            settings={settings}
+            summary={summary}
+            allExpenses={allExpenses}
+            identityStats={identityStats}
+            onOpenAdd={onOpenAdd}
+            onOpenChart={onOpenChart}
+          />
+        </div>
+      </details>
 
-      <WeeklyBehaviorReportHomeCard
-        settings={settings}
-        weeklyPatternSummary={weeklyPatternSummary}
-        patternHistory={patternHistory}
-        walletHp={summary.walletHp}
-        identityStats={identityStats}
-        leaderboard={leaderboard}
-        shareInitData={telegram.isTelegram ? telegram.initData : ""}
-        onOpenChart={onOpenChart}
-        onOpenAdd={onOpenAdd}
-      />
+      <details className="home-compact-details home-weekly-report-details home-collapsed-section">
+        <summary className="home-compact-summary home-weekly-report-summary">
+          <div>
+            <span>Weekly Behavior Report</span>
+            <strong>{weeklyPatternSummary.strongestPattern || weeklyPatternSummary.headline}</strong>
+            <small>Weekly pattern, pressure, comparison, share card, and next move.</small>
+          </div>
+          <b>{weeklyPatternSummary.leakPressure}%</b>
+        </summary>
+        <div className="home-compact-body">
+          <WeeklyBehaviorReportHomeCard
+            settings={settings}
+            weeklyPatternSummary={weeklyPatternSummary}
+            patternHistory={patternHistory}
+            walletHp={summary.walletHp}
+            identityStats={identityStats}
+            leaderboard={leaderboard}
+            shareInitData={telegram.isTelegram ? telegram.initData : ""}
+            onOpenChart={onOpenChart}
+            onOpenAdd={onOpenAdd}
+          />
+        </div>
+      </details>
 
       {allExpenses.length === 0 && (
         <section className="first-user-clarity-card">
@@ -10917,14 +10951,26 @@ function DashboardScreen({
       )}
 
       {comebackState && (
-        <ComebackModeCard
-          settings={settings}
-          comeback={comebackState}
-          onAddMissedLeak={onOpenAdd}
-          onRestartToday={onOpenAdd}
-          onShowDamage={onOpenChart}
-          onOpenSurvival={onOpenSurvival}
-        />
+        <details className="home-compact-details home-comeback-details home-collapsed-section">
+          <summary className="home-compact-summary home-comeback-summary">
+            <div>
+              <span>Comeback Mode</span>
+              <strong>Restart without filling the whole app.</strong>
+              <small>Use this when you missed tracking and need a controlled restart.</small>
+            </div>
+            <b>Open</b>
+          </summary>
+          <div className="home-compact-body">
+            <ComebackModeCard
+              settings={settings}
+              comeback={comebackState}
+              onAddMissedLeak={onOpenAdd}
+              onRestartToday={onOpenAdd}
+              onShowDamage={onOpenChart}
+              onOpenSurvival={onOpenSurvival}
+            />
+          </div>
+        </details>
       )}
 
       <details className="clean-details">
@@ -14093,6 +14139,10 @@ async function createShareImageFileFromElement(element: HTMLElement) {
   const html2canvasModule = await import("html2canvas");
   const html2canvas = html2canvasModule.default;
   const captureId = `share-capture-${Date.now()}`;
+  const scrollOffsetX = typeof window !== "undefined" ? window.scrollX : 0;
+  const scrollOffsetY = typeof window !== "undefined" ? window.scrollY : 0;
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : element.scrollWidth;
+  const viewportHeight = typeof window !== "undefined" ? window.innerHeight : element.scrollHeight;
 
   element.setAttribute("data-share-capture-id", captureId);
 
@@ -14106,8 +14156,10 @@ async function createShareImageFileFromElement(element: HTMLElement) {
       logging: false,
       imageTimeout: 15000,
       removeContainer: true,
-      scrollX: 0,
-      scrollY: 0,
+      scrollX: -scrollOffsetX,
+      scrollY: -scrollOffsetY,
+      windowWidth: Math.max(viewportWidth, element.scrollWidth + 80),
+      windowHeight: Math.max(viewportHeight, element.scrollHeight + 120),
       onclone: (clonedDocument) => {
         const clonedElement = clonedDocument.querySelector(
           `[data-share-capture-id="${captureId}"]`

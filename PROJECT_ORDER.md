@@ -1,41 +1,35 @@
-# PROJECT ORDER — v59.20 Detailed Button Guide Replacement
+# PROJECT ORDER — v59.20.2 Home Compact + Share Card Crop Hotfix
 
 ## Current patch
 
-`v59.20.1 — Button Guide Build Hotfix`
+`v59.20.2 — Home Compact + Share Card Crop Hotfix`
 
 ## Build target
 
-Apply this patch on top of the latest confirmed v59.19.6 line.
+Apply this patch on top of `v59.20.1 — Button Guide Build Hotfix`.
 
 ## What this patch does
 
-1. Replaces the old short guide with a much more detailed in-app guide.
-2. Keeps the guide inside the existing question-mark modal flow.
-3. Explains every major tab and important button/action in practical language.
-4. Renames the old Settings guide tab to Profile in the guide content, while preserving the internal `settings` tab id.
-5. Adds compact premium styling for long guide content.
+1. Keeps Home visually premium but makes it much shorter by default.
+2. Converts major Home sections into compact expandable rows.
+3. Keeps the first-user clarity card visible when the user has no expenses.
+4. Keeps all existing Home mechanics and panels available inside collapsed sections.
+5. Adds export-safe top padding for major share cards.
+6. Updates html2canvas capture offsets/window sizing to reduce cropped exports on Telegram/mobile WebView.
 
 ## What this patch intentionally does not do
 
-- No new mechanics
-- No reward pool logic
-- No API changes
-- No database changes
-- No wallet verification changes
-- No balance formula changes
-- No share-card export logic changes
+- Does not change calculations.
+- Does not change API routes.
+- Does not add Supabase migrations.
+- Does not change wallet verification.
+- Does not change holder reward tiers.
+- Does not change avatar upload backend.
+- Does not change Telegram webhook behavior.
+- Does not change share-card content rules; it only improves layout/capture safety.
 
-## Next recommended steps
+## Manual review focus
 
-After this guide is deployed and visually checked, the next safe step is either:
-
-1. polish any guide wording based on user feedback, or
-2. continue with future holder reward ledger foundation when the product flow is ready.
-
-
-## v59.20.1 Build Hotfix
-
-- Fixed the detailed Profile guide icon reference by adding `profile` to `SHARE_CARD_PUBLIC_ASSETS`.
-- This resolves the TypeScript build error: `Property 'profile' does not exist on type ...`.
-- No API, Supabase, wallet, holder rewards, avatar backend, Telegram webhook, or stored-data changes.
+- Home should no longer feel like a long feed at first open.
+- Wallet Snapshot, Today’s Focus, Weekly Behavior Report, and Comeback Mode should open only when tapped.
+- Share-card PNG exports should no longer clip the top header/avatar/status area.

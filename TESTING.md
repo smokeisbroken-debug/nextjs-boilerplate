@@ -1,4 +1,4 @@
-# TESTING — v59.20 Detailed Button Guide Replacement
+# TESTING — v59.20.2 Home Compact + Share Card Crop Hotfix
 
 ## Static checks performed in this environment
 
@@ -19,32 +19,32 @@ NEXT_TELEMETRY_DISABLED=1 npm run build
 
 ## Manual QA checklist
 
-Open the app and press the question-mark help button.
+### Home
 
-Check:
+- Open Home on mobile.
+- Confirm the visible screen is shorter than before.
+- Confirm Wallet Snapshot is collapsed by default.
+- Tap Wallet Snapshot and confirm income/life cost/leaks/real balance/day tabs are still available.
+- Confirm Today’s Focus is collapsed by default.
+- Tap Today’s Focus and confirm the existing focus logic/actions still work.
+- Confirm Weekly Behavior Report is collapsed by default.
+- Tap Weekly Behavior Report and confirm report/share actions still work.
+- If Comeback Mode appears, confirm it is collapsed by default and opens correctly.
 
-- Help modal opens normally.
-- Close button works.
-- `Got it` button closes the guide.
-- Guide tabs work:
-  - Home
-  - Add
-  - Chart
-  - Growth
-  - Save
-  - Profile
-- Each tab scrolls correctly.
-- Sticky header/tabs do not block text.
-- On mobile, the six guide tabs wrap into compact rows.
-- Text does not overflow outside cards.
-- Profile guide says never to enter seed phrase.
-- Growth guide clearly says no staking, no custody, no investing, no guaranteed returns.
-- Save guide keeps Debt & Bills Radar private-first.
-- No app data, wallet data, share-card data, or records are changed by opening the guide.
+### Share cards
 
+- Export Profile Share Card.
+- Export Weekly Behavior Report share card.
+- Export Daily/Weekly report cards.
+- Export Mission Result card.
+- Export Weekly Review and Monthly Leak History cards.
+- Export Survival card.
+- Confirm avatar/header/status line are not clipped at the top.
+- Confirm custom avatar still appears when configured.
 
-## v59.20.1 Build Hotfix
+### Regression
 
-- Fixed the detailed Profile guide icon reference by adding `profile` to `SHARE_CARD_PUBLIC_ASSETS`.
-- This resolves the TypeScript build error: `Property 'profile' does not exist on type ...`.
-- No API, Supabase, wallet, holder rewards, avatar backend, Telegram webhook, or stored-data changes.
+- Track Leak still saves an expense.
+- Chart still opens and shows data.
+- Profile wallet verification controls still open inside Profile.
+- Share Studio still opens and edits selected public items.
