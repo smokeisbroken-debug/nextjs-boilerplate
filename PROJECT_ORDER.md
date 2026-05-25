@@ -1,15 +1,22 @@
-# PROJECT ORDER — v59.19.1
+# PROJECT ORDER — v59.19.2 Card Premium Alignment Polish
 
-Current checkpoint: v59.19.1 Share Studio Brightness Hotfix.
+## Current patch
 
-## Previous checkpoint
+`v59.19.2` is a visual-only polish patch on top of v59.19.1.
 
-v59.19 Global Premium Style Foundation.
+## Scope
 
-## This patch
+1. Keep the global premium dark dashboard style introduced in v59.19.
+2. Keep the Share Studio brightness reduction from v59.19.1.
+3. Normalize app card width, internal spacing, typography rhythm, and mobile grid behavior.
+4. Make card information feel cleaner and more premium without changing product logic.
 
-Selected Share Studio options were too bright after the global premium restyle. This patch makes active Share Studio picker cards dark/glass selected cards instead of full neon CTA blocks.
+## Guard rails
 
-## Do not treat this as a product logic patch
-
-No app mechanics, API routes, wallet verification, Supabase tables, token logic, or Telegram integrations were changed.
+- Do not change calculations.
+- Do not change wallet verification.
+- Do not change holder reward tiers.
+- Do not add reward payouts.
+- Do not change Supabase schema.
+- Do not change Telegram webhook.
+- Do not rewrite stored data.
