@@ -23810,3 +23810,269 @@ body {
     padding: 11px 12px !important;
   }
 }
+
+/* v59.19.5 — Profile Share Card Export Fit Hotfix */
+.public-share-image-card.premium-share-card {
+  width: min(100%, 440px) !important;
+  max-width: 440px !important;
+  min-height: auto !important;
+  padding: 18px !important;
+  gap: 10px !important;
+  border-radius: 28px !important;
+  align-content: start !important;
+}
+
+.public-share-image-card.premium-share-card .premium-share-card-art {
+  opacity: 0.18 !important;
+}
+
+.public-share-image-card .profile-share-card-top {
+  min-height: 0 !important;
+  margin-bottom: 0 !important;
+  align-items: center !important;
+}
+
+.public-share-image-card .profile-share-card-identity {
+  min-height: 0 !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.public-share-image-card .profile-share-card-avatar {
+  width: 68px !important;
+  height: 68px !important;
+  flex: 0 0 68px !important;
+  border-radius: 21px !important;
+}
+
+.public-share-image-card .profile-share-card-identity > div {
+  padding-top: 0 !important;
+  display: grid !important;
+  gap: 4px !important;
+}
+
+.public-share-image-card .profile-share-card-identity span {
+  width: fit-content !important;
+  max-width: 154px !important;
+  padding: 6px 12px !important;
+  border: 1px solid rgba(183, 255, 25, 0.18) !important;
+  border-radius: 999px !important;
+  color: var(--neon) !important;
+  background: rgba(183, 255, 25, 0.08) !important;
+  font-size: 0.68rem !important;
+  line-height: 1.04 !important;
+  letter-spacing: 0.06em !important;
+}
+
+.public-share-image-card .profile-share-card-identity strong {
+  max-width: 210px !important;
+  font-size: 1.15rem !important;
+  line-height: 1.05 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.public-share-image-card .profile-share-card-identity small {
+  max-width: 210px !important;
+  min-height: 0 !important;
+  color: rgba(244, 247, 240, 0.72) !important;
+  font-size: 0.78rem !important;
+  line-height: 1.16 !important;
+  -webkit-line-clamp: 2 !important;
+}
+
+.public-share-image-card .profile-share-card-style-pill {
+  max-width: 116px !important;
+  min-height: 32px !important;
+  padding: 7px 10px !important;
+  align-self: start !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.68rem !important;
+  line-height: 1.05 !important;
+}
+
+.public-share-image-card .profile-selected-share-grid {
+  gap: 8px !important;
+  margin-top: 2px !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card,
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-card,
+.share-capture-safe .profile-selected-share-grid .profile-share-metric-card {
+  min-height: 76px !important;
+  padding: 10px 11px !important;
+  border-radius: 18px !important;
+  justify-content: center !important;
+  gap: 5px !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card span {
+  font-size: 0.56rem !important;
+  line-height: 1.08 !important;
+  letter-spacing: 0.055em !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card strong {
+  font-size: 1.08rem !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.045em !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong,
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier strong,
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder strong {
+  font-size: 1rem !important;
+  line-height: 1.08 !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card small {
+  font-size: 0.6rem !important;
+  line-height: 1.12 !important;
+}
+
+.public-share-image-card .public-share-savings {
+  min-height: 72px !important;
+  margin-top: 0 !important;
+  padding: 12px 13px !important;
+  border-radius: 20px !important;
+  gap: 4px !important;
+}
+
+.public-share-image-card .public-share-savings span {
+  font-size: 0.62rem !important;
+  letter-spacing: 0.045em !important;
+  text-transform: uppercase !important;
+}
+
+.public-share-image-card .public-share-savings strong {
+  font-size: 1.3rem !important;
+  line-height: 1.05 !important;
+}
+
+.public-share-image-card .public-share-savings small {
+  font-size: 0.66rem !important;
+  line-height: 1.18 !important;
+}
+
+.public-share-image-card .public-share-footer {
+  min-height: 42px !important;
+  margin-top: 2px !important;
+  padding-top: 10px !important;
+  align-items: end !important;
+}
+
+.public-share-image-card .public-share-footer strong {
+  font-size: 0.98rem !important;
+  line-height: 1.05 !important;
+}
+
+.public-share-image-card .public-share-footer span,
+.public-share-image-card .public-share-footer b {
+  font-size: 0.66rem !important;
+  line-height: 1.1 !important;
+}
+
+.share-capture-safe.public-share-image-card {
+  width: 520px !important;
+  max-width: 520px !important;
+  min-height: auto !important;
+  padding: 24px !important;
+  gap: 12px !important;
+  border-radius: 34px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-avatar {
+  width: 76px !important;
+  height: 76px !important;
+  flex-basis: 76px !important;
+  border-radius: 24px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity strong {
+  font-size: 1.35rem !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity small {
+  max-width: 260px !important;
+  font-size: 0.88rem !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid {
+  gap: 10px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-card {
+  min-height: 86px !important;
+  padding: 12px 13px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-card strong {
+  font-size: 1.22rem !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong,
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier strong,
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder strong {
+  font-size: 1.12rem !important;
+}
+
+@media (max-width: 430px) {
+  .public-share-image-card.premium-share-card {
+    width: min(100%, 390px) !important;
+    max-width: 390px !important;
+    padding: 15px !important;
+    gap: 9px !important;
+  }
+
+  .public-share-image-card .profile-share-card-avatar {
+    width: 60px !important;
+    height: 60px !important;
+    flex-basis: 60px !important;
+    border-radius: 19px !important;
+  }
+
+  .public-share-image-card .profile-share-card-identity span {
+    max-width: 132px !important;
+    padding: 5px 9px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .public-share-image-card .profile-share-card-identity strong {
+    max-width: 180px !important;
+    font-size: 1.04rem !important;
+  }
+
+  .public-share-image-card .profile-share-card-identity small {
+    max-width: 180px !important;
+    font-size: 0.72rem !important;
+  }
+
+  .public-share-image-card .profile-share-card-style-pill {
+    max-width: 96px !important;
+    min-height: 28px !important;
+    padding: 6px 8px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-card {
+    min-height: 70px !important;
+    padding: 9px 10px !important;
+    border-radius: 16px !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-card strong {
+    font-size: 1rem !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong,
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier strong,
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-holder strong {
+    font-size: 0.94rem !important;
+  }
+
+  .public-share-image-card .public-share-savings {
+    min-height: 66px !important;
+    padding: 10px 11px !important;
+  }
+}
