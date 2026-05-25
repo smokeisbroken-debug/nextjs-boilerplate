@@ -10758,7 +10758,7 @@ function DashboardScreen({
   }, [allExpenses, settings]);
 
   return (
-    <div className="screen">
+    <div className="screen home-screen">
       <Header title="$BROKE Life Tracker" rightIcon={A.help} onRight={onBellClick} />
 
       <section className="hero home-compact-hero" aria-label="Home wallet status">
@@ -10788,7 +10788,7 @@ function DashboardScreen({
       </section>
 
 
-      <details className="home-compact-details home-wallet-snapshot-card home-collapsed-section">
+      <details open className="home-compact-details home-wallet-snapshot-card home-collapsed-section">
         <summary className="home-compact-summary home-wallet-snapshot-summary">
           <div>
             <span>Wallet Snapshot</span>

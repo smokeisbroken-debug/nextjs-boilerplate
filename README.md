@@ -1,10 +1,10 @@
-# v59.20.2 — Home Compact + Share Card Crop Hotfix
+# v59.20.3 — Home Snapshot Open + Premium Details Rows
 
 Patch-only update for the $BROKE / SmokeIsBroke Telegram Mini App.
 
 ## Purpose
 
-This patch makes Home shorter and easier to scan, similar to the compact Personal Cabinet flow. It also adds a safer share-card export layout so major share cards stop clipping their top identity/header area during html2canvas capture.
+This patch keeps the important Wallet Snapshot visible on Home while making the rest of the Home collapsed sections look like the newer Personal Cabinet premium rows instead of older arrow-style details blocks.
 
 ## Files changed
 
@@ -19,14 +19,12 @@ This patch makes Home shorter and easier to scan, similar to the compact Persona
 
 ## Product changes
 
-- Wallet Snapshot on Home is collapsed by default.
-- Today’s Focus on Home is collapsed by default.
-- Weekly Behavior Report on Home is collapsed by default.
-- Comeback Mode on Home is collapsed by default when present.
-- Existing Home details such as missions, reports, insights, badges, recent expenses, and sync remain in collapsible sections.
-- Share-card export now uses safer scroll offsets and a taller clone viewport.
-- Major share cards receive extra export-safe top padding while captured.
-- Identity/avatar/header rows on share cards are allowed to breathe during capture.
+- Wallet Snapshot on Home is open by default again.
+- Today’s Focus, Weekly Behavior Report, and Comeback Mode remain collapsed by default.
+- Lower Home sections now use compact premium summary rows instead of older arrow-style `clean-details` visuals.
+- Old chevron arrows are hidden on Home details rows.
+- Home detail rows now use the same dark/glass, rounded, status-pill visual language as the compact cabinet sections.
+- Existing Home mechanics and panels remain available inside expandable sections.
 
 ## Not changed
 

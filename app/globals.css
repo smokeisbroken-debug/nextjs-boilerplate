@@ -24566,3 +24566,191 @@ body {
     padding-top: 38px !important;
   }
 }
+
+/* ===== V59.20.3 HOME SNAPSHOT DEFAULT OPEN + PREMIUM DETAILS ROWS ===== */
+.home-screen > .home-wallet-snapshot-card[open] {
+  border-color: rgba(183, 255, 25, 0.2);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.1), transparent 42%),
+    linear-gradient(180deg, rgba(20, 38, 19, 0.84), rgba(5, 12, 8, 0.94));
+}
+
+.home-screen > .clean-details {
+  width: min(100%, var(--content-max, 640px));
+  max-width: 100%;
+  margin: 10px auto;
+  overflow: hidden;
+  padding: 0 !important;
+  border: 1px solid rgba(183, 255, 25, 0.135);
+  border-radius: 25px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.072), transparent 44%),
+    linear-gradient(180deg, rgba(20, 38, 19, 0.76), rgba(5, 12, 8, 0.91));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.home-screen > .clean-details[open] {
+  border-color: rgba(183, 255, 25, 0.22);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.105), transparent 44%),
+    linear-gradient(180deg, rgba(23, 45, 21, 0.84), rgba(5, 12, 8, 0.94));
+}
+
+.home-screen > .clean-details > summary {
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.home-screen > .clean-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-screen > .clean-details > summary::after {
+  content: none !important;
+  display: none !important;
+}
+
+.home-screen > .clean-details[open] > summary {
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(183, 255, 25, 0.11);
+}
+
+.home-screen > .clean-details > summary > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.home-screen > .clean-details > summary span,
+.home-screen > .clean-details > summary div span,
+.home-screen > .clean-details > summary > span {
+  min-width: 0;
+  color: var(--neon);
+  font-size: 0.75rem;
+  line-height: 1.06;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.home-screen > .clean-details > summary div small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.78rem;
+  line-height: 1.23;
+  font-weight: 760;
+}
+
+.home-screen > .clean-details > summary b {
+  margin-right: 0 !important;
+  min-width: 0;
+  max-width: 138px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid rgba(183, 255, 25, 0.2);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: rgba(225, 255, 185, 0.94);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.72rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.home-screen > .clean-details[open] > summary b {
+  color: var(--neon);
+  background: rgba(183, 255, 25, 0.085);
+}
+
+.home-screen > .clean-details > section,
+.home-screen > .clean-details > .share-card,
+.home-screen > .clean-details > .wallet-insights-panel,
+.home-screen > .clean-details > .v2-identity-card,
+.home-screen > .clean-details > .badges-strip,
+.home-screen > .clean-details > .daily-routine-card,
+.home-screen > .clean-details > .chart-preview,
+.home-screen > .clean-details > .recent-card,
+.home-screen > .clean-details > .tg-status,
+.home-screen > .clean-details > .settings-group,
+.home-screen > .clean-details > .tracked-panel,
+.home-screen > .clean-details > .badge-vault-details,
+.home-screen > .clean-details > .streak-settings-panel,
+.home-screen > .clean-details > .leaderboard-panel,
+.home-screen > .clean-details > .challenges-panel,
+.home-screen > .clean-details > .debt-radar-panel {
+  margin: 0 12px 12px;
+}
+
+.home-screen > .clean-details .daily-routine-card,
+.home-screen > .clean-details .v2-identity-card,
+.home-screen > .clean-details .wallet-insights-panel,
+.home-screen > .clean-details .share-card,
+.home-screen > .clean-details .chart-preview,
+.home-screen > .clean-details .recent-card,
+.home-screen > .clean-details .badges-strip,
+.home-screen > .clean-details .settings-group,
+.home-screen > .clean-details .tracked-panel,
+.home-screen > .clean-details .leaderboard-panel,
+.home-screen > .clean-details .challenges-panel,
+.home-screen > .clean-details .debt-radar-panel {
+  max-width: 100% !important;
+  border-radius: 18px;
+}
+
+.home-screen > .clean-details:not([open]) {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.016),
+    0 8px 20px rgba(0, 0, 0, 0.14);
+}
+
+@media (max-width: 430px) {
+  .home-screen > .clean-details {
+    margin: 9px auto;
+    border-radius: 22px;
+  }
+
+  .home-screen > .clean-details > summary {
+    min-height: 66px;
+    padding: 12px 13px;
+    gap: 9px;
+  }
+
+  .home-screen > .clean-details > summary div small {
+    display: none;
+  }
+
+  .home-screen > .clean-details > summary b {
+    max-width: 112px;
+    padding: 6px 8px;
+    font-size: 0.68rem;
+  }
+
+  .home-screen > .clean-details > section,
+  .home-screen > .clean-details > .share-card,
+  .home-screen > .clean-details > .wallet-insights-panel,
+  .home-screen > .clean-details > .v2-identity-card,
+  .home-screen > .clean-details > .badges-strip,
+  .home-screen > .clean-details > .daily-routine-card,
+  .home-screen > .clean-details > .chart-preview,
+  .home-screen > .clean-details > .recent-card,
+  .home-screen > .clean-details > .tg-status,
+  .home-screen > .clean-details > .settings-group,
+  .home-screen > .clean-details > .tracked-panel,
+  .home-screen > .clean-details > .badge-vault-details,
+  .home-screen > .clean-details > .streak-settings-panel,
+  .home-screen > .clean-details > .leaderboard-panel,
+  .home-screen > .clean-details > .challenges-panel,
+  .home-screen > .clean-details > .debt-radar-panel {
+    margin: 0 10px 10px;
+  }
+}

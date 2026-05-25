@@ -1,21 +1,21 @@
-# PROJECT ORDER — v59.20.2 Home Compact + Share Card Crop Hotfix
+# PROJECT ORDER — v59.20.3 Home Snapshot Open + Premium Details Rows
 
 ## Current patch
 
-`v59.20.2 — Home Compact + Share Card Crop Hotfix`
+`v59.20.3 — Home Snapshot Open + Premium Details Rows`
 
 ## Build target
 
-Apply this patch on top of `v59.20.1 — Button Guide Build Hotfix`.
+Apply this patch on top of `v59.20.2 — Home Compact + Share Card Crop Hotfix`.
 
 ## What this patch does
 
-1. Keeps Home visually premium but makes it much shorter by default.
-2. Converts major Home sections into compact expandable rows.
-3. Keeps the first-user clarity card visible when the user has no expenses.
-4. Keeps all existing Home mechanics and panels available inside collapsed sections.
-5. Adds export-safe top padding for major share cards.
-6. Updates html2canvas capture offsets/window sizing to reduce cropped exports on Telegram/mobile WebView.
+1. Keeps Wallet Snapshot open by default on Home.
+2. Keeps Today’s Focus, Weekly Behavior Report, and Comeback Mode collapsed by default.
+3. Adds a Home-specific wrapper class so Home details can be styled without changing every `clean-details` usage elsewhere.
+4. Reworks lower Home collapsed rows into premium dark/glass summary cards.
+5. Removes the old arrow/chevron visual from Home details rows.
+6. Keeps all existing Home panel content and actions unchanged.
 
 ## What this patch intentionally does not do
 
@@ -26,10 +26,11 @@ Apply this patch on top of `v59.20.1 — Button Guide Build Hotfix`.
 - Does not change holder reward tiers.
 - Does not change avatar upload backend.
 - Does not change Telegram webhook behavior.
-- Does not change share-card content rules; it only improves layout/capture safety.
+- Does not change share-card export logic.
 
 ## Manual review focus
 
-- Home should no longer feel like a long feed at first open.
-- Wallet Snapshot, Today’s Focus, Weekly Behavior Report, and Comeback Mode should open only when tapped.
-- Share-card PNG exports should no longer clip the top header/avatar/status area.
+- Wallet Snapshot should be visible immediately on Home.
+- Lower Home rows should look premium and consistent with Personal Cabinet.
+- The old arrow-style details should no longer appear on Home.
+- All collapsed Home sections should still open and show their original content.

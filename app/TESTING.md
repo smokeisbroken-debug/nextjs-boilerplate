@@ -1,4 +1,4 @@
-# TESTING — v59.20.2 Home Compact + Share Card Crop Hotfix
+# TESTING — v59.20.3 Home Snapshot Open + Premium Details Rows
 
 ## Static checks performed in this environment
 
@@ -22,25 +22,13 @@ NEXT_TELEMETRY_DISABLED=1 npm run build
 ### Home
 
 - Open Home on mobile.
-- Confirm the visible screen is shorter than before.
-- Confirm Wallet Snapshot is collapsed by default.
-- Tap Wallet Snapshot and confirm income/life cost/leaks/real balance/day tabs are still available.
-- Confirm Today’s Focus is collapsed by default.
-- Tap Today’s Focus and confirm the existing focus logic/actions still work.
-- Confirm Weekly Behavior Report is collapsed by default.
-- Tap Weekly Behavior Report and confirm report/share actions still work.
+- Confirm Wallet Snapshot is open by default.
+- Confirm Income, Life Cost, Money Leaks, Real Balance, day tabs, and today snapshot are visible without tapping.
+- Confirm Today’s Focus is collapsed by default and opens correctly.
+- Confirm Weekly Behavior Report is collapsed by default and opens correctly.
 - If Comeback Mode appears, confirm it is collapsed by default and opens correctly.
-
-### Share cards
-
-- Export Profile Share Card.
-- Export Weekly Behavior Report share card.
-- Export Daily/Weekly report cards.
-- Export Mission Result card.
-- Export Weekly Review and Monthly Leak History cards.
-- Export Survival card.
-- Confirm avatar/header/status line are not clipped at the top.
-- Confirm custom avatar still appears when configured.
+- Confirm lower rows such as Biggest Leak Challenge, Daily Routine, Share Reports, Badges, Recent Expenses, and Account / Sync use the premium row style.
+- Confirm old arrow/chevron details visuals are not visible on Home.
 
 ### Regression
 
@@ -48,3 +36,4 @@ NEXT_TELEMETRY_DISABLED=1 npm run build
 - Chart still opens and shows data.
 - Profile wallet verification controls still open inside Profile.
 - Share Studio still opens and edits selected public items.
+- Existing share-card exports still work as in v59.20.2.
