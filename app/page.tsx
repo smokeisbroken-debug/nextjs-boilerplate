@@ -17483,6 +17483,7 @@ const SHARE_CARD_PUBLIC_ASSETS = {
   growth: "/share-card-premium-background.png",
   mission: "/share-card-premium-background.png",
   leaderboard: "/share-card-premium-background.png",
+  profile: "/share-card-premium-background.png",
   background: "/share-card-premium-background.png",
 };
 

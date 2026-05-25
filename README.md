@@ -1,4 +1,4 @@
-# v59.20 — Detailed Button Guide Replacement
+# v59.20.1 — Button Guide Build Hotfix
 
 Patch-only update for the $BROKE / SmokeIsBroke Telegram Mini App.
 
@@ -52,3 +52,10 @@ No backend behavior changed.
 - No avatar upload backend changes
 - No Telegram webhook changes
 - No stored data rewrite
+
+
+## v59.20.1 Build Hotfix
+
+- Fixed the detailed Profile guide icon reference by adding `profile` to `SHARE_CARD_PUBLIC_ASSETS`.
+- This resolves the TypeScript build error: `Property 'profile' does not exist on type ...`.
+- No API, Supabase, wallet, holder rewards, avatar backend, Telegram webhook, or stored-data changes.

@@ -41,3 +41,10 @@ Check:
 - Growth guide clearly says no staking, no custody, no investing, no guaranteed returns.
 - Save guide keeps Debt & Bills Radar private-first.
 - No app data, wallet data, share-card data, or records are changed by opening the guide.
+
+
+## v59.20.1 Build Hotfix
+
+- Fixed the detailed Profile guide icon reference by adding `profile` to `SHARE_CARD_PUBLIC_ASSETS`.
+- This resolves the TypeScript build error: `Property 'profile' does not exist on type ...`.
+- No API, Supabase, wallet, holder rewards, avatar backend, Telegram webhook, or stored-data changes.

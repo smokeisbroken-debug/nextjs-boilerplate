@@ -2,7 +2,7 @@
 
 ## Current patch
 
-`v59.20 — Detailed Button Guide Replacement`
+`v59.20.1 — Button Guide Build Hotfix`
 
 ## Build target
 
@@ -32,3 +32,10 @@ After this guide is deployed and visually checked, the next safe step is either:
 
 1. polish any guide wording based on user feedback, or
 2. continue with future holder reward ledger foundation when the product flow is ready.
+
+
+## v59.20.1 Build Hotfix
+
+- Fixed the detailed Profile guide icon reference by adding `profile` to `SHARE_CARD_PUBLIC_ASSETS`.
+- This resolves the TypeScript build error: `Property 'profile' does not exist on type ...`.
+- No API, Supabase, wallet, holder rewards, avatar backend, Telegram webhook, or stored-data changes.
