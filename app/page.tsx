@@ -11020,7 +11020,7 @@ function WeeklyBehaviorReportHomeCard({
         <strong>{weeklyPatternSummary.nextMove}</strong>
       </div>
 
-      <section className={`safe-weekly-share-card identity-share-style-${settings.identity.identityStyle || "classic"}`} ref={weeklyShareCardRef}>
+      <section className={`safe-weekly-share-card premium-share-card identity-share-style-${settings.identity.identityStyle || "classic"}`} ref={weeklyShareCardRef}>
         <div className="safe-weekly-share-top">
           <div className="safe-weekly-share-identity">
             <img src={publicIdentityAvatar} alt="" />
@@ -12342,6 +12342,9 @@ function ReportsPanel({
   const dailyLeaksUsdNote = usdReferenceNote(todayLeakAmount, settings.currency, settings, exchangeRates);
   const weeklyLeaksUsdNote = usdReferenceNote(weeklyLeakAmount, settings.currency, settings, exchangeRates);
   const weeklyBiggestLeakUsdNote = usdReferenceNote(identityStats.biggestLeakAmount, settings.currency, settings, exchangeRates);
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityStatus = getPublicIdentityStatus(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
 
   const dailyReportText = [
     "$BROKE Daily Wallet Report",
@@ -12481,13 +12484,16 @@ function ReportsPanel({
               src={SHARE_CARD_PUBLIC_ASSETS.daily}
               alt=""
             />
-            <div className="report-public-share-top">
-              <div>
-                <span>$BROKE DAILY REPORT</span>
-                <strong>{todayStatus}</strong>
-                <small>Wallet HP {summary.walletHp}/100</small>
+            <div className="report-public-share-top share-card-identity-top">
+              <div className="share-card-identity-line">
+                <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+                <div>
+                  <span>$BROKE DAILY REPORT</span>
+                  <strong>{todayStatus}</strong>
+                  <small>{publicIdentityName} · Wallet HP {summary.walletHp}/100</small>
+                </div>
               </div>
-              <img src={todayTopCategory ? getCategoryIcon(todayTopCategory.category) : A.walletMascot} alt="" />
+              <img className="share-card-signal-icon" src={todayTopCategory ? getCategoryIcon(todayTopCategory.category) : A.walletMascot} alt="" />
             </div>
 
             <div className="report-public-share-grid">
@@ -12571,13 +12577,16 @@ function ReportsPanel({
               src={SHARE_CARD_PUBLIC_ASSETS.weekly}
               alt=""
             />
-            <div className="report-public-share-top">
-              <div>
-                <span>$BROKE WEEKLY REPORT</span>
-                <strong>{weeklyStatus}</strong>
-                <small>Survival {identityStats.weeklySurvivalScore}/100</small>
+            <div className="report-public-share-top share-card-identity-top">
+              <div className="share-card-identity-line">
+                <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+                <div>
+                  <span>$BROKE WEEKLY REPORT</span>
+                  <strong>{weeklyStatus}</strong>
+                  <small>{publicIdentityName} · Survival {identityStats.weeklySurvivalScore}/100</small>
+                </div>
               </div>
-              <img src={identityStats.biggestLeakAmount > 0 ? getCategoryIcon(identityStats.biggestLeakCategory) : A.challengeTrophy} alt="" />
+              <img className="share-card-signal-icon" src={identityStats.biggestLeakAmount > 0 ? getCategoryIcon(identityStats.biggestLeakCategory) : A.challengeTrophy} alt="" />
             </div>
 
             <div className="report-public-share-grid">
@@ -12898,6 +12907,9 @@ function BiggestLeakChallengePanel({
     : progress.failed
       ? "The leak broke the limit. Reset and run it back."
       : "Keep tracking. The result card unlocks when this mission ends.";
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityStatus = getPublicIdentityStatus(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
 
   const shareText = mission
     ? [
@@ -13070,13 +13082,16 @@ function BiggestLeakChallengePanel({
                   alt=""
                 />
 
-                <div className="mission-public-share-top">
-                  <div>
-                    <span>$BROKE MISSION CARD</span>
-                    <strong>{resultTitle}</strong>
-                    <small>{progress.failed ? "Limit broken" : "Wallet HP protected"}</small>
+                <div className="mission-public-share-top share-card-identity-top">
+                  <div className="share-card-identity-line">
+                    <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+                    <div>
+                      <span>$BROKE MISSION CARD</span>
+                      <strong>{resultTitle}</strong>
+                      <small>{publicIdentityName} · {progress.failed ? "Limit broken" : "Wallet HP protected"}</small>
+                    </div>
                   </div>
-                  <img src={progress.completed ? A.challengeCompleted : A.challengeFailed} alt="" />
+                  <img className="share-card-signal-icon" src={progress.completed ? A.challengeCompleted : A.challengeFailed} alt="" />
                 </div>
 
                 <div className="mission-public-share-grid">
@@ -14926,6 +14941,8 @@ function WeeklyReviewPanel({
 }) {
   const spentUsdNote = usdReferenceNote(review.totalSpent, settings.currency, settings, exchangeRates);
   const leaksUsdNote = usdReferenceNote(review.totalLeaks, settings.currency, settings, exchangeRates);
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
 
   return (
     <details className="weekly-review-details">
@@ -15025,12 +15042,16 @@ function WeeklyReviewPanel({
             }}
           />
 
-          <div className="weekly-share-top">
-            <div>
-              <span>$BROKE WEEKLY REVIEW</span>
-              <strong>This Week in $BROKE</strong>
+          <div className="weekly-share-top share-card-identity-top">
+            <div className="share-card-identity-line">
+              <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+              <div>
+                <span>$BROKE WEEKLY REVIEW</span>
+                <strong>This Week in $BROKE</strong>
+                <small>{publicIdentityName}</small>
+              </div>
             </div>
-            <img src={A.chartFrog} alt="" />
+            <img className="share-card-signal-icon" src={A.chartFrog} alt="" />
           </div>
 
           <div className="weekly-share-grid">
@@ -15096,6 +15117,8 @@ function MonthlyLeakHistoryPanel({
 }) {
   const totalSpentUsdNote = usdReferenceNote(archive.totalSpent, settings.currency, settings, exchangeRates);
   const totalLeaksUsdNote = usdReferenceNote(archive.totalLeaks, settings.currency, settings, exchangeRates);
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
 
   return (
     <section className="monthly-leak-history">
@@ -15149,12 +15172,16 @@ function MonthlyLeakHistoryPanel({
           }}
         />
 
-        <div className="monthly-share-top">
-          <div>
-            <span>$BROKE MONTHLY HISTORY</span>
-            <strong>{archive.monthLabel}</strong>
+        <div className="monthly-share-top share-card-identity-top">
+          <div className="share-card-identity-line">
+            <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+            <div>
+              <span>$BROKE MONTHLY HISTORY</span>
+              <strong>{archive.monthLabel}</strong>
+              <small>{publicIdentityName}</small>
+            </div>
           </div>
-          <img src={A.chartFrog} alt="" />
+          <img className="share-card-signal-icon" src={A.chartFrog} alt="" />
         </div>
 
         <div className="monthly-share-grid">
@@ -16929,6 +16956,22 @@ function growthStrokeRoundRect(
   ctx.stroke();
 }
 
+function growthDrawCircularImage(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  centerX: number,
+  centerY: number,
+  radius: number
+) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+  ctx.drawImage(image, centerX - radius, centerY - radius, radius * 2, radius * 2);
+  ctx.restore();
+}
+
 
 function loadShareCardImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -16953,6 +16996,9 @@ async function buildGrowthShareCardBlob(
   const goalUsdNote = context
     ? usdReferenceNote(context.activeGoalTarget, settings.currency, settings, rates)
     : "";
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityStatus = getPublicIdentityStatus(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1350;
@@ -17020,6 +17066,26 @@ async function buildGrowthShareCardBlob(
   ctx.fillStyle = muted;
   ctx.font = "500 29px Arial, sans-serif";
   ctx.fillText("Monthly leak plan into a personal saving goal", 68, 207);
+
+  try {
+    const identityAvatar = await loadShareCardImage(publicIdentityAvatar);
+    growthFillRoundRect(ctx, 770, 58, 248, 110, 32, "rgba(9,20,14,0.76)");
+    growthStrokeRoundRect(ctx, 770, 58, 248, 110, 32, "rgba(183,255,25,0.22)", 2);
+    growthDrawCircularImage(ctx, identityAvatar, 828, 113, 38);
+    ctx.strokeStyle = "rgba(183,255,25,0.55)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(828, 113, 41, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = text;
+    ctx.font = "900 25px Arial, sans-serif";
+    ctx.fillText(publicIdentityName.slice(0, 13), 882, 105);
+    ctx.fillStyle = muted;
+    ctx.font = "800 18px Arial, sans-serif";
+    ctx.fillText(publicIdentityStatus.slice(0, 18), 882, 134);
+  } catch {
+    // Avatar is optional; the share card still renders without it.
+  }
 
   growthFillRoundRect(ctx, 62, 255, 956, 190, 34, panel);
   growthStrokeRoundRect(ctx, 62, 255, 956, 190, 34, "rgba(183,255,25,0.22)", 2);
@@ -19093,6 +19159,8 @@ function SurvivalModePanel({
     : usdReferenceNote(forecast.currentDailyPace, settings.currency, settings, exchangeRates);
   const totalSavingsUsdNote = usdReferenceNote(totalMonthlySavings, settings.currency, settings, exchangeRates);
   const adjustedPaceUsdNote = usdReferenceNote(adjustedDailyPace, settings.currency, settings, exchangeRates);
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
   const statusClass =
     forecast.status === "surviving"
       ? "surviving"
@@ -19188,12 +19256,17 @@ function SurvivalModePanel({
             event.currentTarget.src = SHARE_CARD_PUBLIC_ASSETS.background;
           }}
         />
-        <div className="survival-share-top">
-          <div>
-            <span>$BROKE SURVIVAL MODE</span>
-            <strong>Can I survive until payday?</strong>
+        <div className="survival-share-top share-card-identity-top">
+          <div className="share-card-identity-line">
+            <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+            <div>
+              <span>$BROKE SURVIVAL MODE</span>
+              <strong>Can I survive until payday?</strong>
+              <small>{publicIdentityName}</small>
+            </div>
           </div>
           <img
+            className="share-card-signal-icon"
             src={PREMIUM_VISUAL_PACK.survivalMascot}
             alt=""
             onError={(event) => {

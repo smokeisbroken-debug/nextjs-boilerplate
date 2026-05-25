@@ -1,4 +1,4 @@
-# v59.19.3 Profile Compact Cabinet Hotfix — Project Order
+# v59.19.4 Share Cards Premium Fit & Avatar Polish — Project Order
 
 ## Base
 Apply after:
@@ -6,9 +6,10 @@ Apply after:
 2. v59.19 Global Premium Style Foundation
 3. v59.19.1 Share Studio Brightness Hotfix
 4. v59.19.2 Card Premium Alignment Polish
+5. v59.19.3 Profile Compact Cabinet Hotfix
 
 ## Scope
-Make Profile / Personal Cabinet less long and less noisy while preserving all wallet, identity, Share Studio, and settings functionality.
+Bring public share cards closer to the new premium app style and make them more consistent in width, spacing, and identity presentation.
 
 ## Files changed
 - `app/page.tsx`
@@ -21,10 +22,12 @@ Make Profile / Personal Cabinet less long and less noisy while preserving all wa
 - `app/TESTING.md`
 
 ## Implementation notes
-- Wallet & $BROKE Balance is now a collapsed `<details>` block with a compact status summary.
-- Share Studio is now a collapsed `<details>` block with selected/slot summary.
-- Internal controls are unchanged and remain available after opening the sections.
-- Mobile CSS reduces card height, chip height, grid gaps, and settings-summary height.
+- Active profile avatar is used as the identity visual on major share cards.
+- Custom avatar URL is already returned by `getPublicProfileAvatarImage(settings)`, so uploaded custom avatars appear automatically where the public profile avatar is used.
+- Signal/category icons remain as secondary icons where useful.
+- Share card preview width is capped for mobile readability.
+- Captured cards get a stable 420px width during html2canvas rendering for cleaner PNG output.
+- Growth Lab share card is canvas-generated, so it draws the avatar separately and safely skips it if loading fails.
 
 ## Do not change in this patch
 - API routes

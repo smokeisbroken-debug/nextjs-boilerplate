@@ -1,27 +1,28 @@
-# v59.19.3 Testing Checklist
+# v59.19.4 Testing Checklist
 
-## Profile / Personal Cabinet
-- [ ] Open Profile on Telegram mobile.
-- [ ] Confirm top identity card is shorter than before.
-- [ ] Confirm Wallet & $BROKE Balance appears as one collapsed premium row.
-- [ ] Tap Wallet & $BROKE Balance and confirm wallet address, verify, sync, provider help, holder proof, and privacy controls still work.
-- [ ] Confirm wallet security notes are small chips, not large empty pills.
-- [ ] Confirm holder rewards remain visible only inside the expanded wallet section.
-- [ ] Confirm Share Studio appears as one collapsed premium row.
-- [ ] Tap Share Studio and confirm share item toggles still work.
-- [ ] Confirm selected Share Studio items are dark/glass, not bright neon blocks.
-- [ ] Confirm Open share card and Preview here still work.
+## Share cards
+- [ ] Open Profile → Share Studio → Preview here.
+- [ ] Confirm the Profile Share Card width looks controlled and premium.
+- [ ] If a custom avatar is active, confirm it appears on the Profile Share Card.
+- [ ] Open Home → Weekly Behavior Report and confirm the weekly card uses the avatar and fits cleanly.
+- [ ] Open reports and confirm Daily Report and Weekly Report share cards use avatar + secondary signal icon.
+- [ ] Complete/open a Mission Result card and confirm the avatar appears in the header.
+- [ ] Open Weekly Review and Monthly Leak History cards and confirm layout width is consistent.
+- [ ] Open Survival Mode share card and confirm layout width is consistent.
+- [ ] Create Growth Lab share preview and confirm it still renders; avatar should appear if it loads successfully.
 
-## Settings
-- [ ] Confirm Profile Settings sections remain collapsed by default.
-- [ ] Confirm Quick Setup, Money Setup, Currency & Repair, Privacy & Public Proof, Personalization, Notifications & Sync, Progress Vault, and Data & Records can still open.
+## Image generation
+- [ ] Tap share/download image for the Profile Share Card.
+- [ ] Confirm the exported PNG is not too wide and text is not cropped.
+- [ ] Repeat for Weekly Behavior Report, Daily Report, Weekly Report, and Mission Result.
 
 ## Regression
 - [ ] Add expense still works.
-- [ ] Wallet HP / Home still renders.
-- [ ] Chart still renders.
-- [ ] Growth and Save tabs still open.
-- [ ] No console error after opening/closing wallet and Share Studio.
+- [ ] Wallet verification/sync still works.
+- [ ] Custom avatar upload/remove still works.
+- [ ] Share Studio toggles still work.
+- [ ] Public Proof Mode still hides private numbers.
+- [ ] No console error during share card image generation.
 
 ## Recommended local checks
 ```bash
