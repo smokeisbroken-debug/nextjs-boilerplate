@@ -1,13 +1,13 @@
-# $BROKE Life Tracker — v59.19.5 Profile Share Card Export Fit Hotfix
+# $BROKE Life Tracker — v59.19.6 Profile Share Card Header Crop Hotfix
 
-Patch-only polish on top of v59.19.4.
+Patch-only polish on top of v59.19.5.
 
 ## What changed
-- Profile Share Card export is wider and less vertically stretched during html2canvas capture.
-- Profile Share Card preview is more compact on mobile.
-- Header spacing was tightened so the avatar, title, nickname, status, and identity badge do not leave a large empty area.
-- Metric cards are shorter, better aligned, and still support 8 selected Share Studio items.
-- Potential yearly savings and footer blocks are more compact.
+- Added extra export-safe top padding to the Profile Share Card so html2canvas output no longer cuts the top/header area.
+- Prevented the Profile Share Card identity/status block from clipping the status line.
+- Increased safe header breathing room only for Profile Share Card preview/export.
+- Kept the card width from v59.19.5.
+- Improved the Biggest leak metric wrapping so category names are less likely to split awkwardly.
 - Custom/profile avatar display is preserved.
 
 ## No changes
@@ -21,5 +21,5 @@ Patch-only polish on top of v59.19.4.
 - No stored data rewrite.
 
 ## Verification
-- CSS brace balance passes for `app/globals.css`.
-- Full npm checks were not rerun in this environment because this is CSS/docs-only.
+- CSS brace balance passes.
+- Full npm checks were not rerun because this is CSS/docs-only.

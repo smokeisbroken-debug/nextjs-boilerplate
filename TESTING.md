@@ -1,13 +1,16 @@
-# v59.19.5 Testing Checklist
+# v59.19.6 Testing Checklist
 
 ## Profile Share Card
 - [ ] Open Profile → Share Studio → Preview here.
-- [ ] Confirm the card is not excessively tall.
-- [ ] Confirm the header has no large empty vertical gap.
-- [ ] Confirm selected metrics fit cleanly when 7/8 or 8/8 items are selected.
-- [ ] Confirm the active preset/custom avatar appears in the card header.
-- [ ] Tap share/download image and confirm the exported PNG is wider and cleaner than v59.19.4.
-- [ ] Confirm footer and potential savings block fit without looking stretched.
+- [ ] Confirm the top rounded border is visible and not cropped.
+- [ ] Confirm avatar is fully visible.
+- [ ] Confirm `$BROKE PROFILE` pill is fully visible.
+- [ ] Confirm nickname is fully visible.
+- [ ] Confirm status text is not cut.
+- [ ] Confirm identity style badge is not cut.
+- [ ] Confirm selected metrics still fit cleanly when 7/8 or 8/8 items are selected.
+- [ ] Confirm Biggest leak category text does not split awkwardly when possible.
+- [ ] Export/share image and confirm the PNG has safe top breathing room.
 
 ## Regression
 - [ ] Share Studio toggles still work.

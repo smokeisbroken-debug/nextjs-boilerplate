@@ -24076,3 +24076,135 @@ body {
     padding: 10px 11px !important;
   }
 }
+
+/* v59.19.6 — Profile Share Card Header Crop Hotfix
+   Add export-safe top breathing room and prevent the identity/status line from being clipped in html2canvas output. */
+.public-share-image-card.premium-share-card {
+  overflow: hidden !important;
+  padding-top: 22px !important;
+}
+
+.public-share-image-card .profile-share-card-top,
+.public-share-image-card .profile-share-card-identity,
+.public-share-image-card .profile-share-card-identity > div {
+  overflow: visible !important;
+}
+
+.public-share-image-card .profile-share-card-top {
+  min-height: 92px !important;
+  margin-bottom: 10px !important;
+  align-items: flex-start !important;
+}
+
+.public-share-image-card .profile-share-card-identity {
+  align-items: flex-start !important;
+}
+
+.public-share-image-card .profile-share-card-identity > div {
+  padding-top: 3px !important;
+  gap: 5px !important;
+}
+
+.public-share-image-card .profile-share-card-identity strong {
+  font-size: 1.08rem !important;
+  line-height: 1.08 !important;
+}
+
+.public-share-image-card .profile-share-card-identity small {
+  display: block !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
+  line-height: 1.18 !important;
+}
+
+.public-share-image-card .profile-share-card-style-pill {
+  margin-top: 4px !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong {
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  hyphens: none !important;
+  font-size: 0.94rem !important;
+  line-height: 1.08 !important;
+}
+
+.share-capture-safe.public-share-image-card {
+  padding-top: 34px !important;
+  padding-bottom: 28px !important;
+  overflow: hidden !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-top,
+.share-capture-safe.public-share-image-card .profile-share-card-identity,
+.share-capture-safe.public-share-image-card .profile-share-card-identity > div {
+  overflow: visible !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-top {
+  min-height: 114px !important;
+  margin-bottom: 14px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity > div {
+  padding-top: 4px !important;
+  gap: 6px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity span {
+  max-width: 168px !important;
+  padding: 7px 13px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity strong {
+  max-width: 270px !important;
+  font-size: 1.28rem !important;
+  line-height: 1.08 !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity small {
+  display: block !important;
+  max-width: 270px !important;
+  max-height: none !important;
+  min-height: 24px !important;
+  overflow: visible !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
+  font-size: 0.82rem !important;
+  line-height: 1.18 !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-style-pill {
+  margin-top: 7px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong {
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  hyphens: none !important;
+  font-size: 1.02rem !important;
+  line-height: 1.1 !important;
+}
+
+@media (max-width: 430px) {
+  .public-share-image-card.premium-share-card {
+    padding-top: 20px !important;
+  }
+
+  .public-share-image-card .profile-share-card-top {
+    min-height: 84px !important;
+    margin-bottom: 9px !important;
+  }
+
+  .public-share-image-card .profile-share-card-identity strong {
+    font-size: 1rem !important;
+  }
+
+  .public-share-image-card .profile-share-card-identity small {
+    font-size: 0.68rem !important;
+    line-height: 1.16 !important;
+  }
+}

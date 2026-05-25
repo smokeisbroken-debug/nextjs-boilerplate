@@ -1,4 +1,4 @@
-# v59.19.5 Profile Share Card Export Fit Hotfix — Project Order
+# v59.19.6 Profile Share Card Header Crop Hotfix — Project Order
 
 ## Base
 Apply after:
@@ -8,9 +8,10 @@ Apply after:
 4. v59.19.2 Card Premium Alignment Polish
 5. v59.19.3 Profile Compact Cabinet Hotfix
 6. v59.19.4 Share Cards Premium Fit & Avatar Polish
+7. v59.19.5 Profile Share Card Export Fit Hotfix
 
 ## Scope
-Fix the Profile Share Card visual result after the premium share-card pass: reduce excessive height, improve exported width, tighten metric card spacing, and keep custom/profile avatar rendering.
+Fix the Profile Share Card export result where the top/header area can look cropped after the width/fit adjustment. Keep the wider card, preserve custom/avatar display, and avoid changing any reward, wallet, API, or Supabase logic.
 
 ## Files changed
 - `app/globals.css`
@@ -21,16 +22,9 @@ Fix the Profile Share Card visual result after the premium share-card pass: redu
 - `app/PROJECT_ORDER.md`
 - `app/TESTING.md`
 
-## Implementation notes
-- The visible Profile Share Card remains mobile-safe at up to 390–440px depending on viewport.
-- The cloned html2canvas capture version uses a wider 520px canvas to produce a cleaner PNG.
-- The fix is scoped to the Profile Share Card / public share image card CSS.
-
-## Do not change in this patch
-- API routes
-- Supabase schema
-- wallet proof/signature logic
-- holder tiers/reward thresholds
-- avatar upload backend
-- calculation logic
-- Telegram integration
+## Deployment order
+1. Apply the patch files.
+2. Run the recommended checks.
+3. Open Profile → Share Studio → Preview here.
+4. Generate/export the Profile Share Card PNG.
+5. Confirm the top border, avatar, `$BROKE PROFILE` pill, nickname, status line, and style badge are not cropped.
