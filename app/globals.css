@@ -23269,3 +23269,1998 @@ body {
     font-size: clamp(0.78rem, 3.8vw, 0.95rem);
   }
 }
+
+/* v59.19.3 Profile Compact Cabinet Hotfix */
+.profile-cabinet-card .profile-compact-details {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 0 !important;
+  border-radius: 24px;
+}
+
+.profile-compact-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 76px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.profile-compact-summary::-webkit-details-marker {
+  display: none;
+}
+
+.profile-compact-summary::after {
+  content: "Open";
+  flex: 0 0 auto;
+  border: 1px solid rgba(183, 255, 25, 0.2);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: rgba(220, 255, 180, 0.92);
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+.profile-compact-details[open] > .profile-compact-summary::after {
+  content: "Close";
+}
+
+.profile-compact-summary > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.profile-compact-summary span {
+  color: var(--neon);
+  font-size: 0.76rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profile-compact-summary strong {
+  color: #fff;
+  font-size: clamp(1rem, 4.6vw, 1.22rem);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.profile-compact-summary small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.24;
+}
+
+.profile-compact-summary > b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(183, 255, 25, 0.22);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--neon);
+  background: rgba(183, 255, 25, 0.08);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.profile-compact-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.profile-compact-details[open] > .profile-compact-summary {
+  border-bottom: 1px solid rgba(183, 255, 25, 0.11);
+  margin-bottom: 12px;
+}
+
+.profile-compact-details:not([open]) {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.018), 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.profile-share-safety-row {
+  gap: 8px;
+}
+
+.profile-share-safety-row span {
+  min-height: auto;
+  padding: 10px 12px;
+}
+
+.wallet-compact-body .wallet-address-control,
+.share-studio-compact-body .profile-share-slot-coach {
+  margin-top: 0;
+}
+
+.wallet-security-note-grid {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 7px !important;
+  margin: 8px 0 10px;
+}
+
+.wallet-security-note-grid span {
+  flex: 1 1 30%;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 8px 10px !important;
+  align-content: center !important;
+  border-radius: 999px !important;
+  font-size: 0.68rem !important;
+}
+
+.profile-share-preview-grid,
+.profile-share-picker-grid,
+.holder-reward-grid,
+.wallet-balance-status-grid {
+  gap: 8px !important;
+}
+
+.profile-share-preview-grid article,
+.profile-share-picker-grid label,
+.holder-reward-grid article,
+.wallet-balance-status-grid article,
+.profile-cabinet-stats article {
+  min-height: 70px !important;
+  padding: 11px 12px !important;
+}
+
+.holder-reward-grid small,
+.profile-share-picker-grid small {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.profile-share-studio-note {
+  margin-bottom: 0;
+  font-size: 0.82rem;
+  line-height: 1.34;
+}
+
+.profile-settings-hub {
+  gap: 10px;
+}
+
+.profile-settings-hub-heading.compact-settings-heading,
+.profile-settings-section:not([open]) .profile-section-summary {
+  min-height: 72px;
+  padding: 12px 14px;
+}
+
+.profile-section-summary small {
+  line-height: 1.25;
+}
+
+@media (max-width: 430px) {
+  .profile-cabinet-card {
+    gap: 12px;
+  }
+
+  .profile-compact-summary {
+    min-height: 70px;
+    padding: 12px 13px;
+    gap: 9px;
+  }
+
+  .profile-compact-summary small {
+    display: none;
+  }
+
+  .profile-compact-summary::after {
+    padding: 6px 8px;
+    font-size: 0.68rem;
+  }
+
+  .profile-compact-summary > b {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+  }
+
+  .profile-compact-body {
+    padding: 0 11px 12px;
+  }
+
+  .profile-share-preview-grid,
+  .holder-reward-grid,
+  .wallet-balance-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .profile-share-picker-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wallet-balance-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .wallet-balance-actions button,
+  .profile-share-studio-actions button {
+    min-height: 42px;
+    padding: 10px;
+  }
+
+  .profile-settings-hub-heading.compact-settings-heading,
+  .profile-settings-section:not([open]) .profile-section-summary {
+    min-height: 66px;
+    padding: 11px 12px;
+  }
+
+  .profile-section-summary small {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* v59.19.4 Share Cards Premium Fit & Avatar Polish */
+.public-share-image-card.premium-share-card,
+.report-public-share-card.premium-share-card,
+.mission-public-share-card.premium-share-card,
+.weekly-review-share-card.premium-share-card,
+.monthly-history-share-card.premium-share-card,
+.survival-share-card.premium-share-card,
+.safe-weekly-share-card.premium-share-card {
+  width: min(100%, 420px) !important;
+  max-width: 420px !important;
+  margin-inline: auto !important;
+  padding: 20px !important;
+  display: grid !important;
+  gap: 14px !important;
+  align-content: start !important;
+  border-radius: 30px !important;
+}
+
+.public-share-image-card.premium-share-card,
+.report-public-share-card.premium-share-card,
+.mission-public-share-card.premium-share-card,
+.weekly-review-share-card.premium-share-card,
+.monthly-history-share-card.premium-share-card,
+.survival-share-card.premium-share-card {
+  min-height: 540px !important;
+}
+
+.safe-weekly-share-card.premium-share-card {
+  min-height: 520px !important;
+}
+
+.share-card-identity-top,
+.weekly-share-top.share-card-identity-top,
+.monthly-share-top.share-card-identity-top,
+.survival-share-top.share-card-identity-top {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  margin-bottom: 2px !important;
+}
+
+.share-card-identity-line {
+  min-width: 0 !important;
+  display: grid !important;
+  grid-template-columns: 64px minmax(0, 1fr) !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.share-card-avatar,
+.profile-share-card-avatar,
+.safe-weekly-share-identity img {
+  width: 64px !important;
+  height: 64px !important;
+  flex: 0 0 64px !important;
+  border-radius: 22px !important;
+  object-fit: cover !important;
+  background: rgba(0, 0, 0, 0.34) !important;
+  border: 1px solid rgba(183, 255, 25, 0.38) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 0 4px rgba(183, 255, 25, 0.055),
+    0 14px 30px rgba(0, 0, 0, 0.32) !important;
+}
+
+.share-card-signal-icon {
+  width: 48px !important;
+  height: 48px !important;
+  flex: 0 0 48px !important;
+  border-radius: 16px !important;
+  object-fit: contain !important;
+  padding: 4px !important;
+  background: rgba(0, 0, 0, 0.28) !important;
+  border: 1px solid rgba(183, 255, 25, 0.20) !important;
+  filter: none !important;
+}
+
+.share-card-identity-line strong,
+.profile-share-card-identity strong,
+.safe-weekly-share-identity strong,
+.weekly-share-top strong,
+.monthly-share-top strong,
+.survival-share-top strong {
+  max-width: 250px !important;
+  overflow-wrap: anywhere !important;
+  text-wrap: balance;
+}
+
+.share-card-identity-line small,
+.profile-share-card-identity small,
+.safe-weekly-share-identity small,
+.weekly-share-top small,
+.monthly-share-top small,
+.survival-share-top small {
+  max-width: 245px !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden !important;
+  overflow-wrap: anywhere !important;
+}
+
+.report-public-share-grid,
+.mission-public-share-grid,
+.weekly-share-grid,
+.monthly-share-grid,
+.survival-share-grid,
+.safe-weekly-share-grid,
+.safe-weekly-share-profile-grid,
+.profile-selected-share-grid {
+  width: 100% !important;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.report-public-share-grid > div,
+.mission-public-share-grid > div,
+.weekly-share-grid > div,
+.monthly-share-grid > div,
+.survival-share-grid > div,
+.safe-weekly-share-grid > article,
+.safe-weekly-share-profile-grid > article,
+.profile-selected-share-grid > div {
+  min-width: 0 !important;
+  min-height: 86px !important;
+  display: grid !important;
+  align-content: center !important;
+  gap: 4px !important;
+  padding: 12px !important;
+  border-radius: 20px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.032), rgba(255, 255, 255, 0.014)),
+    rgba(4, 10, 7, 0.58) !important;
+  border: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+.report-public-share-grid strong,
+.mission-public-share-grid strong,
+.weekly-share-grid strong,
+.monthly-share-grid strong,
+.survival-share-grid strong,
+.safe-weekly-share-grid strong,
+.safe-weekly-share-profile-grid strong,
+.profile-selected-share-grid strong {
+  max-width: 100% !important;
+  font-size: clamp(1rem, 4.3vw, 1.22rem) !important;
+  line-height: 1.06 !important;
+  overflow-wrap: anywhere !important;
+}
+
+.report-public-share-grid span,
+.mission-public-share-grid span,
+.weekly-share-grid span,
+.monthly-share-grid span,
+.survival-share-grid span,
+.safe-weekly-share-grid span,
+.safe-weekly-share-profile-grid span,
+.profile-selected-share-grid span {
+  max-width: 100% !important;
+  color: rgba(226, 255, 190, 0.66) !important;
+  font-size: 0.66rem !important;
+  line-height: 1.1 !important;
+  letter-spacing: 0.07em !important;
+  overflow-wrap: anywhere !important;
+}
+
+.public-share-savings,
+.weekly-share-fix,
+.monthly-share-comment,
+.survival-share-status,
+.safe-weekly-share-main {
+  width: 100% !important;
+  min-height: 88px !important;
+  padding: 13px 14px !important;
+  border-radius: 22px !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.10), transparent 34%),
+    rgba(5, 12, 8, 0.68) !important;
+  border: 1px solid rgba(183, 255, 25, 0.13) !important;
+}
+
+.public-share-footer,
+.report-public-share-footer,
+.mission-public-share-footer,
+.weekly-share-footer,
+.monthly-share-footer,
+.survival-share-footer,
+.safe-weekly-share-card footer {
+  margin-top: auto !important;
+  padding-top: 12px !important;
+  min-height: 50px !important;
+  border-top: 1px solid rgba(183, 255, 25, 0.12) !important;
+}
+
+.public-share-image-card .profile-share-card-style-pill {
+  max-width: 112px !important;
+  padding-inline: 10px !important;
+}
+
+.growth-share-preview.premium-share-card {
+  width: min(100%, 420px) !important;
+  max-width: 420px !important;
+  margin-inline: auto !important;
+}
+
+.growth-share-preview img {
+  width: 100% !important;
+  border-radius: 26px !important;
+}
+
+.share-capture-safe.public-share-image-card,
+.share-capture-safe.report-public-share-card,
+.share-capture-safe.mission-public-share-card,
+.share-capture-safe.weekly-review-share-card,
+.share-capture-safe.monthly-history-share-card,
+.share-capture-safe.survival-share-card,
+.share-capture-safe.safe-weekly-share-card {
+  width: 420px !important;
+  max-width: 420px !important;
+  min-height: 540px !important;
+  padding: 22px !important;
+}
+
+.share-capture-safe .share-card-avatar,
+.share-capture-safe .profile-share-card-avatar,
+.share-capture-safe .safe-weekly-share-identity img {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 22px !important;
+  box-shadow: none !important;
+}
+
+.share-capture-safe .share-card-signal-icon {
+  width: 48px !important;
+  height: 48px !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 430px) {
+  .public-share-image-card.premium-share-card,
+  .report-public-share-card.premium-share-card,
+  .mission-public-share-card.premium-share-card,
+  .weekly-review-share-card.premium-share-card,
+  .monthly-history-share-card.premium-share-card,
+  .survival-share-card.premium-share-card,
+  .safe-weekly-share-card.premium-share-card {
+    width: min(100%, 390px) !important;
+    max-width: 390px !important;
+    padding: 16px !important;
+    border-radius: 26px !important;
+    gap: 12px !important;
+  }
+
+  .share-card-identity-line {
+    grid-template-columns: 56px minmax(0, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .share-card-avatar,
+  .profile-share-card-avatar,
+  .safe-weekly-share-identity img {
+    width: 56px !important;
+    height: 56px !important;
+    flex-basis: 56px !important;
+    border-radius: 19px !important;
+  }
+
+  .share-card-signal-icon {
+    width: 42px !important;
+    height: 42px !important;
+    flex-basis: 42px !important;
+  }
+
+  .share-card-identity-line strong,
+  .profile-share-card-identity strong,
+  .safe-weekly-share-identity strong,
+  .weekly-share-top strong,
+  .monthly-share-top strong,
+  .survival-share-top strong {
+    max-width: 190px !important;
+    font-size: 1.04rem !important;
+  }
+
+  .report-public-share-grid > div,
+  .mission-public-share-grid > div,
+  .weekly-share-grid > div,
+  .monthly-share-grid > div,
+  .survival-share-grid > div,
+  .safe-weekly-share-grid > article,
+  .safe-weekly-share-profile-grid > article,
+  .profile-selected-share-grid > div {
+    min-height: 78px !important;
+    padding: 10px !important;
+  }
+
+  .public-share-savings,
+  .weekly-share-fix,
+  .monthly-share-comment,
+  .survival-share-status,
+  .safe-weekly-share-main {
+    min-height: 78px !important;
+    padding: 11px 12px !important;
+  }
+}
+
+/* v59.19.5 — Profile Share Card Export Fit Hotfix */
+.public-share-image-card.premium-share-card {
+  width: min(100%, 440px) !important;
+  max-width: 440px !important;
+  min-height: auto !important;
+  padding: 18px !important;
+  gap: 10px !important;
+  border-radius: 28px !important;
+  align-content: start !important;
+}
+
+.public-share-image-card.premium-share-card .premium-share-card-art {
+  opacity: 0.18 !important;
+}
+
+.public-share-image-card .profile-share-card-top {
+  min-height: 0 !important;
+  margin-bottom: 0 !important;
+  align-items: center !important;
+}
+
+.public-share-image-card .profile-share-card-identity {
+  min-height: 0 !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.public-share-image-card .profile-share-card-avatar {
+  width: 68px !important;
+  height: 68px !important;
+  flex: 0 0 68px !important;
+  border-radius: 21px !important;
+}
+
+.public-share-image-card .profile-share-card-identity > div {
+  padding-top: 0 !important;
+  display: grid !important;
+  gap: 4px !important;
+}
+
+.public-share-image-card .profile-share-card-identity span {
+  width: fit-content !important;
+  max-width: 154px !important;
+  padding: 6px 12px !important;
+  border: 1px solid rgba(183, 255, 25, 0.18) !important;
+  border-radius: 999px !important;
+  color: var(--neon) !important;
+  background: rgba(183, 255, 25, 0.08) !important;
+  font-size: 0.68rem !important;
+  line-height: 1.04 !important;
+  letter-spacing: 0.06em !important;
+}
+
+.public-share-image-card .profile-share-card-identity strong {
+  max-width: 210px !important;
+  font-size: 1.15rem !important;
+  line-height: 1.05 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.public-share-image-card .profile-share-card-identity small {
+  max-width: 210px !important;
+  min-height: 0 !important;
+  color: rgba(244, 247, 240, 0.72) !important;
+  font-size: 0.78rem !important;
+  line-height: 1.16 !important;
+  -webkit-line-clamp: 2 !important;
+}
+
+.public-share-image-card .profile-share-card-style-pill {
+  max-width: 116px !important;
+  min-height: 32px !important;
+  padding: 7px 10px !important;
+  align-self: start !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.68rem !important;
+  line-height: 1.05 !important;
+}
+
+.public-share-image-card .profile-selected-share-grid {
+  gap: 8px !important;
+  margin-top: 2px !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card,
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-card,
+.share-capture-safe .profile-selected-share-grid .profile-share-metric-card {
+  min-height: 76px !important;
+  padding: 10px 11px !important;
+  border-radius: 18px !important;
+  justify-content: center !important;
+  gap: 5px !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card span {
+  font-size: 0.56rem !important;
+  line-height: 1.08 !important;
+  letter-spacing: 0.055em !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card strong {
+  font-size: 1.08rem !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.045em !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong,
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier strong,
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder strong {
+  font-size: 1rem !important;
+  line-height: 1.08 !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-card small {
+  font-size: 0.6rem !important;
+  line-height: 1.12 !important;
+}
+
+.public-share-image-card .public-share-savings {
+  min-height: 72px !important;
+  margin-top: 0 !important;
+  padding: 12px 13px !important;
+  border-radius: 20px !important;
+  gap: 4px !important;
+}
+
+.public-share-image-card .public-share-savings span {
+  font-size: 0.62rem !important;
+  letter-spacing: 0.045em !important;
+  text-transform: uppercase !important;
+}
+
+.public-share-image-card .public-share-savings strong {
+  font-size: 1.3rem !important;
+  line-height: 1.05 !important;
+}
+
+.public-share-image-card .public-share-savings small {
+  font-size: 0.66rem !important;
+  line-height: 1.18 !important;
+}
+
+.public-share-image-card .public-share-footer {
+  min-height: 42px !important;
+  margin-top: 2px !important;
+  padding-top: 10px !important;
+  align-items: end !important;
+}
+
+.public-share-image-card .public-share-footer strong {
+  font-size: 0.98rem !important;
+  line-height: 1.05 !important;
+}
+
+.public-share-image-card .public-share-footer span,
+.public-share-image-card .public-share-footer b {
+  font-size: 0.66rem !important;
+  line-height: 1.1 !important;
+}
+
+.share-capture-safe.public-share-image-card {
+  width: 520px !important;
+  max-width: 520px !important;
+  min-height: auto !important;
+  padding: 24px !important;
+  gap: 12px !important;
+  border-radius: 34px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-avatar {
+  width: 76px !important;
+  height: 76px !important;
+  flex-basis: 76px !important;
+  border-radius: 24px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity strong {
+  font-size: 1.35rem !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity small {
+  max-width: 260px !important;
+  font-size: 0.88rem !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid {
+  gap: 10px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-card {
+  min-height: 86px !important;
+  padding: 12px 13px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-card strong {
+  font-size: 1.22rem !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong,
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier strong,
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-holder strong {
+  font-size: 1.12rem !important;
+}
+
+@media (max-width: 430px) {
+  .public-share-image-card.premium-share-card {
+    width: min(100%, 390px) !important;
+    max-width: 390px !important;
+    padding: 15px !important;
+    gap: 9px !important;
+  }
+
+  .public-share-image-card .profile-share-card-avatar {
+    width: 60px !important;
+    height: 60px !important;
+    flex-basis: 60px !important;
+    border-radius: 19px !important;
+  }
+
+  .public-share-image-card .profile-share-card-identity span {
+    max-width: 132px !important;
+    padding: 5px 9px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .public-share-image-card .profile-share-card-identity strong {
+    max-width: 180px !important;
+    font-size: 1.04rem !important;
+  }
+
+  .public-share-image-card .profile-share-card-identity small {
+    max-width: 180px !important;
+    font-size: 0.72rem !important;
+  }
+
+  .public-share-image-card .profile-share-card-style-pill {
+    max-width: 96px !important;
+    min-height: 28px !important;
+    padding: 6px 8px !important;
+    font-size: 0.6rem !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-card {
+    min-height: 70px !important;
+    padding: 9px 10px !important;
+    border-radius: 16px !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-card strong {
+    font-size: 1rem !important;
+  }
+
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong,
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-holder-tier strong,
+  .public-share-image-card .profile-selected-share-grid .profile-share-metric-holder strong {
+    font-size: 0.94rem !important;
+  }
+
+  .public-share-image-card .public-share-savings {
+    min-height: 66px !important;
+    padding: 10px 11px !important;
+  }
+}
+
+/* v59.19.6 — Profile Share Card Header Crop Hotfix
+   Add export-safe top breathing room and prevent the identity/status line from being clipped in html2canvas output. */
+.public-share-image-card.premium-share-card {
+  overflow: hidden !important;
+  padding-top: 22px !important;
+}
+
+.public-share-image-card .profile-share-card-top,
+.public-share-image-card .profile-share-card-identity,
+.public-share-image-card .profile-share-card-identity > div {
+  overflow: visible !important;
+}
+
+.public-share-image-card .profile-share-card-top {
+  min-height: 92px !important;
+  margin-bottom: 10px !important;
+  align-items: flex-start !important;
+}
+
+.public-share-image-card .profile-share-card-identity {
+  align-items: flex-start !important;
+}
+
+.public-share-image-card .profile-share-card-identity > div {
+  padding-top: 3px !important;
+  gap: 5px !important;
+}
+
+.public-share-image-card .profile-share-card-identity strong {
+  font-size: 1.08rem !important;
+  line-height: 1.08 !important;
+}
+
+.public-share-image-card .profile-share-card-identity small {
+  display: block !important;
+  max-height: none !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
+  line-height: 1.18 !important;
+}
+
+.public-share-image-card .profile-share-card-style-pill {
+  margin-top: 4px !important;
+}
+
+.public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong {
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  hyphens: none !important;
+  font-size: 0.94rem !important;
+  line-height: 1.08 !important;
+}
+
+.share-capture-safe.public-share-image-card {
+  padding-top: 34px !important;
+  padding-bottom: 28px !important;
+  overflow: hidden !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-top,
+.share-capture-safe.public-share-image-card .profile-share-card-identity,
+.share-capture-safe.public-share-image-card .profile-share-card-identity > div {
+  overflow: visible !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-top {
+  min-height: 114px !important;
+  margin-bottom: 14px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity > div {
+  padding-top: 4px !important;
+  gap: 6px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity span {
+  max-width: 168px !important;
+  padding: 7px 13px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity strong {
+  max-width: 270px !important;
+  font-size: 1.28rem !important;
+  line-height: 1.08 !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-identity small {
+  display: block !important;
+  max-width: 270px !important;
+  max-height: none !important;
+  min-height: 24px !important;
+  overflow: visible !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
+  font-size: 0.82rem !important;
+  line-height: 1.18 !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-share-card-style-pill {
+  margin-top: 7px !important;
+}
+
+.share-capture-safe.public-share-image-card .profile-selected-share-grid .profile-share-metric-biggest-leak strong {
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  hyphens: none !important;
+  font-size: 1.02rem !important;
+  line-height: 1.1 !important;
+}
+
+@media (max-width: 430px) {
+  .public-share-image-card.premium-share-card {
+    padding-top: 20px !important;
+  }
+
+  .public-share-image-card .profile-share-card-top {
+    min-height: 84px !important;
+    margin-bottom: 9px !important;
+  }
+
+  .public-share-image-card .profile-share-card-identity strong {
+    font-size: 1rem !important;
+  }
+
+  .public-share-image-card .profile-share-card-identity small {
+    font-size: 0.68rem !important;
+    line-height: 1.16 !important;
+  }
+}
+
+/* ===== V59.20 DETAILED BUTTON GUIDE REPLACEMENT ===== */
+.tab-guide-modal {
+  width: min(100%, 560px);
+  max-height: min(90vh, 880px);
+  padding: 14px;
+  scroll-padding-top: 92px;
+}
+
+.tab-guide-modal .help-modal-head {
+  position: sticky;
+  top: -14px;
+  z-index: 4;
+  margin: -14px -14px 0;
+  padding: 14px;
+  border-radius: 26px 26px 18px 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(10, 20, 13, 0.98), rgba(5, 10, 7, 0.96));
+  border-bottom: 1px solid rgba(183, 255, 25, 0.12);
+  backdrop-filter: blur(18px);
+}
+
+.tab-guide-modal .help-modal-head strong {
+  font-size: clamp(20px, 5.3vw, 28px);
+}
+
+.tab-guide-tabs {
+  position: sticky;
+  top: 70px;
+  z-index: 3;
+  margin: 0 -4px 12px;
+  padding: 10px 4px 8px;
+  border-radius: 0 0 18px 18px;
+  background: linear-gradient(180deg, rgba(6, 14, 9, 0.96), rgba(6, 14, 9, 0.84));
+  backdrop-filter: blur(14px);
+}
+
+.tab-guide-tabs button.active {
+  color: #f7ffe9;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(183, 255, 25, 0.18), transparent 62%),
+    linear-gradient(180deg, rgba(29, 58, 24, 0.86), rgba(10, 21, 12, 0.9));
+  border-color: rgba(183, 255, 25, 0.44);
+  box-shadow:
+    0 0 20px rgba(183, 255, 25, 0.12),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.tab-guide-hero {
+  min-height: 0;
+  grid-template-columns: 58px minmax(0, 1fr);
+  padding: 11px;
+  border-radius: 18px;
+}
+
+.tab-guide-hero img {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+}
+
+.tab-guide-hero p {
+  font-size: 12.5px;
+  line-height: 1.38;
+}
+
+.tab-guide-list {
+  gap: 9px;
+}
+
+.tab-guide-list article {
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+  padding: 11px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.048), rgba(255, 255, 255, 0.016)),
+    rgba(2, 8, 5, 0.35);
+  border-color: rgba(183, 255, 25, 0.12);
+}
+
+.tab-guide-list article > img {
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+}
+
+.tab-guide-list strong {
+  color: #ecffd1;
+  font-size: 13.6px;
+  letter-spacing: -0.15px;
+}
+
+.tab-guide-list span {
+  margin-top: 6px;
+  padding-left: 11px;
+  color: rgba(244, 247, 240, 0.72);
+  font-size: 11.6px;
+  line-height: 1.34;
+}
+
+.tab-guide-list span::before {
+  width: 4px;
+  height: 4px;
+  top: 0.66em;
+}
+
+@media (max-width: 430px) {
+  .tab-guide-modal {
+    width: 100%;
+    max-height: 91vh;
+    padding: 12px;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .tab-guide-modal .help-modal-head {
+    top: -12px;
+    margin: -12px -12px 0;
+    padding: 12px;
+    border-radius: 24px 24px 16px 16px;
+  }
+
+  .tab-guide-tabs {
+    top: 64px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .tab-guide-tabs button {
+    min-height: 48px;
+    grid-template-columns: 26px minmax(0, 1fr);
+    justify-items: start;
+    align-content: center;
+    padding: 7px 8px;
+    gap: 6px;
+    border-radius: 14px;
+  }
+
+  .tab-guide-tabs img {
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+  }
+
+  .tab-guide-tabs span {
+    font-size: 9px;
+    text-align: left;
+  }
+
+  .tab-guide-list article {
+    grid-template-columns: 34px minmax(0, 1fr);
+    padding: 10px;
+  }
+
+  .tab-guide-list article > img {
+    width: 32px;
+    height: 32px;
+    border-radius: 11px;
+  }
+}
+
+/* ===== V59.20.2 HOME COMPACT + SHARE CARD EXPORT SAFE TOP HOTFIX ===== */
+.home-compact-details.home-collapsed-section {
+  width: min(100%, var(--content-max, 640px));
+  max-width: 100%;
+  margin: 12px auto;
+  overflow: hidden;
+  padding: 0 !important;
+  border: 1px solid rgba(183, 255, 25, 0.14);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.09), transparent 42%),
+    linear-gradient(180deg, rgba(20, 38, 19, 0.82), rgba(5, 12, 8, 0.92));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+    0 16px 42px rgba(0, 0, 0, 0.22);
+}
+
+.home-compact-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 76px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+
+.home-compact-summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-compact-summary::after {
+  content: "Open";
+  flex: 0 0 auto;
+  border: 1px solid rgba(183, 255, 25, 0.2);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: rgba(220, 255, 180, 0.92);
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+.home-compact-details[open] > .home-compact-summary::after {
+  content: "Close";
+}
+
+.home-compact-summary > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.home-compact-summary span {
+  color: var(--neon);
+  font-size: 0.76rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-compact-summary strong {
+  color: #fff;
+  font-size: clamp(1rem, 4.6vw, 1.22rem);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.home-compact-summary small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.24;
+}
+
+.home-compact-summary > b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(183, 255, 25, 0.22);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: var(--neon);
+  background: rgba(183, 255, 25, 0.08);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.home-compact-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 14px 14px;
+}
+
+.home-compact-details[open] > .home-compact-summary {
+  border-bottom: 1px solid rgba(183, 255, 25, 0.11);
+  margin-bottom: 12px;
+}
+
+.home-wallet-snapshot-collapsible-body .wallet-snapshot-heading,
+.home-wallet-snapshot-collapsible-body .wallet-snapshot-primary-stats,
+.home-wallet-snapshot-collapsible-body .wallet-snapshot-tabs,
+.home-wallet-snapshot-collapsible-body .wallet-snapshot-day-card,
+.home-wallet-snapshot-collapsible-body .wallet-snapshot-more {
+  width: 100%;
+}
+
+.home-compact-details .smart-home-focus-card,
+.home-compact-details .weekly-behavior-report-card,
+.home-compact-details .comeback-mode-card {
+  margin: 0 !important;
+  max-width: 100% !important;
+}
+
+.home-compact-details:not([open]) {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.018),
+    0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+/* Export-safe breathing room for all major share cards. Prevents top identity rows from being clipped by html2canvas. */
+.share-capture-safe.premium-share-card,
+.share-capture-safe.public-share-image-card,
+.share-capture-safe.report-public-share-card,
+.share-capture-safe.mission-public-share-card,
+.share-capture-safe.weekly-review-share-card,
+.share-capture-safe.monthly-history-share-card,
+.share-capture-safe.survival-share-card,
+.share-capture-safe.safe-weekly-share-card,
+.share-capture-safe.growth-share-preview {
+  box-sizing: border-box !important;
+  padding-top: 42px !important;
+  scroll-margin-top: 42px !important;
+  overflow: visible !important;
+}
+
+.share-capture-safe .share-card-identity-top,
+.share-capture-safe .public-share-top,
+.share-capture-safe .report-public-share-top,
+.share-capture-safe .mission-public-share-top,
+.share-capture-safe .weekly-share-top,
+.share-capture-safe .monthly-share-top,
+.share-capture-safe .survival-share-top,
+.share-capture-safe .safe-weekly-share-identity,
+.share-capture-safe .profile-share-card-top {
+  padding-top: 2px !important;
+  margin-top: 0 !important;
+  overflow: visible !important;
+}
+
+.share-capture-safe .share-card-identity-line,
+.share-capture-safe .profile-share-card-identity,
+.share-capture-safe .safe-weekly-share-identity {
+  overflow: visible !important;
+}
+
+@media (max-width: 430px) {
+  .home-compact-details.home-collapsed-section {
+    margin: 10px auto;
+    border-radius: 23px;
+  }
+
+  .home-compact-summary {
+    min-height: 70px;
+    padding: 12px 13px;
+    gap: 9px;
+  }
+
+  .home-compact-summary small {
+    display: none;
+  }
+
+  .home-compact-summary::after,
+  .home-compact-summary > b {
+    padding: 6px 8px;
+    font-size: 0.68rem;
+  }
+
+  .home-compact-body {
+    padding: 0 11px 12px;
+  }
+
+  .share-capture-safe.premium-share-card,
+  .share-capture-safe.public-share-image-card,
+  .share-capture-safe.report-public-share-card,
+  .share-capture-safe.mission-public-share-card,
+  .share-capture-safe.weekly-review-share-card,
+  .share-capture-safe.monthly-history-share-card,
+  .share-capture-safe.survival-share-card,
+  .share-capture-safe.safe-weekly-share-card,
+  .share-capture-safe.growth-share-preview {
+    padding-top: 38px !important;
+  }
+}
+
+/* ===== V59.20.3 HOME SNAPSHOT DEFAULT OPEN + PREMIUM DETAILS ROWS ===== */
+.home-screen > .home-wallet-snapshot-card[open] {
+  border-color: rgba(183, 255, 25, 0.2);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.1), transparent 42%),
+    linear-gradient(180deg, rgba(20, 38, 19, 0.84), rgba(5, 12, 8, 0.94));
+}
+
+.home-screen > .clean-details {
+  width: min(100%, var(--content-max, 640px));
+  max-width: 100%;
+  margin: 10px auto;
+  overflow: hidden;
+  padding: 0 !important;
+  border: 1px solid rgba(183, 255, 25, 0.135);
+  border-radius: 25px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.072), transparent 44%),
+    linear-gradient(180deg, rgba(20, 38, 19, 0.76), rgba(5, 12, 8, 0.91));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.02),
+    0 12px 32px rgba(0, 0, 0, 0.18);
+}
+
+.home-screen > .clean-details[open] {
+  border-color: rgba(183, 255, 25, 0.22);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.105), transparent 44%),
+    linear-gradient(180deg, rgba(23, 45, 21, 0.84), rgba(5, 12, 8, 0.94));
+}
+
+.home-screen > .clean-details > summary {
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.home-screen > .clean-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-screen > .clean-details > summary::after {
+  content: none !important;
+  display: none !important;
+}
+
+.home-screen > .clean-details[open] > summary {
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(183, 255, 25, 0.11);
+}
+
+.home-screen > .clean-details > summary > div {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.home-screen > .clean-details > summary span,
+.home-screen > .clean-details > summary div span,
+.home-screen > .clean-details > summary > span {
+  min-width: 0;
+  color: var(--neon);
+  font-size: 0.75rem;
+  line-height: 1.06;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.home-screen > .clean-details > summary div small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.78rem;
+  line-height: 1.23;
+  font-weight: 760;
+}
+
+.home-screen > .clean-details > summary b {
+  margin-right: 0 !important;
+  min-width: 0;
+  max-width: 138px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid rgba(183, 255, 25, 0.2);
+  border-radius: 999px;
+  padding: 7px 10px;
+  color: rgba(225, 255, 185, 0.94);
+  background: rgba(0, 0, 0, 0.2);
+  font-size: 0.72rem;
+  font-weight: 950;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+
+.home-screen > .clean-details[open] > summary b {
+  color: var(--neon);
+  background: rgba(183, 255, 25, 0.085);
+}
+
+.home-screen > .clean-details > section,
+.home-screen > .clean-details > .share-card,
+.home-screen > .clean-details > .wallet-insights-panel,
+.home-screen > .clean-details > .v2-identity-card,
+.home-screen > .clean-details > .badges-strip,
+.home-screen > .clean-details > .daily-routine-card,
+.home-screen > .clean-details > .chart-preview,
+.home-screen > .clean-details > .recent-card,
+.home-screen > .clean-details > .tg-status,
+.home-screen > .clean-details > .settings-group,
+.home-screen > .clean-details > .tracked-panel,
+.home-screen > .clean-details > .badge-vault-details,
+.home-screen > .clean-details > .streak-settings-panel,
+.home-screen > .clean-details > .leaderboard-panel,
+.home-screen > .clean-details > .challenges-panel,
+.home-screen > .clean-details > .debt-radar-panel {
+  margin: 0 12px 12px;
+}
+
+.home-screen > .clean-details .daily-routine-card,
+.home-screen > .clean-details .v2-identity-card,
+.home-screen > .clean-details .wallet-insights-panel,
+.home-screen > .clean-details .share-card,
+.home-screen > .clean-details .chart-preview,
+.home-screen > .clean-details .recent-card,
+.home-screen > .clean-details .badges-strip,
+.home-screen > .clean-details .settings-group,
+.home-screen > .clean-details .tracked-panel,
+.home-screen > .clean-details .leaderboard-panel,
+.home-screen > .clean-details .challenges-panel,
+.home-screen > .clean-details .debt-radar-panel {
+  max-width: 100% !important;
+  border-radius: 18px;
+}
+
+.home-screen > .clean-details:not([open]) {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.016),
+    0 8px 20px rgba(0, 0, 0, 0.14);
+}
+
+@media (max-width: 430px) {
+  .home-screen > .clean-details {
+    margin: 9px auto;
+    border-radius: 22px;
+  }
+
+  .home-screen > .clean-details > summary {
+    min-height: 66px;
+    padding: 12px 13px;
+    gap: 9px;
+  }
+
+  .home-screen > .clean-details > summary div small {
+    display: none;
+  }
+
+  .home-screen > .clean-details > summary b {
+    max-width: 112px;
+    padding: 6px 8px;
+    font-size: 0.68rem;
+  }
+
+  .home-screen > .clean-details > section,
+  .home-screen > .clean-details > .share-card,
+  .home-screen > .clean-details > .wallet-insights-panel,
+  .home-screen > .clean-details > .v2-identity-card,
+  .home-screen > .clean-details > .badges-strip,
+  .home-screen > .clean-details > .daily-routine-card,
+  .home-screen > .clean-details > .chart-preview,
+  .home-screen > .clean-details > .recent-card,
+  .home-screen > .clean-details > .tg-status,
+  .home-screen > .clean-details > .settings-group,
+  .home-screen > .clean-details > .tracked-panel,
+  .home-screen > .clean-details > .badge-vault-details,
+  .home-screen > .clean-details > .streak-settings-panel,
+  .home-screen > .clean-details > .leaderboard-panel,
+  .home-screen > .clean-details > .challenges-panel,
+  .home-screen > .clean-details > .debt-radar-panel {
+    margin: 0 10px 10px;
+  }
+}
+
+/* v59.21 — BROKE Active Streak Foundation */
+.active-streak-proof-card,
+.active-holder-eligibility-strip {
+  width: 100%;
+  border: 1px solid rgba(87, 255, 154, 0.18);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(44, 255, 139, 0.16), transparent 34%),
+    linear-gradient(145deg, rgba(8, 22, 17, 0.96), rgba(4, 10, 8, 0.98));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.36), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+
+.active-streak-proof-card {
+  padding: 18px;
+  margin: 14px 0;
+  display: grid;
+  gap: 14px;
+}
+
+.active-streak-proof-card.recovery {
+  border-color: rgba(255, 192, 92, 0.34);
+  background:
+    radial-gradient(circle at top left, rgba(255, 190, 86, 0.16), transparent 34%),
+    linear-gradient(145deg, rgba(25, 18, 8, 0.96), rgba(4, 10, 8, 0.98));
+}
+
+.active-streak-proof-card.eligible {
+  border-color: rgba(98, 255, 166, 0.42);
+  box-shadow: 0 18px 52px rgba(18, 255, 131, 0.12), 0 18px 48px rgba(0, 0, 0, 0.36);
+}
+
+.active-streak-proof-head,
+.active-holder-eligibility-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.active-streak-proof-head > div,
+.active-holder-eligibility-strip > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.active-streak-proof-head span,
+.active-holder-eligibility-strip span {
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.active-streak-proof-head strong,
+.active-holder-eligibility-strip strong {
+  color: #f4fff8;
+  font-size: 1.1rem;
+  line-height: 1.12;
+}
+
+.active-streak-proof-head small,
+.active-holder-eligibility-strip small {
+  color: rgba(225, 255, 236, 0.68);
+  line-height: 1.35;
+}
+
+.active-streak-proof-head b,
+.active-holder-eligibility-strip b {
+  min-width: 58px;
+  padding: 9px 10px;
+  border-radius: 18px;
+  background: rgba(87, 255, 154, 0.12);
+  border: 1px solid rgba(87, 255, 154, 0.22);
+  color: #bbffd5;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.active-streak-proof-meter {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.active-streak-proof-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(50, 255, 136, 0.9), rgba(183, 255, 202, 0.96));
+  box-shadow: 0 0 18px rgba(50, 255, 136, 0.28);
+}
+
+.active-streak-proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.active-streak-proof-grid article {
+  padding: 11px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: grid;
+  gap: 4px;
+}
+
+.active-streak-proof-grid span,
+.active-streak-proof-actions-done span {
+  color: rgba(226, 255, 236, 0.62);
+  font-size: 0.72rem;
+}
+
+.active-streak-proof-grid strong {
+  color: #f5fff8;
+  font-size: 0.9rem;
+}
+
+.active-streak-proof-actions-done {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.active-streak-proof-actions-done span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(87, 255, 154, 0.1);
+  border: 1px solid rgba(87, 255, 154, 0.17);
+  color: #c9ffda;
+  font-weight: 700;
+}
+
+.active-streak-proof-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.active-streak-proof-buttons button {
+  min-height: 42px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(241, 255, 246, 0.9);
+  font-weight: 800;
+}
+
+.active-streak-proof-buttons button.primary {
+  background: linear-gradient(135deg, rgba(64, 255, 142, 0.95), rgba(29, 214, 101, 0.92));
+  color: #031309;
+  border-color: rgba(136, 255, 180, 0.54);
+}
+
+.active-streak-proof-card p {
+  margin: 0;
+  color: rgba(228, 255, 238, 0.62);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.active-holder-eligibility-strip {
+  padding: 14px;
+  margin: 12px 0;
+}
+
+.active-holder-eligibility-strip.recovery {
+  border-color: rgba(255, 192, 92, 0.28);
+}
+
+.active-holder-eligibility-strip.ready b {
+  background: rgba(87, 255, 154, 0.18);
+  color: #caffdc;
+}
+
+@media (max-width: 560px) {
+  .active-streak-proof-card {
+    padding: 15px;
+    border-radius: 22px;
+  }
+
+  .active-streak-proof-head,
+  .active-holder-eligibility-strip {
+    align-items: flex-start;
+  }
+
+  .active-streak-proof-head b,
+  .active-holder-eligibility-strip b {
+    min-width: 48px;
+    font-size: 0.82rem;
+  }
+
+  .active-streak-proof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .active-streak-proof-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* V59.22 Rewards Hub Foundation */
+.rewards-screen {
+  --reward-card-bg: linear-gradient(145deg, rgba(7, 22, 18, 0.96), rgba(10, 15, 22, 0.94));
+  --reward-card-border: rgba(132, 255, 188, 0.18);
+}
+
+.rewards-hub-hero,
+.rewards-hub-grid article,
+.future-reward-pool-card,
+.reward-eligibility-checklist article,
+.rewards-tool-details {
+  width: min(100%, 560px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.rewards-hub-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
+  border: 1px solid var(--reward-card-border);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(63, 255, 159, 0.18), transparent 36%),
+    linear-gradient(145deg, rgba(13, 34, 27, 0.97), rgba(7, 10, 17, 0.98));
+  box-shadow: 0 22px 55px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.rewards-hub-hero.ready {
+  border-color: rgba(103, 255, 163, 0.34);
+  box-shadow: 0 24px 65px rgba(37, 255, 137, 0.13), 0 22px 55px rgba(0, 0, 0, 0.42);
+}
+
+.rewards-hub-hero-copy {
+  min-width: 0;
+}
+
+.rewards-hub-hero-copy > span,
+.future-reward-pool-card span,
+.rewards-hub-grid span {
+  display: block;
+  color: rgba(151, 255, 194, 0.82);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.rewards-hub-hero h2 {
+  margin: 6px 0 8px;
+  color: #f6fff9;
+  font-size: clamp(1.35rem, 5vw, 2rem);
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+
+.rewards-hub-hero p,
+.future-reward-pool-card p {
+  margin: 0;
+  color: rgba(224, 244, 232, 0.72);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.rewards-hub-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.rewards-hub-actions button {
+  border: 1px solid rgba(119, 255, 174, 0.24);
+  border-radius: 999px;
+  padding: 9px 12px;
+  color: #effff5;
+  background: rgba(255, 255, 255, 0.055);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.rewards-hub-actions button:first-child {
+  color: #06130c;
+  background: linear-gradient(135deg, #7cffad, #38e67e);
+  box-shadow: 0 10px 24px rgba(65, 255, 136, 0.16);
+}
+
+.rewards-hub-hero-badge {
+  display: grid;
+  place-items: center;
+  min-width: 86px;
+  min-height: 86px;
+  padding: 10px;
+  border: 1px solid rgba(118, 255, 174, 0.24);
+  border-radius: 28px;
+  background: rgba(0, 0, 0, 0.28);
+  text-align: center;
+}
+
+.rewards-hub-hero-badge strong {
+  color: #86ffb6;
+  font-size: 1.85rem;
+  line-height: 1;
+}
+
+.rewards-hub-hero-badge small {
+  margin-top: 4px;
+  color: rgba(224, 244, 232, 0.66);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.rewards-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: min(100%, 560px);
+  margin: 12px auto 0;
+}
+
+.rewards-hub-grid article {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(119, 255, 174, 0.15);
+  border-radius: 20px;
+  background: var(--reward-card-bg);
+}
+
+.rewards-hub-grid article.ready {
+  border-color: rgba(113, 255, 169, 0.32);
+  background:
+    radial-gradient(circle at top right, rgba(70, 255, 144, 0.16), transparent 45%),
+    var(--reward-card-bg);
+}
+
+.rewards-hub-grid strong {
+  display: block;
+  margin-top: 7px;
+  color: #f6fff9;
+  font-size: 1.05rem;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.rewards-hub-grid small {
+  display: block;
+  margin-top: 6px;
+  color: rgba(224, 244, 232, 0.62);
+  font-size: 0.74rem;
+  line-height: 1.3;
+}
+
+.future-reward-pool-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 206, 103, 0.24);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 205, 87, 0.13), transparent 38%),
+    linear-gradient(145deg, rgba(26, 19, 8, 0.96), rgba(7, 10, 17, 0.98));
+}
+
+.future-reward-pool-card strong {
+  display: block;
+  margin: 6px 0;
+  color: #fff7db;
+  font-size: 1.05rem;
+}
+
+.future-reward-pool-card > b {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 217, 124, 0.26);
+  border-radius: 999px;
+  color: #ffe08a;
+  background: rgba(255, 211, 94, 0.08);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.reward-eligibility-checklist {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 560px);
+  margin: 12px auto 0;
+}
+
+.reward-eligibility-checklist article {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(119, 255, 174, 0.14);
+  border-radius: 18px;
+  background: rgba(8, 17, 19, 0.84);
+}
+
+.reward-eligibility-checklist article.done {
+  border-color: rgba(117, 255, 174, 0.32);
+  background: rgba(38, 255, 125, 0.075);
+}
+
+.reward-eligibility-checklist b {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #8dffba;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.reward-eligibility-checklist strong,
+.reward-eligibility-checklist small {
+  display: block;
+}
+
+.reward-eligibility-checklist strong {
+  color: #f4fff8;
+  font-size: 0.9rem;
+}
+
+.reward-eligibility-checklist small {
+  margin-top: 2px;
+  color: rgba(224, 244, 232, 0.62);
+  font-size: 0.75rem;
+}
+
+.rewards-tool-details {
+  margin-top: 12px;
+  overflow: hidden;
+  border-color: rgba(119, 255, 174, 0.16) !important;
+  background: rgba(8, 17, 19, 0.86) !important;
+}
+
+.rewards-tool-details > summary {
+  align-items: center;
+}
+
+.rewards-tool-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.rewards-tool-details > summary::after {
+  content: "Open";
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid rgba(119, 255, 174, 0.18);
+  border-radius: 999px;
+  color: rgba(209, 255, 225, 0.78);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.rewards-tool-details[open] > summary::after {
+  content: "Close";
+}
+
+.rewards-tool-details .survival-mode-card,
+.rewards-tool-details .debt-radar-card,
+.rewards-tool-details .home-habit-leaks-card,
+.rewards-tool-details .whatif-list,
+.rewards-tool-details .leaderboard-card,
+.rewards-tool-details .challenges-card {
+  margin-top: 10px;
+}
+
+@media (max-width: 520px) {
+  .rewards-hub-hero {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 15px;
+  }
+
+  .rewards-hub-hero-badge {
+    min-width: 100%;
+    min-height: auto;
+    grid-template-columns: auto 1fr;
+    justify-content: start;
+    text-align: left;
+    padding: 12px 14px;
+  }
+
+  .rewards-hub-hero-badge strong {
+    font-size: 1.45rem;
+  }
+
+  .rewards-hub-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .future-reward-pool-card {
+    flex-direction: column;
+  }
+}

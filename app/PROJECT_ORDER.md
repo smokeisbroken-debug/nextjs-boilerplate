@@ -1,22 +1,41 @@
-# PROJECT ORDER — v59.19.2 Card Premium Alignment Polish
+# Project Order — v59.22 Rewards Hub Foundation
 
 ## Current patch
 
-`v59.19.2` is a visual-only polish patch on top of v59.19.1.
+v59.22 turns the old Save tab into the future-facing Rewards Hub while keeping the app stable and avoiding payout logic.
 
-## Scope
+## Files changed
 
-1. Keep the global premium dark dashboard style introduced in v59.19.
-2. Keep the Share Studio brightness reduction from v59.19.1.
-3. Normalize app card width, internal spacing, typography rhythm, and mobile grid behavior.
-4. Make card information feel cleaner and more premium without changing product logic.
+- `app/page.tsx`
+- `app/globals.css`
+- `README.md`
+- `PROJECT_ORDER.md`
+- `TESTING.md`
+- `app/README.md`
+- `app/PROJECT_ORDER.md`
+- `app/TESTING.md`
 
-## Guard rails
+## Product order
 
-- Do not change calculations.
-- Do not change wallet verification.
-- Do not change holder reward tiers.
-- Do not add reward payouts.
-- Do not change Supabase schema.
-- Do not change Telegram webhook.
-- Do not rewrite stored data.
+1. Preserve the existing six bottom-nav layout.
+2. Rename the old Save nav item to Rewards.
+3. Keep existing Save mechanics inside Rewards instead of deleting or rewriting them.
+4. Put Active Streak and recovery status at the top of Rewards.
+5. Add future Holder Rewards readiness logic as UI/status only.
+6. Keep Creator Fee Reward Pool locked/teaser-only until reward epochs and payout safety exist.
+7. Keep all private financial details out of public reward/share wording.
+
+## Not included
+
+- No Creator Fee distribution.
+- No on-chain payouts.
+- No staking.
+- No claims.
+- No token transfers.
+- No reward epoch backend.
+- No Supabase migration.
+- No wallet verification backend change.
+- No balance formula change.
+- No holder threshold change.
+- No avatar backend change.
+- No Telegram webhook change.

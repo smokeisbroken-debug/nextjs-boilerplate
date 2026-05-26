@@ -334,6 +334,7 @@ type CloudAppState = {
   homeHabitLeaks: HomeHabitLeakEntry[];
   dailyRoutineActions?: DailyRoutineActions;
   dailyRoutineReward?: DailyRoutineRewardState;
+  activeStreakProof?: ActiveStreakProofState;
   localLeakMission?: LocalLeakMission | null;
   updatedAt?: string;
 };
@@ -815,6 +816,37 @@ type DailyRoutineActions = {
 type DailyRoutineRewardState = {
   date: string;
   claimed: boolean;
+};
+
+type ActiveStreakProofAction = "track_leak" | "clean_day" | "one_fix" | "daily_challenge";
+
+type ActiveStreakProofLog = {
+  date: string;
+  actions: ActiveStreakProofAction[];
+};
+
+type ActiveStreakProofState = {
+  logs: ActiveStreakProofLog[];
+  recoveredMissedDates: string[];
+  recoveryUsedAt: string | null;
+  updatedAt?: string;
+};
+
+type ActiveStreakProofStatus = {
+  currentStreak: number;
+  bestStreak: number;
+  progressDays: number;
+  eligible: boolean;
+  activeToday: boolean;
+  todayActions: ActiveStreakProofAction[];
+  recoveryMode: boolean;
+  recoveryAvailable: boolean;
+  recoveryUsedRecently: boolean;
+  recoveryActionsNeeded: number;
+  recoveryMissedDate: string | null;
+  lastProofDate: string | null;
+  label: string;
+  detail: string;
 };
 
 type ProfileShareItemId =
@@ -1522,6 +1554,7 @@ const ruText: Record<string, string> = {
   "Add": "Добавить",
   "Chart": "График",
   "Save": "Экономия",
+  "Rewards": "Награды",
   "Settings": "Настройки",
   "Back": "Назад",
   "Action": "Действие",
@@ -2658,7 +2691,7 @@ const ruText: Record<string, string> = {
   "Save is in demo mode": "Save в демо-режиме",
   "No real scenarios yet.": "Пока нет реальных сценариев.",
   "Add expenses first. Then $BROKE will show what you could save by reducing your real leaks.": "Сначала добавь расходы. Затем $BROKE покажет, сколько можно сохранить, уменьшая реальные утечки.",
-  "Add expense to unlock Save": "Добавить расход, чтобы открыть Save",
+  "Add expense to unlock Rewards": "Добавить расход, чтобы открыть Save",
   "First 3-Day User Journey": "Первый 3-дневный путь",
   "complete": "выполнено",
   "Turn first use into a habit.": "Преврати первое использование в привычку.",
@@ -4455,7 +4488,7 @@ const navItems: {
   { id: "add", label: "Add", icon: "/nav-add.png" },
   { id: "chart", label: "Chart", icon: "/nav-chart.png" },
   { id: "growth", label: "Growth", icon: "/nav-growth.png" },
-  { id: "whatif", label: "Save", icon: "/nav-save.png" },
+  { id: "whatif", label: "Rewards", icon: "/nav-save.png" },
   { id: "settings", label: "Profile", icon: "/nav-settings.png" },
 ];
 
@@ -4630,6 +4663,265 @@ function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true, noti
   } catch {
     // XP reward marker is optional. Ignore storage errors.
   }
+}
+
+const ACTIVE_STREAK_PROOF_KEY = "broke-active-streak-proof-v1";
+const ACTIVE_STREAK_ELIGIBILITY_DAYS = 7;
+const ACTIVE_STREAK_RECOVERY_ACTIONS = 2;
+const ACTIVE_STREAK_RECOVERY_COOLDOWN_DAYS = 7;
+const activeStreakProofActions: ActiveStreakProofAction[] = [
+  "track_leak",
+  "clean_day",
+  "one_fix",
+  "daily_challenge",
+];
+
+function getPreviousDayKey(dateKey: string, daysBack = 1) {
+  const date = new Date(`${dateKey}T00:00:00`);
+  date.setDate(date.getDate() - daysBack);
+  return dayKey(date);
+}
+
+function getDayDistance(fromKey: string, toKey: string) {
+  const from = new Date(`${fromKey}T00:00:00`).getTime();
+  const to = new Date(`${toKey}T00:00:00`).getTime();
+
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return 999;
+
+  return Math.round((to - from) / (24 * 60 * 60 * 1000));
+}
+
+function normalizeActiveStreakProofAction(value: unknown): ActiveStreakProofAction | null {
+  return activeStreakProofActions.includes(value as ActiveStreakProofAction)
+    ? (value as ActiveStreakProofAction)
+    : null;
+}
+
+function emptyActiveStreakProofState(): ActiveStreakProofState {
+  return {
+    logs: [],
+    recoveredMissedDates: [],
+    recoveryUsedAt: null,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeActiveStreakProofState(input?: Partial<ActiveStreakProofState> | null): ActiveStreakProofState {
+  const logs = Array.isArray(input?.logs)
+    ? input.logs
+        .map((log) => {
+          const date = String(log?.date || "");
+          const actions = Array.isArray(log?.actions)
+            ? Array.from(
+                new Set(
+                  log.actions
+                    .map(normalizeActiveStreakProofAction)
+                    .filter((action): action is ActiveStreakProofAction => Boolean(action))
+                )
+              )
+            : [];
+
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || actions.length === 0) return null;
+
+          return {
+            date,
+            actions,
+          };
+        })
+        .filter((log): log is ActiveStreakProofLog => Boolean(log))
+    : [];
+
+  const recoveredMissedDates = Array.isArray(input?.recoveredMissedDates)
+    ? Array.from(
+        new Set(
+          input.recoveredMissedDates
+            .map((date) => String(date || ""))
+            .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+        )
+      )
+    : [];
+
+  const recoveryUsedAt = input?.recoveryUsedAt && /^\d{4}-\d{2}-\d{2}$/.test(String(input.recoveryUsedAt))
+    ? String(input.recoveryUsedAt)
+    : null;
+
+  return {
+    logs: logs
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-90),
+    recoveredMissedDates: recoveredMissedDates.sort().slice(-12),
+    recoveryUsedAt,
+    updatedAt: input?.updatedAt || new Date().toISOString(),
+  };
+}
+
+function readActiveStreakProofState(): ActiveStreakProofState {
+  if (typeof window === "undefined") return emptyActiveStreakProofState();
+
+  try {
+    const raw = window.localStorage.getItem(ACTIVE_STREAK_PROOF_KEY);
+    return normalizeActiveStreakProofState(raw ? (JSON.parse(raw) as Partial<ActiveStreakProofState>) : null);
+  } catch {
+    return emptyActiveStreakProofState();
+  }
+}
+
+function writeActiveStreakProofState(state: ActiveStreakProofState, notifyChange = true) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      ACTIVE_STREAK_PROOF_KEY,
+      JSON.stringify(normalizeActiveStreakProofState(state))
+    );
+    if (notifyChange) window.dispatchEvent(new Event(LOCAL_APP_STATE_CHANGE_EVENT));
+  } catch {
+    // Active streak proof is a retention mechanic. It must not block tracking.
+  }
+}
+
+function getActiveStreakProofDateSet(state: ActiveStreakProofState) {
+  const normalized = normalizeActiveStreakProofState(state);
+  return new Set([
+    ...normalized.logs.map((log) => log.date),
+    ...normalized.recoveredMissedDates,
+  ]);
+}
+
+function calculateActiveProofStreakFromDateSet(dateSet: Set<string>) {
+  const dates = Array.from(dateSet).sort();
+
+  if (dates.length === 0) {
+    return {
+      currentStreak: 0,
+      bestStreak: 0,
+      lastProofDate: null as string | null,
+    };
+  }
+
+  let bestStreak = 0;
+  let rollingStreak = 0;
+  let previousDate = "";
+
+  for (const date of dates) {
+    if (previousDate && getDayDistance(previousDate, date) === 1) {
+      rollingStreak += 1;
+    } else {
+      rollingStreak = 1;
+    }
+
+    bestStreak = Math.max(bestStreak, rollingStreak);
+    previousDate = date;
+  }
+
+  const today = dayKey(new Date());
+  const yesterday = getPreviousDayKey(today);
+  let currentStreak = 0;
+
+  if (dateSet.has(today) || dateSet.has(yesterday)) {
+    const startKey = dateSet.has(today) ? today : yesterday;
+    const cursor = new Date(`${startKey}T00:00:00`);
+
+    while (dateSet.has(dayKey(cursor))) {
+      currentStreak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+  }
+
+  return {
+    currentStreak,
+    bestStreak,
+    lastProofDate: dates[dates.length - 1] || null,
+  };
+}
+
+function buildActiveStreakProofStatus(state: ActiveStreakProofState): ActiveStreakProofStatus {
+  const normalized = normalizeActiveStreakProofState(state);
+  const today = dayKey(new Date());
+  const yesterday = getPreviousDayKey(today);
+  const dayBeforeYesterday = getPreviousDayKey(today, 2);
+  const todayActions = normalized.logs.find((log) => log.date === today)?.actions || [];
+  const dateSet = getActiveStreakProofDateSet(normalized);
+  const streakMetrics = calculateActiveProofStreakFromDateSet(dateSet);
+  const recoveryUsedRecently = normalized.recoveryUsedAt
+    ? getDayDistance(normalized.recoveryUsedAt, today) < ACTIVE_STREAK_RECOVERY_COOLDOWN_DAYS
+    : false;
+  const recoveryMissedDate = !dateSet.has(yesterday) && dateSet.has(dayBeforeYesterday) ? yesterday : null;
+  const recoveryMode = Boolean(recoveryMissedDate && !dateSet.has(today));
+  const recoveryAvailable = Boolean(recoveryMissedDate && !recoveryUsedRecently);
+  const recoveryActionsNeeded = recoveryAvailable
+    ? Math.max(0, ACTIVE_STREAK_RECOVERY_ACTIONS - todayActions.length)
+    : 0;
+  const progressDays = Math.min(streakMetrics.currentStreak, ACTIVE_STREAK_ELIGIBILITY_DAYS);
+  const eligible = streakMetrics.currentStreak >= ACTIVE_STREAK_ELIGIBILITY_DAYS;
+  const activeToday = dateSet.has(today);
+
+  let label = `${progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS}`;
+  let detail = `Keep a ${ACTIVE_STREAK_ELIGIBILITY_DAYS}+ day active streak to stay eligible for future Holder Rewards.`;
+
+  if (eligible) {
+    label = "Eligible";
+    detail = "7+ day active streak is live. Keep checking in daily to stay eligible.";
+  } else if (recoveryMode || (recoveryAvailable && todayActions.length > 0)) {
+    label = "Recovery";
+    detail = recoveryAvailable
+      ? `Missed yesterday. Complete ${Math.max(1, recoveryActionsNeeded)} more action${recoveryActionsNeeded === 1 ? "" : "s"} today to restore the streak.`
+      : "Recovery was already used this week. Build a new clean streak if it resets.";
+  } else if (activeToday) {
+    detail = "Today is protected. Keep going until the 7-day active holder line.";
+  }
+
+  return {
+    currentStreak: streakMetrics.currentStreak,
+    bestStreak: streakMetrics.bestStreak,
+    progressDays,
+    eligible,
+    activeToday,
+    todayActions,
+    recoveryMode,
+    recoveryAvailable,
+    recoveryUsedRecently,
+    recoveryActionsNeeded,
+    recoveryMissedDate,
+    lastProofDate: streakMetrics.lastProofDate,
+    label,
+    detail,
+  };
+}
+
+function markActiveStreakProofAction(action: ActiveStreakProofAction): ActiveStreakProofState {
+  const today = dayKey(new Date());
+  const state = normalizeActiveStreakProofState(readActiveStreakProofState());
+  const logs = state.logs.filter((log) => log.date !== today);
+  const todayLog = state.logs.find((log) => log.date === today) || { date: today, actions: [] };
+  const actions = Array.from(new Set([...todayLog.actions, action]));
+  const next: ActiveStreakProofState = normalizeActiveStreakProofState({
+    ...state,
+    logs: [...logs, { date: today, actions }],
+    updatedAt: new Date().toISOString(),
+  });
+  const status = buildActiveStreakProofStatus(next);
+
+  if (
+    status.recoveryMissedDate &&
+    status.recoveryAvailable &&
+    actions.length >= ACTIVE_STREAK_RECOVERY_ACTIONS &&
+    !next.recoveredMissedDates.includes(status.recoveryMissedDate)
+  ) {
+    next.recoveredMissedDates = [...next.recoveredMissedDates, status.recoveryMissedDate];
+    next.recoveryUsedAt = today;
+    next.updatedAt = new Date().toISOString();
+  }
+
+  writeActiveStreakProofState(next);
+  return normalizeActiveStreakProofState(next);
+}
+
+function activeStreakProofActionLabel(action: ActiveStreakProofAction) {
+  if (action === "track_leak") return "Tracked leak";
+  if (action === "clean_day") return "Clean day";
+  if (action === "one_fix") return "One Fix";
+  return "Daily challenge";
 }
 
 
@@ -5132,6 +5424,56 @@ function normalizeExpense(input: Partial<Expense>): Expense {
     createdAt: String(input.createdAt || new Date().toISOString()),
     triggerTags: normalizeLeakTriggerTags(input.triggerTags, String(input.note || "")),
     ...(currency ? { currency } : {}),
+  };
+}
+
+function expenseSyncKey(expense: Expense) {
+  const created = new Date(expense.createdAt);
+  const createdKey = Number.isNaN(created.getTime())
+    ? String(expense.createdAt || "")
+    : created.toISOString().slice(0, 19);
+  const amountKey = Number(expense.amount || 0).toFixed(2);
+  const categoryKey = String(expense.category || "Custom").trim().toLocaleLowerCase();
+  const needKey = String(expense.needType || "Needed").trim().toLocaleLowerCase();
+  const noteKey = String(expense.note || "").replace(/\s+/g, " ").trim().slice(0, 160);
+  const currencyKey = normalizeOptionalCurrency(expense.currency) || "";
+
+  return [createdKey, amountKey, categoryKey, needKey, noteKey, currencyKey].join("|");
+}
+
+function mergeExpensesForSync(localExpenses: Expense[], cloudExpenses: Expense[]) {
+  const merged = new Map<string, Expense>();
+
+  cloudExpenses.forEach((expense) => {
+    merged.set(expenseSyncKey(expense), expense);
+  });
+
+  localExpenses.forEach((expense) => {
+    const normalized = normalizeExpense(expense);
+    const key = expenseSyncKey(normalized);
+
+    if (!merged.has(key)) {
+      merged.set(key, normalized);
+    }
+  });
+
+  return Array.from(merged.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+function mergeStreaksForDisplay(cloudStreak: Streak, localStreak: Streak): Streak {
+  const bestStreak = Math.max(cloudStreak.bestStreak || 0, localStreak.bestStreak || 0);
+  const localCurrent = localStreak.currentStreak || 0;
+  const cloudCurrent = cloudStreak.currentStreak || 0;
+  const source = localCurrent >= cloudCurrent ? localStreak : cloudStreak;
+
+  return {
+    ...source,
+    currentStreak: Math.max(localCurrent, cloudCurrent),
+    bestStreak,
+    lastActiveDate: source.lastActiveDate ?? localStreak.lastActiveDate ?? cloudStreak.lastActiveDate ?? null,
+    updatedAt: source.updatedAt ?? localStreak.updatedAt ?? cloudStreak.updatedAt ?? null,
   };
 }
 
@@ -8047,6 +8389,7 @@ export default function Home() {
   const [toast, setToast] = useState<AppToast | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [leakMission, setLeakMission] = useState<LocalLeakMission | null>(null);
+  const [activeStreakProof, setActiveStreakProof] = useState<ActiveStreakProofState>(() => readActiveStreakProofState());
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   const openAppTrackedRef = useRef(false);
@@ -8148,6 +8491,23 @@ export default function Home() {
       window.removeEventListener(LOCAL_APP_STATE_CHANGE_EVENT, syncLocalAppStateChange);
     };
   }, [loaded, cloudStatus, cloudAuthReady, cloudInitData]);
+
+  useEffect(() => {
+    if (!loaded) return;
+
+    function refreshActiveStreakProof() {
+      setActiveStreakProof(readActiveStreakProofState());
+    }
+
+    refreshActiveStreakProof();
+    window.addEventListener(LOCAL_APP_STATE_CHANGE_EVENT, refreshActiveStreakProof);
+    window.addEventListener(CLOUD_APP_STATE_SYNC_EVENT, refreshActiveStreakProof);
+
+    return () => {
+      window.removeEventListener(LOCAL_APP_STATE_CHANGE_EVENT, refreshActiveStreakProof);
+      window.removeEventListener(CLOUD_APP_STATE_SYNC_EVENT, refreshActiveStreakProof);
+    };
+  }, [loaded]);
 
   useEffect(() => {
     function applyTelegramWebApp() {
@@ -8333,7 +8693,10 @@ export default function Home() {
         if (cancelled) return;
 
         if (data.settings) setSettings(normalizeSettings(data.settings));
-        if (data.expenses) setExpenses(data.expenses.map(normalizeExpense));
+        if (data.expenses) {
+          const cloudExpenses = data.expenses.map(normalizeExpense);
+          setExpenses((prev) => mergeExpensesForSync(prev, cloudExpenses));
+        }
         if (data.streak) setStreak(data.streak);
         if (data.challengeTemplates) setChallengeTemplates(data.challengeTemplates);
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
@@ -8534,7 +8897,13 @@ export default function Home() {
     return calculateStreakFromExpenses(expenses);
   }, [expenses]);
 
-  const activeStreak = cloudAuthReady && cloudStatus === "cloud" ? streak : localStreak;
+  const activeStreak = cloudAuthReady && cloudStatus === "cloud"
+    ? mergeStreaksForDisplay(streak, localStreak)
+    : localStreak;
+
+  const activeProofStatus = useMemo(() => {
+    return buildActiveStreakProofStatus(activeStreakProof);
+  }, [activeStreakProof]);
 
   const smartInsightContext = useMemo<SmartInsightContext>(() => {
     const debtRadarItems = readDebtRadarItems();
@@ -8575,6 +8944,7 @@ export default function Home() {
     const nextExpenses = [expense, ...expenses];
 
     triggerHaptic("success");
+    recordActiveStreakProof("track_leak", false);
     setExpenses((prev) => [expense, ...prev]);
     setLastTrackedExpense(expense);
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
@@ -8624,6 +8994,7 @@ export default function Home() {
     const nextExpenses = [expense, ...expenses];
 
     triggerHaptic("success");
+    recordActiveStreakProof("track_leak", false);
     setExpenses((prev) => [expense, ...prev]);
     setLastTrackedExpense(expense);
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
@@ -8914,6 +9285,40 @@ export default function Home() {
     }
   }
 
+  function recordActiveStreakProof(action: ActiveStreakProofAction, showFeedback = true) {
+    const beforeStatus = buildActiveStreakProofStatus(readActiveStreakProofState());
+    const nextState = markActiveStreakProofAction(action);
+    const nextStatus = buildActiveStreakProofStatus(nextState);
+
+    setActiveStreakProof(nextState);
+
+    if (showFeedback) {
+      const title = nextStatus.eligible
+        ? "Active streak eligible"
+        : nextStatus.recoveryMissedDate && nextStatus.recoveryActionsNeeded === 0
+          ? "Streak recovered"
+          : "Active proof saved";
+      const detail = nextStatus.recoveryMissedDate && nextStatus.recoveryActionsNeeded === 0 && !beforeStatus.eligible
+        ? "Recovery used. Your active streak stays alive."
+        : `${nextStatus.currentStreak}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} days toward Holder Reward eligibility.`;
+
+      showToast(title, detail, nextStatus.eligible ? "xp" : "info");
+    }
+
+    return nextState;
+  }
+
+  function markCleanDayProof() {
+    triggerHaptic("success");
+    recordActiveStreakProof("clean_day");
+  }
+
+  function completeOneFixProof() {
+    triggerHaptic("success");
+    recordActiveStreakProof("one_fix");
+    setActiveTab("chart");
+  }
+
   async function claimDailyRoutineReward() {
     const today = dayKey(new Date());
     const reward = readDailyRoutineReward(today);
@@ -8931,6 +9336,7 @@ export default function Home() {
 
     if (data?.ok) {
       writeDailyRoutineReward(today, true);
+      recordActiveStreakProof("daily_challenge", false);
 
       if (!data.xpAwarded || data.xpAwarded <= 0) {
         showToast("Daily routine complete", "XP already claimed or daily cap reached.", "info");
@@ -9026,6 +9432,9 @@ export default function Home() {
             routineExpenses={currentMonthExpenses}
             allExpenses={displayExpenses}
             leakMission={leakMission}
+            activeProofStatus={activeProofStatus}
+            onMarkCleanDay={markCleanDayProof}
+            onCompleteOneFix={completeOneFixProof}
             onStartLeakMission={startLocalLeakMission}
             onResetLeakMission={resetLocalLeakMission}
             onDeleteExpense={deleteExpense}
@@ -9107,9 +9516,16 @@ export default function Home() {
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onToggleLeaderboard={toggleLeaderboardPublic}
             onStartChallenge={startChallenge}
+            activeProofStatus={activeProofStatus}
+            onMarkCleanDay={markCleanDayProof}
+            onCompleteOneFix={completeOneFixProof}
             onBack={goHome}
             onHelp={openHelp}
             onOpenAdd={() => setActiveTab("add")}
+            onOpenChart={() => {
+              markDailyRoutineAction("checkedChart");
+              setActiveTab("chart");
+            }}
             onAppStateChange={queueCloudAppStateSync}
           />
         )}
@@ -9133,6 +9549,7 @@ export default function Home() {
             cloudStatus={cloudStatus}
             cloudError={cloudError}
             streak={activeStreak}
+            activeProofStatus={activeProofStatus}
             badges={badges}
             leaderboard={leaderboard}
             leaderboardLoading={leaderboardLoading}
@@ -9203,59 +9620,98 @@ function HelpGuideModal({
   > = {
     home: {
       label: "Home",
-      eyebrow: "Home Guide",
-      title: "Home: Wallet Command Center",
+      eyebrow: "Home Button Guide",
+      title: "Home: Daily Command Center",
       intro:
-        "Home is the daily command center. Use it to track one honest expense, read Wallet HP, follow today’s focus, and continue without digging through every report.",
+        "Home is the first screen to open every day. It tells you the current wallet condition, what changed today, what needs attention, and which button to press next.",
       icon: "/nav-home.png",
-      footerTitle: "Daily Home rule",
+      footerTitle: "Home rule",
       footerBody:
-        "Home should answer one question: what should I do right now? Track honestly, then move to Chart only when you want analysis.",
+        "Use Home for the daily decision: read the status, follow one suggested action, then leave the deeper analysis for Chart, Save, or Growth.",
       sections: [
         {
-          title: "1. Read the four main numbers",
+          title: "Bottom navigation: what every button opens",
           body: [
-            "Income shows the money you planned for the period.",
-            "Life Cost shows fixed costs like rent, bills, transport, food basics, and required expenses.",
-            "Money Leaks shows optional or questionable spending that can quietly drain the wallet.",
-            "Real Balance shows what is left after costs and tracked spending.",
+            "Home opens the main dashboard, Wallet HP, today status, reports, routine, and the next action.",
+            "Add opens Track Leak. Press it when money leaves your wallet and you want the app to learn from it.",
+            "Chart opens Wallet Pressure Chart and Leak Pattern Lab. Press it when you want to understand why the leak happened.",
+            "Growth opens the planning lab. Press it when you want to see what leaked money could cover instead.",
+            "Save opens Survival Mode, leak cuts, challenges, leaderboard, and Debt & Bills Radar.",
+            "Profile opens Personal Cabinet: identity, wallet proof, Share Studio, privacy, currency, sync, and data settings.",
+          ],
+          icon: A.navHome,
+        },
+        {
+          title: "Top numbers: Income, Life Cost, Money Leaks, Real Balance",
+          body: [
+            "Income is the planned money for the current period. It is not public by default.",
+            "Life Cost is required spending: rent, bills, transport basics, food basics, education, family support, and similar fixed costs.",
+            "Money Leaks is the part of spending marked as Maybe or Not needed. This is where avoidable pressure is visible.",
+            "Real Balance is what remains after planned costs and tracked records. Use it as a pressure signal, not as a public flex number.",
+            "Tap Profile if these base numbers are wrong and update Money Setup there.",
           ],
           icon: A.walletHp,
         },
         {
-          title: "2. Understand Wallet HP",
+          title: "Wallet HP: what the score means",
           body: [
-            "Wallet HP is the health score of the wallet.",
-            "High HP means the wallet is stable.",
-            "Low HP means leaks are putting pressure on the month.",
-            "The goal is not perfection. The goal is to keep HP alive by reducing the loudest leak.",
+            "Wallet HP is the main health score of the wallet.",
+            "High HP means the month is still controlled.",
+            "Medium HP means leaks are visible and should be reduced before they become normal.",
+            "Low HP means spending pressure is becoming dangerous for the current cycle.",
+            "Do not chase 100/100. The goal is to keep the wallet alive by fixing the loudest leak first.",
           ],
           icon: A.walletMascot,
         },
         {
-          title: "3. Use Next Best Action",
+          title: "Today / Week / Month tabs",
           body: [
-            "Next Best Action tells the user what to do now.",
-            "It can suggest adding the first record, controlling the biggest leak, checking the chart, or sharing safe progress.",
-            "This keeps the app from feeling like a notebook and turns it into a daily discipline tool.",
+            "Today shows what happened during the current day.",
+            "Recent day chips let you compare today with earlier days without opening the full chart.",
+            "Quiet means the day has little or no leak pressure.",
+            "A money amount on a day means tracked pressure exists there.",
+            "Tap Chart if you need a full candle story and exact pattern explanation.",
+          ],
+          icon: A.calendar,
+        },
+        {
+          title: "Today’s Wallet Snapshot",
+          body: [
+            "State after day shows the wallet position after today’s records are applied.",
+            "Tracked shows how much was recorded today.",
+            "Leak pressure shows the part that damaged Wallet HP.",
+            "Use this block to decide whether today was controlled or whether one category needs attention.",
+          ],
+          icon: A.balance,
+        },
+        {
+          title: "Today’s Focus / Next Best Action",
+          body: [
+            "This block tells you the next useful button to press.",
+            "If there are no records, it usually sends you to Add so the app has real data.",
+            "If a pattern exists, it may send you to Chart or Save.",
+            "If public proof is ready, it may suggest a safe share card.",
+            "Follow one action. Do not try to fix the whole app in one session.",
           ],
           icon: A.progressFlame,
         },
         {
-          title: "4. Check reports and cards",
+          title: "Reports, share cards, and public proof",
           body: [
-            "Share Reports summarize what happened without exposing private income.",
-            "Share cards are safe for Telegram or X because they focus on status, Wallet HP, score, leaks, and public progress.",
-            "Use reports when you want community proof without showing sensitive numbers.",
+            "Reports summarize progress without exposing sensitive income by default.",
+            "Share cards are for Telegram, X, or community proof.",
+            "Use them when you want to show status, streak, Wallet HP, Survival Score, biggest leak, or holder identity.",
+            "Private numbers like income, exact balance, payday, and debt details should stay hidden unless the user explicitly enables them.",
           ],
           icon: A.export,
         },
         {
-          title: "5. Complete the daily routine",
+          title: "Daily Routine and streak logic",
           body: [
-            "The routine is not a fake one-click task.",
-            "It is completed when the user really opens the app, tracks expenses, marks leaks, checks charts, checks Save, and shares progress.",
-            "This makes $BROKE feel like discipline, not just finance tracking.",
+            "Routine tasks are meant to be real actions, not fake one-click farming.",
+            "Open the app, track expenses, mark leak type, check chart, check Save, and use share/proof actions when relevant.",
+            "A streak shows repeated discipline across days.",
+            "Future rewards and status mechanics can use streak as proof of activity, so it matters.",
           ],
           icon: A.dailyCheck,
         },
@@ -9263,117 +9719,186 @@ function HelpGuideModal({
     },
     add: {
       label: "Add",
-      eyebrow: "Add Guide",
-      title: "Add: Track Expenses Correctly",
+      eyebrow: "Add Button Guide",
+      title: "Add: Track Leak Correctly",
       intro:
-        "Add is where the app becomes honest. Every useful chart, leak score, Growth simulation, and report depends on real records here.",
+        "Add is the data entry screen. Every chart, pattern, challenge, report, growth plan, and share card becomes better when records here are honest.",
       icon: "/nav-add.png",
       footerTitle: "Add rule",
       footerBody:
-        "Track the expense immediately, choose the real category, and mark Needed / Maybe / Not needed honestly.",
+        "Record the expense as soon as possible, choose the real category, mark the real decision type, then save. Accuracy beats perfection.",
       sections: [
         {
-          title: "1. Enter the real amount",
+          title: "Amount field",
           body: [
-            "Use the amount field for the exact spending amount.",
-            "Small expenses matter because repeated small leaks become monthly damage.",
-            "Do not wait until the end of the week if you can track the expense now.",
+            "Enter the exact amount that left your wallet.",
+            "Use the same currency behavior you set in Profile unless you intentionally changed Currency Mode.",
+            "Small expenses should still be tracked because repeated small leaks create monthly damage.",
+            "If the amount is wrong, fix it before saving. The chart and Wallet HP depend on this value.",
           ],
-          icon: A.addFrog,
+          icon: A.income,
         },
         {
-          title: "2. Choose the right category",
+          title: "Category buttons",
           body: [
-            "Categories make the biggest leak visible.",
-            "Coffee, smoking, takeout, shopping, transport, subscriptions, and custom categories should be used consistently.",
-            "If the same habit is tracked under different names, the app cannot detect the leak properly.",
+            "Choose the category that best describes the expense.",
+            "Use Coffee, Smoking, Takeouts, Shopping, Subscriptions, Taxi, Snacks, Gaming, Family, School, or Custom consistently.",
+            "Do not split the same habit between random categories. The app needs consistency to find the biggest leak.",
+            "Use Profile → Personalization if category names should match your real lifestyle better.",
           ],
           icon: A.categories,
         },
         {
-          title: "3. Mark Needed / Maybe / Not needed",
+          title: "Needed / Maybe / Not needed buttons",
           body: [
-            "Needed means the expense was necessary and does not count as a leak.",
-            "Maybe means the expense was questionable and counts as half pressure.",
-            "Not needed means it was a full money leak.",
-            "Honest marking makes Wallet HP, Save, Chart, and Growth Lab much more accurate.",
+            "Needed means the expense was required. It reduces money but should not be treated as a leak.",
+            "Maybe means the expense was questionable. It adds partial leak pressure.",
+            "Not needed means the expense was avoidable. It adds full leak pressure.",
+            "Be honest here. This button controls Wallet HP, Chart pressure, Save scenarios, and Growth calculations.",
           ],
           icon: A.leaks,
         },
         {
-          title: "4. Add notes when context matters",
+          title: "Trigger chips",
           body: [
-            "Notes explain why the expense happened.",
-            "This helps users notice emotional spending, boredom spending, stress spending, or routine habits.",
-            "A short note is enough. The goal is awareness, not paperwork.",
+            "Trigger chips explain why the expense happened.",
+            "Stress means pressure or emotion pushed the purchase.",
+            "Boredom means the spending filled empty time.",
+            "Impulse means the decision was fast and not planned.",
+            "After payday means money landed and discipline dropped.",
+            "Late night, social pressure, weekend, and habit help Pattern Lab detect timing and behavior loops.",
+          ],
+          icon: A.progressFlame,
+        },
+        {
+          title: "Note field",
+          body: [
+            "Use a short note when the context matters.",
+            "Good notes are simple: after work, tired, friends pushed it, payday, bored, forgot subscription, late night delivery.",
+            "The note does not need to be long. One honest clue is enough.",
+            "Old hashtag-style notes still help, but structured trigger chips are cleaner.",
           ],
           icon: A.pencil,
         },
         {
-          title: "5. Use quick add carefully",
+          title: "Save / Track button",
           body: [
-            "Quick Add is for repeated expenses.",
-            "It is fast, but the amount should still be checked.",
-            "If the quick amount is wrong, edit it before saving the record.",
+            "Press the main save button after amount, category, decision type, and optional triggers are correct.",
+            "After saving, Wallet HP updates and the record becomes part of Chart, Save, Growth, reports, and streak activity.",
+            "If cloud sync is available, the record is also saved to the account.",
+            "If cloud sync fails, the app can still keep local data and show a warning.",
           ],
           icon: A.navAdd,
+        },
+        {
+          title: "Recent records / delete action",
+          body: [
+            "Recent records show what was already tracked.",
+            "Use them to catch duplicates or wrong entries.",
+            "Delete only records that are truly wrong. Deleting real leaks makes the app less useful.",
+            "After delete, totals, Wallet HP, pattern analysis, and reports can change.",
+          ],
+          icon: A.deleteData,
+        },
+        {
+          title: "When to use Add instead of other screens",
+          body: [
+            "Use Add when money was spent and the app needs a new record.",
+            "Use Chart after the record exists and you want analysis.",
+            "Use Save when you want to reduce the leak or start a challenge.",
+            "Use Growth when you want to redirect the leak into a goal.",
+          ],
+          icon: A.addFrog,
         },
       ],
     },
     chart: {
       label: "Chart",
-      eyebrow: "Chart Guide",
-      title: "$BROKE Chart: Wallet Pressure",
+      eyebrow: "Chart Button Guide",
+      title: "Chart: Read Wallet Pressure",
       intro:
-        "Chart is wallet memory and analysis. It shows one daily pressure candle per day, then One Fix, Leak Pattern Lab, Leak Streaks, Weekly Review, and Monthly History.",
+        "Chart explains what happened after records are saved. It turns daily spending into pressure candles, patterns, one fix, weekly review, and monthly history.",
       icon: "/nav-chart.png",
       footerTitle: "Chart rule",
       footerBody:
-        "Start with the chart, follow One Fix, then open Leak Pattern Lab or History only when you need deeper detail.",
+        "Use Chart after adding records. First read the selected day, then follow One Fix. Open deeper labs only when you need more context.",
       sections: [
         {
-          title: "1. Choose the right range",
+          title: "Range buttons",
           body: [
-            "Day shows today’s single pressure candle.",
-            "Week shows the last seven daily candles and is best for habits.",
-            "Month shows the larger pressure across the current cycle/month.",
-            "Switch ranges to understand whether a leak is temporary or becoming normal.",
+            "Day focuses on the current day.",
+            "Week shows the recent rhythm and is best for detecting habits.",
+            "Month shows the larger cycle and helps reveal repeated pressure.",
+            "Switch ranges when you want to know whether a leak was one-time or becoming normal.",
           ],
-          icon: A.navChart,
+          icon: A.calendar,
         },
         {
-          title: "2. Read leak pressure",
+          title: "Wallet Pressure Chart candles",
           body: [
-            "Candle color follows leak pressure, not whether balance went down.",
-            "Needed spending can lower balance without making the candle dangerous.",
-            "Maybe and Not needed spending create Wallet HP pressure.",
+            "Each candle represents one day of wallet pressure.",
+            "The color follows leak pressure, not just balance movement.",
+            "Needed spending can lower balance without making the day dangerous.",
+            "Maybe and Not needed spending create pressure because they are controllable leaks.",
           ],
           icon: A.chartFrog,
         },
         {
-          title: "3. Find the top category",
+          title: "Tap / click a candle",
           body: [
-            "Top category shows the strongest spending movement in the selected period.",
-            "If the same category keeps appearing, it is probably a lifestyle leak.",
-            "This is the category to control first.",
+            "Tap a candle to open that day’s detail card.",
+            "The selected day shows tracked amount, leak pressure, state after day, main causes, spending mix, and top events.",
+            "Use this when you want to understand one specific bad day.",
+            "If a candle looks dangerous, check the top events before blaming the whole month.",
+          ],
+          icon: A.navChart,
+        },
+        {
+          title: "Main causes and spending mix",
+          body: [
+            "Main causes show which categories created the most pressure.",
+            "Spending mix separates Needed, Maybe, and Not needed spending.",
+            "A high Not needed share means the day had clear avoidable leaks.",
+            "A high Maybe share means the day had grey-zone decisions worth reviewing.",
           ],
           icon: A.leaks,
         },
         {
-          title: "4. Use Leak Pattern Lab",
+          title: "One Fix",
           body: [
-            "Leak Pattern Lab explains timing triggers, repeated leaks, payday spikes, weekend leaks, and emotional spending clues in plain language.",
-            "It turns repeated records into one clear action.",
-            "Use One Fix when you do not know what to fix next.",
+            "One Fix gives one practical action instead of a long lecture.",
+            "It may suggest cutting a category, avoiding a timing trigger, checking Save, or changing tomorrow’s behavior.",
+            "Use it when the chart is clear but you do not know what to do next.",
+            "One Fix is the fastest route from analysis to action.",
+          ],
+          icon: A.progressFlame,
+        },
+        {
+          title: "Leak Pattern Lab",
+          body: [
+            "Leak Pattern Lab detects repeated categories, late-night leaks, weekend spikes, payday pressure, and emotion clues.",
+            "It uses categories, decision types, trigger chips, notes, and timing.",
+            "Open it when the same problem keeps returning.",
+            "This is the screen that explains behavior, not only amounts.",
           ],
           icon: A.walletMascot,
         },
         {
-          title: "5. Share only safe chart context",
+          title: "Leak Streaks, Weekly Review, and Monthly History",
           body: [
-            "Chart data can be emotional and personal.",
-            "Public sharing should avoid private income and real balance.",
-            "Use clean share cards or public summaries instead of raw personal numbers.",
+            "Leak Streaks show repeated control or repeated damage.",
+            "Weekly Review summarizes the strongest pattern of the week.",
+            "Monthly History helps compare past cycles and find recurring lifestyle leaks.",
+            "Use these blocks when daily view is not enough.",
+          ],
+          icon: A.bestStreak,
+        },
+        {
+          title: "Chart sharing",
+          body: [
+            "Use share buttons only for safe summaries.",
+            "Do not expose exact income, payday, real balance, or debt details in public.",
+            "Public chart proof should focus on pattern, pressure, progress, and next move.",
           ],
           icon: A.export,
         },
@@ -9381,178 +9906,313 @@ function HelpGuideModal({
     },
     growth: {
       label: "Growth",
-      eyebrow: "Growth Guide",
-      title: "Growth: Target Coverage",
+      eyebrow: "Growth Button Guide",
+      title: "Growth: Redirect Leaks Into Goals",
       intro:
-        "Growth turns detected leaks into real-life targets. It shows what leaked money could cover: insurance, mortgage or rent, school fees, emergency fund, debt payment, family support, or a personal goal.",
+        "Growth shows what could happen if money leaks were redirected into something useful. It is a planner and simulator, not investing, staking, custody, or financial advice.",
       icon: "/nav-growth.png",
       footerTitle: "Growth rule",
       footerBody:
-        "This is planning only: no deposits, no custody, no staking, no investments, no guaranteed returns, and no financial advice.",
+        "Use Growth to turn leak awareness into a target. It does not move funds and does not promise returns.",
       sections: [
         {
-          title: "1. Use detected leaks",
+          title: "Use detected leaks button",
           body: [
-            "Growth reads this month’s Not needed and Maybe expenses.",
-            "Use detected leaks turns leak pressure into a monthly redirected amount.",
-            "This keeps the plan connected to real tracked app data, not random numbers.",
+            "This button pulls this month’s Maybe and Not needed spending into Growth.",
+            "It creates a realistic redirected amount based on real app records.",
+            "Use it before manually entering random goals.",
+            "If there are no leaks yet, go to Add first and track real expenses.",
           ],
           icon: GROWTH_PUBLIC_ASSETS.leak,
         },
         {
-          title: "2. Target Coverage",
+          title: "Target Coverage cards",
           body: [
-            "Target Coverage connects money leaks to real things the user cares about.",
-            "Default lines include Insurance and Mortgage / rent.",
-            "Custom targets can include school fees, phone upgrade, emergency fund, debt payment, family support, or anything personal.",
-            "Use 1m for monthly coverage and 12m for yearly coverage.",
+            "Target Coverage shows what leaks could cover in real life.",
+            "Default examples can include insurance, mortgage or rent, bills, education, debt payment, family support, or emergency fund.",
+            "Use 1m to understand monthly coverage.",
+            "Use 12m to understand yearly potential.",
           ],
           icon: GROWTH_PUBLIC_ASSETS.lab,
         },
         {
-          title: "3. Personal Goal",
+          title: "Personal Goal fields",
           body: [
-            "Personal Goal is the thing the user is actually working toward.",
-            "The target name and amount are entered manually by the user.",
-            "The app estimates how long it could take if monthly leaks are redirected into that goal.",
-            "Currency metadata and USD reference help make the target easier to understand globally.",
+            "Goal name is the thing the user actually wants: phone upgrade, trip, debt payment, laptop, emergency buffer, or family support.",
+            "Goal amount is the target value.",
+            "Monthly redirected amount should be realistic and based on leaks the user can actually reduce.",
+            "Currency and USD reference make the goal easier to understand globally.",
           ],
           icon: GROWTH_PUBLIC_ASSETS.trophy,
         },
         {
-          title: "4. Share goal card",
+          title: "Simulation controls",
           body: [
-            "The share card is for the Personal Goal, not the full private budget.",
-            "It can show the selected currency plus an approximate USD reference.",
-            "It does not show private income, full fixed costs, or Debt Radar details.",
+            "Starting amount is the amount already available for the plan.",
+            "Contribution is the monthly leak amount the user wants to redirect.",
+            "Duration controls how long the simulation runs.",
+            "Yearly growth and risk settings are only illustrative. They do not guarantee real results.",
+            "Reinvest simulated gains changes the math only inside the planner.",
+          ],
+          icon: GROWTH_PUBLIC_ASSETS.market,
+        },
+        {
+          title: "Create simulation button",
+          body: [
+            "Press this after the inputs look realistic.",
+            "The app will show projected value, total contribution, estimated gain, and scenario range.",
+            "Use the result to understand the cost of leaks, not to make financial promises.",
+          ],
+          icon: A.navWhatIf,
+        },
+        {
+          title: "Save plan button",
+          body: [
+            "Save plan stores the simulation for later review.",
+            "Use saved plans to compare old goals with current leak behavior.",
+            "If the user changes habits, create a new plan instead of pretending the old one is still accurate.",
+          ],
+          icon: A.dailyCheck,
+        },
+        {
+          title: "Generate / share growth card",
+          body: [
+            "Generate share card creates a public-friendly goal card.",
+            "The card should show the goal and redirected leak idea, not private income or full budget.",
+            "If Telegram blocks direct sharing, use Download card, copied text, or long-press the preview.",
           ],
           icon: SHARE_CARD_PUBLIC_ASSETS.growth,
         },
         {
-          title: "5. What Growth is not",
+          title: "What Growth is not",
           body: [
-            "It is not investing.",
             "It is not staking.",
             "It is not custody.",
-            "It does not move real funds.",
-            "It is a personal planner that shows what leaks could become if the user changes habits.",
+            "It is not investing.",
+            "It does not collect deposits.",
+            "It is a personal planning tool that makes leaks visible as missed opportunities.",
           ],
-          icon: GROWTH_PUBLIC_ASSETS.market,
+          icon: A.walletMascot,
         },
       ],
     },
     whatif: {
       label: "Save",
-      eyebrow: "Save Guide",
-      title: "Save: Survival, Leak Cuts, and Silent Killers",
+      eyebrow: "Save Button Guide",
+      title: "Save: Survive, Cut, Challenge",
       intro:
-        "Save is where the app turns spending pressure into survival decisions. It includes Survival Mode, Leak Cut Scenarios, Challenges, Public Leaderboard, and the private Debt & Bills Radar.",
+        "Save is where pressure becomes action. Use it to understand survival risk, test leak cuts, start challenges, check leaderboard, and keep Debt & Bills Radar private.",
       icon: "/nav-save.png",
       footerTitle: "Save rule",
       footerBody:
-        "Use Save to understand pressure before payday, cut one realistic leak, and keep Debt & Bills Radar private-first.",
+        "Save should help you reduce one realistic leak or understand one hidden pressure. Do not turn private debt details into public content.",
       sections: [
         {
-          title: "1. Read Survival Mode",
+          title: "Survival Mode button / block",
           body: [
-            "Survival Mode compares time left, money left, current pace, and safe daily budget.",
-            "It helps the user see whether the month is safe or starting to leak too fast.",
-            "Public Proof Mode can hide exact sensitive numbers on share cards.",
+            "Survival Mode compares money left, time left, spending pace, and safe daily budget.",
+            "Use it when you need to know whether the month can survive until the next income cycle.",
+            "It is not for shame. It is for early warning.",
+            "Public Proof Mode can hide sensitive numbers if a survival card is shared.",
           ],
           icon: A.whatIfFrog,
         },
         {
-          title: "2. Use Leak Cut Scenarios",
+          title: "Leak Cut Scenarios",
           body: [
-            "Leak Cut Scenarios show what changes if a category is reduced by a realistic percentage.",
-            "This helps the user test a change before committing to it.",
-            "The goal is not to remove life. The goal is to stop the leak that gives the least value.",
+            "Leak Cut Scenarios show what happens if one category is reduced.",
+            "Use them before making a challenge or goal.",
+            "A good cut is realistic: fewer deliveries, fewer subscriptions, less taxi, less impulse shopping.",
+            "The goal is not to remove life. The goal is to stop the leak with the lowest value.",
           ],
           icon: A.navWhatIf,
         },
         {
-          title: "3. Track Debt & Bills Radar",
+          title: "Pattern Challenge Coach",
           body: [
-            "Debt & Bills Radar is for silent monthly killers: debt, recurring bills, subscriptions, insurance, maintenance, rent, phone, and internet.",
-            "Monthly hit should be filled first. Remaining debt is counted only for Debt items.",
-            "This block is private-first and should not expose debt details in public cards.",
-          ],
-          icon: A.lifeCost,
-        },
-        {
-          title: "4. Start challenges and public progress",
-          body: [
-            "Challenges turn leak control into a short mission.",
-            "Leaderboard and challenge progress are public-friendly when Public Proof Mode is respected.",
-            "They show discipline without revealing private financial details.",
+            "The coach suggests challenges based on detected patterns.",
+            "If takeout is the leak, it can suggest a takeout challenge.",
+            "If late-night or weekend spending is the leak, it can suggest timing-based discipline.",
+            "Use suggested challenges when you want the app to choose the most relevant mission.",
           ],
           icon: A.challengeTrophy,
         },
         {
-          title: "5. Connect Save with Growth",
+          title: "Start challenge / complete challenge buttons",
           body: [
-            "Save shows what can be reduced.",
-            "Growth shows what that redirected leak could cover through Target Coverage or a Personal Goal.",
-            "Together they create the full loop: find the leak, cut the leak, redirect the leak.",
+            "Start challenge begins a limited mission.",
+            "Complete challenge should be pressed only after the real action is done.",
+            "Failed or skipped challenges still teach the app where discipline breaks.",
+            "Challenge progress can support badges, streaks, and public proof.",
+          ],
+          icon: A.challengeCompleted,
+        },
+        {
+          title: "Leaderboard",
+          body: [
+            "Leaderboard is for public-friendly discipline status.",
+            "It should not reveal private income, debt, payday, or exact balance unless the user chooses public settings.",
+            "Use it for motivation, not for exposing personal financial details.",
+          ],
+          icon: A.badgeStableWallet,
+        },
+        {
+          title: "Debt & Bills Radar",
+          body: [
+            "Debt & Bills Radar is for silent monthly killers: debt, subscriptions, insurance, rent, phone, internet, and recurring obligations.",
+            "Monthly hit should be filled first because it affects survival pressure.",
+            "Remaining debt should be used only for real debt items.",
+            "This block is private-first and should not be converted into a detailed public debt card.",
+          ],
+          icon: A.lifeCost,
+        },
+        {
+          title: "Copy / share safe text",
+          body: [
+            "Use copy or share actions for safe public summaries.",
+            "Good public proof shows discipline, score, pattern, next move, or challenge status.",
+            "Avoid income, exact real balance, payday, debt amounts, and sensitive bills.",
+          ],
+          icon: A.export,
+        },
+        {
+          title: "When to leave Save and open Growth",
+          body: [
+            "Use Rewards to decide what to cut or which proof action to complete.",
+            "Use Growth to see what the cut could become.",
+            "The full loop is: Add records, read Chart, complete proof in Rewards, redirect saved leaks in Growth, show safe proof in Profile or Home.",
           ],
           icon: GROWTH_PUBLIC_ASSETS.market,
         },
       ],
     },
     settings: {
-      label: "Settings",
-      eyebrow: "Settings Guide",
-      title: "Settings: Currency, Privacy, and Sync",
+      label: "Profile",
+      eyebrow: "Profile Button Guide",
+      title: "Profile: Personal Cabinet",
       intro:
-        "Settings controls the app’s real-life assumptions: language, profile, income, fixed costs, currency mode, privacy, categories, sync, and data control.",
+        "Profile controls identity, wallet proof, public share cards, privacy, currency, sync, and data. Most blocks are collapsed so the screen stays compact.",
       icon: "/nav-settings.png",
-      footerTitle: "Settings rule",
+      footerTitle: "Profile rule",
       footerBody:
-        "Keep profile numbers realistic, use Convert values only when you want real exchange-rate display, and keep Public Proof Mode on for public sharing.",
+        "Use Profile to control what the app knows privately and what the community can see publicly. Verify only through message signature; never enter a seed phrase.",
       sections: [
         {
-          title: "1. Life Profile and income",
+          title: "Identity Setup / Edit button",
           body: [
-            "Life Profile adapts the app to the user’s country, lifestyle, and income rhythm.",
-            "Income should match the real situation: salary, side income, allowance, irregular income, or mixed income.",
-            "New and edited income fields now remember the currency they were entered in.",
+            "Identity Setup controls avatar, nickname, status line, and identity style.",
+            "Press Edit to change the public identity shown on profile cards and share cards.",
+            "Avatar presets are available for everyone.",
+            "Custom avatar is a holder reward and depends on verified wallet requirements.",
+            "Nickname and status should be public-safe because they can appear on share cards.",
           ],
-          icon: A.income,
+          icon: A.walletMascot,
         },
         {
-          title: "2. Fixed costs",
+          title: "Wallet & $BROKE Balance card",
           body: [
-            "Fixed costs are required costs like rent, utilities, transport basics, food basics, phone, data, education, or family support.",
-            "These costs reduce available money before leaks are calculated.",
-            "New and edited fixed-cost fields now remember their original currency for converted display.",
-          ],
-          icon: A.lifeCost,
-        },
-        {
-          title: "3. Currency Mode",
-          body: [
-            "Display only changes the symbol and keeps values visually close to old behavior.",
-            "Convert values uses exchange rates to show real converted display values.",
-            "Approximate USD reference appears across the app and share cards so global users can understand the scale faster.",
-            "Older numbers may need to be re-saved once if they were created before original-currency metadata existed.",
+            "This card is collapsed by default to keep Profile short.",
+            "Open it when you want to paste a wallet, recheck $BROKE balance, verify ownership, sync verification, or inspect holder tier.",
+            "Watch-only wallet can show balance but cannot unlock verified holder rewards.",
+            "Verified wallet means the user proved ownership by signing a message.",
           ],
           icon: A.walletHp,
         },
         {
-          title: "4. Privacy and public sharing",
+          title: "Paste wallet / Clear buttons",
           body: [
-            "Public Proof Mode protects public cards from exposing sensitive income and balance details.",
-            "Share cards can show selected currency plus approximate USD reference.",
-            "Debt & Bills Radar stays private-first and should not be turned into a detailed debt share card.",
+            "Paste wallet adds a Solana address for read-only balance checks.",
+            "No seed phrase is needed. No transaction is needed. No token approval is needed.",
+            "Clear removes the watched wallet from the local/profile flow.",
+            "Use Paste only with the public wallet address, never with private keys or recovery words.",
+          ],
+          icon: A.pencil,
+        },
+        {
+          title: "Recheck $BROKE balance button",
+          body: [
+            "Recheck asks the backend to read the latest $BROKE balance for the linked wallet.",
+            "Use it after buying, selling, transferring, or returning to the app after some time.",
+            "Balance can affect holder tier and public display slots.",
+            "Rewards and unlocks should use verified ownership, not only watched balance.",
+          ],
+          icon: A.currency,
+        },
+        {
+          title: "Verify wallet / Sync verification buttons",
+          body: [
+            "Verify wallet proves ownership by message signature.",
+            "Telegram browser may not expose a signing provider, so open the app inside Phantom, Solflare, Backpack, or another Solana wallet browser if needed.",
+            "Signature proof does not move tokens and does not approve spending.",
+            "Sync verification refreshes the app after returning from a wallet browser or another session.",
+          ],
+          icon: A.bestStreak,
+        },
+        {
+          title: "Provider Help / Rescan provider",
+          body: [
+            "Provider Help explains whether the app can detect a wallet signing provider.",
+            "Rescan provider checks again for Phantom, Solflare, Backpack, or another injected Solana provider.",
+            "Use it if the wallet app was opened after the page loaded.",
+            "If provider still does not appear, open the app inside the wallet browser instead of Telegram WebView.",
+          ],
+          icon: A.help,
+        },
+        {
+          title: "Holder Proof and Holder Rewards blocks",
+          body: [
+            "Holder Proof shows verified holder identity and tier progress.",
+            "Holder Rewards show cosmetic/profile unlocks such as custom avatar, extra public slots, proof frame, and elite style.",
+            "These are profile rewards, not automatic token payouts.",
+            "Future reward-pool mechanics should still check verified wallet, balance snapshot, and activity requirements.",
+          ],
+          icon: A.challengeTrophy,
+        },
+        {
+          title: "Share Studio card",
+          body: [
+            "Share Studio is collapsed by default because it has many options.",
+            "Open it to choose what your public profile card can show.",
+            "Wallet HP and verified holder balance can unlock more public display slots.",
+            "The selected items determine what appears on public profile/share cards.",
           ],
           icon: A.export,
         },
         {
-          title: "5. Sync and data control",
+          title: "Share Studio checkboxes",
           body: [
-            "Telegram and web sync keep expenses, settings, Growth state, and Debt Radar state connected when cloud sync is available.",
-            "If sync shows an error, the app can still work locally until cloud sync recovers.",
-            "Reset and delete actions should be used carefully because they can remove progress.",
+            "Survival Score shows public survival strength.",
+            "Wallet HP shows current pressure state.",
+            "Streak shows discipline.",
+            "Badges show progress achievements.",
+            "Leaderboard shows public rank if enabled.",
+            "Biggest leak can show category-level pressure without exposing private transactions.",
+            "Life hours shows time cost of leaks.",
+            "Holder tier shows verified $BROKE proof when enabled.",
+          ],
+          icon: A.navSettings,
+        },
+        {
+          title: "Open share card / Preview here buttons",
+          body: [
+            "Open share card opens the public profile card flow.",
+            "Preview here shows the card inside Profile before exporting.",
+            "Use preview to check avatar, nickname, status, selected stats, and privacy before sharing.",
+            "If the card looks crowded, reduce selected items in Share Studio.",
+          ],
+          icon: SHARE_CARD_PUBLIC_ASSETS.profile,
+        },
+        {
+          title: "Profile Settings sections",
+          body: [
+            "Quick Setup controls language, region, life mode, currency mode, and basic profile rules.",
+            "Money Setup controls income, payday, and fixed costs that power Wallet HP.",
+            "Currency & Repair controls display currency, conversion helpers, and old data repair.",
+            "Privacy & Public Proof controls what public cards and leaderboards can show.",
+            "Personalization controls category names and labels.",
+            "Notifications & Sync controls reminders, Telegram connection, and cloud status.",
+            "Progress Vault shows streak progress and badges.",
+            "Data & Records contains sensitive reset/delete tools and should be used carefully.",
           ],
           icon: A.navSettings,
         },
@@ -10380,6 +11040,9 @@ function DashboardScreen({
   routineExpenses,
   allExpenses,
   leakMission,
+  activeProofStatus,
+  onMarkCleanDay,
+  onCompleteOneFix,
   onStartLeakMission,
   onResetLeakMission,
   onDeleteExpense,
@@ -10417,6 +11080,9 @@ function DashboardScreen({
   routineExpenses: Expense[];
   allExpenses: Expense[];
   leakMission: LocalLeakMission | null;
+  activeProofStatus: ActiveStreakProofStatus;
+  onMarkCleanDay: () => void;
+  onCompleteOneFix: () => void;
   onStartLeakMission: (category: string, baselineWeekly: number) => void;
   onResetLeakMission: () => void;
   onDeleteExpense: (id: string) => void;
@@ -10515,7 +11181,7 @@ function DashboardScreen({
   }, [allExpenses, settings]);
 
   return (
-    <div className="screen">
+    <div className="screen home-screen">
       <Header title="$BROKE Life Tracker" rightIcon={A.help} onRight={onBellClick} />
 
       <section className="hero home-compact-hero" aria-label="Home wallet status">
@@ -10544,8 +11210,25 @@ function DashboardScreen({
         />
       </section>
 
+      <ActiveStreakProofCard
+        status={activeProofStatus}
+        onTrackLeak={onOpenAdd}
+        onMarkCleanDay={onMarkCleanDay}
+        onCompleteOneFix={onCompleteOneFix}
+        onOpenChallenge={onOpenSurvival}
+      />
 
-      <section className="home-wallet-snapshot-card">
+
+      <details open className="home-compact-details home-wallet-snapshot-card home-collapsed-section">
+        <summary className="home-compact-summary home-wallet-snapshot-summary">
+          <div>
+            <span>Wallet Snapshot</span>
+            <strong>{summary.walletHp}/100 HP · {money(summary.realBalance, settings.currency)} left</strong>
+            <small>Income, life cost, leaks, and day snapshots stay here.</small>
+          </div>
+          <b>Open</b>
+        </summary>
+        <div className="home-compact-body home-wallet-snapshot-collapsible-body">
         <div className="wallet-snapshot-heading">
           <div>
             <span>Wallet Snapshot for Today</span>
@@ -10636,29 +11319,54 @@ function DashboardScreen({
             </section>
           </section>
         </details>
-      </section>
+        </div>
+      </details>
 
 
-      <SmartHomeFocusCard
-        settings={settings}
-        summary={summary}
-        allExpenses={allExpenses}
-        identityStats={identityStats}
-        onOpenAdd={onOpenAdd}
-        onOpenChart={onOpenChart}
-      />
+      <details className="home-compact-details home-focus-details home-collapsed-section">
+        <summary className="home-compact-summary home-focus-summary">
+          <div>
+            <span>Today’s Focus</span>
+            <strong>{summary.todaySpent > 0 ? `${money(summary.todaySpent, settings.currency)} tracked today` : "No leak tracked today"}</strong>
+            <small>Next action, pressure signal, and the button to press next.</small>
+          </div>
+          <b>Open</b>
+        </summary>
+        <div className="home-compact-body">
+          <SmartHomeFocusCard
+            settings={settings}
+            summary={summary}
+            allExpenses={allExpenses}
+            identityStats={identityStats}
+            onOpenAdd={onOpenAdd}
+            onOpenChart={onOpenChart}
+          />
+        </div>
+      </details>
 
-      <WeeklyBehaviorReportHomeCard
-        settings={settings}
-        weeklyPatternSummary={weeklyPatternSummary}
-        patternHistory={patternHistory}
-        walletHp={summary.walletHp}
-        identityStats={identityStats}
-        leaderboard={leaderboard}
-        shareInitData={telegram.isTelegram ? telegram.initData : ""}
-        onOpenChart={onOpenChart}
-        onOpenAdd={onOpenAdd}
-      />
+      <details className="home-compact-details home-weekly-report-details home-collapsed-section">
+        <summary className="home-compact-summary home-weekly-report-summary">
+          <div>
+            <span>Weekly Behavior Report</span>
+            <strong>{weeklyPatternSummary.strongestPattern || weeklyPatternSummary.headline}</strong>
+            <small>Weekly pattern, pressure, comparison, share card, and next move.</small>
+          </div>
+          <b>{weeklyPatternSummary.leakPressure}%</b>
+        </summary>
+        <div className="home-compact-body">
+          <WeeklyBehaviorReportHomeCard
+            settings={settings}
+            weeklyPatternSummary={weeklyPatternSummary}
+            patternHistory={patternHistory}
+            walletHp={summary.walletHp}
+            identityStats={identityStats}
+            leaderboard={leaderboard}
+            shareInitData={telegram.isTelegram ? telegram.initData : ""}
+            onOpenChart={onOpenChart}
+            onOpenAdd={onOpenAdd}
+          />
+        </div>
+      </details>
 
       {allExpenses.length === 0 && (
         <section className="first-user-clarity-card">
@@ -10674,14 +11382,26 @@ function DashboardScreen({
       )}
 
       {comebackState && (
-        <ComebackModeCard
-          settings={settings}
-          comeback={comebackState}
-          onAddMissedLeak={onOpenAdd}
-          onRestartToday={onOpenAdd}
-          onShowDamage={onOpenChart}
-          onOpenSurvival={onOpenSurvival}
-        />
+        <details className="home-compact-details home-comeback-details home-collapsed-section">
+          <summary className="home-compact-summary home-comeback-summary">
+            <div>
+              <span>Comeback Mode</span>
+              <strong>Restart without filling the whole app.</strong>
+              <small>Use this when you missed tracking and need a controlled restart.</small>
+            </div>
+            <b>Open</b>
+          </summary>
+          <div className="home-compact-body">
+            <ComebackModeCard
+              settings={settings}
+              comeback={comebackState}
+              onAddMissedLeak={onOpenAdd}
+              onRestartToday={onOpenAdd}
+              onShowDamage={onOpenChart}
+              onOpenSurvival={onOpenSurvival}
+            />
+          </div>
+        </details>
       )}
 
       <details className="clean-details">
@@ -10863,6 +11583,118 @@ function DashboardScreen({
 }
 
 
+function ActiveStreakProofCard({
+  status,
+  onTrackLeak,
+  onMarkCleanDay,
+  onCompleteOneFix,
+  onOpenChallenge,
+}: {
+  status: ActiveStreakProofStatus;
+  onTrackLeak: () => void;
+  onMarkCleanDay: () => void;
+  onCompleteOneFix: () => void;
+  onOpenChallenge: () => void;
+}) {
+  const tone = status.eligible
+    ? "eligible"
+    : status.recoveryMode || status.recoveryAvailable
+      ? "recovery"
+      : status.activeToday
+        ? "active"
+        : "building";
+  const actionLabels = status.todayActions.map(activeStreakProofActionLabel);
+  const progressPercent = status.eligible
+    ? 100
+    : Math.round((status.progressDays / ACTIVE_STREAK_ELIGIBILITY_DAYS) * 100);
+
+  return (
+    <section className={`active-streak-proof-card ${tone}`}>
+      <div className="active-streak-proof-head">
+        <div>
+          <span>BROKE Active Streak</span>
+          <strong>{status.label}</strong>
+          <small>{status.detail}</small>
+        </div>
+        <b>{status.currentStreak}d</b>
+      </div>
+
+      <div className="active-streak-proof-meter" aria-hidden="true">
+        <i style={{ width: `${progressPercent}%` }} />
+      </div>
+
+      <div className="active-streak-proof-grid">
+        <article>
+          <span>Eligibility line</span>
+          <strong>7+ days</strong>
+        </article>
+        <article>
+          <span>Today</span>
+          <strong>{status.activeToday ? "Protected" : status.recoveryMode ? "Recovery" : "Needs action"}</strong>
+        </article>
+        <article>
+          <span>Recovery</span>
+          <strong>{status.recoveryUsedRecently ? "Used this week" : "1 / 7d"}</strong>
+        </article>
+      </div>
+
+      {actionLabels.length > 0 && (
+        <div className="active-streak-proof-actions-done">
+          {actionLabels.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+      )}
+
+      <div className="active-streak-proof-buttons">
+        <button type="button" className="primary" onClick={onTrackLeak}>Track Leak</button>
+        <button type="button" onClick={onMarkCleanDay}>Mark Clean Day</button>
+        <button type="button" onClick={onCompleteOneFix}>One Fix</button>
+        <button type="button" onClick={onOpenChallenge}>Daily Challenge</button>
+      </div>
+
+      <p>
+        Future Holder Rewards will use the live streak state, not a one-time unlock. If the streak drops below 7 days, eligibility pauses until it is rebuilt or recovered.
+      </p>
+    </section>
+  );
+}
+
+function ActiveHolderEligibilityStrip({
+  status,
+  wallet,
+}: {
+  status: ActiveStreakProofStatus;
+  wallet: Settings["wallet"];
+}) {
+  const verified = Boolean(wallet.isVerified);
+  const hasBalance = wallet.brokeBalance > 0;
+  const ready = verified && hasBalance && status.eligible;
+  const label = ready
+    ? "Reward eligible foundation"
+    : !verified
+      ? "Verify wallet"
+      : !hasBalance
+        ? "Hold $BROKE"
+        : status.recoveryMode || status.recoveryAvailable
+          ? "Recovery mode"
+          : `${status.progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} active days`;
+
+  return (
+    <section className={`active-holder-eligibility-strip ${ready ? "ready" : status.recoveryMode ? "recovery" : "building"}`}>
+      <div>
+        <span>Future Holder Rewards</span>
+        <strong>{label}</strong>
+        <small>
+          Verified wallet + $BROKE balance + live 7+ day active streak. If the streak breaks, eligibility pauses.
+        </small>
+      </div>
+      <b>{ready ? "Ready" : status.eligible ? "Streak ready" : `${status.currentStreak}d`}</b>
+    </section>
+  );
+}
+
+
 function WeeklyBehaviorReportHomeCard({
   settings,
   weeklyPatternSummary,
@@ -11020,7 +11852,7 @@ function WeeklyBehaviorReportHomeCard({
         <strong>{weeklyPatternSummary.nextMove}</strong>
       </div>
 
-      <section className={`safe-weekly-share-card identity-share-style-${settings.identity.identityStyle || "classic"}`} ref={weeklyShareCardRef}>
+      <section className={`safe-weekly-share-card premium-share-card identity-share-style-${settings.identity.identityStyle || "classic"}`} ref={weeklyShareCardRef}>
         <div className="safe-weekly-share-top">
           <div className="safe-weekly-share-identity">
             <img src={publicIdentityAvatar} alt="" />
@@ -12342,6 +13174,9 @@ function ReportsPanel({
   const dailyLeaksUsdNote = usdReferenceNote(todayLeakAmount, settings.currency, settings, exchangeRates);
   const weeklyLeaksUsdNote = usdReferenceNote(weeklyLeakAmount, settings.currency, settings, exchangeRates);
   const weeklyBiggestLeakUsdNote = usdReferenceNote(identityStats.biggestLeakAmount, settings.currency, settings, exchangeRates);
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityStatus = getPublicIdentityStatus(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
 
   const dailyReportText = [
     "$BROKE Daily Wallet Report",
@@ -12481,13 +13316,16 @@ function ReportsPanel({
               src={SHARE_CARD_PUBLIC_ASSETS.daily}
               alt=""
             />
-            <div className="report-public-share-top">
-              <div>
-                <span>$BROKE DAILY REPORT</span>
-                <strong>{todayStatus}</strong>
-                <small>Wallet HP {summary.walletHp}/100</small>
+            <div className="report-public-share-top share-card-identity-top">
+              <div className="share-card-identity-line">
+                <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+                <div>
+                  <span>$BROKE DAILY REPORT</span>
+                  <strong>{todayStatus}</strong>
+                  <small>{publicIdentityName} · Wallet HP {summary.walletHp}/100</small>
+                </div>
               </div>
-              <img src={todayTopCategory ? getCategoryIcon(todayTopCategory.category) : A.walletMascot} alt="" />
+              <img className="share-card-signal-icon" src={todayTopCategory ? getCategoryIcon(todayTopCategory.category) : A.walletMascot} alt="" />
             </div>
 
             <div className="report-public-share-grid">
@@ -12571,13 +13409,16 @@ function ReportsPanel({
               src={SHARE_CARD_PUBLIC_ASSETS.weekly}
               alt=""
             />
-            <div className="report-public-share-top">
-              <div>
-                <span>$BROKE WEEKLY REPORT</span>
-                <strong>{weeklyStatus}</strong>
-                <small>Survival {identityStats.weeklySurvivalScore}/100</small>
+            <div className="report-public-share-top share-card-identity-top">
+              <div className="share-card-identity-line">
+                <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+                <div>
+                  <span>$BROKE WEEKLY REPORT</span>
+                  <strong>{weeklyStatus}</strong>
+                  <small>{publicIdentityName} · Survival {identityStats.weeklySurvivalScore}/100</small>
+                </div>
               </div>
-              <img src={identityStats.biggestLeakAmount > 0 ? getCategoryIcon(identityStats.biggestLeakCategory) : A.challengeTrophy} alt="" />
+              <img className="share-card-signal-icon" src={identityStats.biggestLeakAmount > 0 ? getCategoryIcon(identityStats.biggestLeakCategory) : A.challengeTrophy} alt="" />
             </div>
 
             <div className="report-public-share-grid">
@@ -12898,6 +13739,9 @@ function BiggestLeakChallengePanel({
     : progress.failed
       ? "The leak broke the limit. Reset and run it back."
       : "Keep tracking. The result card unlocks when this mission ends.";
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityStatus = getPublicIdentityStatus(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
 
   const shareText = mission
     ? [
@@ -13070,13 +13914,16 @@ function BiggestLeakChallengePanel({
                   alt=""
                 />
 
-                <div className="mission-public-share-top">
-                  <div>
-                    <span>$BROKE MISSION CARD</span>
-                    <strong>{resultTitle}</strong>
-                    <small>{progress.failed ? "Limit broken" : "Wallet HP protected"}</small>
+                <div className="mission-public-share-top share-card-identity-top">
+                  <div className="share-card-identity-line">
+                    <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+                    <div>
+                      <span>$BROKE MISSION CARD</span>
+                      <strong>{resultTitle}</strong>
+                      <small>{publicIdentityName} · {progress.failed ? "Limit broken" : "Wallet HP protected"}</small>
+                    </div>
                   </div>
-                  <img src={progress.completed ? A.challengeCompleted : A.challengeFailed} alt="" />
+                  <img className="share-card-signal-icon" src={progress.completed ? A.challengeCompleted : A.challengeFailed} alt="" />
                 </div>
 
                 <div className="mission-public-share-grid">
@@ -13835,6 +14682,10 @@ async function createShareImageFileFromElement(element: HTMLElement) {
   const html2canvasModule = await import("html2canvas");
   const html2canvas = html2canvasModule.default;
   const captureId = `share-capture-${Date.now()}`;
+  const scrollOffsetX = typeof window !== "undefined" ? window.scrollX : 0;
+  const scrollOffsetY = typeof window !== "undefined" ? window.scrollY : 0;
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : element.scrollWidth;
+  const viewportHeight = typeof window !== "undefined" ? window.innerHeight : element.scrollHeight;
 
   element.setAttribute("data-share-capture-id", captureId);
 
@@ -13848,8 +14699,10 @@ async function createShareImageFileFromElement(element: HTMLElement) {
       logging: false,
       imageTimeout: 15000,
       removeContainer: true,
-      scrollX: 0,
-      scrollY: 0,
+      scrollX: -scrollOffsetX,
+      scrollY: -scrollOffsetY,
+      windowWidth: Math.max(viewportWidth, element.scrollWidth + 80),
+      windowHeight: Math.max(viewportHeight, element.scrollHeight + 120),
       onclone: (clonedDocument) => {
         const clonedElement = clonedDocument.querySelector(
           `[data-share-capture-id="${captureId}"]`
@@ -14926,6 +15779,8 @@ function WeeklyReviewPanel({
 }) {
   const spentUsdNote = usdReferenceNote(review.totalSpent, settings.currency, settings, exchangeRates);
   const leaksUsdNote = usdReferenceNote(review.totalLeaks, settings.currency, settings, exchangeRates);
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
 
   return (
     <details className="weekly-review-details">
@@ -15025,12 +15880,16 @@ function WeeklyReviewPanel({
             }}
           />
 
-          <div className="weekly-share-top">
-            <div>
-              <span>$BROKE WEEKLY REVIEW</span>
-              <strong>This Week in $BROKE</strong>
+          <div className="weekly-share-top share-card-identity-top">
+            <div className="share-card-identity-line">
+              <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+              <div>
+                <span>$BROKE WEEKLY REVIEW</span>
+                <strong>This Week in $BROKE</strong>
+                <small>{publicIdentityName}</small>
+              </div>
             </div>
-            <img src={A.chartFrog} alt="" />
+            <img className="share-card-signal-icon" src={A.chartFrog} alt="" />
           </div>
 
           <div className="weekly-share-grid">
@@ -15096,6 +15955,8 @@ function MonthlyLeakHistoryPanel({
 }) {
   const totalSpentUsdNote = usdReferenceNote(archive.totalSpent, settings.currency, settings, exchangeRates);
   const totalLeaksUsdNote = usdReferenceNote(archive.totalLeaks, settings.currency, settings, exchangeRates);
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
 
   return (
     <section className="monthly-leak-history">
@@ -15149,12 +16010,16 @@ function MonthlyLeakHistoryPanel({
           }}
         />
 
-        <div className="monthly-share-top">
-          <div>
-            <span>$BROKE MONTHLY HISTORY</span>
-            <strong>{archive.monthLabel}</strong>
+        <div className="monthly-share-top share-card-identity-top">
+          <div className="share-card-identity-line">
+            <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+            <div>
+              <span>$BROKE MONTHLY HISTORY</span>
+              <strong>{archive.monthLabel}</strong>
+              <small>{publicIdentityName}</small>
+            </div>
           </div>
-          <img src={A.chartFrog} alt="" />
+          <img className="share-card-signal-icon" src={A.chartFrog} alt="" />
         </div>
 
         <div className="monthly-share-grid">
@@ -16929,6 +17794,22 @@ function growthStrokeRoundRect(
   ctx.stroke();
 }
 
+function growthDrawCircularImage(
+  ctx: CanvasRenderingContext2D,
+  image: HTMLImageElement,
+  centerX: number,
+  centerY: number,
+  radius: number
+) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+  ctx.drawImage(image, centerX - radius, centerY - radius, radius * 2, radius * 2);
+  ctx.restore();
+}
+
 
 function loadShareCardImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -16953,6 +17834,9 @@ async function buildGrowthShareCardBlob(
   const goalUsdNote = context
     ? usdReferenceNote(context.activeGoalTarget, settings.currency, settings, rates)
     : "";
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityStatus = getPublicIdentityStatus(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
   const canvas = document.createElement("canvas");
   canvas.width = 1080;
   canvas.height = 1350;
@@ -17020,6 +17904,26 @@ async function buildGrowthShareCardBlob(
   ctx.fillStyle = muted;
   ctx.font = "500 29px Arial, sans-serif";
   ctx.fillText("Monthly leak plan into a personal saving goal", 68, 207);
+
+  try {
+    const identityAvatar = await loadShareCardImage(publicIdentityAvatar);
+    growthFillRoundRect(ctx, 770, 58, 248, 110, 32, "rgba(9,20,14,0.76)");
+    growthStrokeRoundRect(ctx, 770, 58, 248, 110, 32, "rgba(183,255,25,0.22)", 2);
+    growthDrawCircularImage(ctx, identityAvatar, 828, 113, 38);
+    ctx.strokeStyle = "rgba(183,255,25,0.55)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(828, 113, 41, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = text;
+    ctx.font = "900 25px Arial, sans-serif";
+    ctx.fillText(publicIdentityName.slice(0, 13), 882, 105);
+    ctx.fillStyle = muted;
+    ctx.font = "800 18px Arial, sans-serif";
+    ctx.fillText(publicIdentityStatus.slice(0, 18), 882, 134);
+  } catch {
+    // Avatar is optional; the share card still renders without it.
+  }
 
   growthFillRoundRect(ctx, 62, 255, 956, 190, 34, panel);
   growthStrokeRoundRect(ctx, 62, 255, 956, 190, 34, "rgba(183,255,25,0.22)", 2);
@@ -17174,6 +18078,7 @@ const SHARE_CARD_PUBLIC_ASSETS = {
   growth: "/share-card-premium-background.png",
   mission: "/share-card-premium-background.png",
   leaderboard: "/share-card-premium-background.png",
+  profile: "/share-card-premium-background.png",
   background: "/share-card-premium-background.png",
 };
 
@@ -18562,6 +19467,7 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
         claimed: Boolean(input.dailyRoutineReward.claimed),
       }
     : undefined;
+  const activeStreakProof = normalizeActiveStreakProofState(input?.activeStreakProof);
 
   return {
     growthSimulations: Array.isArray(input?.growthSimulations)
@@ -18576,6 +19482,7 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
       : [],
     ...(routineActions?.date === today ? { dailyRoutineActions: routineActions } : {}),
     ...(routineReward?.date === today ? { dailyRoutineReward: routineReward } : {}),
+    activeStreakProof,
     localLeakMission: input?.localLeakMission || null,
     updatedAt: input?.updatedAt,
   };
@@ -18591,6 +19498,7 @@ function readLocalCloudAppState(): CloudAppState {
     homeHabitLeaks: readHomeHabitLeaks(),
     dailyRoutineActions: readDailyRoutineActions(today),
     dailyRoutineReward: readDailyRoutineReward(today),
+    activeStreakProof: readActiveStreakProofState(),
     localLeakMission: readLocalLeakMission(),
     updatedAt: new Date().toISOString(),
   });
@@ -18606,6 +19514,7 @@ function writeLocalCloudAppState(input: Partial<CloudAppState>) {
   writeHomeHabitLeaks(appState.homeHabitLeaks);
   if (appState.dailyRoutineActions) writeDailyRoutineActions(appState.dailyRoutineActions, false);
   if (appState.dailyRoutineReward) writeDailyRoutineReward(appState.dailyRoutineReward.date, appState.dailyRoutineReward.claimed, false);
+  if (appState.activeStreakProof) writeActiveStreakProofState(appState.activeStreakProof, false);
   if ("localLeakMission" in appState) writeLocalLeakMission(appState.localLeakMission || null, false);
   window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
 }
@@ -19093,6 +20002,8 @@ function SurvivalModePanel({
     : usdReferenceNote(forecast.currentDailyPace, settings.currency, settings, exchangeRates);
   const totalSavingsUsdNote = usdReferenceNote(totalMonthlySavings, settings.currency, settings, exchangeRates);
   const adjustedPaceUsdNote = usdReferenceNote(adjustedDailyPace, settings.currency, settings, exchangeRates);
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
   const statusClass =
     forecast.status === "surviving"
       ? "surviving"
@@ -19188,12 +20099,17 @@ function SurvivalModePanel({
             event.currentTarget.src = SHARE_CARD_PUBLIC_ASSETS.background;
           }}
         />
-        <div className="survival-share-top">
-          <div>
-            <span>$BROKE SURVIVAL MODE</span>
-            <strong>Can I survive until payday?</strong>
+        <div className="survival-share-top share-card-identity-top">
+          <div className="share-card-identity-line">
+            <img className="share-card-avatar" src={publicIdentityAvatar} alt="" />
+            <div>
+              <span>$BROKE SURVIVAL MODE</span>
+              <strong>Can I survive until payday?</strong>
+              <small>{publicIdentityName}</small>
+            </div>
           </div>
           <img
+            className="share-card-signal-icon"
             src={PREMIUM_VISUAL_PACK.survivalMascot}
             alt=""
             onError={(event) => {
@@ -19396,9 +20312,13 @@ function WhatIfScreen({
   shareInitData,
   onToggleLeaderboard,
   onStartChallenge,
+  activeProofStatus,
+  onMarkCleanDay,
+  onCompleteOneFix,
   onBack,
   onHelp,
   onOpenAdd,
+  onOpenChart,
   onAppStateChange,
 }: {
   settings: Settings;
@@ -19414,9 +20334,13 @@ function WhatIfScreen({
   shareInitData: string;
   onToggleLeaderboard: (nextValue: boolean) => void;
   onStartChallenge: (challengeId: string) => void;
+  activeProofStatus: ActiveStreakProofStatus;
+  onMarkCleanDay: () => void;
+  onCompleteOneFix: () => void;
   onBack: () => void;
   onHelp: () => void;
   onOpenAdd: () => void;
+  onOpenChart: () => void;
   onAppStateChange?: () => void;
 }) {
   const [reductions, setReductions] = useState<Record<string, number>>({});
@@ -19433,6 +20357,7 @@ function WhatIfScreen({
   );
   const debtRadarRateState = useExchangeRates(settings, debtRadarCurrencySources);
   const survivalCardRef = useRef<HTMLDivElement | null>(null);
+  const challengeSectionRef = useRef<HTMLDetailsElement | null>(null);
 
   const categorySummaries = useMemo(() => {
     return getCategoryLeakSummaries(expenses).slice(0, 6);
@@ -19525,6 +20450,53 @@ function WhatIfScreen({
   const survivalCurrentPaceUsdNote = settings.privacy.publicProofMode
     ? ""
     : usdReferenceNote(survivalForecast.currentDailyPace, settings.currency, settings, debtRadarRateState.rates);
+
+  const walletVerified = Boolean(settings.wallet.isVerified);
+  const holderHasBalance = settings.wallet.brokeBalance > 0;
+  const activeStreakReady = activeProofStatus.eligible;
+  const rewardFoundationReady = walletVerified && holderHasBalance && activeStreakReady;
+  const holderRewardWeight =
+    settings.wallet.holderTier.id === "leviathan"
+      ? "Max weight"
+      : settings.wallet.holderTier.id === "whale"
+        ? "Elite weight"
+        : settings.wallet.holderTier.id === "shark"
+          ? "High weight"
+          : settings.wallet.holderTier.id === "strong"
+            ? "Strong weight"
+            : settings.wallet.holderTier.id === "frog"
+              ? "Base+ weight"
+              : holderHasBalance
+                ? "Base weight"
+                : "No weight yet";
+  const rewardChecklist = [
+    {
+      label: "Verified wallet",
+      detail: walletVerified ? "Ownership proof active" : "Verify ownership in Profile",
+      done: walletVerified,
+    },
+    {
+      label: "$BROKE balance",
+      detail: holderHasBalance ? `${formatTokenAmount(settings.wallet.brokeBalance)} BROKE` : "Hold $BROKE in verified wallet",
+      done: holderHasBalance,
+    },
+    {
+      label: "7+ day active streak",
+      detail: activeStreakReady ? `${activeProofStatus.currentStreak}d live streak` : `${activeProofStatus.progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} days built`,
+      done: activeStreakReady,
+    },
+    {
+      label: "Reward epoch",
+      detail: "Locked until Creator Fee pool opens",
+      done: false,
+    },
+  ];
+
+  function openChallengeArea() {
+    triggerHaptic("light");
+    challengeSectionRef.current?.setAttribute("open", "true");
+    challengeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   const survivalShareText = [
     "$BROKE Survival Mode",
@@ -19726,45 +20698,105 @@ function WhatIfScreen({
   }
 
   return (
-    <div className="screen">
-      <Header title="Save" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
+    <div className="screen rewards-screen">
+      <Header title="Rewards" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
-      <section className="whatif-hero">
-        <img src={A.whatIfFrog} alt="" />
-        <div>
-          <h2>Cut one leak.</h2>
-          <h2>Survive better.</h2>
+      <section className={`rewards-hub-hero ${rewardFoundationReady ? "ready" : "building"}`}>
+        <div className="rewards-hub-hero-copy">
+          <span>Rewards Hub</span>
+          <h2>{rewardFoundationReady ? "Active holder foundation ready." : "Build active holder proof."}</h2>
           <p>
-            {hasRealData
-              ? "Based on your tracked expenses this month."
-              : "Demo mode. Add expenses to get real scenarios."}
+            Use the app daily, protect the 7+ day streak, verify wallet ownership, and prepare for future Holder Rewards without token transfers yet.
           </p>
+          <div className="rewards-hub-actions">
+            <button type="button" onClick={onOpenAdd}>Track Leak</button>
+            <button type="button" onClick={onOpenChart}>Read Chart</button>
+          </div>
+        </div>
+        <div className="rewards-hub-hero-badge">
+          <strong>{activeProofStatus.currentStreak}d</strong>
+          <small>{activeProofStatus.eligible ? "eligible streak" : "active streak"}</small>
         </div>
       </section>
 
-      <section className="whatif-total-card">
-        <span>Potential leak cut</span>
-        <strong>{money(totalMonthlySavings, settings.currency)}</strong>
-        <small>
-          /month · {money(totalMonthlySavings * 12, settings.currency)}/year
-        </small>
-      </section>
-
-      <SurvivalModePanel
-        settings={settings}
-        forecast={survivalForecast}
-        exchangeRates={debtRadarRateState.rates}
-        adjustedDailyPace={survivalAdjustedPace}
-        daysSaved={survivalDaysSaved}
-        totalMonthlySavings={totalMonthlySavings}
-        nextPaydayDate={settings.survival.nextPaydayDate || survivalForecast.nextPaydayDate}
-        onPaydayDateChange={updateSurvivalPaydayDate}
-        shareCardRef={survivalCardRef}
-        sharing={survivalSharing}
-        onShare={shareSurvivalCard}
+      <ActiveStreakProofCard
+        status={activeProofStatus}
+        onTrackLeak={onOpenAdd}
+        onMarkCleanDay={onMarkCleanDay}
+        onCompleteOneFix={onCompleteOneFix}
+        onOpenChallenge={openChallengeArea}
       />
 
-      <details className="clean-details debt-radar-details" open>
+      <section className="rewards-hub-grid">
+        <article className={rewardFoundationReady ? "ready" : "building"}>
+          <span>Reward foundation</span>
+          <strong>{rewardFoundationReady ? "Ready" : "Building"}</strong>
+          <small>Verified wallet + $BROKE balance + live 7+ day streak.</small>
+        </article>
+        <article>
+          <span>Holder tier</span>
+          <strong>{settings.wallet.holderTier.label}</strong>
+          <small>{holderRewardWeight}</small>
+        </article>
+        <article>
+          <span>Today proof</span>
+          <strong>{activeProofStatus.activeToday ? "Protected" : activeProofStatus.recoveryMode ? "Recovery" : "Needs action"}</strong>
+          <small>{activeProofStatus.todayActions.length} proof action{activeProofStatus.todayActions.length === 1 ? "" : "s"} logged.</small>
+        </article>
+        <article>
+          <span>Recovery</span>
+          <strong>{activeProofStatus.recoveryAvailable ? "Available" : activeProofStatus.recoveryUsedRecently ? "Used" : "Ready"}</strong>
+          <small>1 recovery per 7 days · 2 proof actions required.</small>
+        </article>
+      </section>
+
+      <section className="future-reward-pool-card">
+        <div>
+          <span>Creator Fee Reward Pool</span>
+          <strong>Coming later after volume trigger</strong>
+          <p>
+            Planned rule: once $BROKE volume passes $50K / 24h, up to 50% of Creator Fee may be allocated to verified active holders. Final share will depend on verified balance tier and snapshot rules.
+          </p>
+        </div>
+        <b>Locked</b>
+      </section>
+
+      <section className="reward-eligibility-checklist">
+        {rewardChecklist.map((item) => (
+          <article key={item.label} className={item.done ? "done" : "pending"}>
+            <b>{item.done ? "✓" : "—"}</b>
+            <div>
+              <strong>{item.label}</strong>
+              <small>{item.detail}</small>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <details className="clean-details rewards-tool-details rewards-survival-details">
+        <summary>
+          <div>
+            <span>Survival Mode</span>
+            <small>Check pressure before payday and export a safe Survival card.</small>
+          </div>
+          <b>{survivalForecast.statusLabel}</b>
+        </summary>
+        <SurvivalModePanel
+          settings={settings}
+          forecast={survivalForecast}
+          exchangeRates={debtRadarRateState.rates}
+          adjustedDailyPace={survivalAdjustedPace}
+          daysSaved={survivalDaysSaved}
+          totalMonthlySavings={totalMonthlySavings}
+          nextPaydayDate={settings.survival.nextPaydayDate || survivalForecast.nextPaydayDate}
+          onPaydayDateChange={updateSurvivalPaydayDate}
+          shareCardRef={survivalCardRef}
+          sharing={survivalSharing}
+          onShare={shareSurvivalCard}
+        />
+      </details>
+
+      <details className="clean-details rewards-tool-details debt-radar-details">
         <summary>
           <div>
             <span>Debt & Bills Radar</span>
@@ -19785,7 +20817,7 @@ function WhatIfScreen({
         />
       </details>
 
-      <details className="clean-details home-habit-leaks-details" open>
+      <details className="clean-details rewards-tool-details home-habit-leaks-details">
         <summary>
           <div>
             <span>Home Habit Leaks</span>
@@ -19806,11 +20838,11 @@ function WhatIfScreen({
           <div className="v58-empty-head">
             <img src={A.whatIfFrog} alt="" />
             <div>
-              <span>Save is in demo mode</span>
-              <strong>No real scenarios yet.</strong>
+              <span>Rewards tools are in demo mode</span>
+              <strong>No real leak-cut scenarios yet.</strong>
               <p>
-                Add expenses first. Then $BROKE will show what you could save by
-                reducing your real leaks.
+                Add expenses first. Then $BROKE will connect Rewards, streak proof,
+                survival pressure, and real leak cuts.
               </p>
             </div>
           </div>
@@ -19830,7 +20862,7 @@ function WhatIfScreen({
         onOpenAdd={onOpenAdd}
       />
 
-      <details className="clean-details" open={Boolean(activeChallenge || challengeProgress)}>
+      <details ref={challengeSectionRef} className="clean-details rewards-tool-details" open={Boolean(activeChallenge || challengeProgress)}>
         <summary>
           <div>
             <span>Challenges</span>
@@ -19848,7 +20880,7 @@ function WhatIfScreen({
         />
       </details>
 
-      <details className="clean-details">
+      <details className="clean-details rewards-tool-details">
         <summary>
           <div>
             <span>Public Leaderboard</span>
@@ -19863,7 +20895,7 @@ function WhatIfScreen({
         />
       </details>
 
-      <details className="clean-details" open>
+      <details className="clean-details rewards-tool-details">
         <summary>
           <div>
             <span>Leak Cut Scenarios</span>
@@ -19957,6 +20989,7 @@ function SettingsScreen({
   cloudStatus,
   cloudError,
   streak,
+  activeProofStatus,
   badges,
   leaderboard,
   leaderboardLoading,
@@ -19981,6 +21014,7 @@ function SettingsScreen({
   cloudStatus: CloudStatus;
   cloudError: string;
   streak: Streak;
+  activeProofStatus: ActiveStreakProofStatus;
   badges: BadgeItem[];
   leaderboard: LeaderboardState | null;
   leaderboardLoading: boolean;
@@ -20994,6 +22028,8 @@ function SettingsScreen({
           </article>
         </div>
 
+        <ActiveHolderEligibilityStrip status={activeProofStatus} wallet={settings.wallet} />
+
         <div className="profile-public-preview profile-share-identity-preview">
           <img className="profile-public-preview-avatar" src={selectedProfileAvatarImage} alt="Public identity avatar" />
           <div>
@@ -21009,15 +22045,16 @@ function SettingsScreen({
           <span><b>Hides</b> income, real balance, payday and private debt details by default.</span>
         </div>
 
-        <section className={`wallet-balance-foundation-card holder-tier-${settings.wallet.holderTier.id}`}>
-          <div className="wallet-balance-foundation-head">
+        <details className={`wallet-balance-foundation-card profile-compact-details holder-tier-${settings.wallet.holderTier.id}`}>
+          <summary className="profile-compact-summary wallet-compact-summary">
             <div>
               <span>Wallet & $BROKE balance</span>
               <strong>{settings.wallet.walletAddress ? settings.wallet.holderTier.label : "Read-only holder check"}</strong>
-              <small>No seed phrase. No transactions. Paste address only.</small>
+              <small>{settings.wallet.isVerified ? "Verified wallet · rewards-ready proof" : settings.wallet.walletAddress ? "Watched wallet · tap to manage verification" : "Paste wallet · verify ownership later"}</small>
             </div>
-            <b>{settings.wallet.walletAddress ? formatHolderPercent(settings.wallet.percentOfSupply) : "Not linked"}</b>
-          </div>
+            <b>{settings.wallet.walletAddress ? formatHolderPercent(settings.wallet.percentOfSupply) : "Setup"}</b>
+          </summary>
+          <div className="profile-compact-body wallet-compact-body">
 
           <div
             className={`wallet-address-control ${
@@ -21267,17 +22304,19 @@ function SettingsScreen({
           </div>
 
           {walletMessage && <p className="wallet-balance-message">{walletMessage}</p>}
-        </section>
+          </div>
+        </details>
 
-        <section className="profile-share-studio-card">
-          <div className="profile-share-studio-head">
+        <details className="profile-share-studio-card profile-compact-details">
+          <summary className="profile-compact-summary share-studio-compact-summary">
             <div>
               <span>Share Studio</span>
-              <strong>Choose what your public card shows.</strong>
-              <small>Wallet HP + verified holder balance unlock more public display slots.</small>
+              <strong>Public card setup</strong>
+              <small>{visibleShareProfileItems.length}/{shareSlotLimit} selected · tap to edit public items</small>
             </div>
             <b>{visibleShareProfileItems.length}/{shareSlotLimit} slots</b>
-          </div>
+          </summary>
+          <div className="profile-compact-body share-studio-compact-body">
 
           <div className="profile-share-slot-coach">
             <div>
@@ -21359,11 +22398,12 @@ function SettingsScreen({
               />
             </div>
           )}
-        </section>
+          </div>
+        </details>
 
         <div className="profile-cabinet-note compact-profile-note">
-          <span>Settings below.</span>
-          <small>Money, currency, privacy, sync and data tools stayed.</small>
+          <span>More settings below</span>
+          <small>Collapsed by default to keep Profile easier to scan.</small>
         </div>
       </section>
 
