@@ -819,7 +819,7 @@ type DailyRoutineRewardState = {
   claimed: boolean;
 };
 
-type ActiveStreakProofAction = "track_leak" | "clean_day" | "one_fix" | "daily_challenge";
+type ActiveStreakProofAction = "track_leak" | "clean_day" | "one_fix" | "daily_challenge" | "daily_routine";
 
 type ActiveStreakProofLog = {
   date: string;
@@ -1799,8 +1799,8 @@ const ruText: Record<string, string> = {
   "The wallet is under pressure. Stop the bleeding.": "Кошелёк под давлением. Останови слив.",
   "The leak was already there. Now it is visible.": "Утечка уже была. Теперь она видна.",
   "Daily Routine": "Ежедневная рутина",
-  "7 real tasks per day.": "7 реальных заданий в день.",
-  "Complete the routine through real actions. Finish 7/7 to unlock the daily XP reward.": "Выполняй рутину реальными действиями. Закрой 7/7, чтобы получить дневной XP.",
+  "7 real actions protect the streak.": "7 реальных действий защищают страйк.",
+  "Complete the routine through real actions. Finish 7/7 to protect today’s Active Streak.": "Выполняй рутину реальными действиями. Закрой 7/7, чтобы защитить сегодняшний Active Streak.",
   "Open the app": "Открыть приложение",
   "Start the day with a wallet check.": "Начни день с проверки кошелька.",
   "Track 1 expense": "Записать 1 расход",
@@ -1811,20 +1811,20 @@ const ruText: Record<string, string> = {
   "Add a note to one expense so the habit is visible.": "Добавь заметку к одному расходу, чтобы привычка стала видимой.",
   "Check $BROKE Chart": "Проверить $BROKE Chart",
   "Open the Chart tab and look at today’s damage.": "Открой график и посмотри сегодняшний урон.",
-  "Check Rewards plan": "Проверить план экономии",
-  "Open Rewards and review one leak-cut scenario.": "Открой Экономию и проверь один сценарий What If.",
+  "Check Rewards plan": "Проверить Rewards plan",
+  "Open Rewards and review one leak-cut scenario.": "Открой Rewards и проверь один сценарий сокращения утечки.",
   "Share public proof": "Поделиться публичным прогрессом",
   "Share or copy a safe progress card. No private money data.": "Поделись или скопируй безопасную карточку прогресса. Без личных финансовых данных.",
   "Discipline rule:": "Правило дисциплины:",
   "you cannot tap tasks complete. Complete the action, then the checkmark appears.": "нельзя просто нажать и закрыть задание. Сделай действие — тогда появится галочка.",
-  "Daily XP unlocked": "Дневной XP открыт",
-  "+50 XP claimed": "+50 XP получено",
-  "XP claimed": "XP получен",
+  "Daily Routine proof ready": "Daily Routine proof готов",
+  "Active Streak protected": "Active Streak защищён",
+  "Streak protected": "Страйк защищён",
   "7/7 complete": "7/7 выполнено",
-  "7/7 real tasks can reward daily XP once per day.": "7/7 реальных заданий дают дневной XP один раз в день.",
-  "Connect Telegram to claim routine XP.": "Подключи Telegram, чтобы получить XP за рутину.",
+  "Daily Routine now counts as Active Streak proof. No XP claim needed.": "Daily Routine теперь засчитывается как proof для Active Streak. XP claim не нужен.",
+  "No Telegram claim needed for routine streak proof.": "Telegram claim не нужен для routine streak proof.",
   "Daily routine complete": "Ежедневная рутина выполнена",
-  "XP already claimed or daily cap reached.": "XP уже получен или достигнут дневной лимит.",
+  "Daily Routine proof already saved.": "Daily Routine proof уже сохранён.",
   "Share Result": "Поделиться результатом",
   "Telegram / X ready": "Готово для Telegram / X",
   "Public share card": "Публичная карточка",
@@ -4684,6 +4684,7 @@ const activeStreakProofActions: ActiveStreakProofAction[] = [
   "clean_day",
   "one_fix",
   "daily_challenge",
+  "daily_routine",
 ];
 
 function getPreviousDayKey(dateKey: string, daysBack = 1) {
@@ -4970,14 +4971,16 @@ function activeStreakProofActionLabel(action: ActiveStreakProofAction) {
   if (action === "track_leak") return "Tracked leak";
   if (action === "clean_day") return "Clean day";
   if (action === "one_fix") return "One Fix";
-  return "Daily challenge";
+  if (action === "daily_challenge") return "Daily challenge";
+  return "Daily Routine";
 }
 
 function activeStreakProofActionShortLabel(action: ActiveStreakProofAction) {
   if (action === "track_leak") return "Track Leak";
   if (action === "clean_day") return "Clean Day";
   if (action === "one_fix") return "One Fix";
-  return "Daily Challenge";
+  if (action === "daily_challenge") return "Daily Challenge";
+  return "Daily Routine";
 }
 
 function getActiveStreakRewardReadinessLabel(status: ActiveStreakProofStatus, settings: Settings) {
@@ -9528,33 +9531,17 @@ export default function Home() {
     setActiveTab("chart");
   }
 
-  async function claimDailyRoutineReward() {
+  async function completeDailyRoutineStreakProof() {
     const today = dayKey(new Date());
-    const reward = readDailyRoutineReward(today);
+    const currentStatus = buildActiveStreakProofStatus(readActiveStreakProofState());
+    const alreadyLogged = currentStatus.todayActions.includes("daily_routine");
 
-    if (reward.claimed) {
-      return true;
+    if (!alreadyLogged) {
+      recordActiveStreakProof("daily_routine");
     }
 
-    if (!cloudAuthReady) {
-      showToast("Daily routine complete", "Connect Telegram to claim XP.", "info");
-      return false;
-    }
-
-    const data = await trackXpAction("daily_streak", "Daily routine complete");
-
-    if (data?.ok) {
-      writeDailyRoutineReward(today, true);
-      recordActiveStreakProof("daily_challenge", false);
-
-      if (!data.xpAwarded || data.xpAwarded <= 0) {
-        showToast("Daily routine complete", "XP already claimed or daily cap reached.", "info");
-      }
-
-      return true;
-    }
-
-    return false;
+    writeDailyRoutineReward(today, true);
+    return true;
   }
 
   async function toggleLeaderboardPublic(nextValue: boolean) {
@@ -9659,7 +9646,7 @@ export default function Home() {
             cloudStatus={cloudStatus}
             cloudError={cloudError}
             cloudAuthReady={cloudAuthReady}
-            onRoutineComplete={claimDailyRoutineReward}
+            onRoutineComplete={completeDailyRoutineStreakProof}
             onBellClick={openHelp}
           />
         )}
@@ -10236,7 +10223,7 @@ function HelpGuideModal({
           body: [
             "Today’s Proof is the daily action area.",
             "On a normal day, one proof action protects the day.",
-            "Valid actions are Track Leak, Mark Clean Day, One Fix, or Daily Challenge.",
+            "Valid actions are Track Leak, Mark Clean Day, One Fix, Daily Challenge, or full Daily Routine completion.",
             "If today is already protected, you do not need to press random buttons just to farm activity.",
           ],
           icon: A.dailyCheck,
@@ -11714,15 +11701,14 @@ function DashboardScreen({
         <summary>
           <div>
             <span>Daily Routine</span>
-            <small>7 actions to keep your wallet alive today.</small>
+            <small>7 actions to protect today’s Active Streak.</small>
           </div>
-          <b>7 real tasks</b>
+          <b>Streak proof</b>
         </summary>
         <DailyRoutinePanel
           settings={settings}
           summary={summary}
           expenses={routineExpenses}
-          cloudReady={cloudAuthReady}
           onRoutineComplete={onRoutineComplete}
         />
       </details>
@@ -14301,7 +14287,6 @@ function DailyRoutinePanel({
   settings,
   summary,
   expenses,
-  cloudReady,
   onRoutineComplete,
 }: {
   settings: Settings;
@@ -14316,7 +14301,6 @@ function DailyRoutinePanel({
     streak: Streak;
   };
   expenses: Expense[];
-  cloudReady: boolean;
   onRoutineComplete: () => Promise<boolean>;
 }) {
   const today = dayKey(new Date());
@@ -14327,15 +14311,20 @@ function DailyRoutinePanel({
   const [rewardClaimed, setRewardClaimed] = useState(() =>
     readDailyRoutineReward(today).claimed
   );
+  const [routineProofLogged, setRoutineProofLogged] = useState(() =>
+    buildActiveStreakProofStatus(readActiveStreakProofState()).todayActions.includes("daily_routine")
+  );
 
   useEffect(() => {
     markDailyRoutineAction("openedApp");
     setActions(readDailyRoutineActions(today));
     setRewardClaimed(readDailyRoutineReward(today).claimed);
+    setRoutineProofLogged(buildActiveStreakProofStatus(readActiveStreakProofState()).todayActions.includes("daily_routine"));
 
     const interval = window.setInterval(() => {
       setActions(readDailyRoutineActions(today));
       setRewardClaimed(readDailyRoutineReward(today).claimed);
+      setRoutineProofLogged(buildActiveStreakProofStatus(readActiveStreakProofState()).todayActions.includes("daily_routine"));
     }, 800);
 
     return () => window.clearInterval(interval);
@@ -14408,13 +14397,13 @@ function DailyRoutinePanel({
   const routineComplete = completedCount === routineItems.length;
   const routineStatus =
     routineComplete
-      ? rewardClaimed
-        ? "XP claimed"
+      ? routineProofLogged || rewardClaimed
+        ? "Streak protected"
         : "7/7 complete"
       : `${completedCount}/7 done`;
 
   useEffect(() => {
-    if (!routineComplete || rewardClaimed || rewardRequestRef.current) return;
+    if (!routineComplete || routineProofLogged || rewardRequestRef.current) return;
 
     rewardRequestRef.current = true;
 
@@ -14422,13 +14411,14 @@ function DailyRoutinePanel({
       .then((claimed) => {
         if (claimed) {
           setRewardClaimed(true);
+          setRoutineProofLogged(true);
         }
       })
       .finally(() => {
         rewardRequestRef.current = false;
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routineComplete, rewardClaimed, today]);
+  }, [routineComplete, routineProofLogged, today]);
 
   return (
     <section className="daily-routine-card">
@@ -14439,10 +14429,10 @@ function DailyRoutinePanel({
 
       <div className="routine-hero">
         <div>
-          <strong>7 real tasks per day.</strong>
+          <strong>7 real actions protect the streak.</strong>
           <p>
-            Complete the routine through real actions. Finish 7/7 to unlock the
-            daily XP reward.
+            Complete the routine through real actions. Finish 7/7 to protect
+            today’s Active Streak.
           </p>
         </div>
 
@@ -14462,17 +14452,15 @@ function DailyRoutinePanel({
         <div>
           <strong>
             {routineComplete
-              ? rewardClaimed
-                ? "+50 XP claimed"
-                : "Daily XP unlocked"
+              ? routineProofLogged || rewardClaimed
+                ? "Active Streak protected"
+                : "Daily Routine proof ready"
               : `Complete ${routineItems.length - completedCount} more task${
                   routineItems.length - completedCount === 1 ? "" : "s"
                 }`}
           </strong>
           <span>
-            {cloudReady
-              ? "7/7 real tasks can reward daily XP once per day."
-              : "Connect Telegram to claim routine XP."}
+            Daily Routine now counts as Active Streak proof. No XP claim needed.
           </span>
         </div>
       </div>

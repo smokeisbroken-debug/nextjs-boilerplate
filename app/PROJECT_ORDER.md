@@ -1,10 +1,10 @@
-# PROJECT ORDER — v59.25.2
+# PROJECT ORDER — v59.25.3
 
-Current patch: **v59.25.2 — Formula & Rewards Consistency Audit**.
+Current patch: **v59.25.3 — Daily Routine Streak Proof Hotfix**.
 
 ## Scope
 
-This patch audits and aligns formulas/copy after the Rewards and Active Streak work. It is a consistency patch, not a new reward payout system.
+This is a streak-only hotfix. It changes the Daily Routine reward behavior from old XP-oriented wording/claiming to Active Streak proof protection.
 
 ## Files changed
 
@@ -19,16 +19,15 @@ This patch audits and aligns formulas/copy after the Rewards and Active Streak w
 
 ## Product rules preserved
 
-- A normal day is protected by at least one proof action.
+- A normal day is protected by at least one valid proof action.
 - Recovery still requires two proof actions during the recovery day.
 - 7+ Active Streak is live eligibility foundation, not a one-time unlock.
-- Future Holder Rewards are preparation-only in the app.
-- Balance-share wording remains: user eligible BROKE / total eligible BROKE.
+- Daily Routine now counts as a valid proof action after all 7 real tasks are completed.
+- Future Holder Rewards remain preparation-only in the app.
 
-## Main audit fixes
+## Main fixes
 
-1. Home/Wallet Snapshot chart balances now line up better with monthly Real Balance.
-2. Client wallet totals now flow through one shared visible summary helper.
-3. Server badge/leaderboard wallet formulas now match client income/fixed-cost/leak weighting rules.
-4. Rewards `Ready` state now uses the planned 100K+ verified holder requirement consistently.
-5. Watch-only balances no longer appear as verified holder proof in the Active Streak share output.
+1. Daily Routine 7/7 completion records `daily_routine` in Active Streak proof logs.
+2. Routine proof does not require Telegram cloud XP claim.
+3. Old Daily Routine XP labels were removed from the visible routine card.
+4. Cloud/server proof normalization accepts `daily_routine` so the proof survives sync.

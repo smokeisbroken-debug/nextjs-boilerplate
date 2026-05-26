@@ -180,7 +180,7 @@ type DailyRoutineRewardState = {
   claimed: boolean;
 };
 
-type ActiveStreakProofAction = "track_leak" | "clean_day" | "one_fix" | "daily_challenge";
+type ActiveStreakProofAction = "track_leak" | "clean_day" | "one_fix" | "daily_challenge" | "daily_routine";
 
 type ActiveStreakProofLog = {
   date: string;
@@ -1429,6 +1429,7 @@ const activeStreakProofActions: ActiveStreakProofAction[] = [
   "clean_day",
   "one_fix",
   "daily_challenge",
+  "daily_routine",
 ];
 
 function normalizeActiveStreakProofAction(value: unknown): ActiveStreakProofAction | null {

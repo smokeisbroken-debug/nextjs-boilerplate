@@ -1,28 +1,25 @@
-# $BROKE Life Tracker — v59.25.2 Formula & Rewards Consistency Audit
+# $BROKE Life Tracker — v59.25.3 Daily Routine Streak Proof Hotfix
 
-Patch-only update on top of v59.25.1.
+Patch-only update on top of v59.25.2.
 
 ## What changed
 
-- Added a shared client-side wallet summary helper so Home, Wallet HP, Smart Insights, and other visible wallet figures use the same monthly totals.
-- Fixed weekly/day Wallet Snapshot chart balances so the selected day's `State after day` starts from the same month balance baseline as Home `Real Balance` instead of ignoring earlier current-month expenses.
-- Aligned server-side badge/leaderboard wallet formulas with the app UI:
-  - Weekly income is multiplied by `4.35`.
-  - Daily income is multiplied by `30`.
-  - Rent is counted only when `hasRent` is enabled.
-  - Data and education fixed costs are included.
-  - Maybe leaks count as `50%` pressure, Not needed counts as `100%`, Needed counts as `0%`.
-- Tightened Rewards holder readiness logic so `Ready` requires verified wallet + 100K+ verified $BROKE + live 7+ Active Streak.
-- Active Streak share card and share text no longer treat watch-only balances as verified holder tier proof.
-- Updated remaining visible old `Save` references in the button guide/routine copy to `Rewards` where the old Save tab has become the Rewards hub.
+- Daily Routine completion now protects the BROKE Active Streak directly.
+- Finishing the 7/7 Daily Routine tasks logs a new `daily_routine` Active Streak proof action.
+- Daily Routine no longer depends on the old daily XP claim flow for streak protection.
+- Removed visible XP reward wording from the Daily Routine card.
+- Updated Daily Routine copy so users understand the goal is now streak protection, not XP claiming.
+- Server-side Active Streak proof normalization now accepts the new `daily_routine` action, so cloud sync does not drop routine proof logs.
 
 ## Not changed
 
 - No Creator Fee distribution.
 - No payouts, reward epochs, staking, claims, or token transfers.
 - No Supabase migration.
-- No wallet verification backend flow changes.
-- No holder threshold enforcement on-chain.
+- No wallet backend changes.
+- No holder threshold enforcement.
+- No balance formula changes.
 - No avatar backend changes.
 - No Telegram webhook changes.
 - No share-card export changes.
+- No broader Rewards rule changes.
