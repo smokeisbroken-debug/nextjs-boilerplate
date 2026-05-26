@@ -25979,6 +25979,7 @@ body {
 }
 
 /* ===== V59.24.1 REWARDS COMPACT BALANCE POLISH ===== */
+/* V59.24.2 keeps the same visual system; wording-only balance-share hotfix lives in page/docs. */
 .rewards-screen {
   --reward-soft-bg: linear-gradient(145deg, rgba(8, 18, 16, 0.95), rgba(5, 9, 12, 0.97));
   --reward-soft-border: rgba(140, 255, 189, 0.14);

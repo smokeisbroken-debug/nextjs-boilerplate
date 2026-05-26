@@ -1,19 +1,19 @@
-# v59.24.1 — Rewards Compact Balance Polish
+# v59.24.2 — Rewards Balance-Share Wording Hotfix
 
-Goal: make Rewards easier to understand at first glance and reduce visual clutter while preserving all v59.24 functionality.
+Goal: correct the future Holder Rewards wording so balance-share distribution is clear and not confused with fixed tier weights or vague proportional wording.
 
 Scope:
 
-1. Add a simple June 1 Rewards preparation overview card at the top of Rewards.
-2. Show planned reward rules in a compact format:
+1. Update the June 1 Rewards preparation overview wording.
+2. Show planned reward rules with explicit balance-share logic:
    - up to 50% of Creator Fee may be allocated to a future pool;
    - planned minimum hold is 100,000 $BROKE;
    - wallet verification matters;
    - app activity matters;
    - live 7+ day streak matters;
-   - distribution is proportional between eligible holders.
-3. Collapse detailed Rewards blocks by default, similar to Profile.
-4. Balance Rewards colors and reduce over-bright neon fills.
+   - distribution is balance-share based: holder share = holder eligible $BROKE / total eligible $BROKE at snapshot time.
+3. Preserve collapsed Rewards blocks from v59.24.1.
+4. Preserve balanced Rewards colors from v59.24.1.
 5. Preserve the existing Rewards tools and proof actions.
 
 Non-goals:

@@ -12067,7 +12067,7 @@ function FutureRewardsExplainerCard() {
     "Verify wallet ownership in Profile.",
     "Hold at least 100,000 $BROKE in the verified wallet.",
     "Wait for a future Creator Fee reward epoch to open.",
-    "Reward share will be proportional between eligible holders.",
+    "Reward share is calculated from each eligible holder’s percentage of the eligible $BROKE pool.",
   ];
 
   return (
@@ -12123,7 +12123,7 @@ function RewardsLaunchOverviewCard({
           <span>Holder Rewards system</span>
           <strong>Activity will matter.</strong>
           <p>
-            We are preparing future Holder Rewards where up to 50% of the Creator Fee may be allocated to a rewards pool after the volume trigger. Holding helps, but app activity and wallet verification will matter too.
+            We are preparing future Holder Rewards where up to 50% of the Creator Fee may be allocated to a rewards pool after the volume trigger. The reward split is balance-share based: if eligible holders together hold 10 BROKE and one holder has 5, that holder represents 50% of the eligible pool. App activity and wallet verification will matter too.
           </p>
         </div>
         <aside>
@@ -12150,8 +12150,8 @@ function RewardsLaunchOverviewCard({
         </article>
         <article>
           <span>Distribution</span>
-          <strong>Proportional</strong>
-          <small>Between eligible holders.</small>
+          <strong>Balance share</strong>
+          <small>Your BROKE / eligible BROKE total.</small>
         </article>
       </div>
 
@@ -21121,20 +21121,9 @@ function WhatIfScreen({
   const holderMeetsFutureRewardMinimum = settings.wallet.brokeBalance >= FUTURE_HOLDER_REWARD_MIN_BALANCE;
   const activeStreakReady = activeProofStatus.eligible;
   const rewardFoundationReady = walletVerified && holderMeetsFutureRewardMinimum && activeStreakReady;
-  const holderRewardWeight =
-    settings.wallet.holderTier.id === "leviathan"
-      ? "Max weight"
-      : settings.wallet.holderTier.id === "whale"
-        ? "Elite weight"
-        : settings.wallet.holderTier.id === "shark"
-          ? "High weight"
-          : settings.wallet.holderTier.id === "strong"
-            ? "Strong weight"
-            : settings.wallet.holderTier.id === "frog"
-              ? "Base+ weight"
-              : holderHasBalance
-                ? "Base weight"
-                : "No weight yet";
+  const holderRewardWeight = holderHasBalance
+    ? "Share = your verified BROKE / total eligible BROKE"
+    : "No reward share yet";
   const rewardChecklist = [
     {
       label: "Verified wallet",
@@ -21421,7 +21410,7 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Future Holder Rewards</span>
-            <small>June 1 prep, 100K+ minimum hold, proportional rewards.</small>
+            <small>June 1 prep, 100K+ minimum hold, balance-share rewards.</small>
           </div>
           <b>{rewardFoundationReady ? "Ready" : "Prep"}</b>
         </summary>
@@ -21432,8 +21421,8 @@ function WhatIfScreen({
             <small>Verified wallet + 100K+ $BROKE + live 7+ day streak.</small>
           </article>
           <article>
-            <span>Holder tier</span>
-            <strong>{settings.wallet.holderTier.label}</strong>
+            <span>Reward share</span>
+            <strong>{holderHasBalance ? "Balance based" : "No balance"}</strong>
             <small>{holderRewardWeight}</small>
           </article>
           <article>
@@ -21455,7 +21444,7 @@ function WhatIfScreen({
             <span>Creator Fee Reward Pool</span>
             <strong>Coming later after volume trigger</strong>
             <p>
-              Planned rule: once $BROKE volume passes $50K / 24h, up to 50% of Creator Fee may be allocated to verified active holders. Minimum hold is planned at 100,000 $BROKE, and final distribution will be proportional between eligible holders.
+              Planned rule: once $BROKE volume passes $50K / 24h, up to 50% of Creator Fee may be allocated to verified active holders. Minimum hold is planned at 100,000 $BROKE, and final distribution will be based on each eligible holder’s percentage of the total eligible $BROKE balance at snapshot time.
             </p>
           </div>
           <b>Locked</b>
