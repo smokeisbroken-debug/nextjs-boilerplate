@@ -1,3 +1,26 @@
+# v59.24 — Rewards Notifications Prep Testing
+
+Recommended checks:
+
+1. Open Rewards.
+2. Confirm Rewards Status hero still renders.
+3. Confirm Daily Proof Checklist still works.
+4. Confirm Notifications Prep card appears below the checklist.
+5. Toggle Daily Proof / Recovery / 7-day reached buttons.
+6. Select 09:00, 18:00, and 21:00 reminder time chips.
+7. Click Copy reminder plan and confirm clipboard/toast behavior.
+8. Complete a proof action and confirm toast wording for today protected.
+9. Build a 7-day test state and confirm 7-day reached wording.
+10. Confirm no payout, claim, staking, transfer, or reward epoch UI became active.
+
+Verification commands:
+
+```bash
+npm run typecheck
+npm run lint:quiet
+NEXT_TELEMETRY_DISABLED=1 npm run build
+```
+
 # Testing — v59.23 — Rewards Proof Polish + Shareable Active Streak Card
 
 ## Automated checks completed

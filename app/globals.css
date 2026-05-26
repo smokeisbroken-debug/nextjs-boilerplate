@@ -25825,3 +25825,155 @@ body {
     min-height: 106px;
   }
 }
+
+/* ===== V59.24 REWARDS NOTIFICATIONS PREP ===== */
+.reward-notification-prep-card {
+  width: min(100%, 560px);
+  margin: 12px auto 0;
+  padding: 16px;
+  border: 1px solid rgba(119, 255, 174, 0.17);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(88, 255, 160, 0.13), transparent 38%),
+    linear-gradient(145deg, rgba(6, 19, 18, 0.96), rgba(5, 10, 13, 0.96));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.reward-notification-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reward-notification-head span,
+.reward-notification-state-grid span {
+  display: block;
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.reward-notification-head strong {
+  display: block;
+  margin-top: 5px;
+  color: #f8fff9;
+  font-size: 1.12rem;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.reward-notification-head small,
+.reward-notification-state-grid small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(226, 246, 234, 0.64);
+  font-size: 0.76rem;
+  line-height: 1.34;
+}
+
+.reward-notification-head > b {
+  flex: 0 0 auto;
+  min-width: 62px;
+  padding: 8px 10px;
+  border: 1px solid rgba(119, 255, 174, 0.22);
+  border-radius: 999px;
+  color: #baffd2;
+  background: rgba(119, 255, 174, 0.09);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.reward-notification-state-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.reward-notification-state-grid article {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.reward-notification-state-grid article.active {
+  border-color: rgba(118, 255, 174, 0.3);
+  background: rgba(78, 255, 143, 0.075);
+}
+
+.reward-notification-state-grid article.muted {
+  opacity: 0.72;
+}
+
+.reward-notification-state-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: #f8fff9;
+  font-size: 0.98rem;
+  line-height: 1.08;
+}
+
+.reward-notification-toggle-row,
+.reward-notification-time-row,
+.reward-notification-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.reward-notification-toggle-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.reward-notification-time-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.reward-notification-toggle-row button,
+.reward-notification-time-row button,
+.reward-notification-actions button {
+  min-height: 42px;
+  padding: 9px 11px;
+  border: 1px solid rgba(130, 255, 180, 0.16);
+  border-radius: 16px;
+  color: rgba(244, 255, 248, 0.9);
+  background: rgba(255, 255, 255, 0.052);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.12;
+}
+
+.reward-notification-toggle-row button.active,
+.reward-notification-time-row button.active {
+  color: #06130c;
+  border-color: rgba(175, 255, 206, 0.5);
+  background: linear-gradient(135deg, rgba(118, 255, 170, 0.98), rgba(48, 225, 111, 0.94));
+  box-shadow: 0 12px 26px rgba(53, 255, 135, 0.14);
+}
+
+.reward-notification-actions button {
+  min-height: 44px;
+  border-color: rgba(183, 255, 25, 0.22);
+  color: var(--neon);
+  background: rgba(183, 255, 25, 0.08);
+}
+
+@media (max-width: 520px) {
+  .reward-notification-head {
+    align-items: flex-start;
+  }
+
+  .reward-notification-state-grid,
+  .reward-notification-toggle-row {
+    grid-template-columns: 1fr;
+  }
+
+  .reward-notification-time-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

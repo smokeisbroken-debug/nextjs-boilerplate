@@ -1,3 +1,28 @@
+# v59.24 — Rewards Notifications Prep
+
+Goal: prepare Rewards for daily proof / recovery / milestone notifications while keeping the current product safe and non-transactional.
+
+Scope:
+
+1. Rewards Notification Prep card.
+2. Daily proof reminder intent.
+3. Recovery alert intent.
+4. 7-day milestone alert intent.
+5. Preferred reminder time chips.
+6. Copy reminder plan helper.
+7. App-state sync for reminder preferences through existing payload.
+
+Out of scope:
+
+- Creator Fee distribution.
+- Token payouts.
+- Reward epoch ledger.
+- Claims.
+- Staking.
+- Token transfers.
+- Supabase migration.
+- Telegram webhook changes.
+
 # Project Order — v59.23 — Rewards Proof Polish + Shareable Active Streak Card
 
 ## Current patch

@@ -1,3 +1,35 @@
+# v59.24 — Rewards Notifications Prep
+
+Patch-only update on top of v59.23. Adds notification-preparation UX for the Rewards tab without enabling external push, Telegram alerts, payouts, reward epochs, claims, staking, or token transfers.
+
+## Changes
+
+- Added a Rewards Notifications Prep card inside Rewards.
+- Users can set local/synced intent for Daily Proof reminders, Recovery alerts, and 7-day milestone alerts.
+- Added preferred reminder time chips: 09:00, 18:00, and 21:00.
+- Added Copy reminder plan for Telegram/push setup notes.
+- Reminder preferences are stored in the existing app-state payload; no Supabase migration is required.
+- Active proof feedback now distinguishes 7-day line reached, streak recovered, and today protected states.
+
+## Not changed
+
+- No Creator Fee distribution.
+- No payouts.
+- No reward epochs.
+- No staking, claims, or token transfers.
+- No Supabase migration.
+- No wallet verification backend changes.
+- No holder threshold changes.
+- No balance formula changes.
+- No avatar backend changes.
+- No Telegram webhook changes.
+
+## Verification
+
+- `npm run typecheck`
+- `npm run lint:quiet`
+- `NEXT_TELEMETRY_DISABLED=1 npm run build`
+
 # v59.23 — Rewards Proof Polish + Shareable Active Streak Card
 
 Patch focus: makes the Rewards tab clearer, more premium, and more useful as the future Holder Rewards command center. This is still a no-payout foundation: no Creator Fee distribution, reward epochs, claims, staking, or token transfers are active yet.

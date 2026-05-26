@@ -335,6 +335,7 @@ type CloudAppState = {
   dailyRoutineActions?: DailyRoutineActions;
   dailyRoutineReward?: DailyRoutineRewardState;
   activeStreakProof?: ActiveStreakProofState;
+  rewardNotificationPrefs?: RewardNotificationPrefs;
   localLeakMission?: LocalLeakMission | null;
   updatedAt?: string;
 };
@@ -847,6 +848,14 @@ type ActiveStreakProofStatus = {
   lastProofDate: string | null;
   label: string;
   detail: string;
+};
+
+type RewardNotificationPrefs = {
+  dailyProofReminder: boolean;
+  recoveryReminder: boolean;
+  milestoneReminder: boolean;
+  reminderTime: string;
+  updatedAt?: string;
 };
 
 type ProfileShareItemId =
@@ -4973,6 +4982,78 @@ function buildActiveStreakProofShareText(settings: Settings, status: ActiveStrea
     "Keep a 7+ day active streak to stay eligible for future Holder Rewards.",
     "Built in $BROKE Life Tracker.",
   ].filter(Boolean).join("\n");
+}
+
+const REWARD_NOTIFICATION_PREFS_KEY = "broke-reward-notification-prefs-v1";
+const REWARD_NOTIFICATION_TIME_OPTIONS = ["09:00", "18:00", "21:00"];
+
+function getDefaultRewardNotificationPrefs(): RewardNotificationPrefs {
+  return {
+    dailyProofReminder: true,
+    recoveryReminder: true,
+    milestoneReminder: true,
+    reminderTime: "18:00",
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeRewardNotificationPrefs(input?: Partial<RewardNotificationPrefs> | null): RewardNotificationPrefs {
+  const fallback = getDefaultRewardNotificationPrefs();
+  const reminderTime = typeof input?.reminderTime === "string" && /^\d{2}:\d{2}$/.test(input.reminderTime)
+    ? input.reminderTime
+    : fallback.reminderTime;
+
+  return {
+    dailyProofReminder: typeof input?.dailyProofReminder === "boolean" ? input.dailyProofReminder : fallback.dailyProofReminder,
+    recoveryReminder: typeof input?.recoveryReminder === "boolean" ? input.recoveryReminder : fallback.recoveryReminder,
+    milestoneReminder: typeof input?.milestoneReminder === "boolean" ? input.milestoneReminder : fallback.milestoneReminder,
+    reminderTime,
+    updatedAt: input?.updatedAt || new Date().toISOString(),
+  };
+}
+
+function readRewardNotificationPrefs(): RewardNotificationPrefs {
+  if (typeof window === "undefined") return getDefaultRewardNotificationPrefs();
+
+  try {
+    const raw = window.localStorage.getItem(REWARD_NOTIFICATION_PREFS_KEY);
+    return normalizeRewardNotificationPrefs(raw ? (JSON.parse(raw) as Partial<RewardNotificationPrefs>) : null);
+  } catch {
+    return getDefaultRewardNotificationPrefs();
+  }
+}
+
+function writeRewardNotificationPrefs(input: RewardNotificationPrefs, notifyChange = true) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      REWARD_NOTIFICATION_PREFS_KEY,
+      JSON.stringify(normalizeRewardNotificationPrefs(input))
+    );
+    if (notifyChange) window.dispatchEvent(new Event(LOCAL_APP_STATE_CHANGE_EVENT));
+  } catch {
+    // Notification preferences are local-first and must not block the app.
+  }
+}
+
+function buildRewardReminderCopy(status: ActiveStreakProofStatus, prefs: RewardNotificationPrefs) {
+  const todayLine = status.activeToday
+    ? "today is already protected"
+    : status.recoveryAvailable
+      ? `${status.recoveryActionsNeeded} recovery action${status.recoveryActionsNeeded === 1 ? "" : "s"} needed today`
+      : "one proof action needed today";
+
+  return [
+    "$BROKE Active Streak reminder",
+    `Preferred time: ${prefs.reminderTime}`,
+    `Status: ${todayLine}`,
+    prefs.dailyProofReminder ? "Daily proof reminder: on" : "Daily proof reminder: off",
+    prefs.recoveryReminder ? "Recovery alert: on" : "Recovery alert: off",
+    prefs.milestoneReminder ? "7-day milestone alert: on" : "7-day milestone alert: off",
+    "",
+    "Future Holder Rewards will use live 7+ day active streak proof.",
+  ].join("\n");
 }
 
 
@@ -9344,16 +9425,24 @@ export default function Home() {
     setActiveStreakProof(nextState);
 
     if (showFeedback) {
-      const title = nextStatus.eligible
-        ? "Active streak eligible"
-        : nextStatus.recoveryMissedDate && nextStatus.recoveryActionsNeeded === 0
+      const justReachedEligibility = !beforeStatus.eligible && nextStatus.eligible;
+      const recovered = Boolean(nextStatus.recoveryMissedDate && nextStatus.recoveryActionsNeeded === 0);
+      const title = justReachedEligibility
+        ? "7-day streak reached"
+        : recovered
           ? "Streak recovered"
-          : "Active proof saved";
-      const detail = nextStatus.recoveryMissedDate && nextStatus.recoveryActionsNeeded === 0 && !beforeStatus.eligible
-        ? "Recovery used. Your active streak stays alive."
-        : `${nextStatus.currentStreak}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} days toward Holder Reward eligibility.`;
+          : nextStatus.eligible
+            ? "Active streak protected"
+            : "Active proof saved";
+      const detail = justReachedEligibility
+        ? "Future Holder Reward eligibility foundation is live. Keep checking in daily."
+        : recovered
+          ? "Recovery used. Your active streak stays alive."
+          : nextStatus.activeToday
+            ? "Today is protected. Reminder state updated in Rewards."
+            : `${nextStatus.currentStreak}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} days toward Holder Reward eligibility.`;
 
-      showToast(title, detail, nextStatus.eligible ? "xp" : "info");
+      showToast(title, detail, nextStatus.eligible || justReachedEligibility ? "xp" : "info");
     }
 
     return nextState;
@@ -11852,6 +11941,119 @@ function DailyProofChecklist({
             </button>
           );
         })}
+      </div>
+    </section>
+  );
+}
+
+function RewardsNotificationPrepCard({
+  status,
+  prefs,
+  onChange,
+}: {
+  status: ActiveStreakProofStatus;
+  prefs: RewardNotificationPrefs;
+  onChange: Dispatch<SetStateAction<RewardNotificationPrefs>>;
+}) {
+  const [copied, setCopied] = useState(false);
+  const activePrefsCount = [prefs.dailyProofReminder, prefs.recoveryReminder, prefs.milestoneReminder].filter(Boolean).length;
+  const todayNotificationLine = status.activeToday
+    ? "No daily proof alert needed now. Today is protected."
+    : status.recoveryAvailable
+      ? `${status.recoveryActionsNeeded} recovery action${status.recoveryActionsNeeded === 1 ? "" : "s"} should trigger a recovery warning.`
+      : "Daily proof reminder should ask for one action today.";
+  const milestoneLine = status.eligible
+    ? "7-day line reached. Keep daily proof alive."
+    : `${Math.max(0, ACTIVE_STREAK_ELIGIBILITY_DAYS - status.progressDays)} day${ACTIVE_STREAK_ELIGIBILITY_DAYS - status.progressDays === 1 ? "" : "s"} left before the 7-day line.`;
+
+  function updatePrefs(patch: Partial<RewardNotificationPrefs>) {
+    onChange((current) => normalizeRewardNotificationPrefs({
+      ...current,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    }));
+    triggerHaptic("light");
+  }
+
+  async function copyReminderPlan() {
+    try {
+      await navigator.clipboard.writeText(buildRewardReminderCopy(status, prefs));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+      notifyApp("Reminder plan copied", "Use it for Telegram/push setup notes.");
+    } catch {
+      notifyApp("Copy unavailable", "Clipboard access was blocked by this browser.", "info");
+    }
+  }
+
+  return (
+    <section className="reward-notification-prep-card">
+      <div className="reward-notification-head">
+        <div>
+          <span>Notifications prep</span>
+          <strong>{activePrefsCount}/3 reminder signals armed</strong>
+          <small>Preparation only. No external push or Telegram alert is sent yet.</small>
+        </div>
+        <b>{prefs.reminderTime}</b>
+      </div>
+
+      <div className="reward-notification-state-grid">
+        <article className={prefs.dailyProofReminder ? "active" : "muted"}>
+          <span>Daily proof</span>
+          <strong>{prefs.dailyProofReminder ? "Armed" : "Off"}</strong>
+          <small>{todayNotificationLine}</small>
+        </article>
+        <article className={prefs.recoveryReminder ? "active" : "muted"}>
+          <span>Recovery alert</span>
+          <strong>{prefs.recoveryReminder ? "Armed" : "Off"}</strong>
+          <small>Warn when a missed day can still be restored.</small>
+        </article>
+        <article className={prefs.milestoneReminder ? "active" : "muted"}>
+          <span>7-day line</span>
+          <strong>{prefs.milestoneReminder ? "Armed" : "Off"}</strong>
+          <small>{milestoneLine}</small>
+        </article>
+      </div>
+
+      <div className="reward-notification-toggle-row">
+        <button
+          type="button"
+          className={prefs.dailyProofReminder ? "active" : ""}
+          onClick={() => updatePrefs({ dailyProofReminder: !prefs.dailyProofReminder })}
+        >
+          Daily proof
+        </button>
+        <button
+          type="button"
+          className={prefs.recoveryReminder ? "active" : ""}
+          onClick={() => updatePrefs({ recoveryReminder: !prefs.recoveryReminder })}
+        >
+          Recovery
+        </button>
+        <button
+          type="button"
+          className={prefs.milestoneReminder ? "active" : ""}
+          onClick={() => updatePrefs({ milestoneReminder: !prefs.milestoneReminder })}
+        >
+          7-day reached
+        </button>
+      </div>
+
+      <div className="reward-notification-time-row" aria-label="Preferred reminder time">
+        {REWARD_NOTIFICATION_TIME_OPTIONS.map((time) => (
+          <button
+            type="button"
+            key={time}
+            className={prefs.reminderTime === time ? "active" : ""}
+            onClick={() => updatePrefs({ reminderTime: time })}
+          >
+            {time}
+          </button>
+        ))}
+      </div>
+
+      <div className="reward-notification-actions">
+        <button type="button" onClick={copyReminderPlan}>{copied ? "Copied" : "Copy reminder plan"}</button>
       </div>
     </section>
   );
@@ -19832,6 +20034,7 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
       }
     : undefined;
   const activeStreakProof = normalizeActiveStreakProofState(input?.activeStreakProof);
+  const rewardNotificationPrefs = normalizeRewardNotificationPrefs(input?.rewardNotificationPrefs);
 
   return {
     growthSimulations: Array.isArray(input?.growthSimulations)
@@ -19847,6 +20050,7 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
     ...(routineActions?.date === today ? { dailyRoutineActions: routineActions } : {}),
     ...(routineReward?.date === today ? { dailyRoutineReward: routineReward } : {}),
     activeStreakProof,
+    rewardNotificationPrefs,
     localLeakMission: input?.localLeakMission || null,
     updatedAt: input?.updatedAt,
   };
@@ -19863,6 +20067,7 @@ function readLocalCloudAppState(): CloudAppState {
     dailyRoutineActions: readDailyRoutineActions(today),
     dailyRoutineReward: readDailyRoutineReward(today),
     activeStreakProof: readActiveStreakProofState(),
+    rewardNotificationPrefs: readRewardNotificationPrefs(),
     localLeakMission: readLocalLeakMission(),
     updatedAt: new Date().toISOString(),
   });
@@ -19879,6 +20084,7 @@ function writeLocalCloudAppState(input: Partial<CloudAppState>) {
   if (appState.dailyRoutineActions) writeDailyRoutineActions(appState.dailyRoutineActions, false);
   if (appState.dailyRoutineReward) writeDailyRoutineReward(appState.dailyRoutineReward.date, appState.dailyRoutineReward.claimed, false);
   if (appState.activeStreakProof) writeActiveStreakProofState(appState.activeStreakProof, false);
+  if (appState.rewardNotificationPrefs) writeRewardNotificationPrefs(appState.rewardNotificationPrefs, false);
   if ("localLeakMission" in appState) writeLocalLeakMission(appState.localLeakMission || null, false);
   window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
 }
@@ -20715,6 +20921,9 @@ function WhatIfScreen({
   const [homeHabitLeaks, setHomeHabitLeaks] = useState<HomeHabitLeakEntry[]>(() =>
     readHomeHabitLeaks()
   );
+  const [rewardNotificationPrefs, setRewardNotificationPrefs] = useState<RewardNotificationPrefs>(() =>
+    readRewardNotificationPrefs()
+  );
   const debtRadarCurrencySources = useMemo(
     () => debtRadarItems.flatMap((item) => [item.currency, item.remainingCurrency]),
     [debtRadarItems]
@@ -20749,9 +20958,15 @@ function WhatIfScreen({
   }, [homeHabitLeaks]);
 
   useEffect(() => {
+    writeRewardNotificationPrefs(rewardNotificationPrefs);
+    onAppStateChange?.();
+  }, [rewardNotificationPrefs]);
+
+  useEffect(() => {
     function applySyncedAppState() {
       setDebtRadarItems(readDebtRadarItems());
       setHomeHabitLeaks(readHomeHabitLeaks());
+      setRewardNotificationPrefs(readRewardNotificationPrefs());
     }
 
     window.addEventListener(CLOUD_APP_STATE_SYNC_EVENT, applySyncedAppState);
@@ -21079,6 +21294,12 @@ function WhatIfScreen({
         onMarkCleanDay={onMarkCleanDay}
         onCompleteOneFix={onCompleteOneFix}
         onOpenChallenge={openChallengeArea}
+      />
+
+      <RewardsNotificationPrepCard
+        status={activeProofStatus}
+        prefs={rewardNotificationPrefs}
+        onChange={setRewardNotificationPrefs}
       />
 
       <ActiveStreakProofCard
