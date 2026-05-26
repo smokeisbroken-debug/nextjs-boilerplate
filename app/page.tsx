@@ -4676,6 +4676,7 @@ function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true, noti
 
 const ACTIVE_STREAK_PROOF_KEY = "broke-active-streak-proof-v1";
 const ACTIVE_STREAK_ELIGIBILITY_DAYS = 7;
+const FUTURE_HOLDER_REWARD_MIN_BALANCE = 100_000;
 const ACTIVE_STREAK_RECOVERY_ACTIONS = 2;
 const ACTIVE_STREAK_RECOVERY_COOLDOWN_DAYS = 7;
 const activeStreakProofActions: ActiveStreakProofAction[] = [
@@ -4942,11 +4943,11 @@ function activeStreakProofActionShortLabel(action: ActiveStreakProofAction) {
 
 function getActiveStreakRewardReadinessLabel(status: ActiveStreakProofStatus, settings: Settings) {
   const verified = Boolean(settings.wallet.isVerified);
-  const hasBalance = settings.wallet.brokeBalance > 0;
+  const meetsMinHold = settings.wallet.brokeBalance >= FUTURE_HOLDER_REWARD_MIN_BALANCE;
 
-  if (verified && hasBalance && status.eligible) return "Reward-ready foundation";
+  if (verified && meetsMinHold && status.eligible) return "Reward-ready foundation";
   if (!verified) return "Verify wallet next";
-  if (!hasBalance) return "Hold $BROKE next";
+  if (!meetsMinHold) return "Hold 100K+ $BROKE next";
   if (status.recoveryMode || status.recoveryAvailable) return "Recovery active";
   if (status.activeToday) return "Today protected";
 
@@ -9666,6 +9667,7 @@ export default function Home() {
               markDailyRoutineAction("checkedChart");
               setActiveTab("chart");
             }}
+            onOpenProfile={() => setActiveTab("settings")}
             onAppStateChange={queueCloudAppStateSync}
           />
         )}
@@ -12063,9 +12065,9 @@ function FutureRewardsExplainerCard() {
   const steps = [
     "Keep a live 7+ day Active Streak.",
     "Verify wallet ownership in Profile.",
-    "Hold $BROKE in the verified wallet.",
-    "Wait for a future reward epoch to open.",
-    "Reward share will depend on verified holder tier.",
+    "Hold at least 100,000 $BROKE in the verified wallet.",
+    "Wait for a future Creator Fee reward epoch to open.",
+    "Reward share will be proportional between eligible holders.",
   ];
 
   return (
@@ -12081,6 +12083,88 @@ function FutureRewardsExplainerCard() {
             <span>{step}</span>
           </article>
         ))}
+      </div>
+    </section>
+  );
+}
+
+function RewardsLaunchOverviewCard({
+  status,
+  settings,
+  onTrackLeak,
+  onOpenProfile,
+}: {
+  status: ActiveStreakProofStatus;
+  settings: Settings;
+  onTrackLeak: () => void;
+  onOpenProfile: () => void;
+}) {
+  const verified = Boolean(settings.wallet.isVerified);
+  const meetsMinHold = settings.wallet.brokeBalance >= FUTURE_HOLDER_REWARD_MIN_BALANCE;
+  const rewardReady = verified && meetsMinHold && status.eligible;
+  const todayLabel = status.activeToday
+    ? "Protected today"
+    : status.recoveryAvailable
+      ? "Recovery available"
+      : "Needs one action";
+  const holdLabel = meetsMinHold
+    ? `${formatTokenAmount(settings.wallet.brokeBalance)} BROKE`
+    : `${formatTokenAmount(Math.max(0, FUTURE_HOLDER_REWARD_MIN_BALANCE - settings.wallet.brokeBalance))} left`;
+
+  return (
+    <section className={`rewards-launch-overview-card ${rewardReady ? "ready" : status.recoveryAvailable ? "recovery" : "building"}`}>
+      <div className="rewards-launch-eyebrow">
+        <span>Starting June 1</span>
+        <b>Prep</b>
+      </div>
+
+      <div className="rewards-launch-main">
+        <div>
+          <span>Holder Rewards system</span>
+          <strong>Activity will matter.</strong>
+          <p>
+            We are preparing future Holder Rewards where up to 50% of the Creator Fee may be allocated to a rewards pool after the volume trigger. Holding helps, but app activity and wallet verification will matter too.
+          </p>
+        </div>
+        <aside>
+          <strong>{status.currentStreak}d</strong>
+          <small>{status.eligible ? "7+ active" : `${status.progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS}`}</small>
+        </aside>
+      </div>
+
+      <div className="rewards-launch-rules">
+        <article>
+          <span>Pool</span>
+          <strong>Up to 50%</strong>
+          <small>Creator Fee allocation, once opened.</small>
+        </article>
+        <article>
+          <span>Min hold</span>
+          <strong>100K $BROKE</strong>
+          <small>{holdLabel}</small>
+        </article>
+        <article>
+          <span>Streak</span>
+          <strong>7+ days</strong>
+          <small>Live, not one-time.</small>
+        </article>
+        <article>
+          <span>Distribution</span>
+          <strong>Proportional</strong>
+          <small>Between eligible holders.</small>
+        </article>
+      </div>
+
+      <div className="rewards-launch-status-row">
+        <span className={verified ? "done" : "pending"}>{verified ? "Wallet verified" : "Verify wallet"}</span>
+        <span className={meetsMinHold ? "done" : "pending"}>{meetsMinHold ? "100K+ hold" : "100K+ needed"}</span>
+        <span className={status.eligible ? "done" : "pending"}>{status.eligible ? "7+ streak live" : "Build 7-day streak"}</span>
+        <span className={status.activeToday ? "done" : status.recoveryAvailable ? "recovery" : "pending"}>{todayLabel}</span>
+      </div>
+
+      <div className="rewards-launch-actions">
+        <button type="button" className="primary" onClick={onTrackLeak}>Protect today</button>
+        <button type="button" onClick={onOpenProfile}>Wallet proof</button>
       </div>
     </section>
   );
@@ -20889,6 +20973,7 @@ function WhatIfScreen({
   onHelp,
   onOpenAdd,
   onOpenChart,
+  onOpenProfile,
   onAppStateChange,
 }: {
   settings: Settings;
@@ -20911,6 +20996,7 @@ function WhatIfScreen({
   onHelp: () => void;
   onOpenAdd: () => void;
   onOpenChart: () => void;
+  onOpenProfile: () => void;
   onAppStateChange?: () => void;
 }) {
   const [reductions, setReductions] = useState<Record<string, number>>({});
@@ -21032,8 +21118,9 @@ function WhatIfScreen({
 
   const walletVerified = Boolean(settings.wallet.isVerified);
   const holderHasBalance = settings.wallet.brokeBalance > 0;
+  const holderMeetsFutureRewardMinimum = settings.wallet.brokeBalance >= FUTURE_HOLDER_REWARD_MIN_BALANCE;
   const activeStreakReady = activeProofStatus.eligible;
-  const rewardFoundationReady = walletVerified && holderHasBalance && activeStreakReady;
+  const rewardFoundationReady = walletVerified && holderMeetsFutureRewardMinimum && activeStreakReady;
   const holderRewardWeight =
     settings.wallet.holderTier.id === "leviathan"
       ? "Max weight"
@@ -21055,9 +21142,11 @@ function WhatIfScreen({
       done: walletVerified,
     },
     {
-      label: "$BROKE balance",
-      detail: holderHasBalance ? `${formatTokenAmount(settings.wallet.brokeBalance)} BROKE` : "Hold $BROKE in verified wallet",
-      done: holderHasBalance,
+      label: "100K+ $BROKE hold",
+      detail: holderMeetsFutureRewardMinimum
+        ? `${formatTokenAmount(settings.wallet.brokeBalance)} BROKE`
+        : `Planned minimum: ${formatTokenAmount(FUTURE_HOLDER_REWARD_MIN_BALANCE)}`,
+      done: holderMeetsFutureRewardMinimum,
     },
     {
       label: "7+ day active streak",
@@ -21280,89 +21369,140 @@ function WhatIfScreen({
     <div className="screen rewards-screen">
       <Header title="Rewards" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
-      <RewardsStatusHero
+      <RewardsLaunchOverviewCard
         status={activeProofStatus}
         settings={settings}
         onTrackLeak={onOpenAdd}
-        onOpenChart={onOpenChart}
-        onOpenChallenge={openChallengeArea}
+        onOpenProfile={onOpenProfile}
       />
 
-      <DailyProofChecklist
-        status={activeProofStatus}
-        onTrackLeak={onOpenAdd}
-        onMarkCleanDay={onMarkCleanDay}
-        onCompleteOneFix={onCompleteOneFix}
-        onOpenChallenge={openChallengeArea}
-      />
+      <details className="clean-details rewards-core-details">
+        <summary>
+          <div>
+            <span>Today’s proof</span>
+            <small>Protect the streak with one clear action today.</small>
+          </div>
+          <b>{activeProofStatus.activeToday ? "Protected" : activeProofStatus.recoveryAvailable ? "Recovery" : "Open"}</b>
+        </summary>
+        <RewardsStatusHero
+          status={activeProofStatus}
+          settings={settings}
+          onTrackLeak={onOpenAdd}
+          onOpenChart={onOpenChart}
+          onOpenChallenge={openChallengeArea}
+        />
+        <DailyProofChecklist
+          status={activeProofStatus}
+          onTrackLeak={onOpenAdd}
+          onMarkCleanDay={onMarkCleanDay}
+          onCompleteOneFix={onCompleteOneFix}
+          onOpenChallenge={openChallengeArea}
+        />
+      </details>
 
-      <RewardsNotificationPrepCard
-        status={activeProofStatus}
-        prefs={rewardNotificationPrefs}
-        onChange={setRewardNotificationPrefs}
-      />
+      <details className="clean-details rewards-core-details">
+        <summary>
+          <div>
+            <span>Streak & recovery</span>
+            <small>7+ days must stay live. Recovery is limited.</small>
+          </div>
+          <b>{activeProofStatus.currentStreak}d</b>
+        </summary>
+        <ActiveStreakProofCard
+          status={activeProofStatus}
+          onTrackLeak={onOpenAdd}
+          onMarkCleanDay={onMarkCleanDay}
+          onCompleteOneFix={onCompleteOneFix}
+          onOpenChallenge={openChallengeArea}
+        />
+      </details>
 
-      <ActiveStreakProofCard
-        status={activeProofStatus}
-        onTrackLeak={onOpenAdd}
-        onMarkCleanDay={onMarkCleanDay}
-        onCompleteOneFix={onCompleteOneFix}
-        onOpenChallenge={openChallengeArea}
-      />
-
-      <section className="rewards-hub-grid rewards-readiness-grid">
-        <article className={rewardFoundationReady ? "ready" : "building"}>
-          <span>Reward foundation</span>
-          <strong>{rewardFoundationReady ? "Ready" : "Building"}</strong>
-          <small>Verified wallet + $BROKE balance + live 7+ day streak.</small>
-        </article>
-        <article>
-          <span>Holder tier</span>
-          <strong>{settings.wallet.holderTier.label}</strong>
-          <small>{holderRewardWeight}</small>
-        </article>
-        <article>
-          <span>Today proof</span>
-          <strong>{activeProofStatus.activeToday ? "Protected" : activeProofStatus.recoveryMode ? "Recovery" : "Needs action"}</strong>
-          <small>{activeProofStatus.todayActions.length} proof action{activeProofStatus.todayActions.length === 1 ? "" : "s"} logged.</small>
-        </article>
-        <article>
-          <span>Recovery</span>
-          <strong>{activeProofStatus.recoveryAvailable ? "Available" : activeProofStatus.recoveryUsedRecently ? "Used" : "Ready"}</strong>
-          <small>1 recovery per 7 days · 2 proof actions required.</small>
-        </article>
-      </section>
-
-      <FutureRewardsExplainerCard />
-
-      <ActiveStreakShareCard
-        settings={settings}
-        status={activeProofStatus}
-        shareInitData={shareInitData}
-      />
-
-      <section className="future-reward-pool-card">
-        <div>
-          <span>Creator Fee Reward Pool</span>
-          <strong>Coming later after volume trigger</strong>
-          <p>
-            Planned rule: once $BROKE volume passes $50K / 24h, up to 50% of Creator Fee may be allocated to verified active holders. Final share will depend on verified balance tier and snapshot rules.
-          </p>
-        </div>
-        <b>Locked</b>
-      </section>
-
-      <section className="reward-eligibility-checklist">
-        {rewardChecklist.map((item) => (
-          <article key={item.label} className={item.done ? "done" : "pending"}>
-            <b>{item.done ? "✓" : "—"}</b>
-            <div>
-              <strong>{item.label}</strong>
-              <small>{item.detail}</small>
-            </div>
+      <details className="clean-details rewards-core-details">
+        <summary>
+          <div>
+            <span>Future Holder Rewards</span>
+            <small>June 1 prep, 100K+ minimum hold, proportional rewards.</small>
+          </div>
+          <b>{rewardFoundationReady ? "Ready" : "Prep"}</b>
+        </summary>
+        <section className="rewards-hub-grid rewards-readiness-grid">
+          <article className={rewardFoundationReady ? "ready" : "building"}>
+            <span>Reward foundation</span>
+            <strong>{rewardFoundationReady ? "Ready" : "Building"}</strong>
+            <small>Verified wallet + 100K+ $BROKE + live 7+ day streak.</small>
           </article>
-        ))}
-      </section>
+          <article>
+            <span>Holder tier</span>
+            <strong>{settings.wallet.holderTier.label}</strong>
+            <small>{holderRewardWeight}</small>
+          </article>
+          <article>
+            <span>Today proof</span>
+            <strong>{activeProofStatus.activeToday ? "Protected" : activeProofStatus.recoveryMode ? "Recovery" : "Needs action"}</strong>
+            <small>{activeProofStatus.todayActions.length} proof action{activeProofStatus.todayActions.length === 1 ? "" : "s"} logged.</small>
+          </article>
+          <article>
+            <span>Recovery</span>
+            <strong>{activeProofStatus.recoveryAvailable ? "Available" : activeProofStatus.recoveryUsedRecently ? "Used" : "Ready"}</strong>
+            <small>1 recovery per 7 days · 2 proof actions required.</small>
+          </article>
+        </section>
+
+        <FutureRewardsExplainerCard />
+
+        <section className="future-reward-pool-card">
+          <div>
+            <span>Creator Fee Reward Pool</span>
+            <strong>Coming later after volume trigger</strong>
+            <p>
+              Planned rule: once $BROKE volume passes $50K / 24h, up to 50% of Creator Fee may be allocated to verified active holders. Minimum hold is planned at 100,000 $BROKE, and final distribution will be proportional between eligible holders.
+            </p>
+          </div>
+          <b>Locked</b>
+        </section>
+
+        <section className="reward-eligibility-checklist">
+          {rewardChecklist.map((item) => (
+            <article key={item.label} className={item.done ? "done" : "pending"}>
+              <b>{item.done ? "✓" : "—"}</b>
+              <div>
+                <strong>{item.label}</strong>
+                <small>{item.detail}</small>
+              </div>
+            </article>
+          ))}
+        </section>
+      </details>
+
+      <details className="clean-details rewards-core-details">
+        <summary>
+          <div>
+            <span>Share Active Streak Card</span>
+            <small>Public proof card without income, balance, payday, or debt details.</small>
+          </div>
+          <b>Share</b>
+        </summary>
+        <ActiveStreakShareCard
+          settings={settings}
+          status={activeProofStatus}
+          shareInitData={shareInitData}
+        />
+      </details>
+
+      <details className="clean-details rewards-core-details">
+        <summary>
+          <div>
+            <span>Notifications prep</span>
+            <small>Reminder preferences for daily proof, recovery, and 7-day line.</small>
+          </div>
+          <b>{rewardNotificationPrefs.reminderTime}</b>
+        </summary>
+        <RewardsNotificationPrepCard
+          status={activeProofStatus}
+          prefs={rewardNotificationPrefs}
+          onChange={setRewardNotificationPrefs}
+        />
+      </details>
 
       <details className="clean-details rewards-tool-details rewards-survival-details">
         <summary>
