@@ -334,6 +334,7 @@ type CloudAppState = {
   homeHabitLeaks: HomeHabitLeakEntry[];
   dailyRoutineActions?: DailyRoutineActions;
   dailyRoutineReward?: DailyRoutineRewardState;
+  activeStreakProof?: ActiveStreakProofState;
   localLeakMission?: LocalLeakMission | null;
   updatedAt?: string;
 };
@@ -815,6 +816,37 @@ type DailyRoutineActions = {
 type DailyRoutineRewardState = {
   date: string;
   claimed: boolean;
+};
+
+type ActiveStreakProofAction = "track_leak" | "clean_day" | "one_fix" | "daily_challenge";
+
+type ActiveStreakProofLog = {
+  date: string;
+  actions: ActiveStreakProofAction[];
+};
+
+type ActiveStreakProofState = {
+  logs: ActiveStreakProofLog[];
+  recoveredMissedDates: string[];
+  recoveryUsedAt: string | null;
+  updatedAt?: string;
+};
+
+type ActiveStreakProofStatus = {
+  currentStreak: number;
+  bestStreak: number;
+  progressDays: number;
+  eligible: boolean;
+  activeToday: boolean;
+  todayActions: ActiveStreakProofAction[];
+  recoveryMode: boolean;
+  recoveryAvailable: boolean;
+  recoveryUsedRecently: boolean;
+  recoveryActionsNeeded: number;
+  recoveryMissedDate: string | null;
+  lastProofDate: string | null;
+  label: string;
+  detail: string;
 };
 
 type ProfileShareItemId =
@@ -1522,6 +1554,7 @@ const ruText: Record<string, string> = {
   "Add": "Добавить",
   "Chart": "График",
   "Save": "Экономия",
+  "Rewards": "Награды",
   "Settings": "Настройки",
   "Back": "Назад",
   "Action": "Действие",
@@ -2658,7 +2691,7 @@ const ruText: Record<string, string> = {
   "Save is in demo mode": "Save в демо-режиме",
   "No real scenarios yet.": "Пока нет реальных сценариев.",
   "Add expenses first. Then $BROKE will show what you could save by reducing your real leaks.": "Сначала добавь расходы. Затем $BROKE покажет, сколько можно сохранить, уменьшая реальные утечки.",
-  "Add expense to unlock Save": "Добавить расход, чтобы открыть Save",
+  "Add expense to unlock Rewards": "Добавить расход, чтобы открыть Save",
   "First 3-Day User Journey": "Первый 3-дневный путь",
   "complete": "выполнено",
   "Turn first use into a habit.": "Преврати первое использование в привычку.",
@@ -4455,7 +4488,7 @@ const navItems: {
   { id: "add", label: "Add", icon: "/nav-add.png" },
   { id: "chart", label: "Chart", icon: "/nav-chart.png" },
   { id: "growth", label: "Growth", icon: "/nav-growth.png" },
-  { id: "whatif", label: "Save", icon: "/nav-save.png" },
+  { id: "whatif", label: "Rewards", icon: "/nav-save.png" },
   { id: "settings", label: "Profile", icon: "/nav-settings.png" },
 ];
 
@@ -4630,6 +4663,265 @@ function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true, noti
   } catch {
     // XP reward marker is optional. Ignore storage errors.
   }
+}
+
+const ACTIVE_STREAK_PROOF_KEY = "broke-active-streak-proof-v1";
+const ACTIVE_STREAK_ELIGIBILITY_DAYS = 7;
+const ACTIVE_STREAK_RECOVERY_ACTIONS = 2;
+const ACTIVE_STREAK_RECOVERY_COOLDOWN_DAYS = 7;
+const activeStreakProofActions: ActiveStreakProofAction[] = [
+  "track_leak",
+  "clean_day",
+  "one_fix",
+  "daily_challenge",
+];
+
+function getPreviousDayKey(dateKey: string, daysBack = 1) {
+  const date = new Date(`${dateKey}T00:00:00`);
+  date.setDate(date.getDate() - daysBack);
+  return dayKey(date);
+}
+
+function getDayDistance(fromKey: string, toKey: string) {
+  const from = new Date(`${fromKey}T00:00:00`).getTime();
+  const to = new Date(`${toKey}T00:00:00`).getTime();
+
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return 999;
+
+  return Math.round((to - from) / (24 * 60 * 60 * 1000));
+}
+
+function normalizeActiveStreakProofAction(value: unknown): ActiveStreakProofAction | null {
+  return activeStreakProofActions.includes(value as ActiveStreakProofAction)
+    ? (value as ActiveStreakProofAction)
+    : null;
+}
+
+function emptyActiveStreakProofState(): ActiveStreakProofState {
+  return {
+    logs: [],
+    recoveredMissedDates: [],
+    recoveryUsedAt: null,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeActiveStreakProofState(input?: Partial<ActiveStreakProofState> | null): ActiveStreakProofState {
+  const logs = Array.isArray(input?.logs)
+    ? input.logs
+        .map((log) => {
+          const date = String(log?.date || "");
+          const actions = Array.isArray(log?.actions)
+            ? Array.from(
+                new Set(
+                  log.actions
+                    .map(normalizeActiveStreakProofAction)
+                    .filter((action): action is ActiveStreakProofAction => Boolean(action))
+                )
+              )
+            : [];
+
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || actions.length === 0) return null;
+
+          return {
+            date,
+            actions,
+          };
+        })
+        .filter((log): log is ActiveStreakProofLog => Boolean(log))
+    : [];
+
+  const recoveredMissedDates = Array.isArray(input?.recoveredMissedDates)
+    ? Array.from(
+        new Set(
+          input.recoveredMissedDates
+            .map((date) => String(date || ""))
+            .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+        )
+      )
+    : [];
+
+  const recoveryUsedAt = input?.recoveryUsedAt && /^\d{4}-\d{2}-\d{2}$/.test(String(input.recoveryUsedAt))
+    ? String(input.recoveryUsedAt)
+    : null;
+
+  return {
+    logs: logs
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-90),
+    recoveredMissedDates: recoveredMissedDates.sort().slice(-12),
+    recoveryUsedAt,
+    updatedAt: input?.updatedAt || new Date().toISOString(),
+  };
+}
+
+function readActiveStreakProofState(): ActiveStreakProofState {
+  if (typeof window === "undefined") return emptyActiveStreakProofState();
+
+  try {
+    const raw = window.localStorage.getItem(ACTIVE_STREAK_PROOF_KEY);
+    return normalizeActiveStreakProofState(raw ? (JSON.parse(raw) as Partial<ActiveStreakProofState>) : null);
+  } catch {
+    return emptyActiveStreakProofState();
+  }
+}
+
+function writeActiveStreakProofState(state: ActiveStreakProofState, notifyChange = true) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      ACTIVE_STREAK_PROOF_KEY,
+      JSON.stringify(normalizeActiveStreakProofState(state))
+    );
+    if (notifyChange) window.dispatchEvent(new Event(LOCAL_APP_STATE_CHANGE_EVENT));
+  } catch {
+    // Active streak proof is a retention mechanic. It must not block tracking.
+  }
+}
+
+function getActiveStreakProofDateSet(state: ActiveStreakProofState) {
+  const normalized = normalizeActiveStreakProofState(state);
+  return new Set([
+    ...normalized.logs.map((log) => log.date),
+    ...normalized.recoveredMissedDates,
+  ]);
+}
+
+function calculateActiveProofStreakFromDateSet(dateSet: Set<string>) {
+  const dates = Array.from(dateSet).sort();
+
+  if (dates.length === 0) {
+    return {
+      currentStreak: 0,
+      bestStreak: 0,
+      lastProofDate: null as string | null,
+    };
+  }
+
+  let bestStreak = 0;
+  let rollingStreak = 0;
+  let previousDate = "";
+
+  for (const date of dates) {
+    if (previousDate && getDayDistance(previousDate, date) === 1) {
+      rollingStreak += 1;
+    } else {
+      rollingStreak = 1;
+    }
+
+    bestStreak = Math.max(bestStreak, rollingStreak);
+    previousDate = date;
+  }
+
+  const today = dayKey(new Date());
+  const yesterday = getPreviousDayKey(today);
+  let currentStreak = 0;
+
+  if (dateSet.has(today) || dateSet.has(yesterday)) {
+    const startKey = dateSet.has(today) ? today : yesterday;
+    const cursor = new Date(`${startKey}T00:00:00`);
+
+    while (dateSet.has(dayKey(cursor))) {
+      currentStreak += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+  }
+
+  return {
+    currentStreak,
+    bestStreak,
+    lastProofDate: dates[dates.length - 1] || null,
+  };
+}
+
+function buildActiveStreakProofStatus(state: ActiveStreakProofState): ActiveStreakProofStatus {
+  const normalized = normalizeActiveStreakProofState(state);
+  const today = dayKey(new Date());
+  const yesterday = getPreviousDayKey(today);
+  const dayBeforeYesterday = getPreviousDayKey(today, 2);
+  const todayActions = normalized.logs.find((log) => log.date === today)?.actions || [];
+  const dateSet = getActiveStreakProofDateSet(normalized);
+  const streakMetrics = calculateActiveProofStreakFromDateSet(dateSet);
+  const recoveryUsedRecently = normalized.recoveryUsedAt
+    ? getDayDistance(normalized.recoveryUsedAt, today) < ACTIVE_STREAK_RECOVERY_COOLDOWN_DAYS
+    : false;
+  const recoveryMissedDate = !dateSet.has(yesterday) && dateSet.has(dayBeforeYesterday) ? yesterday : null;
+  const recoveryMode = Boolean(recoveryMissedDate && !dateSet.has(today));
+  const recoveryAvailable = Boolean(recoveryMissedDate && !recoveryUsedRecently);
+  const recoveryActionsNeeded = recoveryAvailable
+    ? Math.max(0, ACTIVE_STREAK_RECOVERY_ACTIONS - todayActions.length)
+    : 0;
+  const progressDays = Math.min(streakMetrics.currentStreak, ACTIVE_STREAK_ELIGIBILITY_DAYS);
+  const eligible = streakMetrics.currentStreak >= ACTIVE_STREAK_ELIGIBILITY_DAYS;
+  const activeToday = dateSet.has(today);
+
+  let label = `${progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS}`;
+  let detail = `Keep a ${ACTIVE_STREAK_ELIGIBILITY_DAYS}+ day active streak to stay eligible for future Holder Rewards.`;
+
+  if (eligible) {
+    label = "Eligible";
+    detail = "7+ day active streak is live. Keep checking in daily to stay eligible.";
+  } else if (recoveryMode || (recoveryAvailable && todayActions.length > 0)) {
+    label = "Recovery";
+    detail = recoveryAvailable
+      ? `Missed yesterday. Complete ${Math.max(1, recoveryActionsNeeded)} more action${recoveryActionsNeeded === 1 ? "" : "s"} today to restore the streak.`
+      : "Recovery was already used this week. Build a new clean streak if it resets.";
+  } else if (activeToday) {
+    detail = "Today is protected. Keep going until the 7-day active holder line.";
+  }
+
+  return {
+    currentStreak: streakMetrics.currentStreak,
+    bestStreak: streakMetrics.bestStreak,
+    progressDays,
+    eligible,
+    activeToday,
+    todayActions,
+    recoveryMode,
+    recoveryAvailable,
+    recoveryUsedRecently,
+    recoveryActionsNeeded,
+    recoveryMissedDate,
+    lastProofDate: streakMetrics.lastProofDate,
+    label,
+    detail,
+  };
+}
+
+function markActiveStreakProofAction(action: ActiveStreakProofAction): ActiveStreakProofState {
+  const today = dayKey(new Date());
+  const state = normalizeActiveStreakProofState(readActiveStreakProofState());
+  const logs = state.logs.filter((log) => log.date !== today);
+  const todayLog = state.logs.find((log) => log.date === today) || { date: today, actions: [] };
+  const actions = Array.from(new Set([...todayLog.actions, action]));
+  const next: ActiveStreakProofState = normalizeActiveStreakProofState({
+    ...state,
+    logs: [...logs, { date: today, actions }],
+    updatedAt: new Date().toISOString(),
+  });
+  const status = buildActiveStreakProofStatus(next);
+
+  if (
+    status.recoveryMissedDate &&
+    status.recoveryAvailable &&
+    actions.length >= ACTIVE_STREAK_RECOVERY_ACTIONS &&
+    !next.recoveredMissedDates.includes(status.recoveryMissedDate)
+  ) {
+    next.recoveredMissedDates = [...next.recoveredMissedDates, status.recoveryMissedDate];
+    next.recoveryUsedAt = today;
+    next.updatedAt = new Date().toISOString();
+  }
+
+  writeActiveStreakProofState(next);
+  return normalizeActiveStreakProofState(next);
+}
+
+function activeStreakProofActionLabel(action: ActiveStreakProofAction) {
+  if (action === "track_leak") return "Tracked leak";
+  if (action === "clean_day") return "Clean day";
+  if (action === "one_fix") return "One Fix";
+  return "Daily challenge";
 }
 
 
@@ -5132,6 +5424,56 @@ function normalizeExpense(input: Partial<Expense>): Expense {
     createdAt: String(input.createdAt || new Date().toISOString()),
     triggerTags: normalizeLeakTriggerTags(input.triggerTags, String(input.note || "")),
     ...(currency ? { currency } : {}),
+  };
+}
+
+function expenseSyncKey(expense: Expense) {
+  const created = new Date(expense.createdAt);
+  const createdKey = Number.isNaN(created.getTime())
+    ? String(expense.createdAt || "")
+    : created.toISOString().slice(0, 19);
+  const amountKey = Number(expense.amount || 0).toFixed(2);
+  const categoryKey = String(expense.category || "Custom").trim().toLocaleLowerCase();
+  const needKey = String(expense.needType || "Needed").trim().toLocaleLowerCase();
+  const noteKey = String(expense.note || "").replace(/\s+/g, " ").trim().slice(0, 160);
+  const currencyKey = normalizeOptionalCurrency(expense.currency) || "";
+
+  return [createdKey, amountKey, categoryKey, needKey, noteKey, currencyKey].join("|");
+}
+
+function mergeExpensesForSync(localExpenses: Expense[], cloudExpenses: Expense[]) {
+  const merged = new Map<string, Expense>();
+
+  cloudExpenses.forEach((expense) => {
+    merged.set(expenseSyncKey(expense), expense);
+  });
+
+  localExpenses.forEach((expense) => {
+    const normalized = normalizeExpense(expense);
+    const key = expenseSyncKey(normalized);
+
+    if (!merged.has(key)) {
+      merged.set(key, normalized);
+    }
+  });
+
+  return Array.from(merged.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+function mergeStreaksForDisplay(cloudStreak: Streak, localStreak: Streak): Streak {
+  const bestStreak = Math.max(cloudStreak.bestStreak || 0, localStreak.bestStreak || 0);
+  const localCurrent = localStreak.currentStreak || 0;
+  const cloudCurrent = cloudStreak.currentStreak || 0;
+  const source = localCurrent >= cloudCurrent ? localStreak : cloudStreak;
+
+  return {
+    ...source,
+    currentStreak: Math.max(localCurrent, cloudCurrent),
+    bestStreak,
+    lastActiveDate: source.lastActiveDate ?? localStreak.lastActiveDate ?? cloudStreak.lastActiveDate ?? null,
+    updatedAt: source.updatedAt ?? localStreak.updatedAt ?? cloudStreak.updatedAt ?? null,
   };
 }
 
@@ -8047,6 +8389,7 @@ export default function Home() {
   const [toast, setToast] = useState<AppToast | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [leakMission, setLeakMission] = useState<LocalLeakMission | null>(null);
+  const [activeStreakProof, setActiveStreakProof] = useState<ActiveStreakProofState>(() => readActiveStreakProofState());
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
   const openAppTrackedRef = useRef(false);
@@ -8148,6 +8491,23 @@ export default function Home() {
       window.removeEventListener(LOCAL_APP_STATE_CHANGE_EVENT, syncLocalAppStateChange);
     };
   }, [loaded, cloudStatus, cloudAuthReady, cloudInitData]);
+
+  useEffect(() => {
+    if (!loaded) return;
+
+    function refreshActiveStreakProof() {
+      setActiveStreakProof(readActiveStreakProofState());
+    }
+
+    refreshActiveStreakProof();
+    window.addEventListener(LOCAL_APP_STATE_CHANGE_EVENT, refreshActiveStreakProof);
+    window.addEventListener(CLOUD_APP_STATE_SYNC_EVENT, refreshActiveStreakProof);
+
+    return () => {
+      window.removeEventListener(LOCAL_APP_STATE_CHANGE_EVENT, refreshActiveStreakProof);
+      window.removeEventListener(CLOUD_APP_STATE_SYNC_EVENT, refreshActiveStreakProof);
+    };
+  }, [loaded]);
 
   useEffect(() => {
     function applyTelegramWebApp() {
@@ -8333,7 +8693,10 @@ export default function Home() {
         if (cancelled) return;
 
         if (data.settings) setSettings(normalizeSettings(data.settings));
-        if (data.expenses) setExpenses(data.expenses.map(normalizeExpense));
+        if (data.expenses) {
+          const cloudExpenses = data.expenses.map(normalizeExpense);
+          setExpenses((prev) => mergeExpensesForSync(prev, cloudExpenses));
+        }
         if (data.streak) setStreak(data.streak);
         if (data.challengeTemplates) setChallengeTemplates(data.challengeTemplates);
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
@@ -8534,7 +8897,13 @@ export default function Home() {
     return calculateStreakFromExpenses(expenses);
   }, [expenses]);
 
-  const activeStreak = cloudAuthReady && cloudStatus === "cloud" ? streak : localStreak;
+  const activeStreak = cloudAuthReady && cloudStatus === "cloud"
+    ? mergeStreaksForDisplay(streak, localStreak)
+    : localStreak;
+
+  const activeProofStatus = useMemo(() => {
+    return buildActiveStreakProofStatus(activeStreakProof);
+  }, [activeStreakProof]);
 
   const smartInsightContext = useMemo<SmartInsightContext>(() => {
     const debtRadarItems = readDebtRadarItems();
@@ -8575,6 +8944,7 @@ export default function Home() {
     const nextExpenses = [expense, ...expenses];
 
     triggerHaptic("success");
+    recordActiveStreakProof("track_leak", false);
     setExpenses((prev) => [expense, ...prev]);
     setLastTrackedExpense(expense);
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
@@ -8624,6 +8994,7 @@ export default function Home() {
     const nextExpenses = [expense, ...expenses];
 
     triggerHaptic("success");
+    recordActiveStreakProof("track_leak", false);
     setExpenses((prev) => [expense, ...prev]);
     setLastTrackedExpense(expense);
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
@@ -8914,6 +9285,40 @@ export default function Home() {
     }
   }
 
+  function recordActiveStreakProof(action: ActiveStreakProofAction, showFeedback = true) {
+    const beforeStatus = buildActiveStreakProofStatus(readActiveStreakProofState());
+    const nextState = markActiveStreakProofAction(action);
+    const nextStatus = buildActiveStreakProofStatus(nextState);
+
+    setActiveStreakProof(nextState);
+
+    if (showFeedback) {
+      const title = nextStatus.eligible
+        ? "Active streak eligible"
+        : nextStatus.recoveryMissedDate && nextStatus.recoveryActionsNeeded === 0
+          ? "Streak recovered"
+          : "Active proof saved";
+      const detail = nextStatus.recoveryMissedDate && nextStatus.recoveryActionsNeeded === 0 && !beforeStatus.eligible
+        ? "Recovery used. Your active streak stays alive."
+        : `${nextStatus.currentStreak}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} days toward Holder Reward eligibility.`;
+
+      showToast(title, detail, nextStatus.eligible ? "xp" : "info");
+    }
+
+    return nextState;
+  }
+
+  function markCleanDayProof() {
+    triggerHaptic("success");
+    recordActiveStreakProof("clean_day");
+  }
+
+  function completeOneFixProof() {
+    triggerHaptic("success");
+    recordActiveStreakProof("one_fix");
+    setActiveTab("chart");
+  }
+
   async function claimDailyRoutineReward() {
     const today = dayKey(new Date());
     const reward = readDailyRoutineReward(today);
@@ -8931,6 +9336,7 @@ export default function Home() {
 
     if (data?.ok) {
       writeDailyRoutineReward(today, true);
+      recordActiveStreakProof("daily_challenge", false);
 
       if (!data.xpAwarded || data.xpAwarded <= 0) {
         showToast("Daily routine complete", "XP already claimed or daily cap reached.", "info");
@@ -9026,6 +9432,9 @@ export default function Home() {
             routineExpenses={currentMonthExpenses}
             allExpenses={displayExpenses}
             leakMission={leakMission}
+            activeProofStatus={activeProofStatus}
+            onMarkCleanDay={markCleanDayProof}
+            onCompleteOneFix={completeOneFixProof}
             onStartLeakMission={startLocalLeakMission}
             onResetLeakMission={resetLocalLeakMission}
             onDeleteExpense={deleteExpense}
@@ -9107,9 +9516,16 @@ export default function Home() {
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onToggleLeaderboard={toggleLeaderboardPublic}
             onStartChallenge={startChallenge}
+            activeProofStatus={activeProofStatus}
+            onMarkCleanDay={markCleanDayProof}
+            onCompleteOneFix={completeOneFixProof}
             onBack={goHome}
             onHelp={openHelp}
             onOpenAdd={() => setActiveTab("add")}
+            onOpenChart={() => {
+              markDailyRoutineAction("checkedChart");
+              setActiveTab("chart");
+            }}
             onAppStateChange={queueCloudAppStateSync}
           />
         )}
@@ -9133,6 +9549,7 @@ export default function Home() {
             cloudStatus={cloudStatus}
             cloudError={cloudError}
             streak={activeStreak}
+            activeProofStatus={activeProofStatus}
             badges={badges}
             leaderboard={leaderboard}
             leaderboardLoading={leaderboardLoading}
@@ -9661,9 +10078,9 @@ function HelpGuideModal({
         {
           title: "When to leave Save and open Growth",
           body: [
-            "Use Save to decide what to cut.",
+            "Use Rewards to decide what to cut or which proof action to complete.",
             "Use Growth to see what the cut could become.",
-            "The full loop is: Add records, read Chart, cut in Save, redirect in Growth, show safe proof in Profile or Home.",
+            "The full loop is: Add records, read Chart, complete proof in Rewards, redirect saved leaks in Growth, show safe proof in Profile or Home.",
           ],
           icon: GROWTH_PUBLIC_ASSETS.market,
         },
@@ -10623,6 +11040,9 @@ function DashboardScreen({
   routineExpenses,
   allExpenses,
   leakMission,
+  activeProofStatus,
+  onMarkCleanDay,
+  onCompleteOneFix,
   onStartLeakMission,
   onResetLeakMission,
   onDeleteExpense,
@@ -10660,6 +11080,9 @@ function DashboardScreen({
   routineExpenses: Expense[];
   allExpenses: Expense[];
   leakMission: LocalLeakMission | null;
+  activeProofStatus: ActiveStreakProofStatus;
+  onMarkCleanDay: () => void;
+  onCompleteOneFix: () => void;
   onStartLeakMission: (category: string, baselineWeekly: number) => void;
   onResetLeakMission: () => void;
   onDeleteExpense: (id: string) => void;
@@ -10786,6 +11209,14 @@ function DashboardScreen({
           }}
         />
       </section>
+
+      <ActiveStreakProofCard
+        status={activeProofStatus}
+        onTrackLeak={onOpenAdd}
+        onMarkCleanDay={onMarkCleanDay}
+        onCompleteOneFix={onCompleteOneFix}
+        onOpenChallenge={onOpenSurvival}
+      />
 
 
       <details open className="home-compact-details home-wallet-snapshot-card home-collapsed-section">
@@ -11148,6 +11579,118 @@ function DashboardScreen({
         <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
       </details>
     </div>
+  );
+}
+
+
+function ActiveStreakProofCard({
+  status,
+  onTrackLeak,
+  onMarkCleanDay,
+  onCompleteOneFix,
+  onOpenChallenge,
+}: {
+  status: ActiveStreakProofStatus;
+  onTrackLeak: () => void;
+  onMarkCleanDay: () => void;
+  onCompleteOneFix: () => void;
+  onOpenChallenge: () => void;
+}) {
+  const tone = status.eligible
+    ? "eligible"
+    : status.recoveryMode || status.recoveryAvailable
+      ? "recovery"
+      : status.activeToday
+        ? "active"
+        : "building";
+  const actionLabels = status.todayActions.map(activeStreakProofActionLabel);
+  const progressPercent = status.eligible
+    ? 100
+    : Math.round((status.progressDays / ACTIVE_STREAK_ELIGIBILITY_DAYS) * 100);
+
+  return (
+    <section className={`active-streak-proof-card ${tone}`}>
+      <div className="active-streak-proof-head">
+        <div>
+          <span>BROKE Active Streak</span>
+          <strong>{status.label}</strong>
+          <small>{status.detail}</small>
+        </div>
+        <b>{status.currentStreak}d</b>
+      </div>
+
+      <div className="active-streak-proof-meter" aria-hidden="true">
+        <i style={{ width: `${progressPercent}%` }} />
+      </div>
+
+      <div className="active-streak-proof-grid">
+        <article>
+          <span>Eligibility line</span>
+          <strong>7+ days</strong>
+        </article>
+        <article>
+          <span>Today</span>
+          <strong>{status.activeToday ? "Protected" : status.recoveryMode ? "Recovery" : "Needs action"}</strong>
+        </article>
+        <article>
+          <span>Recovery</span>
+          <strong>{status.recoveryUsedRecently ? "Used this week" : "1 / 7d"}</strong>
+        </article>
+      </div>
+
+      {actionLabels.length > 0 && (
+        <div className="active-streak-proof-actions-done">
+          {actionLabels.map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+      )}
+
+      <div className="active-streak-proof-buttons">
+        <button type="button" className="primary" onClick={onTrackLeak}>Track Leak</button>
+        <button type="button" onClick={onMarkCleanDay}>Mark Clean Day</button>
+        <button type="button" onClick={onCompleteOneFix}>One Fix</button>
+        <button type="button" onClick={onOpenChallenge}>Daily Challenge</button>
+      </div>
+
+      <p>
+        Future Holder Rewards will use the live streak state, not a one-time unlock. If the streak drops below 7 days, eligibility pauses until it is rebuilt or recovered.
+      </p>
+    </section>
+  );
+}
+
+function ActiveHolderEligibilityStrip({
+  status,
+  wallet,
+}: {
+  status: ActiveStreakProofStatus;
+  wallet: Settings["wallet"];
+}) {
+  const verified = Boolean(wallet.isVerified);
+  const hasBalance = wallet.brokeBalance > 0;
+  const ready = verified && hasBalance && status.eligible;
+  const label = ready
+    ? "Reward eligible foundation"
+    : !verified
+      ? "Verify wallet"
+      : !hasBalance
+        ? "Hold $BROKE"
+        : status.recoveryMode || status.recoveryAvailable
+          ? "Recovery mode"
+          : `${status.progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} active days`;
+
+  return (
+    <section className={`active-holder-eligibility-strip ${ready ? "ready" : status.recoveryMode ? "recovery" : "building"}`}>
+      <div>
+        <span>Future Holder Rewards</span>
+        <strong>{label}</strong>
+        <small>
+          Verified wallet + $BROKE balance + live 7+ day active streak. If the streak breaks, eligibility pauses.
+        </small>
+      </div>
+      <b>{ready ? "Ready" : status.eligible ? "Streak ready" : `${status.currentStreak}d`}</b>
+    </section>
   );
 }
 
@@ -18924,6 +19467,7 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
         claimed: Boolean(input.dailyRoutineReward.claimed),
       }
     : undefined;
+  const activeStreakProof = normalizeActiveStreakProofState(input?.activeStreakProof);
 
   return {
     growthSimulations: Array.isArray(input?.growthSimulations)
@@ -18938,6 +19482,7 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
       : [],
     ...(routineActions?.date === today ? { dailyRoutineActions: routineActions } : {}),
     ...(routineReward?.date === today ? { dailyRoutineReward: routineReward } : {}),
+    activeStreakProof,
     localLeakMission: input?.localLeakMission || null,
     updatedAt: input?.updatedAt,
   };
@@ -18953,6 +19498,7 @@ function readLocalCloudAppState(): CloudAppState {
     homeHabitLeaks: readHomeHabitLeaks(),
     dailyRoutineActions: readDailyRoutineActions(today),
     dailyRoutineReward: readDailyRoutineReward(today),
+    activeStreakProof: readActiveStreakProofState(),
     localLeakMission: readLocalLeakMission(),
     updatedAt: new Date().toISOString(),
   });
@@ -18968,6 +19514,7 @@ function writeLocalCloudAppState(input: Partial<CloudAppState>) {
   writeHomeHabitLeaks(appState.homeHabitLeaks);
   if (appState.dailyRoutineActions) writeDailyRoutineActions(appState.dailyRoutineActions, false);
   if (appState.dailyRoutineReward) writeDailyRoutineReward(appState.dailyRoutineReward.date, appState.dailyRoutineReward.claimed, false);
+  if (appState.activeStreakProof) writeActiveStreakProofState(appState.activeStreakProof, false);
   if ("localLeakMission" in appState) writeLocalLeakMission(appState.localLeakMission || null, false);
   window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
 }
@@ -19765,9 +20312,13 @@ function WhatIfScreen({
   shareInitData,
   onToggleLeaderboard,
   onStartChallenge,
+  activeProofStatus,
+  onMarkCleanDay,
+  onCompleteOneFix,
   onBack,
   onHelp,
   onOpenAdd,
+  onOpenChart,
   onAppStateChange,
 }: {
   settings: Settings;
@@ -19783,9 +20334,13 @@ function WhatIfScreen({
   shareInitData: string;
   onToggleLeaderboard: (nextValue: boolean) => void;
   onStartChallenge: (challengeId: string) => void;
+  activeProofStatus: ActiveStreakProofStatus;
+  onMarkCleanDay: () => void;
+  onCompleteOneFix: () => void;
   onBack: () => void;
   onHelp: () => void;
   onOpenAdd: () => void;
+  onOpenChart: () => void;
   onAppStateChange?: () => void;
 }) {
   const [reductions, setReductions] = useState<Record<string, number>>({});
@@ -19802,6 +20357,7 @@ function WhatIfScreen({
   );
   const debtRadarRateState = useExchangeRates(settings, debtRadarCurrencySources);
   const survivalCardRef = useRef<HTMLDivElement | null>(null);
+  const challengeSectionRef = useRef<HTMLDetailsElement | null>(null);
 
   const categorySummaries = useMemo(() => {
     return getCategoryLeakSummaries(expenses).slice(0, 6);
@@ -19894,6 +20450,53 @@ function WhatIfScreen({
   const survivalCurrentPaceUsdNote = settings.privacy.publicProofMode
     ? ""
     : usdReferenceNote(survivalForecast.currentDailyPace, settings.currency, settings, debtRadarRateState.rates);
+
+  const walletVerified = Boolean(settings.wallet.isVerified);
+  const holderHasBalance = settings.wallet.brokeBalance > 0;
+  const activeStreakReady = activeProofStatus.eligible;
+  const rewardFoundationReady = walletVerified && holderHasBalance && activeStreakReady;
+  const holderRewardWeight =
+    settings.wallet.holderTier.id === "leviathan"
+      ? "Max weight"
+      : settings.wallet.holderTier.id === "whale"
+        ? "Elite weight"
+        : settings.wallet.holderTier.id === "shark"
+          ? "High weight"
+          : settings.wallet.holderTier.id === "strong"
+            ? "Strong weight"
+            : settings.wallet.holderTier.id === "frog"
+              ? "Base+ weight"
+              : holderHasBalance
+                ? "Base weight"
+                : "No weight yet";
+  const rewardChecklist = [
+    {
+      label: "Verified wallet",
+      detail: walletVerified ? "Ownership proof active" : "Verify ownership in Profile",
+      done: walletVerified,
+    },
+    {
+      label: "$BROKE balance",
+      detail: holderHasBalance ? `${formatTokenAmount(settings.wallet.brokeBalance)} BROKE` : "Hold $BROKE in verified wallet",
+      done: holderHasBalance,
+    },
+    {
+      label: "7+ day active streak",
+      detail: activeStreakReady ? `${activeProofStatus.currentStreak}d live streak` : `${activeProofStatus.progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} days built`,
+      done: activeStreakReady,
+    },
+    {
+      label: "Reward epoch",
+      detail: "Locked until Creator Fee pool opens",
+      done: false,
+    },
+  ];
+
+  function openChallengeArea() {
+    triggerHaptic("light");
+    challengeSectionRef.current?.setAttribute("open", "true");
+    challengeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   const survivalShareText = [
     "$BROKE Survival Mode",
@@ -20095,45 +20698,105 @@ function WhatIfScreen({
   }
 
   return (
-    <div className="screen">
-      <Header title="Save" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
+    <div className="screen rewards-screen">
+      <Header title="Rewards" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
-      <section className="whatif-hero">
-        <img src={A.whatIfFrog} alt="" />
-        <div>
-          <h2>Cut one leak.</h2>
-          <h2>Survive better.</h2>
+      <section className={`rewards-hub-hero ${rewardFoundationReady ? "ready" : "building"}`}>
+        <div className="rewards-hub-hero-copy">
+          <span>Rewards Hub</span>
+          <h2>{rewardFoundationReady ? "Active holder foundation ready." : "Build active holder proof."}</h2>
           <p>
-            {hasRealData
-              ? "Based on your tracked expenses this month."
-              : "Demo mode. Add expenses to get real scenarios."}
+            Use the app daily, protect the 7+ day streak, verify wallet ownership, and prepare for future Holder Rewards without token transfers yet.
           </p>
+          <div className="rewards-hub-actions">
+            <button type="button" onClick={onOpenAdd}>Track Leak</button>
+            <button type="button" onClick={onOpenChart}>Read Chart</button>
+          </div>
+        </div>
+        <div className="rewards-hub-hero-badge">
+          <strong>{activeProofStatus.currentStreak}d</strong>
+          <small>{activeProofStatus.eligible ? "eligible streak" : "active streak"}</small>
         </div>
       </section>
 
-      <section className="whatif-total-card">
-        <span>Potential leak cut</span>
-        <strong>{money(totalMonthlySavings, settings.currency)}</strong>
-        <small>
-          /month · {money(totalMonthlySavings * 12, settings.currency)}/year
-        </small>
-      </section>
-
-      <SurvivalModePanel
-        settings={settings}
-        forecast={survivalForecast}
-        exchangeRates={debtRadarRateState.rates}
-        adjustedDailyPace={survivalAdjustedPace}
-        daysSaved={survivalDaysSaved}
-        totalMonthlySavings={totalMonthlySavings}
-        nextPaydayDate={settings.survival.nextPaydayDate || survivalForecast.nextPaydayDate}
-        onPaydayDateChange={updateSurvivalPaydayDate}
-        shareCardRef={survivalCardRef}
-        sharing={survivalSharing}
-        onShare={shareSurvivalCard}
+      <ActiveStreakProofCard
+        status={activeProofStatus}
+        onTrackLeak={onOpenAdd}
+        onMarkCleanDay={onMarkCleanDay}
+        onCompleteOneFix={onCompleteOneFix}
+        onOpenChallenge={openChallengeArea}
       />
 
-      <details className="clean-details debt-radar-details" open>
+      <section className="rewards-hub-grid">
+        <article className={rewardFoundationReady ? "ready" : "building"}>
+          <span>Reward foundation</span>
+          <strong>{rewardFoundationReady ? "Ready" : "Building"}</strong>
+          <small>Verified wallet + $BROKE balance + live 7+ day streak.</small>
+        </article>
+        <article>
+          <span>Holder tier</span>
+          <strong>{settings.wallet.holderTier.label}</strong>
+          <small>{holderRewardWeight}</small>
+        </article>
+        <article>
+          <span>Today proof</span>
+          <strong>{activeProofStatus.activeToday ? "Protected" : activeProofStatus.recoveryMode ? "Recovery" : "Needs action"}</strong>
+          <small>{activeProofStatus.todayActions.length} proof action{activeProofStatus.todayActions.length === 1 ? "" : "s"} logged.</small>
+        </article>
+        <article>
+          <span>Recovery</span>
+          <strong>{activeProofStatus.recoveryAvailable ? "Available" : activeProofStatus.recoveryUsedRecently ? "Used" : "Ready"}</strong>
+          <small>1 recovery per 7 days · 2 proof actions required.</small>
+        </article>
+      </section>
+
+      <section className="future-reward-pool-card">
+        <div>
+          <span>Creator Fee Reward Pool</span>
+          <strong>Coming later after volume trigger</strong>
+          <p>
+            Planned rule: once $BROKE volume passes $50K / 24h, up to 50% of Creator Fee may be allocated to verified active holders. Final share will depend on verified balance tier and snapshot rules.
+          </p>
+        </div>
+        <b>Locked</b>
+      </section>
+
+      <section className="reward-eligibility-checklist">
+        {rewardChecklist.map((item) => (
+          <article key={item.label} className={item.done ? "done" : "pending"}>
+            <b>{item.done ? "✓" : "—"}</b>
+            <div>
+              <strong>{item.label}</strong>
+              <small>{item.detail}</small>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <details className="clean-details rewards-tool-details rewards-survival-details">
+        <summary>
+          <div>
+            <span>Survival Mode</span>
+            <small>Check pressure before payday and export a safe Survival card.</small>
+          </div>
+          <b>{survivalForecast.statusLabel}</b>
+        </summary>
+        <SurvivalModePanel
+          settings={settings}
+          forecast={survivalForecast}
+          exchangeRates={debtRadarRateState.rates}
+          adjustedDailyPace={survivalAdjustedPace}
+          daysSaved={survivalDaysSaved}
+          totalMonthlySavings={totalMonthlySavings}
+          nextPaydayDate={settings.survival.nextPaydayDate || survivalForecast.nextPaydayDate}
+          onPaydayDateChange={updateSurvivalPaydayDate}
+          shareCardRef={survivalCardRef}
+          sharing={survivalSharing}
+          onShare={shareSurvivalCard}
+        />
+      </details>
+
+      <details className="clean-details rewards-tool-details debt-radar-details">
         <summary>
           <div>
             <span>Debt & Bills Radar</span>
@@ -20154,7 +20817,7 @@ function WhatIfScreen({
         />
       </details>
 
-      <details className="clean-details home-habit-leaks-details" open>
+      <details className="clean-details rewards-tool-details home-habit-leaks-details">
         <summary>
           <div>
             <span>Home Habit Leaks</span>
@@ -20175,11 +20838,11 @@ function WhatIfScreen({
           <div className="v58-empty-head">
             <img src={A.whatIfFrog} alt="" />
             <div>
-              <span>Save is in demo mode</span>
-              <strong>No real scenarios yet.</strong>
+              <span>Rewards tools are in demo mode</span>
+              <strong>No real leak-cut scenarios yet.</strong>
               <p>
-                Add expenses first. Then $BROKE will show what you could save by
-                reducing your real leaks.
+                Add expenses first. Then $BROKE will connect Rewards, streak proof,
+                survival pressure, and real leak cuts.
               </p>
             </div>
           </div>
@@ -20199,7 +20862,7 @@ function WhatIfScreen({
         onOpenAdd={onOpenAdd}
       />
 
-      <details className="clean-details" open={Boolean(activeChallenge || challengeProgress)}>
+      <details ref={challengeSectionRef} className="clean-details rewards-tool-details" open={Boolean(activeChallenge || challengeProgress)}>
         <summary>
           <div>
             <span>Challenges</span>
@@ -20217,7 +20880,7 @@ function WhatIfScreen({
         />
       </details>
 
-      <details className="clean-details">
+      <details className="clean-details rewards-tool-details">
         <summary>
           <div>
             <span>Public Leaderboard</span>
@@ -20232,7 +20895,7 @@ function WhatIfScreen({
         />
       </details>
 
-      <details className="clean-details" open>
+      <details className="clean-details rewards-tool-details">
         <summary>
           <div>
             <span>Leak Cut Scenarios</span>
@@ -20326,6 +20989,7 @@ function SettingsScreen({
   cloudStatus,
   cloudError,
   streak,
+  activeProofStatus,
   badges,
   leaderboard,
   leaderboardLoading,
@@ -20350,6 +21014,7 @@ function SettingsScreen({
   cloudStatus: CloudStatus;
   cloudError: string;
   streak: Streak;
+  activeProofStatus: ActiveStreakProofStatus;
   badges: BadgeItem[];
   leaderboard: LeaderboardState | null;
   leaderboardLoading: boolean;
@@ -21362,6 +22027,8 @@ function SettingsScreen({
             <strong>{streak.currentStreak}d</strong>
           </article>
         </div>
+
+        <ActiveHolderEligibilityStrip status={activeProofStatus} wallet={settings.wallet} />
 
         <div className="profile-public-preview profile-share-identity-preview">
           <img className="profile-public-preview-avatar" src={selectedProfileAvatarImage} alt="Public identity avatar" />

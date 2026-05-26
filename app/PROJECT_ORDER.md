@@ -1,36 +1,41 @@
-# PROJECT ORDER — v59.20.3 Home Snapshot Open + Premium Details Rows
+# Project Order — v59.22 Rewards Hub Foundation
 
 ## Current patch
 
-`v59.20.3 — Home Snapshot Open + Premium Details Rows`
+v59.22 turns the old Save tab into the future-facing Rewards Hub while keeping the app stable and avoiding payout logic.
 
-## Build target
+## Files changed
 
-Apply this patch on top of `v59.20.2 — Home Compact + Share Card Crop Hotfix`.
+- `app/page.tsx`
+- `app/globals.css`
+- `README.md`
+- `PROJECT_ORDER.md`
+- `TESTING.md`
+- `app/README.md`
+- `app/PROJECT_ORDER.md`
+- `app/TESTING.md`
 
-## What this patch does
+## Product order
 
-1. Keeps Wallet Snapshot open by default on Home.
-2. Keeps Today’s Focus, Weekly Behavior Report, and Comeback Mode collapsed by default.
-3. Adds a Home-specific wrapper class so Home details can be styled without changing every `clean-details` usage elsewhere.
-4. Reworks lower Home collapsed rows into premium dark/glass summary cards.
-5. Removes the old arrow/chevron visual from Home details rows.
-6. Keeps all existing Home panel content and actions unchanged.
+1. Preserve the existing six bottom-nav layout.
+2. Rename the old Save nav item to Rewards.
+3. Keep existing Save mechanics inside Rewards instead of deleting or rewriting them.
+4. Put Active Streak and recovery status at the top of Rewards.
+5. Add future Holder Rewards readiness logic as UI/status only.
+6. Keep Creator Fee Reward Pool locked/teaser-only until reward epochs and payout safety exist.
+7. Keep all private financial details out of public reward/share wording.
 
-## What this patch intentionally does not do
+## Not included
 
-- Does not change calculations.
-- Does not change API routes.
-- Does not add Supabase migrations.
-- Does not change wallet verification.
-- Does not change holder reward tiers.
-- Does not change avatar upload backend.
-- Does not change Telegram webhook behavior.
-- Does not change share-card export logic.
-
-## Manual review focus
-
-- Wallet Snapshot should be visible immediately on Home.
-- Lower Home rows should look premium and consistent with Personal Cabinet.
-- The old arrow-style details should no longer appear on Home.
-- All collapsed Home sections should still open and show their original content.
+- No Creator Fee distribution.
+- No on-chain payouts.
+- No staking.
+- No claims.
+- No token transfers.
+- No reward epoch backend.
+- No Supabase migration.
+- No wallet verification backend change.
+- No balance formula change.
+- No holder threshold change.
+- No avatar backend change.
+- No Telegram webhook change.
