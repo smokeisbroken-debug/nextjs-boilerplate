@@ -1,38 +1,23 @@
-# $BROKE Life Tracker — v59.25 Rewards Guide + User Clarity Polish
+# $BROKE Life Tracker — v59.25.1 Streak Proof Persistence Hotfix
 
-Patch-only update on top of v59.24.3.
+Patch-only update on top of v59.25.
 
 ## What changed
 
-- Replaced the old Save guide content with a detailed Rewards guide.
-- The `?` guide now explains:
-  - Rewards overview card
-  - Today’s Proof
-  - Track Leak / Mark Clean Day / One Fix / Daily Challenge
-  - live 7+ day Active Streak
-  - Recovery Mode
-  - future Holder Rewards rules
-  - Balance-share split
-  - Reward epoch / snapshot
-  - Notifications Prep
-  - Share Active Streak Card
-  - old Save tools that now live inside Rewards
-- Added a compact `Quick reward terms` card inside Future Holder Rewards details.
-- Clarified that future Holder Rewards are not live payouts yet.
-- Clarified that balance-share means: user eligible $BROKE balance divided by total eligible $BROKE balance at snapshot time.
-- Kept Rewards UI compact; long explanations now live in the guide instead of the main screen.
+- Fixed Active Streak proof actions being lost after cloud sync.
+- Cloud `app_state_payload` no longer overwrites local Active Streak proof with an older or missing payload.
+- Active Streak proof logs are now merged by date/action between local and cloud state.
+- Server `saveAppState` also merges existing cloud proof state with incoming proof state before saving.
+- Starting/opening a Daily Challenge from Rewards now logs `daily_challenge` proof and opens the challenge area.
+- Existing Rewards UI, guide, balance-share wording, wallet verification, and future Holder Rewards wording remain unchanged.
 
 ## Not changed
 
 - No Creator Fee distribution.
-- No payouts.
-- No reward epochs.
-- No staking.
-- No claims.
-- No token transfers.
+- No payouts, reward epochs, staking, claims, or token transfers.
 - No Supabase migration.
-- No wallet backend changes.
-- No holder-threshold enforcement.
+- No wallet backend logic changes.
+- No holder threshold enforcement changes.
 - No balance formula changes.
 - No avatar backend changes.
 - No Telegram webhook changes.

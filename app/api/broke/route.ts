@@ -180,6 +180,20 @@ type DailyRoutineRewardState = {
   claimed: boolean;
 };
 
+type ActiveStreakProofAction = "track_leak" | "clean_day" | "one_fix" | "daily_challenge";
+
+type ActiveStreakProofLog = {
+  date: string;
+  actions: ActiveStreakProofAction[];
+};
+
+type ActiveStreakProofState = {
+  logs: ActiveStreakProofLog[];
+  recoveredMissedDates: string[];
+  recoveryUsedAt: string | null;
+  updatedAt?: string;
+};
+
 type LocalLeakMission = {
   id: string;
   category: string;
@@ -344,6 +358,7 @@ type AppState = {
   homeHabitLeaks: HomeHabitLeakEntry[];
   dailyRoutineActions?: DailyRoutineActions;
   dailyRoutineReward?: DailyRoutineRewardState;
+  activeStreakProof?: ActiveStreakProofState;
   localLeakMission?: LocalLeakMission | null;
   updatedAt?: string;
 };
@@ -1409,6 +1424,104 @@ function normalizeDailyRoutineReward(input?: Partial<DailyRoutineRewardState> | 
   };
 }
 
+const activeStreakProofActions: ActiveStreakProofAction[] = [
+  "track_leak",
+  "clean_day",
+  "one_fix",
+  "daily_challenge",
+];
+
+function normalizeActiveStreakProofAction(value: unknown): ActiveStreakProofAction | null {
+  return activeStreakProofActions.includes(value as ActiveStreakProofAction)
+    ? (value as ActiveStreakProofAction)
+    : null;
+}
+
+function normalizeActiveStreakProofState(input?: Partial<ActiveStreakProofState> | null): ActiveStreakProofState {
+  const logs = Array.isArray(input?.logs)
+    ? input.logs
+        .map((log) => {
+          const date = String(log?.date || "");
+          const actions = Array.isArray(log?.actions)
+            ? Array.from(
+                new Set(
+                  log.actions
+                    .map(normalizeActiveStreakProofAction)
+                    .filter((action): action is ActiveStreakProofAction => Boolean(action))
+                )
+              )
+            : [];
+
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || actions.length === 0) return null;
+
+          return {
+            date,
+            actions,
+          };
+        })
+        .filter((log): log is ActiveStreakProofLog => Boolean(log))
+    : [];
+
+  const recoveredMissedDates = Array.isArray(input?.recoveredMissedDates)
+    ? Array.from(
+        new Set(
+          input.recoveredMissedDates
+            .map((date) => String(date || ""))
+            .filter((date) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+        )
+      )
+    : [];
+  const recoveryUsedAt = input?.recoveryUsedAt && /^\d{4}-\d{2}-\d{2}$/.test(String(input.recoveryUsedAt))
+    ? String(input.recoveryUsedAt)
+    : null;
+
+  return {
+    logs: logs.sort((a, b) => a.date.localeCompare(b.date)).slice(-90),
+    recoveredMissedDates: recoveredMissedDates.sort().slice(-12),
+    recoveryUsedAt,
+    updatedAt: input?.updatedAt || new Date().toISOString(),
+  };
+}
+
+function mergeActiveStreakProofStates(
+  base?: Partial<ActiveStreakProofState> | null,
+  incoming?: Partial<ActiveStreakProofState> | null
+): ActiveStreakProofState {
+  const normalizedBase = normalizeActiveStreakProofState(base);
+  const normalizedIncoming = normalizeActiveStreakProofState(incoming);
+  const logsByDate = new Map<string, ActiveStreakProofLog>();
+
+  [...normalizedBase.logs, ...normalizedIncoming.logs].forEach((log) => {
+    const current = logsByDate.get(log.date);
+    logsByDate.set(log.date, {
+      date: log.date,
+      actions: Array.from(new Set([...(current?.actions || []), ...log.actions])),
+    });
+  });
+
+  const recoveredMissedDates = Array.from(
+    new Set([
+      ...normalizedBase.recoveredMissedDates,
+      ...normalizedIncoming.recoveredMissedDates,
+    ])
+  ).sort().slice(-12);
+  const recoveryUsedAt = [normalizedBase.recoveryUsedAt, normalizedIncoming.recoveryUsedAt]
+    .filter((date): date is string => Boolean(date))
+    .sort()
+    .pop() || null;
+  const updatedAt = [normalizedBase.updatedAt, normalizedIncoming.updatedAt]
+    .filter((date): date is string => Boolean(date))
+    .sort()
+    .pop() || new Date().toISOString();
+
+  return normalizeActiveStreakProofState({
+    logs: Array.from(logsByDate.values()).sort((a, b) => a.date.localeCompare(b.date)).slice(-90),
+    recoveredMissedDates,
+    recoveryUsedAt,
+    updatedAt,
+  });
+}
+
 function normalizeLocalLeakMission(input?: Partial<LocalLeakMission> | null): LocalLeakMission | null {
   if (!input?.id || !input.category || !input.startedAt || !input.endsAt) return null;
 
@@ -1424,6 +1537,13 @@ function normalizeLocalLeakMission(input?: Partial<LocalLeakMission> | null): Lo
 }
 
 function normalizeAppState(input?: Partial<AppState> | null): AppState {
+  const hasActiveStreakProof = Boolean(
+    input && Object.prototype.hasOwnProperty.call(input, "activeStreakProof")
+  );
+  const activeStreakProof = hasActiveStreakProof
+    ? normalizeActiveStreakProofState(input?.activeStreakProof)
+    : undefined;
+
   return {
     growthSimulations: Array.isArray(input?.growthSimulations)
       ? input.growthSimulations.map(normalizeGrowthSimulation).slice(0, 8)
@@ -1441,6 +1561,7 @@ function normalizeAppState(input?: Partial<AppState> | null): AppState {
     ...(normalizeDailyRoutineReward(input?.dailyRoutineReward)
       ? { dailyRoutineReward: normalizeDailyRoutineReward(input?.dailyRoutineReward) }
       : {}),
+    ...(activeStreakProof ? { activeStreakProof } : {}),
     localLeakMission: normalizeLocalLeakMission(input?.localLeakMission),
     updatedAt: input?.updatedAt || new Date().toISOString(),
   };
@@ -2699,7 +2820,28 @@ async function getAppState(telegramId: number, localFallback?: Partial<AppState>
     const payload = parseAppStatePayload(rows[0].app_state_payload);
 
     if (payload) {
-      return normalizeAppState(payload);
+      const cloudAppState = normalizeAppState(payload);
+
+      if (localFallback && Object.prototype.hasOwnProperty.call(localFallback, "activeStreakProof")) {
+        const mergedAppState = normalizeAppState({
+          ...cloudAppState,
+          activeStreakProof: mergeActiveStreakProofStates(
+            cloudAppState.activeStreakProof,
+            localFallback.activeStreakProof
+          ),
+        });
+
+        const cloudProofSignature = JSON.stringify(cloudAppState.activeStreakProof || null);
+        const mergedProofSignature = JSON.stringify(mergedAppState.activeStreakProof || null);
+
+        if (cloudProofSignature !== mergedProofSignature) {
+          await saveAppState(telegramId, mergedAppState);
+        }
+
+        return mergedAppState;
+      }
+
+      return cloudAppState;
     }
 
     if (localFallback) {
@@ -2715,8 +2857,24 @@ async function getAppState(telegramId: number, localFallback?: Partial<AppState>
 }
 
 async function saveAppState(telegramId: number, input: Partial<AppState>) {
+  let existingAppState: AppState | null = null;
+
+  try {
+    const rows = (await supabaseFetch(
+      `broke_settings?telegram_id=eq.${telegramId}&select=app_state_payload`
+    )) as Record<string, unknown>[];
+    const payload = rows.length > 0 ? parseAppStatePayload(rows[0].app_state_payload) : null;
+    existingAppState = payload ? normalizeAppState(payload) : null;
+  } catch {
+    existingAppState = null;
+  }
+
   const appState = normalizeAppState({
+    ...existingAppState,
     ...input,
+    activeStreakProof: Object.prototype.hasOwnProperty.call(input, "activeStreakProof")
+      ? mergeActiveStreakProofStates(existingAppState?.activeStreakProof, input.activeStreakProof)
+      : existingAppState?.activeStreakProof,
     updatedAt: new Date().toISOString(),
   });
 
@@ -2807,16 +2965,34 @@ async function savePatternHistory(telegramId: number, input: unknown) {
   }
 }
 
-async function importLocalExpensesIfEmpty(telegramId: number, expenses: Expense[]) {
-  if (!expenses.length) return;
+function expenseSyncKey(expense: Expense) {
+  const created = new Date(expense.createdAt);
+  const createdKey = Number.isNaN(created.getTime())
+    ? String(expense.createdAt || "")
+    : created.toISOString().slice(0, 19);
+  const amountKey = Number(expense.amount || 0).toFixed(2);
+  const categoryKey = String(expense.category || "Custom").trim().toLocaleLowerCase();
+  const needKey = String(expense.needType || "Needed").trim().toLocaleLowerCase();
+  const noteKey = String(expense.note || "").replace(/\s+/g, " ").trim().slice(0, 160);
+  const currencyKey = normalizeOptionalCurrency(expense.currency) || "";
 
-  const existing = (await supabaseFetch(
-    `broke_expenses?telegram_id=eq.${telegramId}&select=id&limit=1`
-  )) as Record<string, unknown>[];
+  return [createdKey, amountKey, categoryKey, needKey, noteKey, currencyKey].join("|");
+}
 
-  if (existing.length > 0) return;
+async function importLocalExpensesIfMissing(telegramId: number, expenses: Expense[]) {
+  const localExpenses = expenses
+    .filter((expense) => Number(expense?.amount || 0) > 0)
+    .slice(0, 300);
 
-  const rowsWithCurrency = expenses.slice(0, 200).map((expense) => ({
+  if (!localExpenses.length) return 0;
+
+  const existingExpenses = await getExpenses(telegramId);
+  const existingKeys = new Set(existingExpenses.map(expenseSyncKey));
+  const missingExpenses = localExpenses.filter((expense) => !existingKeys.has(expenseSyncKey(expense)));
+
+  if (!missingExpenses.length) return 0;
+
+  const rowsWithCurrency = missingExpenses.slice(0, 200).map((expense) => ({
     telegram_id: telegramId,
     amount: expense.amount,
     category: expense.category,
@@ -2859,6 +3035,8 @@ async function importLocalExpensesIfEmpty(telegramId: number, expenses: Expense[
       body: JSON.stringify(legacyRows),
     });
   }
+
+  return rowsWithCurrency.length;
 }
 
 async function addExpense(telegramId: number, expense: Expense) {
@@ -3342,7 +3520,7 @@ export async function POST(request: NextRequest) {
       const appState = await getAppState(telegramId, localData?.appState);
 
       if (localData?.expenses?.length) {
-        await importLocalExpensesIfEmpty(telegramId, localData.expenses);
+        await importLocalExpensesIfMissing(telegramId, localData.expenses);
       }
 
       const expenses = await getExpenses(telegramId);

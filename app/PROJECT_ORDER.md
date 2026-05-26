@@ -1,22 +1,24 @@
-# PROJECT ORDER — v59.25
+# PROJECT ORDER — v59.25.1
 
-1. Keep v59.24.3 as the base.
-2. Apply this patch over the project root.
-3. Deploy after checks pass.
-4. Verify the Rewards guide and compact Rewards clarity card.
+Current patch: **v59.25.1 — Streak Proof Persistence Hotfix**.
 
 ## Scope
 
-This is a guide/copy/clarity polish for the Rewards system.
+This patch fixes Active Streak proof persistence after v59.21-v59.25 Rewards work.
 
-## Main intent
+## Files changed
 
-Rewards should stay visually compact while the detailed explanation moves into the `?` guide. Users should understand what to press, why it matters, and how future Holder Rewards eligibility is intended to work.
+- `app/page.tsx`
+- `app/api/broke/route.ts`
+- `README.md`
+- `PROJECT_ORDER.md`
+- `TESTING.md`
+- `app/README.md`
+- `app/PROJECT_ORDER.md`
+- `app/TESTING.md`
 
-## Core wording
+## Product rule preserved
 
-- 7+ day streak is live eligibility proof, not a one-time unlock.
-- Recovery is limited and requires 2 proof actions during the recovery window.
-- Minimum hold is planned as 100,000 $BROKE.
-- Balance-share split means each eligible holder’s reward percentage is based on their verified eligible $BROKE balance divided by the total verified eligible $BROKE balance at snapshot time.
-- No payouts, claims, Creator Fee distribution, or reward epochs are live in this patch.
+- A normal day is protected by at least one proof action.
+- Recovery still requires two proof actions during the recovery day.
+- 7+ Active Streak is live eligibility foundation, not a one-time unlock.

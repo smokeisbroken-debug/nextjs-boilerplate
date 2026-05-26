@@ -4765,6 +4765,45 @@ function normalizeActiveStreakProofState(input?: Partial<ActiveStreakProofState>
   };
 }
 
+function mergeActiveStreakProofStates(
+  base?: Partial<ActiveStreakProofState> | null,
+  incoming?: Partial<ActiveStreakProofState> | null
+): ActiveStreakProofState {
+  const normalizedBase = normalizeActiveStreakProofState(base);
+  const normalizedIncoming = normalizeActiveStreakProofState(incoming);
+  const logsByDate = new Map<string, ActiveStreakProofLog>();
+
+  [...normalizedBase.logs, ...normalizedIncoming.logs].forEach((log) => {
+    const current = logsByDate.get(log.date);
+    logsByDate.set(log.date, {
+      date: log.date,
+      actions: Array.from(new Set([...(current?.actions || []), ...log.actions])),
+    });
+  });
+
+  const recoveredMissedDates = Array.from(
+    new Set([
+      ...normalizedBase.recoveredMissedDates,
+      ...normalizedIncoming.recoveredMissedDates,
+    ])
+  ).sort().slice(-12);
+  const recoveryUsedAt = [normalizedBase.recoveryUsedAt, normalizedIncoming.recoveryUsedAt]
+    .filter((date): date is string => Boolean(date))
+    .sort()
+    .pop() || null;
+  const updatedAt = [normalizedBase.updatedAt, normalizedIncoming.updatedAt]
+    .filter((date): date is string => Boolean(date))
+    .sort()
+    .pop() || new Date().toISOString();
+
+  return normalizeActiveStreakProofState({
+    logs: Array.from(logsByDate.values()).sort((a, b) => a.date.localeCompare(b.date)).slice(-90),
+    recoveredMissedDates,
+    recoveryUsedAt,
+    updatedAt,
+  });
+}
+
 function readActiveStreakProofState(): ActiveStreakProofState {
   if (typeof window === "undefined") return emptyActiveStreakProofState();
 
@@ -9353,6 +9392,7 @@ export default function Home() {
 
   async function startChallenge(challengeId: string) {
     triggerHaptic("medium");
+    recordActiveStreakProof("daily_challenge", false);
 
     if (!cloudAuthReady) {
       notifyApp("Connect Telegram", "Sync your account first, then start challenges.");
@@ -9660,6 +9700,10 @@ export default function Home() {
             activeProofStatus={activeProofStatus}
             onMarkCleanDay={markCleanDayProof}
             onCompleteOneFix={completeOneFixProof}
+            onDailyChallengeProof={() => {
+              recordActiveStreakProof("daily_challenge");
+              setActiveTab("whatif");
+            }}
             onBack={goHome}
             onHelp={openHelp}
             onOpenAdd={() => setActiveTab("add")}
@@ -11962,7 +12006,7 @@ function DailyProofChecklist({
     {
       action: "daily_challenge",
       title: "Daily Challenge",
-      detail: "Complete or open a challenge mission.",
+      detail: "Logs daily challenge proof and opens missions.",
       onClick: onOpenChallenge,
     },
   ];
@@ -20204,7 +20248,12 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
         claimed: Boolean(input.dailyRoutineReward.claimed),
       }
     : undefined;
-  const activeStreakProof = normalizeActiveStreakProofState(input?.activeStreakProof);
+  const hasActiveStreakProof = Boolean(
+    input && Object.prototype.hasOwnProperty.call(input, "activeStreakProof")
+  );
+  const activeStreakProof = hasActiveStreakProof
+    ? normalizeActiveStreakProofState(input?.activeStreakProof)
+    : undefined;
   const hasRewardNotificationPrefs = Boolean(
     input && Object.prototype.hasOwnProperty.call(input, "rewardNotificationPrefs")
   );
@@ -20225,7 +20274,7 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
       : [],
     ...(routineActions?.date === today ? { dailyRoutineActions: routineActions } : {}),
     ...(routineReward?.date === today ? { dailyRoutineReward: routineReward } : {}),
-    activeStreakProof,
+    ...(activeStreakProof ? { activeStreakProof } : {}),
     ...(rewardNotificationPrefs ? { rewardNotificationPrefs } : {}),
     localLeakMission: input?.localLeakMission || null,
     updatedAt: input?.updatedAt,
@@ -20259,7 +20308,12 @@ function writeLocalCloudAppState(input: Partial<CloudAppState>) {
   writeHomeHabitLeaks(appState.homeHabitLeaks);
   if (appState.dailyRoutineActions) writeDailyRoutineActions(appState.dailyRoutineActions, false);
   if (appState.dailyRoutineReward) writeDailyRoutineReward(appState.dailyRoutineReward.date, appState.dailyRoutineReward.claimed, false);
-  if (appState.activeStreakProof) writeActiveStreakProofState(appState.activeStreakProof, false);
+  if (appState.activeStreakProof) {
+    writeActiveStreakProofState(
+      mergeActiveStreakProofStates(readActiveStreakProofState(), appState.activeStreakProof),
+      false
+    );
+  }
   if (appState.rewardNotificationPrefs) writeRewardNotificationPrefs(appState.rewardNotificationPrefs, false);
   if ("localLeakMission" in appState) writeLocalLeakMission(appState.localLeakMission || null, false);
   window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
@@ -21061,6 +21115,7 @@ function WhatIfScreen({
   activeProofStatus,
   onMarkCleanDay,
   onCompleteOneFix,
+  onDailyChallengeProof,
   onBack,
   onHelp,
   onOpenAdd,
@@ -21084,6 +21139,7 @@ function WhatIfScreen({
   activeProofStatus: ActiveStreakProofStatus;
   onMarkCleanDay: () => void;
   onCompleteOneFix: () => void;
+  onDailyChallengeProof: () => void;
   onBack: () => void;
   onHelp: () => void;
   onOpenAdd: () => void;
@@ -21245,6 +21301,11 @@ function WhatIfScreen({
     triggerHaptic("light");
     challengeSectionRef.current?.setAttribute("open", "true");
     challengeSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function completeDailyChallengeProof() {
+    onDailyChallengeProof();
+    window.setTimeout(() => openChallengeArea(), 0);
   }
 
   const survivalShareText = [
@@ -21470,14 +21531,14 @@ function WhatIfScreen({
           settings={settings}
           onTrackLeak={onOpenAdd}
           onOpenChart={onOpenChart}
-          onOpenChallenge={openChallengeArea}
+          onOpenChallenge={completeDailyChallengeProof}
         />
         <DailyProofChecklist
           status={activeProofStatus}
           onTrackLeak={onOpenAdd}
           onMarkCleanDay={onMarkCleanDay}
           onCompleteOneFix={onCompleteOneFix}
-          onOpenChallenge={openChallengeArea}
+          onOpenChallenge={completeDailyChallengeProof}
         />
       </details>
 
@@ -21494,7 +21555,7 @@ function WhatIfScreen({
           onTrackLeak={onOpenAdd}
           onMarkCleanDay={onMarkCleanDay}
           onCompleteOneFix={onCompleteOneFix}
-          onOpenChallenge={openChallengeArea}
+          onOpenChallenge={completeDailyChallengeProof}
         />
       </details>
 

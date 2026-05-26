@@ -1,6 +1,6 @@
-# TESTING — v59.25
+# TESTING — v59.25.1
 
-Recommended checks:
+## Verified in patch workspace
 
 ```bash
 npm run typecheck
@@ -8,16 +8,24 @@ npm run lint:quiet
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-Manual checks:
+Result: passed.
 
-1. Open the app and tap the `?` guide.
-2. Open the Rewards tab inside the guide.
-3. Confirm the guide title says `Rewards: Proof, Streak, Future Holder Rewards`.
-4. Confirm the guide explains Today’s Proof, Mark Clean Day, One Fix, Daily Challenge, 7+ day streak, Recovery Mode, Balance-share, Reward epoch, Notifications Prep, and Share Active Streak Card.
-5. Open Rewards → Future Holder Rewards.
-6. Confirm the `Quick reward terms` card appears and stays compact.
-7. Confirm no long explanation was added back to the main Rewards overview card.
-8. Confirm all major Rewards blocks remain collapsed by default except the lightweight top overview.
-9. Confirm the app still builds and no new API or Supabase step is required.
+## Manual QA checklist
 
-No database migration is required.
+1. Open Rewards.
+2. Open Today’s Proof.
+3. Tap **Mark Clean Day**.
+4. Confirm Today changes to protected and Active Streak shows at least `1d` / `1/7`.
+5. Refresh app.
+6. Confirm streak proof remains protected.
+7. Wait for cloud sync or reopen Telegram Mini App.
+8. Confirm proof does not reset to `0d`.
+9. Tap **Daily Challenge**.
+10. Confirm Daily Challenge is logged as proof and challenge area opens.
+
+## Regression checks
+
+- Track Leak still records a normal expense.
+- One Fix still logs proof and opens Chart.
+- Rewards Notifications settings still keep independent state.
+- Future Holder Rewards text still uses balance-share wording.
