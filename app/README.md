@@ -1,21 +1,26 @@
-# $BROKE Life Tracker — v59.24.3 Rewards Brightness + Compact Notification Fix
+# $BROKE Life Tracker — v59.25 Rewards Guide + User Clarity Polish
 
-Patch-only update on top of v59.24.2.
+Patch-only update on top of v59.24.3.
 
 ## What changed
 
-- Rewards tab colors were brightened to match the rest of the app.
-- Rewards overview text was shortened.
-- Main Rewards card now focuses on the essentials:
-  - Starting June 1 prep
-  - up to 50% Creator Fee pool
-  - 100K $BROKE minimum hold
-  - live 7+ day streak
-  - balance-share split
-- Future Holder Rewards wording now stays short; detailed explanations belong in the guide.
-- Notification Prep copy was shortened.
-- Notification preferences no longer reset when cloud app-state sync receives older/missing notification preferences.
-- Notification toggles now use independent local/synced state for Daily Proof, Recovery, and 7-day milestone.
+- Replaced the old Save guide content with a detailed Rewards guide.
+- The `?` guide now explains:
+  - Rewards overview card
+  - Today’s Proof
+  - Track Leak / Mark Clean Day / One Fix / Daily Challenge
+  - live 7+ day Active Streak
+  - Recovery Mode
+  - future Holder Rewards rules
+  - Balance-share split
+  - Reward epoch / snapshot
+  - Notifications Prep
+  - Share Active Streak Card
+  - old Save tools that now live inside Rewards
+- Added a compact `Quick reward terms` card inside Future Holder Rewards details.
+- Clarified that future Holder Rewards are not live payouts yet.
+- Clarified that balance-share means: user eligible $BROKE balance divided by total eligible $BROKE balance at snapshot time.
+- Kept Rewards UI compact; long explanations now live in the guide instead of the main screen.
 
 ## Not changed
 

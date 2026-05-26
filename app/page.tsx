@@ -10139,95 +10139,159 @@ function HelpGuideModal({
       ],
     },
     whatif: {
-      label: "Save",
-      eyebrow: "Save Button Guide",
-      title: "Save: Survive, Cut, Challenge",
+      label: "Rewards",
+      eyebrow: "Rewards Button Guide",
+      title: "Rewards: Proof, Streak, Future Holder Rewards",
       intro:
-        "Save is where pressure becomes action. Use it to understand survival risk, test leak cuts, start challenges, check leaderboard, and keep Debt & Bills Radar private.",
+        "Rewards is the proof hub. Use it to protect today, build the live 7+ day Active Streak, prepare wallet proof, and understand future Holder Rewards rules before any payout system exists.",
       icon: "/nav-save.png",
-      footerTitle: "Save rule",
+      footerTitle: "Rewards rule",
       footerBody:
-        "Save should help you reduce one realistic leak or understand one hidden pressure. Do not turn private debt details into public content.",
+        "Rewards are not a one-time unlock. Keep the streak live, verify wallet ownership, hold eligible $BROKE, and use the app consistently. No Creator Fee payouts or claims are active yet.",
       sections: [
         {
-          title: "Survival Mode button / block",
+          title: "Rewards overview card",
           body: [
-            "Survival Mode compares money left, time left, spending pace, and safe daily budget.",
-            "Use it when you need to know whether the month can survive until the next income cycle.",
-            "It is not for shame. It is for early warning.",
-            "Public Proof Mode can hide sensitive numbers if a survival card is shared.",
-          ],
-          icon: A.whatIfFrog,
-        },
-        {
-          title: "Leak Cut Scenarios",
-          body: [
-            "Leak Cut Scenarios show what happens if one category is reduced.",
-            "Use them before making a challenge or goal.",
-            "A good cut is realistic: fewer deliveries, fewer subscriptions, less taxi, less impulse shopping.",
-            "The goal is not to remove life. The goal is to stop the leak with the lowest value.",
-          ],
-          icon: A.navWhatIf,
-        },
-        {
-          title: "Pattern Challenge Coach",
-          body: [
-            "The coach suggests challenges based on detected patterns.",
-            "If takeout is the leak, it can suggest a takeout challenge.",
-            "If late-night or weekend spending is the leak, it can suggest timing-based discipline.",
-            "Use suggested challenges when you want the app to choose the most relevant mission.",
+            "This is the short top card in Rewards.",
+            "It shows the planned June 1 direction: activity matters, 100K $BROKE minimum hold, 7+ day streak, wallet verification, and balance-share split.",
+            "It is a preparation card, not a live payout screen.",
+            "Use Protect today when the app says today's proof is still needed.",
           ],
           icon: A.challengeTrophy,
         },
         {
-          title: "Start challenge / complete challenge buttons",
+          title: "Today’s Proof",
           body: [
-            "Start challenge begins a limited mission.",
-            "Complete challenge should be pressed only after the real action is done.",
-            "Failed or skipped challenges still teach the app where discipline breaks.",
-            "Challenge progress can support badges, streaks, and public proof.",
+            "Today’s Proof is the daily action area.",
+            "On a normal day, one proof action protects the day.",
+            "Valid actions are Track Leak, Mark Clean Day, One Fix, or Daily Challenge.",
+            "If today is already protected, you do not need to press random buttons just to farm activity.",
+          ],
+          icon: A.dailyCheck,
+        },
+        {
+          title: "Track Leak button",
+          body: [
+            "Track Leak opens Add so you can record real spending or a real wallet decision.",
+            "Use it when money actually left the wallet or when a leak pattern needs to be logged.",
+            "A real tracked leak can count as proof activity for the active streak.",
+            "Do not create fake expenses just to protect a streak.",
+          ],
+          icon: A.navAdd,
+        },
+        {
+          title: "Mark Clean Day button",
+          body: [
+            "Mark Clean Day protects the streak when there is no leak to record.",
+            "Use it only when the day was controlled or there was nothing meaningful to track.",
+            "This keeps honest users from being forced to invent expenses.",
+            "If you actually spent money, Track Leak is the better button.",
+          ],
+          icon: A.bestStreak,
+        },
+        {
+          title: "One Fix button",
+          body: [
+            "One Fix means one small corrective action after reading your wallet pattern.",
+            "It can be reducing a category, cancelling a small leak, avoiding one timing trigger, or choosing tomorrow’s control move.",
+            "The button sends you toward Chart because One Fix should be based on real pattern data.",
+            "Use it when you want action, not another report.",
+          ],
+          icon: A.progressFlame,
+        },
+        {
+          title: "Daily Challenge button",
+          body: [
+            "Daily Challenge opens the challenge area inside Rewards.",
+            "Challenges are leak-control missions based on spending behavior and pattern pressure.",
+            "Completing a real challenge can count as proof activity.",
+            "Challenge progress can also support badges, leaderboard, and public proof.",
           ],
           icon: A.challengeCompleted,
         },
         {
-          title: "Leaderboard",
+          title: "7+ day Active Streak",
           body: [
-            "Leaderboard is for public-friendly discipline status.",
-            "It should not reveal private income, debt, payday, or exact balance unless the user chooses public settings.",
-            "Use it for motivation, not for exposing personal financial details.",
+            "The Active Streak is live eligibility proof, not a permanent badge.",
+            "0–6 days means you are still building eligibility.",
+            "7+ days means the activity side is ready for future Holder Reward checks.",
+            "If the streak drops below 7 days, eligibility pauses until it is rebuilt or recovered.",
           ],
-          icon: A.badgeStableWallet,
+          icon: A.bestStreak,
         },
         {
-          title: "Debt & Bills Radar",
+          title: "Recovery Mode",
           body: [
-            "Debt & Bills Radar is for silent monthly killers: debt, subscriptions, insurance, rent, phone, internet, and recurring obligations.",
-            "Monthly hit should be filled first because it affects survival pressure.",
-            "Remaining debt should be used only for real debt items.",
-            "This block is private-first and should not be converted into a detailed public debt card.",
+            "Recovery is the safety window after a missed day.",
+            "Recovery is limited to one recovery per 7 days.",
+            "During recovery, complete 2 proof actions in time to restore the streak.",
+            "If recovery expires, the active streak resets and must be rebuilt.",
           ],
-          icon: A.lifeCost,
+          icon: A.calendar,
         },
         {
-          title: "Copy / share safe text",
+          title: "Future Holder Rewards rules",
           body: [
-            "Use copy or share actions for safe public summaries.",
-            "Good public proof shows discipline, score, pattern, next move, or challenge status.",
-            "Avoid income, exact real balance, payday, debt amounts, and sensitive bills.",
+            "Future Holder Rewards are planned, not live payouts yet.",
+            "Planned requirements: legitimate app activity, verified wallet, minimum 100,000 $BROKE hold, live 7+ day streak, and an active reward epoch.",
+            "Up to 50% of the Creator Fee may be allocated to a future rewards pool after the volume trigger.",
+            "Holding alone is not enough. App activity and wallet proof matter too.",
+          ],
+          icon: A.walletHp,
+        },
+        {
+          title: "Balance-share split",
+          body: [
+            "Balance-share means your percentage depends on your verified eligible $BROKE balance compared with the total verified eligible $BROKE balance at snapshot time.",
+            "Example: if all eligible holders together hold 10 BROKE and one holder holds 5, that holder represents 50% of the eligible pool.",
+            "If another holder has 3 out of 10, that holder represents 30% of the eligible pool.",
+            "This is different from a fixed tier-weight payout.",
+          ],
+          icon: A.currency,
+        },
+        {
+          title: "Reward epoch / snapshot",
+          body: [
+            "Reward epoch means a future reward period controlled by the project.",
+            "Snapshot means the app checks who is eligible at that moment.",
+            "The planned check uses the current state: verified wallet, eligible balance, active streak, and reward rules.",
+            "If your streak was 7+ before but is broken at snapshot time, eligibility can pause.",
+          ],
+          icon: A.calendar,
+        },
+        {
+          title: "Notifications Prep",
+          body: [
+            "Notifications Prep is only a settings preparation block right now.",
+            "Daily Proof, Recovery, 7-day milestone, and reminder time are saved as preferences.",
+            "Real Telegram scheduled alerts or push notifications are not active yet.",
+            "Use this block to tell the app what reminders should exist later.",
+          ],
+          icon: A.bell,
+        },
+        {
+          title: "Share Active Streak Card",
+          body: [
+            "This card is public proof for streak activity and holder-readiness status.",
+            "It can show avatar, identity style, streak, today status, wallet verification, holder tier, and reward preparation state.",
+            "It should not expose income, real balance, payday, or private debt details.",
+            "Use it for X or Telegram when you want to show consistency without leaking private finance data.",
           ],
           icon: A.export,
         },
         {
-          title: "When to leave Save and open Growth",
+          title: "Old Save tools inside Rewards",
           body: [
-            "Use Rewards to decide what to cut or which proof action to complete.",
-            "Use Growth to see what the cut could become.",
-            "The full loop is: Add records, read Chart, complete proof in Rewards, redirect saved leaks in Growth, show safe proof in Profile or Home.",
+            "Survival Mode, Debt & Bills Radar, Home Habit Leaks, Pattern Challenge Coach, Challenges, Leaderboard, and Leak Cut Scenarios still exist inside Rewards.",
+            "They are grouped here because they all support proof, discipline, or leak control.",
+            "Open only the tool you need instead of scrolling through everything.",
+            "Rewards is now the activity and proof hub, not just the old Save tab.",
           ],
-          icon: GROWTH_PUBLIC_ASSETS.market,
+          icon: A.navWhatIf,
         },
       ],
     },
+
     settings: {
       label: "Profile",
       eyebrow: "Profile Button Guide",
@@ -12066,25 +12130,46 @@ function RewardsNotificationPrepCard({
 }
 
 function FutureRewardsExplainerCard() {
-  const steps = [
-    "Keep a live 7+ day Active Streak.",
-    "Verify wallet ownership in Profile.",
-    "Hold at least 100,000 $BROKE in the verified wallet.",
-    "Wait for a future Creator Fee reward epoch to open.",
-    "Reward share is calculated from each eligible holder’s percentage of the eligible $BROKE pool.",
+  const terms = [
+    {
+      label: "Live streak",
+      value: "7+ active days",
+      detail: "Current state, not a one-time unlock.",
+    },
+    {
+      label: "Wallet proof",
+      value: "Verified owner",
+      detail: "Message signature only. No token movement.",
+    },
+    {
+      label: "Minimum hold",
+      value: "100K $BROKE",
+      detail: "Planned minimum for future eligibility.",
+    },
+    {
+      label: "Balance-share",
+      value: "Your % of eligible pool",
+      detail: "Your eligible BROKE / total eligible BROKE.",
+    },
+    {
+      label: "Reward epoch",
+      value: "Not live yet",
+      detail: "No payouts, claims, or Creator Fee distribution now.",
+    },
   ];
 
   return (
-    <section className="future-rewards-explainer-card">
+    <section className="future-rewards-explainer-card rewards-clarity-card">
       <div className="section-title compact-title">
-        <span>How future Holder Rewards will work</span>
-        <small>No payouts or claims are active yet.</small>
+        <span>Quick reward terms</span>
+        <small>Full details are in the ? guide.</small>
       </div>
-      <div className="future-rewards-steps">
-        {steps.map((step, index) => (
-          <article key={step}>
-            <b>{index + 1}</b>
-            <span>{step}</span>
+      <div className="future-rewards-steps reward-term-grid">
+        {terms.map((item) => (
+          <article key={item.label}>
+            <b>{item.label}</b>
+            <strong>{item.value}</strong>
+            <span>{item.detail}</span>
           </article>
         ))}
       </div>

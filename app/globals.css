@@ -26578,3 +26578,72 @@ body {
     grid-template-columns: 1fr !important;
   }
 }
+
+/* v59.25 Rewards Guide + User Clarity Polish */
+.rewards-clarity-card {
+  margin-top: 12px !important;
+}
+
+.reward-term-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px !important;
+}
+
+.reward-term-grid article {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  align-items: start !important;
+  gap: 5px !important;
+  min-height: 0 !important;
+  padding: 12px !important;
+  border: 1px solid rgba(183, 255, 25, 0.14) !important;
+  border-radius: 18px !important;
+  background:
+    radial-gradient(circle at top right, rgba(183, 255, 25, 0.06), transparent 42%),
+    rgba(5, 15, 10, 0.36) !important;
+}
+
+.reward-term-grid article b {
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  place-items: unset !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--neon) !important;
+  font-size: 0.72rem !important;
+  font-weight: 950 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+}
+
+.reward-term-grid article strong {
+  color: #f8fff3 !important;
+  font-size: 0.96rem !important;
+  line-height: 1.12 !important;
+}
+
+.reward-term-grid article span {
+  color: rgba(238, 248, 232, 0.68) !important;
+  font-size: 0.76rem !important;
+  line-height: 1.26 !important;
+}
+
+.tab-guide-list article strong {
+  letter-spacing: -0.015em;
+}
+
+.tab-guide-list article li {
+  line-height: 1.34;
+}
+
+@media (max-width: 520px) {
+  .reward-term-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reward-term-grid article {
+    padding: 11px !important;
+  }
+}
