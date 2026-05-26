@@ -1,47 +1,90 @@
-# TESTING — v59.26
+# TESTING — v59.27 Reward Snapshot Ledger Foundation
 
-## Verified in patch workspace
+## Build checks
+
+Run:
 
 ```bash
 npm run typecheck
 npm run lint:quiet
+NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-Result: passed.
+## Supabase checks
 
-`NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully and finished TypeScript, then timed out in this sandbox during/after static page generation. Full final build completion was not confirmed here. Re-run the same build command in the deployment workspace.
+1. Run migration:
 
-## Manual QA checklist
+```sql
+supabase/migrations/20260526_v59_27_reward_snapshot_ledger_foundation.sql
+```
 
-### Chart Active Streak Timeline
+2. Run audit:
 
-1. Open Rewards.
-2. Complete one proof action such as Mark Clean Day or Daily Routine 7/7.
-3. Open Chart.
-4. Confirm **Active Streak Timeline** appears below Chart stats.
-5. Confirm Today shows protected and the correct proof action label.
-6. Refresh the app and wait for cloud sync.
-7. Confirm the proof timeline still shows the same protected day.
+```sql
+supabase/review/20260526_v59_27_reward_snapshot_ledger_audit.sql
+```
 
-### Recovery / missed day display
+3. Check app diagnostics:
 
-1. Use a test account or local storage state with a missed yesterday scenario.
-2. Open Chart.
-3. Confirm recovery/missed state is visible and not presented as a payout or reward claim.
-4. Complete two proof actions in Rewards.
-5. Return to Chart and confirm the missed day shows as recovered.
+```txt
+/api/broke?check=supabase&key=YOUR_SECRET
+```
 
-### Copy consistency
+Confirm these tables return `ok: true`:
 
-1. Open Home, Chart, Growth, Rewards, and Profile.
-2. Confirm the bottom nav uses Rewards, not old Save wording.
-3. Confirm Growth still uses “Save plan” only as a verb for saved simulations.
-4. Confirm Rewards remains the place for proof actions and Chart remains read-only history.
+- `broke_reward_epochs`
+- `broke_reward_snapshots`
 
-### Regression checks
+## Admin route checks
 
-1. Track Leak still saves expenses and logs proof.
-2. Daily Routine 7/7 still logs `daily_routine` proof.
-3. Mark Clean Day still logs proof.
-4. One Fix and Daily Challenge still log proof.
-5. Wallet formulas and Holder Rewards wording remain unchanged.
+Dry run must not write rows:
+
+```bash
+curl -X POST "https://YOUR_APP/api/rewards/snapshot?key=YOUR_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"dryRun":true}'
+```
+
+Expected:
+
+- `dryRun: true`
+- `committed: false`
+- eligible/ineligible previews returned
+- no token transfer fields or claim execution
+
+Commit test:
+
+```bash
+curl -X POST "https://YOUR_APP/api/rewards/snapshot?key=YOUR_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"commit":true,"epochCode":"test-prep","epochName":"Test Prep Snapshot"}'
+```
+
+Expected:
+
+- one epoch row created/updated;
+- snapshot rows created/updated;
+- balance-share percentages calculated only for eligible holders.
+
+## UI checks
+
+Open Rewards → Future Holder Rewards.
+
+Confirm:
+
+- Reward Snapshot Ledger card appears.
+- It says ledger only, no payout or claim active.
+- Ready state requires wallet verification, 100K+ verified BROKE, and 7+ active streak.
+- Main Rewards screen stays compact.
+
+## Non-regression checks
+
+Confirm unchanged:
+
+- Track Leak.
+- Daily Routine proof.
+- Rewards proof actions.
+- Chart proof timeline.
+- Wallet verification.
+- Share cards.
+- Avatar upload.

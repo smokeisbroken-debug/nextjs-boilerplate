@@ -10418,6 +10418,16 @@ function HelpGuideModal({
           icon: A.calendar,
         },
         {
+          title: "Reward Snapshot Ledger",
+          body: [
+            "The snapshot ledger is the future admin record of who was eligible at a specific moment.",
+            "It records verified wallet, verified $BROKE balance, active streak days, eligibility reason, and balance-share percentage.",
+            "It does not send tokens, open claims, create staking, or distribute Creator Fee by itself.",
+            "Final share is locked only when an admin snapshot is run for an active reward epoch.",
+          ],
+          icon: A.calendar,
+        },
+        {
           title: "Notifications Prep",
           body: [
             "Notifications Prep is only a settings preparation block right now.",
@@ -12331,6 +12341,65 @@ function FutureRewardsExplainerCard() {
             <span>{item.detail}</span>
           </article>
         ))}
+      </div>
+    </section>
+  );
+}
+
+
+function RewardSnapshotLedgerCard({
+  settings,
+  status,
+}: {
+  settings: Settings;
+  status: ActiveStreakProofStatus;
+}) {
+  const walletVerified = Boolean(settings.wallet.isVerified);
+  const verifiedBalance = walletVerified ? settings.wallet.brokeBalance : 0;
+  const minHoldReady = verifiedBalance >= FUTURE_HOLDER_REWARD_MIN_BALANCE;
+  const snapshotReady = walletVerified && minHoldReady && status.eligible;
+  const missing = [
+    !walletVerified ? "wallet proof" : "",
+    walletVerified && !minHoldReady ? "100K+ hold" : "",
+    !status.eligible ? "7+ active streak" : "",
+  ].filter(Boolean);
+  const balanceSharePreview = snapshotReady
+    ? "Calculated at snapshot"
+    : missing.length
+      ? `Needs ${missing.join(" + ")}`
+      : "Waiting for epoch";
+
+  return (
+    <section className={`reward-snapshot-ledger-card ${snapshotReady ? "ready" : "building"}`}>
+      <div className="section-title compact-title">
+        <span>Reward Snapshot Ledger</span>
+        <small>Admin snapshot foundation. No payout or claim active.</small>
+      </div>
+      <div className="reward-snapshot-ledger-grid">
+        <article>
+          <span>Snapshot status</span>
+          <strong>{snapshotReady ? "Ready to be counted" : "Preparing"}</strong>
+          <small>Final eligibility is locked only when an epoch snapshot is run.</small>
+        </article>
+        <article>
+          <span>Eligible balance</span>
+          <strong>{walletVerified ? formatTokenAmount(verifiedBalance) : "Verify first"}</strong>
+          <small>Only verified wallet balance can enter the ledger.</small>
+        </article>
+        <article>
+          <span>Active streak</span>
+          <strong>{status.currentStreak}d / {ACTIVE_STREAK_ELIGIBILITY_DAYS}+</strong>
+          <small>{status.eligible ? "Live streak ready" : "Keep building daily proof."}</small>
+        </article>
+        <article>
+          <span>Balance-share</span>
+          <strong>{balanceSharePreview}</strong>
+          <small>Your verified eligible BROKE / total verified eligible BROKE.</small>
+        </article>
+      </div>
+      <div className="reward-snapshot-ledger-note">
+        <b>Ledger only</b>
+        <span>v59.27 prepares epochs and snapshot rows. Token transfers, claims, staking, payouts, and Creator Fee distribution stay off.</span>
       </div>
     </section>
   );
@@ -21784,6 +21853,11 @@ function WhatIfScreen({
         </section>
 
         <FutureRewardsExplainerCard />
+
+        <RewardSnapshotLedgerCard
+          settings={settings}
+          status={activeProofStatus}
+        />
 
         <section className="future-reward-pool-card">
           <div>

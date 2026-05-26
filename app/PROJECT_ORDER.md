@@ -1,15 +1,17 @@
-# PROJECT ORDER — v59.26
+# PROJECT ORDER — v59.27 Reward Snapshot Ledger Foundation
 
-Current patch: **v59.26 — Chart Proof Timeline + Full App Consistency Polish**.
+## Current patch
 
-## Scope
-
-This patch adds the Active Streak proof history to Chart and performs a visible-copy consistency audit across the app. It does not change reward distribution, wallet verification, balance formulas, or backend payout mechanics.
+v59.27 prepares the future Holder Rewards ledger without enabling payouts.
 
 ## Files changed
 
 - `app/page.tsx`
 - `app/globals.css`
+- `app/api/broke/route.ts`
+- `app/api/rewards/snapshot/route.ts`
+- `supabase/migrations/20260526_v59_27_reward_snapshot_ledger_foundation.sql`
+- `supabase/review/20260526_v59_27_reward_snapshot_ledger_audit.sql`
 - `README.md`
 - `PROJECT_ORDER.md`
 - `TESTING.md`
@@ -17,19 +19,13 @@ This patch adds the Active Streak proof history to Chart and performs a visible-
 - `app/PROJECT_ORDER.md`
 - `app/TESTING.md`
 
-## Product rules preserved
+## Product order
 
-- A normal day is protected by at least one valid proof action.
-- Daily Routine counts only after full 7/7 completion.
-- Recovery requires two proof actions during the recovery day.
-- 7+ Active Streak is a live eligibility foundation, not a permanent unlock.
-- Future Holder Rewards remain preparation-only.
+1. Rewards tab keeps the compact user-facing rules.
+2. Chart keeps the proof history timeline.
+3. v59.27 adds snapshot ledger infrastructure.
+4. Future steps may add admin review UI, public snapshot summary, or claim/payout logic later.
 
-## Main changes
+## Safety line
 
-1. Added a Chart-only **Active Streak Timeline**.
-2. Shows the last 7 days as protected, missed, recovered, or today.
-3. Shows the proof action label: Track Leak, Daily Routine, Clean Day, One Fix, or Daily Challenge.
-4. Adds clear status text for Today protected / Recovery available / Today needs proof / No active proof yet.
-5. Updated Chart guide content for the new proof history block.
-6. Cleaned visible copy so old Save wording aligns with the current Rewards tab.
+This patch is ledger-only. No Creator Fee distribution, claims, staking, token transfers, or automatic payouts are active.

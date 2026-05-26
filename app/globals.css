@@ -24970,6 +24970,7 @@ body {
 .rewards-hub-hero,
 .rewards-hub-grid article,
 .future-reward-pool-card,
+.reward-snapshot-ledger-card,
 .reward-eligibility-checklist article,
 .rewards-tool-details {
   width: min(100%, 560px);
@@ -26645,6 +26646,97 @@ body {
 
   .reward-term-grid article {
     padding: 11px !important;
+  }
+}
+
+
+/* v59.27 — Reward Snapshot Ledger Foundation */
+.reward-snapshot-ledger-card {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+  border-radius: 24px;
+  padding: 14px;
+  overflow: hidden;
+}
+
+.reward-snapshot-ledger-card.ready {
+  border-color: rgba(183, 255, 25, 0.30) !important;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(183, 255, 25, 0.13), transparent 36%),
+    linear-gradient(145deg, rgba(18, 48, 22, 0.96), rgba(5, 16, 12, 0.98)) !important;
+}
+
+.reward-snapshot-ledger-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.reward-snapshot-ledger-grid article {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid rgba(183, 255, 25, 0.14);
+  border-radius: 18px;
+  padding: 11px;
+  background: rgba(5, 15, 10, 0.34);
+}
+
+.reward-snapshot-ledger-grid span {
+  color: var(--neon);
+  font-size: 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reward-snapshot-ledger-grid strong {
+  color: #f8fff3;
+  font-size: 0.94rem;
+  line-height: 1.14;
+  word-break: break-word;
+}
+
+.reward-snapshot-ledger-grid small {
+  color: rgba(238, 248, 232, 0.66);
+  font-size: 0.74rem;
+  line-height: 1.25;
+}
+
+.reward-snapshot-ledger-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  justify-content: space-between;
+  border: 1px solid rgba(183, 255, 25, 0.14);
+  border-radius: 18px;
+  padding: 10px 11px;
+  background: rgba(183, 255, 25, 0.06);
+}
+
+.reward-snapshot-ledger-note b {
+  flex: 0 0 auto;
+  color: #ddff8d;
+  font-size: 0.74rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.reward-snapshot-ledger-note span {
+  color: rgba(238, 248, 232, 0.70);
+  font-size: 0.76rem;
+  line-height: 1.28;
+}
+
+@media (max-width: 520px) {
+  .reward-snapshot-ledger-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .reward-snapshot-ledger-note {
+    display: grid;
   }
 }
 

@@ -3499,6 +3499,8 @@ export async function GET(request: NextRequest) {
       checkSupabaseTable("broke_pattern_history"),
       checkSupabaseTable("broke_wallet_links"),
       checkSupabaseTable("broke_wallet_verifications"),
+      checkSupabaseTable("broke_reward_epochs"),
+      checkSupabaseTable("broke_reward_snapshots"),
     ]);
 
     return NextResponse.json({
