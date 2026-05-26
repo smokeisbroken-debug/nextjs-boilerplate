@@ -1,3 +1,30 @@
+# Project Order — v59.22.1 — Rewards UI Placement Hotfix
+
+## Current patch
+
+Keep Rewards as the dedicated hub, but remove duplicate Active Streak weight from Home. Home should stay short and focused. Rewards should own the full streak/recovery/proof flow.
+
+## Files changed
+
+- `app/page.tsx`
+- `app/globals.css`
+- `README.md`
+- `PROJECT_ORDER.md`
+- `TESTING.md`
+- `app/README.md`
+- `app/PROJECT_ORDER.md`
+- `app/TESTING.md`
+
+## Product order
+
+1. Home shows wallet status and Wallet Snapshot.
+2. Rewards owns BROKE Active Streak, recovery, proof actions, and future reward readiness.
+3. Bottom nav remains six items: Home, Add, Chart, Growth, Rewards, Profile.
+4. Rewards tool sections use clean horizontal `Open` / `Close` buttons.
+5. No backend, payout, wallet, token, or database behavior changes.
+
+---
+
 # Project Order — v59.22 Rewards Hub Foundation
 
 ## Current patch

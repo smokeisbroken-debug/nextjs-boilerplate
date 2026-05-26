@@ -1,3 +1,21 @@
+# v59.22.1 — Rewards UI Placement Hotfix
+
+Patch focus: keeps the new Rewards Hub direction, but removes the large BROKE Active Streak card from Home so Home stays focused on Wallet Snapshot and wallet context. The full Active Streak / Recovery / proof-action flow remains inside Rewards.
+
+UI polish included:
+
+- Removed the large Active Streak card from Home.
+- Kept Wallet Snapshot open on Home.
+- Rewards remains the main place for Active Streak, recovery, proof actions, future Holder Rewards readiness, and old Save tools.
+- Fixed Rewards collapsible action pills so `Open` / `Close` render horizontally instead of cramped vertical labels.
+- Tightened the Rewards proof-action buttons into a cleaner 2x2 mobile layout.
+
+This patch does not change Creator Fee distribution, payouts, reward epochs, staking, claims, token transfers, Supabase migrations, wallet verification backend, holder thresholds, balance formula, avatar backend, Telegram webhook, share-card export logic, or stored data.
+
+Verification in this environment: TypeScript TSX transpile diagnostics pass for `app/page.tsx`; CSS brace balance passes for `app/globals.css`. Full npm checks were not rerun because this is a small UI placement/CSS hotfix.
+
+---
+
 # v59.22 — Rewards Hub Foundation
 
 Patch focus: turns the old Save tab into a dedicated Rewards Hub without adding a seventh bottom-nav button. The bottom nav now shows `Rewards`, while the underlying tab id remains `whatif` for compatibility with existing state and tracking logic.

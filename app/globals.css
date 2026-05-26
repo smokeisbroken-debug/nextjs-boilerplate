@@ -25264,3 +25264,108 @@ body {
     flex-direction: column;
   }
 }
+
+/* ===== V59.22.1 HOME ACTIVE STREAK REMOVAL + REWARDS BUTTON POLISH ===== */
+.home-screen > .active-streak-proof-card {
+  display: none !important;
+}
+
+.rewards-screen .rewards-tool-details > summary {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 9px;
+  min-height: 76px;
+  padding: 14px 16px;
+}
+
+.rewards-screen .rewards-tool-details > summary b {
+  grid-column: 2;
+  grid-row: 1;
+  margin-right: 0 !important;
+  max-width: 118px;
+  min-width: 0;
+  writing-mode: horizontal-tb !important;
+  transform: none !important;
+  text-orientation: mixed !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rewards-screen .rewards-tool-details > summary::after {
+  content: "Open";
+  grid-column: 3;
+  grid-row: 1;
+  width: auto !important;
+  height: auto !important;
+  min-width: 62px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  place-items: unset !important;
+  padding: 8px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(119, 255, 174, 0.22);
+  color: rgba(215, 255, 228, 0.86);
+  background: rgba(119, 255, 174, 0.075);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.025);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.055em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  transform: none !important;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+.rewards-screen .rewards-tool-details[open] > summary::after {
+  content: "Close";
+  color: var(--neon);
+  border-color: rgba(183, 255, 25, 0.28);
+  background: rgba(183, 255, 25, 0.11);
+  transform: none !important;
+}
+
+.rewards-screen .rewards-tool-details[open] > summary {
+  border-bottom-color: rgba(119, 255, 174, 0.13);
+}
+
+.rewards-screen .active-streak-proof-buttons {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.rewards-screen .active-streak-proof-buttons button {
+  min-height: 46px;
+  border-radius: 18px;
+  font-size: 0.86rem;
+  letter-spacing: -0.01em;
+  background: rgba(255, 255, 255, 0.052);
+  border-color: rgba(199, 255, 222, 0.1);
+}
+
+.rewards-screen .active-streak-proof-buttons button.primary {
+  background: linear-gradient(135deg, rgba(101, 255, 160, 0.96), rgba(47, 226, 111, 0.92));
+  border-color: rgba(167, 255, 198, 0.5);
+  box-shadow: 0 12px 26px rgba(53, 255, 135, 0.16);
+}
+
+@media (max-width: 430px) {
+  .rewards-screen .rewards-tool-details > summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 70px;
+    padding: 13px 14px;
+  }
+
+  .rewards-screen .rewards-tool-details > summary b {
+    display: none;
+  }
+
+  .rewards-screen .rewards-tool-details > summary::after {
+    grid-column: 2;
+    min-width: 58px;
+    padding: 8px 10px;
+    font-size: 0.64rem;
+  }
+}

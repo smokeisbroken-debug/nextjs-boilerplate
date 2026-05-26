@@ -1,3 +1,24 @@
+# Testing — v59.22.1 — Rewards UI Placement Hotfix
+
+## Manual checks after deploy
+
+1. Open Home and confirm the large `BROKE Active Streak` card is no longer shown there.
+2. Confirm Home still shows the Wallet Snapshot open by default.
+3. Open Rewards and confirm `BROKE Active Streak` is still visible there.
+4. Confirm `Track Leak`, `Mark Clean Day`, `One Fix`, and `Daily Challenge` buttons render as clean 2x2 action buttons on mobile.
+5. Confirm Rewards tool rows such as Survival Mode, Debt & Bills Radar, Home Habit Leaks, Challenges, Public Leaderboard, and Leak Cut Scenarios show horizontal `Open` / `Close` pills, not vertical cramped text.
+6. Confirm opening and closing Rewards tool rows still works.
+7. Confirm bottom nav still has six items and the Rewards icon opens the Rewards tab.
+
+## Automated checks in this environment
+
+- `app/page.tsx` TSX transpile diagnostics: passed
+- `app/globals.css` brace balance: passed
+
+Full npm checks were not rerun for this small UI placement/CSS hotfix.
+
+---
+
 # Testing — v59.22 Rewards Hub Foundation
 
 ## Automated checks completed
