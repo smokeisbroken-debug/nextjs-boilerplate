@@ -25369,3 +25369,459 @@ body {
     font-size: 0.64rem;
   }
 }
+
+/* ===== V59.23 REWARDS PROOF POLISH + ACTIVE STREAK SHARE CARD ===== */
+.rewards-status-hero,
+.daily-proof-checklist-card,
+.future-rewards-explainer-card,
+.active-streak-share-section,
+.active-streak-share-card {
+  width: min(100%, 560px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.rewards-status-hero {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  overflow: hidden;
+  border-radius: 26px;
+  border: 1px solid rgba(119, 255, 174, 0.2);
+  background:
+    radial-gradient(circle at 85% 10%, rgba(96, 255, 166, 0.2), transparent 32%),
+    linear-gradient(145deg, rgba(13, 34, 27, 0.98), rgba(5, 10, 13, 0.98));
+  box-shadow: 0 24px 66px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.rewards-status-hero.ready {
+  border-color: rgba(108, 255, 164, 0.38);
+  box-shadow: 0 26px 72px rgba(40, 255, 139, 0.13), 0 24px 66px rgba(0, 0, 0, 0.42);
+}
+
+.rewards-status-hero.recovery {
+  border-color: rgba(255, 201, 99, 0.32);
+  background:
+    radial-gradient(circle at 85% 10%, rgba(255, 206, 103, 0.18), transparent 34%),
+    linear-gradient(145deg, rgba(31, 22, 9, 0.98), rgba(5, 10, 13, 0.98));
+}
+
+.rewards-status-copy {
+  min-width: 0;
+  padding-right: 92px;
+}
+
+.rewards-status-copy > span,
+.daily-proof-checklist-head span,
+.future-rewards-explainer-card .section-title span,
+.active-streak-share-section .section-title span,
+.active-streak-share-card span {
+  display: block;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.rewards-status-copy h2 {
+  margin: 7px 0 8px;
+  color: #f8fff9;
+  font-size: clamp(1.45rem, 5.4vw, 2.15rem);
+  line-height: 1.02;
+  letter-spacing: -0.055em;
+}
+
+.rewards-status-copy p {
+  margin: 0;
+  color: rgba(227, 248, 236, 0.72);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.rewards-status-orbit {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 82px;
+  min-height: 82px;
+  padding: 10px;
+  border: 1px solid rgba(133, 255, 186, 0.24);
+  border-radius: 26px;
+  background: rgba(3, 12, 9, 0.62);
+  text-align: center;
+}
+
+.rewards-status-orbit strong {
+  color: #a2ffc4;
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.rewards-status-orbit small {
+  margin-top: 5px;
+  color: rgba(226, 255, 236, 0.66);
+  font-size: 0.63rem;
+  font-weight: 900;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.rewards-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rewards-status-grid article,
+.future-rewards-steps article,
+.active-streak-share-proof-grid article {
+  min-width: 0;
+  padding: 11px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.rewards-status-grid strong,
+.active-streak-share-main strong,
+.active-streak-share-proof-grid strong {
+  display: block;
+  margin-top: 5px;
+  color: #f7fff9;
+  font-size: 0.94rem;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.rewards-status-grid span,
+.active-streak-share-proof-grid span,
+.active-streak-share-main span {
+  color: rgba(160, 255, 198, 0.82);
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.rewards-status-actions,
+.active-streak-share-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rewards-status-actions button,
+.active-streak-share-actions button {
+  min-height: 42px;
+  border-radius: 16px;
+  border: 1px solid rgba(130, 255, 180, 0.18);
+  background: rgba(255, 255, 255, 0.052);
+  color: rgba(244, 255, 248, 0.92);
+  font-weight: 900;
+}
+
+.rewards-status-actions button:first-child,
+.active-streak-share-actions button:first-child {
+  color: #05130b;
+  background: linear-gradient(135deg, rgba(118, 255, 170, 0.98), rgba(48, 225, 111, 0.94));
+  border-color: rgba(175, 255, 206, 0.5);
+}
+
+.daily-proof-checklist-card,
+.future-rewards-explainer-card,
+.active-streak-share-section {
+  margin-top: 12px;
+  padding: 16px;
+  border-radius: 24px;
+  border: 1px solid rgba(119, 255, 174, 0.17);
+  background: linear-gradient(145deg, rgba(7, 20, 17, 0.94), rgba(5, 10, 13, 0.96));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.daily-proof-checklist-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.daily-proof-checklist-head strong {
+  display: block;
+  margin-top: 5px;
+  color: #f7fff9;
+  font-size: 1.12rem;
+  line-height: 1.08;
+}
+
+.daily-proof-checklist-head small,
+.future-rewards-explainer-card .section-title small,
+.active-streak-share-section .section-title small,
+.active-streak-share-main small,
+.active-streak-share-card footer span {
+  display: block;
+  margin-top: 4px;
+  color: rgba(226, 246, 234, 0.66);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.daily-proof-checklist-head > b {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(119, 255, 174, 0.22);
+  background: rgba(119, 255, 174, 0.09);
+  color: #baffd2;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.daily-proof-checklist-list {
+  display: grid;
+  gap: 8px;
+}
+
+.daily-proof-checklist-list button {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 60px;
+  padding: 11px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.045);
+  text-align: left;
+}
+
+.daily-proof-checklist-list button.done {
+  border-color: rgba(118, 255, 174, 0.32);
+  background: rgba(78, 255, 143, 0.08);
+}
+
+.daily-proof-checklist-list button > b {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #8dffb9;
+  font-size: 1rem;
+}
+
+.daily-proof-checklist-list strong {
+  display: block;
+  color: #f8fff9;
+  font-size: 0.92rem;
+  line-height: 1.1;
+}
+
+.daily-proof-checklist-list small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(226, 246, 234, 0.6);
+  font-size: 0.73rem;
+  line-height: 1.28;
+}
+
+.future-rewards-steps {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.future-rewards-steps article {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.future-rewards-steps b {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #07140c;
+  background: linear-gradient(135deg, #a8ff49, #42ee83);
+  font-size: 0.8rem;
+  font-weight: 950;
+}
+
+.future-rewards-steps span {
+  color: rgba(245, 255, 249, 0.9);
+  font-size: 0.86rem;
+  line-height: 1.32;
+}
+
+.active-streak-share-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 24px;
+  border-radius: 32px;
+  border: 1px solid rgba(143, 255, 189, 0.24);
+  background:
+    radial-gradient(circle at top right, rgba(106, 255, 164, 0.17), transparent 34%),
+    linear-gradient(145deg, rgba(9, 26, 19, 0.98), rgba(3, 8, 7, 0.98));
+  box-shadow: 0 20px 58px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.active-streak-share-card .premium-share-card-art {
+  opacity: 0.22;
+}
+
+.active-streak-share-top {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.active-streak-share-top > img {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 22px;
+  border: 1px solid rgba(176, 255, 208, 0.24);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+}
+
+.active-streak-share-top strong {
+  display: block;
+  margin-top: 5px;
+  color: #f8fff9;
+  font-size: 1.5rem;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.active-streak-share-top small {
+  color: rgba(227, 248, 236, 0.72);
+  font-size: 0.82rem;
+  line-height: 1.25;
+}
+
+.active-streak-share-top > b {
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(182, 255, 204, 0.22);
+  background: rgba(126, 255, 176, 0.09);
+  color: #caffdd;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.active-streak-share-main,
+.active-streak-share-proof-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 9px;
+}
+
+.active-streak-share-main {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.active-streak-share-main > div {
+  min-height: 126px;
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.active-streak-share-main strong {
+  margin-top: 10px;
+  color: var(--neon);
+  font-size: 2.1rem;
+  letter-spacing: -0.06em;
+}
+
+.active-streak-share-proof-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.active-streak-share-card footer {
+  position: relative;
+  z-index: 1;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.active-streak-share-card footer strong {
+  display: block;
+  color: #f8fff9;
+  font-size: 1.03rem;
+}
+
+.active-streak-share-actions {
+  margin-top: 10px;
+}
+
+.share-capture-safe.active-streak-share-card {
+  width: 720px !important;
+  max-width: 720px !important;
+  padding-top: 36px !important;
+}
+
+@media (max-width: 520px) {
+  .rewards-status-copy {
+    padding-right: 0;
+  }
+
+  .rewards-status-orbit {
+    position: static;
+    width: 100%;
+    min-height: auto;
+    grid-template-columns: auto 1fr;
+    justify-content: start;
+    text-align: left;
+  }
+
+  .rewards-status-grid,
+  .active-streak-share-main,
+  .active-streak-share-proof-grid,
+  .rewards-status-actions,
+  .active-streak-share-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .active-streak-share-card {
+    padding: 18px;
+    border-radius: 28px;
+  }
+
+  .active-streak-share-top {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .active-streak-share-top > img {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+  }
+
+  .active-streak-share-top > b {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .active-streak-share-main > div {
+    min-height: 106px;
+  }
+}

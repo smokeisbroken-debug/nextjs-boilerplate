@@ -4924,6 +4924,57 @@ function activeStreakProofActionLabel(action: ActiveStreakProofAction) {
   return "Daily challenge";
 }
 
+function activeStreakProofActionShortLabel(action: ActiveStreakProofAction) {
+  if (action === "track_leak") return "Track Leak";
+  if (action === "clean_day") return "Clean Day";
+  if (action === "one_fix") return "One Fix";
+  return "Daily Challenge";
+}
+
+function getActiveStreakRewardReadinessLabel(status: ActiveStreakProofStatus, settings: Settings) {
+  const verified = Boolean(settings.wallet.isVerified);
+  const hasBalance = settings.wallet.brokeBalance > 0;
+
+  if (verified && hasBalance && status.eligible) return "Reward-ready foundation";
+  if (!verified) return "Verify wallet next";
+  if (!hasBalance) return "Hold $BROKE next";
+  if (status.recoveryMode || status.recoveryAvailable) return "Recovery active";
+  if (status.activeToday) return "Today protected";
+
+  return "Proof needed today";
+}
+
+function buildActiveStreakProofShareText(settings: Settings, status: ActiveStreakProofStatus) {
+  const identityName = getPublicIdentityName(settings);
+  const identityStatus = getPublicIdentityStatus(settings);
+  const holderTier = settings.wallet.holderTier.label;
+  const verified = settings.wallet.isVerified ? "Verified wallet" : "Wallet not verified yet";
+  const balanceLine = settings.wallet.brokeBalance > 0
+    ? `${formatTokenAmount(settings.wallet.brokeBalance)} BROKE`
+    : "Building holder balance";
+  const todayLine = status.activeToday
+    ? "Today protected"
+    : status.recoveryAvailable
+      ? `Recovery mode: ${status.recoveryActionsNeeded} proof action${status.recoveryActionsNeeded === 1 ? "" : "s"} needed`
+      : "Today needs proof";
+
+  return [
+    `${identityName} on $BROKE`,
+    identityStatus,
+    "",
+    "BROKE Active Streak proof:",
+    `Active streak: ${status.currentStreak}/${ACTIVE_STREAK_ELIGIBILITY_DAYS}+ days`,
+    `Today: ${todayLine}`,
+    `Status: ${status.eligible ? "Eligible streak live" : "Building eligibility"}`,
+    `Holder tier: ${holderTier}`,
+    `Wallet: ${verified}`,
+    `Balance proof: ${balanceLine}`,
+    "",
+    "Keep a 7+ day active streak to stay eligible for future Holder Rewards.",
+    "Built in $BROKE Life Tracker.",
+  ].filter(Boolean).join("\n");
+}
+
 
 function normalizeCurrencyMode(value: unknown): CurrencyMode {
   return value === "convert" ? "convert" : "display";
@@ -11647,6 +11698,328 @@ function ActiveStreakProofCard({
       <p>
         Future Holder Rewards will use the live streak state, not a one-time unlock. If the streak drops below 7 days, eligibility pauses until it is rebuilt or recovered.
       </p>
+    </section>
+  );
+}
+
+function RewardsStatusHero({
+  status,
+  settings,
+  onTrackLeak,
+  onOpenChart,
+  onOpenChallenge,
+}: {
+  status: ActiveStreakProofStatus;
+  settings: Settings;
+  onTrackLeak: () => void;
+  onOpenChart: () => void;
+  onOpenChallenge: () => void;
+}) {
+  const verified = Boolean(settings.wallet.isVerified);
+  const hasBalance = settings.wallet.brokeBalance > 0;
+  const rewardReady = verified && hasBalance && status.eligible;
+  const todayState = status.activeToday
+    ? "Protected"
+    : status.recoveryMode || status.recoveryAvailable
+      ? "Recovery"
+      : "Needs proof";
+
+  return (
+    <section className={`rewards-status-hero ${rewardReady ? "ready" : status.recoveryAvailable ? "recovery" : "building"}`}>
+      <div className="rewards-status-copy">
+        <span>Rewards Status</span>
+        <h2>{rewardReady ? "Ready for future snapshots." : getActiveStreakRewardReadinessLabel(status, settings)}</h2>
+        <p>
+          Keep the live 7+ day streak, verify wallet ownership, and hold $BROKE. Future reward checks use the current state, not a one-time unlock.
+        </p>
+      </div>
+
+      <div className="rewards-status-orbit">
+        <strong>{status.currentStreak}d</strong>
+        <small>{status.eligible ? "7+ active" : `${status.progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} built`}</small>
+      </div>
+
+      <div className="rewards-status-grid">
+        <article>
+          <span>Today</span>
+          <strong>{todayState}</strong>
+        </article>
+        <article>
+          <span>Wallet</span>
+          <strong>{verified ? "Verified" : "Not verified"}</strong>
+        </article>
+        <article>
+          <span>Holder tier</span>
+          <strong>{hasBalance ? settings.wallet.holderTier.label : "No tier"}</strong>
+        </article>
+        <article>
+          <span>Reward status</span>
+          <strong>{rewardReady ? "Ready" : "Preparing"}</strong>
+        </article>
+      </div>
+
+      <div className="rewards-status-actions">
+        <button type="button" onClick={onTrackLeak}>Track Leak</button>
+        <button type="button" onClick={onOpenChart}>Read Chart</button>
+        <button type="button" onClick={onOpenChallenge}>Open Challenge</button>
+      </div>
+    </section>
+  );
+}
+
+function DailyProofChecklist({
+  status,
+  onTrackLeak,
+  onMarkCleanDay,
+  onCompleteOneFix,
+  onOpenChallenge,
+}: {
+  status: ActiveStreakProofStatus;
+  onTrackLeak: () => void;
+  onMarkCleanDay: () => void;
+  onCompleteOneFix: () => void;
+  onOpenChallenge: () => void;
+}) {
+  const actionConfig: Array<{
+    action: ActiveStreakProofAction;
+    title: string;
+    detail: string;
+    onClick: () => void;
+  }> = [
+    {
+      action: "track_leak",
+      title: "Track Leak",
+      detail: "Log one real wallet leak or spending decision.",
+      onClick: onTrackLeak,
+    },
+    {
+      action: "clean_day",
+      title: "Mark Clean Day",
+      detail: "Protect the streak when there was no leak to record.",
+      onClick: onMarkCleanDay,
+    },
+    {
+      action: "one_fix",
+      title: "One Fix",
+      detail: "Make one small correction after reading the chart.",
+      onClick: onCompleteOneFix,
+    },
+    {
+      action: "daily_challenge",
+      title: "Daily Challenge",
+      detail: "Complete or open a challenge mission.",
+      onClick: onOpenChallenge,
+    },
+  ];
+  const requiredActions = status.recoveryAvailable || status.recoveryMode
+    ? ACTIVE_STREAK_RECOVERY_ACTIONS
+    : 1;
+  const completedCount = Math.min(status.todayActions.length, requiredActions);
+  const checklistTitle = status.recoveryAvailable || status.recoveryMode
+    ? "Recovery proof checklist"
+    : "Today’s proof checklist";
+  const checklistDetail = status.recoveryAvailable || status.recoveryMode
+    ? `Complete ${requiredActions} proof actions today to restore the streak.`
+    : "Complete at least one proof action today to protect the active streak.";
+
+  return (
+    <section className="daily-proof-checklist-card">
+      <div className="daily-proof-checklist-head">
+        <div>
+          <span>{checklistTitle}</span>
+          <strong>{completedCount}/{requiredActions} completed</strong>
+          <small>{checklistDetail}</small>
+        </div>
+        <b>{status.activeToday ? "Safe" : status.recoveryAvailable ? "Recovery" : "Open"}</b>
+      </div>
+
+      <div className="daily-proof-checklist-list">
+        {actionConfig.map((item) => {
+          const done = status.todayActions.includes(item.action);
+
+          return (
+            <button
+              type="button"
+              key={item.action}
+              className={done ? "done" : "pending"}
+              onClick={item.onClick}
+            >
+              <b>{done ? "✓" : "□"}</b>
+              <span>
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function FutureRewardsExplainerCard() {
+  const steps = [
+    "Keep a live 7+ day Active Streak.",
+    "Verify wallet ownership in Profile.",
+    "Hold $BROKE in the verified wallet.",
+    "Wait for a future reward epoch to open.",
+    "Reward share will depend on verified holder tier.",
+  ];
+
+  return (
+    <section className="future-rewards-explainer-card">
+      <div className="section-title compact-title">
+        <span>How future Holder Rewards will work</span>
+        <small>No payouts or claims are active yet.</small>
+      </div>
+      <div className="future-rewards-steps">
+        {steps.map((step, index) => (
+          <article key={step}>
+            <b>{index + 1}</b>
+            <span>{step}</span>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ActiveStreakShareCard({
+  settings,
+  status,
+  shareInitData,
+}: {
+  settings: Settings;
+  status: ActiveStreakProofStatus;
+  shareInitData: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [imageSharing, setImageSharing] = useState(false);
+  const shareCardRef = useRef<HTMLDivElement | null>(null);
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityStatus = getPublicIdentityStatus(settings);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
+  const identityStyle = getIdentityStyleMeta(settings.identity.identityStyle);
+  const shareText = buildActiveStreakProofShareText(settings, status);
+  const todayLine = status.activeToday
+    ? "Today protected"
+    : status.recoveryAvailable
+      ? `${status.recoveryActionsNeeded} recovery actions left`
+      : "Needs proof today";
+  const loggedLabels = status.todayActions.length
+    ? status.todayActions.map(activeStreakProofActionShortLabel).join(" · ")
+    : "No proof action yet";
+
+  async function copyProofText() {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      triggerHaptic("success");
+      markDailyRoutineAction("sharedProgress");
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
+      notifyApp("Copy unavailable", "Your browser blocked clipboard access.", "info");
+    }
+  }
+
+  function openXShare() {
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+    openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`);
+  }
+
+  async function shareProofImage() {
+    if (!shareCardRef.current || imageSharing) return;
+
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+    setImageSharing(true);
+
+    try {
+      const imageFile = await createShareImageFileFromElement(shareCardRef.current);
+      const nativeShared = await tryNativeImageShare(imageFile);
+
+      if (nativeShared) return;
+
+      if (!shareInitData) {
+        downloadImageFile(imageFile);
+        notifyApp("Proof card downloaded", "Open inside Telegram to send it directly to the bot.");
+        return;
+      }
+
+      try {
+        await sendShareImageViaBot(imageFile, shareInitData, shareText);
+        notifyApp("Proof card sent", "Open your Telegram bot chat and forward it anywhere.");
+      } catch {
+        downloadImageFile(imageFile);
+        notifyApp("PNG downloaded", "Bot delivery failed, so the proof card was saved as a file.");
+      }
+    } catch {
+      notifyApp("Sharing unavailable", "Proof image sharing was cancelled or is not supported here.");
+    } finally {
+      setImageSharing(false);
+    }
+  }
+
+  return (
+    <section className="active-streak-share-section">
+      <div className="section-title compact-title">
+        <span>Shareable Active Streak Card</span>
+        <small>Public proof without income, payday, or real balance.</small>
+      </div>
+
+      <div className={`active-streak-share-card premium-share-card identity-share-style-${settings.identity.identityStyle || "classic"}`} ref={shareCardRef}>
+        <img className="premium-share-card-art" src={SHARE_CARD_PUBLIC_ASSETS.background} alt="" />
+        <div className="active-streak-share-top">
+          <img src={publicIdentityAvatar} alt="" />
+          <div>
+            <span>$BROKE ACTIVE PROOF</span>
+            <strong>{publicIdentityName}</strong>
+            <small>{publicIdentityStatus}</small>
+          </div>
+          <b>{identityStyle.badge}</b>
+        </div>
+
+        <div className="active-streak-share-main">
+          <div>
+            <span>Active streak</span>
+            <strong>{status.currentStreak}/{ACTIVE_STREAK_ELIGIBILITY_DAYS}+</strong>
+            <small>{status.eligible ? "Eligible streak live" : `${status.progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} days built`}</small>
+          </div>
+          <div>
+            <span>Today</span>
+            <strong>{todayLine}</strong>
+            <small>{loggedLabels}</small>
+          </div>
+        </div>
+
+        <div className="active-streak-share-proof-grid">
+          <article>
+            <span>Wallet</span>
+            <strong>{settings.wallet.isVerified ? "Verified" : "Not verified"}</strong>
+          </article>
+          <article>
+            <span>Holder tier</span>
+            <strong>{settings.wallet.brokeBalance > 0 ? settings.wallet.holderTier.label : "Building"}</strong>
+          </article>
+          <article>
+            <span>Reward status</span>
+            <strong>{settings.wallet.isVerified && settings.wallet.brokeBalance > 0 && status.eligible ? "Ready" : "Preparing"}</strong>
+          </article>
+        </div>
+
+        <footer>
+          <strong>Keep 7+ active days to stay eligible.</strong>
+          <span>Future Holder Rewards use live proof, not a one-time unlock.</span>
+        </footer>
+      </div>
+
+      <div className="active-streak-share-actions">
+        <button type="button" onClick={openXShare}>Share on X</button>
+        <button type="button" onClick={copyProofText}>{copied ? "Copied" : "Copy text"}</button>
+        <button type="button" onClick={shareProofImage}>{imageSharing ? "Preparing..." : "Share image"}</button>
+      </div>
     </section>
   );
 }
@@ -20692,23 +21065,21 @@ function WhatIfScreen({
     <div className="screen rewards-screen">
       <Header title="Rewards" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
 
-      <section className={`rewards-hub-hero ${rewardFoundationReady ? "ready" : "building"}`}>
-        <div className="rewards-hub-hero-copy">
-          <span>Rewards Hub</span>
-          <h2>{rewardFoundationReady ? "Active holder foundation ready." : "Build active holder proof."}</h2>
-          <p>
-            Use the app daily, protect the 7+ day streak, verify wallet ownership, and prepare for future Holder Rewards without token transfers yet.
-          </p>
-          <div className="rewards-hub-actions">
-            <button type="button" onClick={onOpenAdd}>Track Leak</button>
-            <button type="button" onClick={onOpenChart}>Read Chart</button>
-          </div>
-        </div>
-        <div className="rewards-hub-hero-badge">
-          <strong>{activeProofStatus.currentStreak}d</strong>
-          <small>{activeProofStatus.eligible ? "eligible streak" : "active streak"}</small>
-        </div>
-      </section>
+      <RewardsStatusHero
+        status={activeProofStatus}
+        settings={settings}
+        onTrackLeak={onOpenAdd}
+        onOpenChart={onOpenChart}
+        onOpenChallenge={openChallengeArea}
+      />
+
+      <DailyProofChecklist
+        status={activeProofStatus}
+        onTrackLeak={onOpenAdd}
+        onMarkCleanDay={onMarkCleanDay}
+        onCompleteOneFix={onCompleteOneFix}
+        onOpenChallenge={openChallengeArea}
+      />
 
       <ActiveStreakProofCard
         status={activeProofStatus}
@@ -20718,7 +21089,7 @@ function WhatIfScreen({
         onOpenChallenge={openChallengeArea}
       />
 
-      <section className="rewards-hub-grid">
+      <section className="rewards-hub-grid rewards-readiness-grid">
         <article className={rewardFoundationReady ? "ready" : "building"}>
           <span>Reward foundation</span>
           <strong>{rewardFoundationReady ? "Ready" : "Building"}</strong>
@@ -20740,6 +21111,14 @@ function WhatIfScreen({
           <small>1 recovery per 7 days · 2 proof actions required.</small>
         </article>
       </section>
+
+      <FutureRewardsExplainerCard />
+
+      <ActiveStreakShareCard
+        settings={settings}
+        status={activeProofStatus}
+        shareInitData={shareInitData}
+      />
 
       <section className="future-reward-pool-card">
         <div>

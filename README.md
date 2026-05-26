@@ -1,3 +1,34 @@
+# v59.23 — Rewards Proof Polish + Shareable Active Streak Card
+
+Patch focus: makes the Rewards tab clearer, more premium, and more useful as the future Holder Rewards command center. This is still a no-payout foundation: no Creator Fee distribution, reward epochs, claims, staking, or token transfers are active yet.
+
+Product changes:
+
+- Added a new Rewards Status hero with active streak, today proof state, wallet verification state, holder tier, and reward-readiness state.
+- Added a Daily Proof Checklist explaining exactly which actions can protect the day: Track Leak, Mark Clean Day, One Fix, and Daily Challenge.
+- Recovery mode now has clearer copy: recovery days require two proof actions, while normal days need one proof action.
+- Added a simple “How future Holder Rewards will work” explainer with five steps.
+- Added a Shareable Active Streak Card inside Rewards with profile avatar support, identity style, active streak, today status, wallet verification, holder tier, and reward preparation status.
+- Added share actions for the Active Streak card: Share on X, Copy text, and Share image / send via Telegram bot when init data is available.
+- Kept old Save/Rewards tools intact: Survival Mode, Debt & Bills Radar, Home Habit Leaks, Pattern Challenge Coach, Challenges, Public Leaderboard, and Leak Cut Scenarios.
+
+Not changed:
+
+- No Creator Fee distribution.
+- No payout, claim, staking, or token transfer logic.
+- No reward epochs or snapshot ledger.
+- No Supabase migration.
+- No wallet verification backend changes.
+- No holder threshold changes.
+- No balance formula changes.
+- No avatar upload backend changes.
+- No Telegram webhook changes.
+- No existing share-card export behavior changes outside the new Active Streak proof card.
+
+Verification completed in this environment: `npm run typecheck`, `npm run lint:quiet`, and `NEXT_TELEMETRY_DISABLED=1 npm run build` passed.
+
+---
+
 # v59.22.1 — Rewards UI Placement Hotfix
 
 Patch focus: keeps the new Rewards Hub direction, but removes the large BROKE Active Streak card from Home so Home stays focused on Wallet Snapshot and wallet context. The full Active Streak / Recovery / proof-action flow remains inside Rewards.

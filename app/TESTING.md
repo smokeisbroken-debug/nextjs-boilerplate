@@ -1,3 +1,36 @@
+# Testing — v59.23 — Rewards Proof Polish + Shareable Active Streak Card
+
+## Automated checks completed
+
+```bash
+npm run typecheck
+npm run lint:quiet
+NEXT_TELEMETRY_DISABLED=1 npm run build
+```
+
+## Manual checks after deploy
+
+1. Open Rewards and confirm the top status card shows current streak, today state, wallet state, holder tier, and reward status.
+2. Confirm the Daily Proof Checklist shows Track Leak, Mark Clean Day, One Fix, and Daily Challenge.
+3. Press Track Leak and confirm it opens Add.
+4. Press One Fix and confirm it records proof and opens Chart.
+5. Press Daily Challenge and confirm it opens the Challenges section.
+6. If recovery mode is active, confirm the copy says two proof actions are required.
+7. Confirm the “How future Holder Rewards will work” explainer appears below the readiness cards.
+8. Confirm the Active Streak share card shows profile avatar/custom avatar, identity, active streak, today status, wallet verification, holder tier, and reward status.
+9. Test Copy text from the Active Streak card.
+10. Test Share on X opens a tweet intent with the proof text.
+11. Test Share image in Telegram WebView and in normal browser fallback.
+12. Confirm old Rewards tools still open and close: Survival Mode, Debt & Bills Radar, Home Habit Leaks, Challenges, Public Leaderboard, and Leak Cut Scenarios.
+13. Confirm Home still does not show the large Active Streak card.
+
+## Safety checks
+
+- Confirm no payout, claim, staking, token transfer, reward epoch, or Creator Fee distribution UI is active.
+- Confirm public proof text does not expose income, real balance, payday, seed phrase, or debt details.
+
+---
+
 # Testing — v59.22.1 — Rewards UI Placement Hotfix
 
 ## Manual checks after deploy

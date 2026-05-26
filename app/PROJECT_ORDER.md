@@ -1,3 +1,38 @@
+# Project Order — v59.23 — Rewards Proof Polish + Shareable Active Streak Card
+
+## Current patch
+
+Rewards becomes easier to understand and easier to share. The tab now starts with a status-oriented command center, a daily proof checklist, future Holder Rewards explanation, and a new public Active Streak proof card.
+
+## Files changed
+
+- `app/page.tsx`
+- `app/globals.css`
+- `README.md`
+- `PROJECT_ORDER.md`
+- `TESTING.md`
+- `app/README.md`
+- `app/PROJECT_ORDER.md`
+- `app/TESTING.md`
+
+## Product order
+
+1. Home remains focused on Wallet Snapshot and overview.
+2. Rewards owns Active Streak, Recovery Mode, proof actions, future Holder Rewards readiness, and shareable proof.
+3. Profile remains the place for identity, wallet proof, holder tier, Share Studio, and settings.
+4. Active Streak is rolling: 7+ days means eligible foundation, below 7 days pauses eligibility.
+5. Recovery can restore a missed day only when the user completes the required proof actions within the recovery day.
+6. Future Creator Fee Reward Pool remains locked and informational only.
+
+## Not in this patch
+
+- No Creator Fee distribution.
+- No claims, staking, payouts, token transfers, or reward epochs.
+- No new database tables or Supabase migration.
+- No wallet verification backend changes.
+
+---
+
 # Project Order — v59.22.1 — Rewards UI Placement Hotfix
 
 ## Current patch
