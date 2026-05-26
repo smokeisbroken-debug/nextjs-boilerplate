@@ -11960,13 +11960,13 @@ function RewardsNotificationPrepCard({
   const [copied, setCopied] = useState(false);
   const activePrefsCount = [prefs.dailyProofReminder, prefs.recoveryReminder, prefs.milestoneReminder].filter(Boolean).length;
   const todayNotificationLine = status.activeToday
-    ? "No daily proof alert needed now. Today is protected."
+    ? "Already safe."
     : status.recoveryAvailable
-      ? `${status.recoveryActionsNeeded} recovery action${status.recoveryActionsNeeded === 1 ? "" : "s"} should trigger a recovery warning.`
-      : "Daily proof reminder should ask for one action today.";
+      ? `${status.recoveryActionsNeeded} recovery left.`
+      : "Needs proof.";
   const milestoneLine = status.eligible
-    ? "7-day line reached. Keep daily proof alive."
-    : `${Math.max(0, ACTIVE_STREAK_ELIGIBILITY_DAYS - status.progressDays)} day${ACTIVE_STREAK_ELIGIBILITY_DAYS - status.progressDays === 1 ? "" : "s"} left before the 7-day line.`;
+    ? "7-day line live."
+    : `${Math.max(0, ACTIVE_STREAK_ELIGIBILITY_DAYS - status.progressDays)}d left.`;
 
   function updatePrefs(patch: Partial<RewardNotificationPrefs>) {
     onChange((current) => normalizeRewardNotificationPrefs({
@@ -11992,9 +11992,9 @@ function RewardsNotificationPrepCard({
     <section className="reward-notification-prep-card">
       <div className="reward-notification-head">
         <div>
-          <span>Notifications prep</span>
-          <strong>{activePrefsCount}/3 reminder signals armed</strong>
-          <small>Preparation only. No external push or Telegram alert is sent yet.</small>
+          <span>Reminder prep</span>
+          <strong>{activePrefsCount}/3 active</strong>
+          <small>Local settings for future Telegram/push alerts.</small>
         </div>
         <b>{prefs.reminderTime}</b>
       </div>
@@ -12008,7 +12008,7 @@ function RewardsNotificationPrepCard({
         <article className={prefs.recoveryReminder ? "active" : "muted"}>
           <span>Recovery alert</span>
           <strong>{prefs.recoveryReminder ? "Armed" : "Off"}</strong>
-          <small>Warn when a missed day can still be restored.</small>
+          <small>Missed day warning.</small>
         </article>
         <article className={prefs.milestoneReminder ? "active" : "muted"}>
           <span>7-day line</span>
@@ -12021,6 +12021,7 @@ function RewardsNotificationPrepCard({
         <button
           type="button"
           className={prefs.dailyProofReminder ? "active" : ""}
+          aria-pressed={prefs.dailyProofReminder}
           onClick={() => updatePrefs({ dailyProofReminder: !prefs.dailyProofReminder })}
         >
           Daily proof
@@ -12028,6 +12029,7 @@ function RewardsNotificationPrepCard({
         <button
           type="button"
           className={prefs.recoveryReminder ? "active" : ""}
+          aria-pressed={prefs.recoveryReminder}
           onClick={() => updatePrefs({ recoveryReminder: !prefs.recoveryReminder })}
         >
           Recovery
@@ -12035,6 +12037,7 @@ function RewardsNotificationPrepCard({
         <button
           type="button"
           className={prefs.milestoneReminder ? "active" : ""}
+          aria-pressed={prefs.milestoneReminder}
           onClick={() => updatePrefs({ milestoneReminder: !prefs.milestoneReminder })}
         >
           7-day reached
@@ -12047,6 +12050,7 @@ function RewardsNotificationPrepCard({
             type="button"
             key={time}
             className={prefs.reminderTime === time ? "active" : ""}
+            aria-pressed={prefs.reminderTime === time}
             onClick={() => updatePrefs({ reminderTime: time })}
           >
             {time}
@@ -12120,11 +12124,9 @@ function RewardsLaunchOverviewCard({
 
       <div className="rewards-launch-main">
         <div>
-          <span>Holder Rewards system</span>
-          <strong>Activity will matter.</strong>
-          <p>
-            We are preparing future Holder Rewards where up to 50% of the Creator Fee may be allocated to a rewards pool after the volume trigger. The reward split is balance-share based: if eligible holders together hold 10 BROKE and one holder has 5, that holder represents 50% of the eligible pool. App activity and wallet verification will matter too.
-          </p>
+          <span>Holder Rewards</span>
+          <strong>Activity matters.</strong>
+          <p>June 1 prep. Hold $BROKE, verify wallet, keep 7+ active days.</p>
         </div>
         <aside>
           <strong>{status.currentStreak}d</strong>
@@ -12149,9 +12151,9 @@ function RewardsLaunchOverviewCard({
           <small>Live, not one-time.</small>
         </article>
         <article>
-          <span>Distribution</span>
-          <strong>Balance share</strong>
-          <small>Your BROKE / eligible BROKE total.</small>
+          <span>Split</span>
+          <strong>Balance-share</strong>
+          <small>Your eligible BROKE / total eligible BROKE.</small>
         </article>
       </div>
 
@@ -20118,7 +20120,12 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
       }
     : undefined;
   const activeStreakProof = normalizeActiveStreakProofState(input?.activeStreakProof);
-  const rewardNotificationPrefs = normalizeRewardNotificationPrefs(input?.rewardNotificationPrefs);
+  const hasRewardNotificationPrefs = Boolean(
+    input && Object.prototype.hasOwnProperty.call(input, "rewardNotificationPrefs")
+  );
+  const rewardNotificationPrefs = hasRewardNotificationPrefs
+    ? normalizeRewardNotificationPrefs(input?.rewardNotificationPrefs)
+    : undefined;
 
   return {
     growthSimulations: Array.isArray(input?.growthSimulations)
@@ -20134,7 +20141,7 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
     ...(routineActions?.date === today ? { dailyRoutineActions: routineActions } : {}),
     ...(routineReward?.date === today ? { dailyRoutineReward: routineReward } : {}),
     activeStreakProof,
-    rewardNotificationPrefs,
+    ...(rewardNotificationPrefs ? { rewardNotificationPrefs } : {}),
     localLeakMission: input?.localLeakMission || null,
     updatedAt: input?.updatedAt,
   };
@@ -21410,7 +21417,7 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Future Holder Rewards</span>
-            <small>June 1 prep, 100K+ minimum hold, balance-share rewards.</small>
+            <small>100K+ hold, wallet proof, 7+ active days.</small>
           </div>
           <b>{rewardFoundationReady ? "Ready" : "Prep"}</b>
         </summary>
@@ -21444,7 +21451,7 @@ function WhatIfScreen({
             <span>Creator Fee Reward Pool</span>
             <strong>Coming later after volume trigger</strong>
             <p>
-              Planned rule: once $BROKE volume passes $50K / 24h, up to 50% of Creator Fee may be allocated to verified active holders. Minimum hold is planned at 100,000 $BROKE, and final distribution will be based on each eligible holder’s percentage of the total eligible $BROKE balance at snapshot time.
+              Planned: after the volume trigger, up to 50% of Creator Fee may go to eligible verified holders. Split is based on each holder’s eligible $BROKE balance share at snapshot time.
             </p>
           </div>
           <b>Locked</b>
@@ -21482,7 +21489,7 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Notifications prep</span>
-            <small>Reminder preferences for daily proof, recovery, and 7-day line.</small>
+            <small>Local reminder settings for future alerts.</small>
           </div>
           <b>{rewardNotificationPrefs.reminderTime}</b>
         </summary>

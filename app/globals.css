@@ -26393,3 +26393,188 @@ body {
     font-size: 0.64rem;
   }
 }
+
+/* ===== V59.24.3 REWARDS BRIGHT COMPACT + NOTIFICATION STATE FIX ===== */
+.rewards-screen {
+  --reward-soft-bg:
+    radial-gradient(circle at 92% 4%, rgba(185, 255, 36, 0.16), transparent 34%),
+    linear-gradient(145deg, rgba(23, 58, 24, 0.95), rgba(5, 18, 13, 0.98));
+  --reward-soft-border: rgba(183, 255, 25, 0.28);
+  --reward-muted-text: rgba(234, 247, 232, 0.72);
+}
+
+.rewards-launch-overview-card {
+  gap: 11px;
+  padding: 16px;
+  border-color: rgba(183, 255, 25, 0.26) !important;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(183, 255, 25, 0.24), transparent 38%),
+    radial-gradient(circle at 0% 100%, rgba(55, 255, 117, 0.14), transparent 34%),
+    linear-gradient(145deg, rgba(24, 59, 24, 0.96), rgba(6, 20, 13, 0.98)) !important;
+  box-shadow: 0 20px 50px rgba(28, 255, 100, 0.08), 0 18px 42px rgba(0, 0, 0, 0.34) !important;
+}
+
+.rewards-launch-overview-card.ready {
+  border-color: rgba(183, 255, 25, 0.38) !important;
+}
+
+.rewards-launch-eyebrow span,
+.rewards-launch-main > div > span,
+.rewards-launch-rules span {
+  color: var(--neon) !important;
+}
+
+.rewards-launch-eyebrow b,
+.rewards-launch-main aside,
+.rewards-launch-status-row span.done {
+  border-color: rgba(183, 255, 25, 0.30) !important;
+  background: rgba(183, 255, 25, 0.10) !important;
+  color: #dfff8c !important;
+}
+
+.rewards-launch-main strong {
+  font-size: clamp(1.5rem, 5.2vw, 2rem);
+}
+
+.rewards-launch-main p {
+  max-width: 32rem;
+  color: rgba(246, 255, 241, 0.78) !important;
+  font-size: 0.86rem;
+  line-height: 1.34;
+}
+
+.rewards-launch-main aside strong {
+  color: #f2ffb8 !important;
+}
+
+.rewards-launch-rules article {
+  border-color: rgba(183, 255, 25, 0.16) !important;
+  background: rgba(5, 15, 10, 0.36) !important;
+}
+
+.rewards-launch-rules strong {
+  color: #f8fff5 !important;
+}
+
+.rewards-launch-rules small {
+  color: rgba(237, 249, 230, 0.62) !important;
+}
+
+.rewards-launch-actions button.primary,
+.rewards-status-actions button:first-child,
+.active-streak-proof-buttons button.primary,
+.active-streak-share-actions button:first-child {
+  color: #081108 !important;
+  border-color: rgba(221, 255, 117, 0.55) !important;
+  background: linear-gradient(135deg, rgba(183, 255, 25, 0.96), rgba(48, 235, 92, 0.94)) !important;
+  box-shadow: 0 14px 28px rgba(99, 255, 83, 0.14) !important;
+}
+
+.rewards-screen .rewards-core-details,
+.rewards-screen .rewards-tool-details {
+  border-color: rgba(183, 255, 25, 0.18) !important;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(183, 255, 25, 0.08), transparent 32%),
+    linear-gradient(145deg, rgba(14, 35, 19, 0.93), rgba(5, 14, 12, 0.97)) !important;
+}
+
+.rewards-screen .rewards-core-details[open],
+.rewards-screen .rewards-tool-details[open] {
+  border-color: rgba(183, 255, 25, 0.27) !important;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(183, 255, 25, 0.12), transparent 34%),
+    linear-gradient(145deg, rgba(18, 45, 21, 0.96), rgba(5, 15, 12, 0.98)) !important;
+}
+
+.rewards-screen .rewards-core-details > summary span,
+.rewards-screen .rewards-tool-details > summary span {
+  color: #f7fff2 !important;
+}
+
+.rewards-screen .rewards-core-details > summary small,
+.rewards-screen .rewards-tool-details > summary small {
+  color: rgba(236, 248, 229, 0.64) !important;
+}
+
+.rewards-screen .rewards-core-details > summary b,
+.rewards-screen .rewards-tool-details > summary b {
+  border-color: rgba(183, 255, 25, 0.24) !important;
+  background: rgba(183, 255, 25, 0.09) !important;
+  color: #ddff8d !important;
+}
+
+.rewards-status-hero,
+.daily-proof-checklist-card,
+.reward-notification-prep-card,
+.active-streak-proof-card,
+.future-rewards-explainer-card,
+.active-streak-share-section,
+.future-reward-pool-card,
+.reward-eligibility-checklist article,
+.rewards-hub-grid article {
+  border-color: rgba(183, 255, 25, 0.18) !important;
+  background: var(--reward-soft-bg) !important;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+}
+
+.reward-notification-prep-card {
+  padding: 14px !important;
+}
+
+.reward-notification-head {
+  margin-bottom: 10px;
+}
+
+.reward-notification-head span,
+.reward-notification-state-grid span {
+  color: var(--neon) !important;
+}
+
+.reward-notification-state-grid article {
+  padding: 10px !important;
+  border-color: rgba(183, 255, 25, 0.12) !important;
+  background: rgba(5, 15, 10, 0.32) !important;
+}
+
+.reward-notification-state-grid article.active {
+  border-color: rgba(183, 255, 25, 0.28) !important;
+  background: rgba(183, 255, 25, 0.08) !important;
+}
+
+.reward-notification-state-grid strong {
+  font-size: 0.9rem !important;
+}
+
+.reward-notification-state-grid small {
+  font-size: 0.68rem !important;
+  line-height: 1.2 !important;
+}
+
+.reward-notification-toggle-row button.active,
+.reward-notification-time-row button.active,
+.daily-proof-checklist-list button.done {
+  color: #081108 !important;
+  border-color: rgba(221, 255, 117, 0.52) !important;
+  background: linear-gradient(135deg, rgba(183, 255, 25, 0.92), rgba(48, 235, 92, 0.86)) !important;
+}
+
+.reward-notification-actions button {
+  border-color: rgba(183, 255, 25, 0.24) !important;
+  color: #ddff8d !important;
+  background: rgba(183, 255, 25, 0.08) !important;
+}
+
+@media (max-width: 560px) {
+  .rewards-launch-rules article {
+    padding: 10px;
+  }
+
+  .rewards-launch-status-row span {
+    font-size: 0.68rem;
+  }
+
+  .reward-notification-state-grid,
+  .reward-notification-toggle-row {
+    grid-template-columns: 1fr !important;
+  }
+}
