@@ -850,6 +850,17 @@ type ActiveStreakProofStatus = {
   detail: string;
 };
 
+type ActiveStreakProofTimelineDay = {
+  date: string;
+  label: string;
+  dayName: string;
+  protected: boolean;
+  recovered: boolean;
+  isToday: boolean;
+  isYesterday: boolean;
+  actions: ActiveStreakProofAction[];
+};
+
 type RewardNotificationPrefs = {
   dailyProofReminder: boolean;
   recoveryReminder: boolean;
@@ -1651,7 +1662,7 @@ const ruText: Record<string, string> = {
   "Not needed": "Не нужно",
   "Needed = necessary. It protects accuracy and does not count as a leak.": "Needed = необходимо. Это сохраняет точность и не считается утечкой.",
   "Maybe = grey zone. $BROKE counts half of it as leak pressure.": "Maybe = серая зона. $BROKE считает половину как давление утечки.",
-  "Not needed = full leak. It lowers Wallet HP and powers Save/Growth insights.": "Not needed = полная утечка. Она снижает Wallet HP и питает инсайты Save/Growth.",
+  "Not needed = full leak. It lowers Wallet HP and powers Rewards/Growth insights.": "Not needed = полная утечка. Она снижает Wallet HP и питает инсайты Rewards/Growth.",
   "New expenses are now saved with their original currency.": "Новые расходы теперь сохраняются с исходной валютой.",
   "New entries remember this currency for future conversion.": "Новые записи запоминают эту валюту для будущей конвертации.",
   "Currency currently changes display only. New entries remember this currency for future conversion.": "Валюта пока меняет только отображение. Новые записи запоминают эту валюту для будущей конвертации.",
@@ -1686,7 +1697,7 @@ const ruText: Record<string, string> = {
   "avoidable": "можно избежать",
   "Survival cost = necessary. It protects accuracy and does not count as a leak.": "Расход на выживание = необходимо. Он сохраняет точность и не считается утечкой.",
   "Grey zone = questionable. $BROKE counts half of it as leak pressure.": "Серая зона = спорно. $BROKE считает половину как давление утечки.",
-  "Full leak = avoidable. It lowers Wallet HP and powers Save/Growth insights.": "Полная утечка = можно было избежать. Она снижает Wallet HP и питает инсайты Save/Growth.",
+  "Full leak = avoidable. It lowers Wallet HP and powers Rewards/Growth insights.": "Полная утечка = можно было избежать. Она снижает Wallet HP и питает инсайты Rewards/Growth.",
   "Trigger chips": "Триггеры",
   "optional, but useful": "необязательно, но полезно",
   "Pattern context": "Контекст паттерна",
@@ -2056,7 +2067,7 @@ const ruText: Record<string, string> = {
   "Choose your country or type your own, set currency, life mode, income style, rent mode and work/study hours. This makes the app fit your real life.": "Выбери страну или напиши свою, задай валюту, тип жизни, тип дохода, аренду и часы работы/учёбы. Так app подстроится под твою реальность.",
   "Go to Add, enter the amount, choose a category, and mark if it was Needed, Maybe, or Not needed.": "Открой Добавить, введи сумму, выбери категорию и отметь: Нужно, Возможно или Не нужно.",
   "Needed does not count as a leak. Maybe counts as half. Not needed counts as a full wallet leak.": "Нужно не считается утечкой. Возможно считается наполовину. Не нужно считается полной утечкой.",
-  "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check chart, check Save, and share public proof.": "Выполни 7 реальных действий в день: открыть app, записать расход, отметить утечку, добавить контекст, проверить график, проверить экономию и поделиться безопасным прогрессом.",
+  "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check chart, check Rewards, and share public proof.": "Выполни 7 реальных действий в день: открыть app, записать расход, отметить утечку, добавить контекст, проверить график, проверить Rewards и поделиться безопасным прогрессом.",
   "Survival Score, Biggest Leak, Hours Lost, Status and Doomspending Alert show what is draining your wallet this week.": "Оценка выживания, главная утечка, потерянные часы, статус и тревога импульсивных трат показывают, что сливает кошелёк на этой неделе.",
   "The chart shows Wallet Pressure, not fake profit candles. Green days are controlled. Red days mean leak danger.": "График показывает Wallet Pressure, а не fake profit свечи. Зелёные дни — контроль. Красные — опасная утечка.",
   "Simple rule:": "Простое правило:",
@@ -2492,7 +2503,7 @@ const ruText: Record<string, string> = {
   "Use reports when you want community proof without showing sensitive numbers.": "Используй отчёты, когда нужен social proof без личных чисел.",
   "5. Complete the daily routine": "5. Выполняй ежедневную рутину",
   "The routine is not a fake one-click task.": "Рутина — это не фейковое задание в один клик.",
-  "It is completed when the user really opens the app, tracks expenses, marks leaks, checks charts, checks Save, and shares progress.": "Она выполняется, когда пользователь реально открывает app, записывает расходы, отмечает утечки, смотрит график, проверяет Save и делится прогрессом.",
+  "It is completed when the user really opens the app, tracks expenses, marks leaks, checks charts, checks Rewards, and shares progress.": "Она выполняется, когда пользователь реально открывает app, записывает расходы, отмечает утечки, смотрит график, проверяет Rewards и делится прогрессом.",
   "This makes $BROKE feel like discipline, not just finance tracking.": "Это делает $BROKE дисциплиной, а не просто учётом финансов.",
   "Add Guide": "Гайд Add",
   "Add: Track Expenses Correctly": "Add: как правильно записывать расходы",
@@ -2511,7 +2522,7 @@ const ruText: Record<string, string> = {
   "Needed means the expense was necessary and does not count as a leak.": "Needed означает, что трата была необходимой и не считается утечкой.",
   "Maybe means the expense was questionable and counts as half pressure.": "Maybe означает спорную трату и считается как половина давления.",
   "Not needed means it was a full money leak.": "Not needed означает полноценную money leak.",
-  "Honest marking makes Wallet HP, Save, Chart, and Growth Lab much more accurate.": "Честная отметка делает Wallet HP, Save, Chart и Growth Lab намного точнее.",
+  "Honest marking makes Wallet HP, Rewards, Chart, and Growth Lab much more accurate.": "Честная отметка делает Wallet HP, Rewards, Chart и Growth Lab намного точнее.",
   "4. Add notes when context matters": "4. Добавляй заметки, когда важен контекст",
   "Notes explain why the expense happened.": "Заметки объясняют, почему случилась трата.",
   "This helps users notice emotional spending, boredom spending, stress spending, or routine habits.": "Это помогает замечать эмоциональные траты, траты от скуки, стрессовые покупки или привычки.",
@@ -2575,9 +2586,9 @@ const ruText: Record<string, string> = {
   "The bot sends it to the user chat, and the user can forward it anywhere.": "Бот отправляет её пользователю в чат, а пользователь может переслать её куда нужно.",
   "The card is designed for public sharing and does not show private income.": "Карточка создана для публичного share и не показывает личный доход.",
   "Rewards Guide": "Гайд Rewards",
-  "Save: Leak Cut Scenarios": "Save: сценарии сокращения утечек",
-  "Save shows what could be saved if one leak was reduced. It is the practical side of $BROKE: stop one leak, protect Wallet HP, and build proof of progress.": "Save показывает, сколько можно сохранить, если уменьшить одну утечку. Это практическая часть $BROKE: остановить утечку, защитить Wallet HP и создать proof of progress.",
-  "Save rule": "Правило Save",
+  "Rewards: Leak Cut Scenarios": "Rewards: сценарии сокращения утечек",
+  "Rewards shows what could be saved if one leak was reduced. It is the practical side of $BROKE: stop one leak, protect Wallet HP, and build proof of progress.": "Rewards показывает, сколько можно сохранить, если уменьшить одну утечку. Это практическая часть $BROKE: остановить утечку, защитить Wallet HP и создать proof of progress.",
+  "Rewards rule": "Правило Rewards",
   "Pick one realistic reduction. A small reduction that actually happens is stronger than a perfect plan that nobody follows.": "Выбери одно реалистичное сокращение. Маленькое сокращение, которое реально выполняется, сильнее идеального плана, которого никто не придерживается.",
   "1. Read potential leak cut": "1. Читай potential leak cut",
   "Potential leak cut shows how much could be protected if spending is reduced.": "Potential leak cut показывает, сколько можно защитить, если уменьшить расходы.",
@@ -2595,8 +2606,8 @@ const ruText: Record<string, string> = {
   "Leaderboard and challenge progress are public-friendly.": "Leaderboard и progress челленджей подходят для публичного показа.",
   "They show discipline without revealing private financial details.": "Они показывают дисциплину без раскрытия личных финансовых деталей.",
   "This creates community proof around the $BROKE identity.": "Это создаёт community proof вокруг $BROKE identity.",
-  "5. Use Save with Growth Lab": "5. Используй Save вместе с Growth Lab",
-  "Save shows what can be reduced.": "Save показывает, что можно уменьшить.",
+  "5. Use Rewards with Growth Lab": "5. Используй Rewards вместе с Growth Lab",
+  "Rewards shows what can be reduced.": "Rewards показывает, что можно уменьшить.",
   "Growth Lab shows what that saved amount could become in a simulation.": "Growth Lab показывает, чем эта сохранённая сумма могла бы стать в симуляции.",
   "Together they create the full story: find the leak, stop the leak, redirect the leak.": "Вместе они создают полную историю: найти утечку, остановить утечку, перенаправить утечку.",
   "Settings Guide": "Гайд Settings",
@@ -2680,13 +2691,13 @@ const ruText: Record<string, string> = {
   "no leak detected yet": "утечка пока не найдена",
   "Start here": "Начни здесь",
   "Your wallet has no movement yet.": "У кошелька пока нет движения.",
-  "Track one real expense to unlock Wallet HP, Chart movement, Rewards scenarios, Growth Lab and share cards.": "Запиши один реальный расход, чтобы открыть Wallet HP, движение графика, Save-сценарии, Growth Lab и share-карточки.",
+  "Track one real expense to unlock Wallet HP, Chart movement, Rewards scenarios, Growth Lab and share cards.": "Запиши один реальный расход, чтобы открыть Wallet HP, движение графика, Rewards-сценарии, Growth Lab и share-карточки.",
   "Add first expense": "Добавь первый расход",
   "Use a real spend, not a fake test.": "Используй реальную трату, не фейковый тест.",
   "Mark the leak": "Отметь утечку",
   "Needed, Maybe or Not needed.": "Needed, Maybe или Not needed.",
   "Unlock the system": "Открой систему",
-  "Chart, Rewards, Growth and reports become real.": "Chart, Save, Growth и отчёты станут реальными.",
+  "Chart, Rewards, Growth and reports become real.": "Chart, Rewards, Growth и отчёты станут реальными.",
   "No leaks tracked yet.": "Утечки пока не записаны.",
   "Add your first expense to make Wallet HP, Chart and Growth Lab real.": "Добавь первый расход, чтобы Wallet HP, Chart и Growth Lab стали реальными.",
   "$BROKE Chart is waiting": "$BROKE Chart ждёт",
@@ -2697,10 +2708,10 @@ const ruText: Record<string, string> = {
   "No leaks detected yet.": "Утечки пока не найдены.",
   "Add one Not needed or Maybe expense first. Then Growth Lab can turn that leak into a realistic plan.": "Сначала добавь один расход Not needed или Maybe. Затем Growth Lab сможет превратить эту утечку в реалистичный план.",
   "Add first leak": "Добавить первую утечку",
-  "Save is in demo mode": "Save в демо-режиме",
+  "Rewards is in demo mode": "Rewards в демо-режиме",
   "No real scenarios yet.": "Пока нет реальных сценариев.",
   "Add expenses first. Then $BROKE will show what you could save by reducing your real leaks.": "Сначала добавь расходы. Затем $BROKE покажет, сколько можно сохранить, уменьшая реальные утечки.",
-  "Add expense to unlock Rewards": "Добавить расход, чтобы открыть Save",
+  "Add expense to unlock Rewards": "Добавить расход, чтобы открыть Rewards",
   "First 3-Day User Journey": "Первый 3-дневный путь",
   "complete": "выполнено",
   "Turn first use into a habit.": "Преврати первое использование в привычку.",
@@ -2741,7 +2752,7 @@ const ruText: Record<string, string> = {
   "Tomorrow Hook": "Крючок на завтра",
   "path": "путь",
   "Track your first real leak": "Запиши первую реальную утечку",
-  "One real expense unlocks Wallet HP, Chart, Rewards, Growth Lab and public share cards.": "Один реальный расход открывает Wallet HP, Chart, Save, Growth Lab и публичные share-карточки.",
+  "One real expense unlocks Wallet HP, Chart, Rewards, Growth Lab and public share cards.": "Один реальный расход открывает Wallet HP, Chart, Rewards, Growth Lab и публичные share-карточки.",
   "Check your wallet movement": "Проверь движение кошелька",
   "Open Chart once and find the category that started the biggest pressure.": "Открой Chart один раз и найди категорию, которая дала главное давление.",
   "Share safe public progress": "Поделись безопасным публичным прогрессом",
@@ -3052,9 +3063,9 @@ const ruText: Record<string, string> = {
   "It can show the selected currency plus an approximate USD reference.": "Она может показывать выбранную валюту и примерный USD-ориентир.",
   "It does not show private income, full fixed costs, or Debt Radar details.": "Она не показывает личный доход, полные фиксированные расходы или детали Debt Radar.",
   "5. What Growth is not": "5. Чем Growth не является",
-  "Save: Survival, Leak Cuts, and Silent Killers": "Save: выживание, сокращение утечек и silent killers",
-  "Save is where the app turns spending pressure into survival decisions. It includes Survival Mode, Leak Cut Scenarios, Challenges, Public Leaderboard, and the private Debt & Bills Radar.": "Save превращает давление расходов в решения для выживания. Здесь есть Survival Mode, Leak Cut Scenarios, Challenges, Public Leaderboard и приватный Debt & Bills Radar.",
-  "Use Save to understand pressure before payday, cut one realistic leak, and keep Debt & Bills Radar private-first.": "Используй Save, чтобы понять давление до зарплаты, сократить одну реалистичную утечку и оставить Debt & Bills Radar private-first.",
+  "Rewards: Survival, Leak Cuts, and Silent Killers": "Rewards: выживание, сокращение утечек и silent killers",
+  "Rewards is where the app turns spending pressure into survival decisions. It includes Survival Mode, Leak Cut Scenarios, Challenges, Public Leaderboard, and the private Debt & Bills Radar.": "Rewards превращает давление расходов в решения для выживания. Здесь есть Survival Mode, Leak Cut Scenarios, Challenges, Public Leaderboard и приватный Debt & Bills Radar.",
+  "Use Rewards to understand pressure before payday, cut one realistic leak, and keep Debt & Bills Radar private-first.": "Используй Rewards, чтобы понять давление до зарплаты, сократить одну реалистичную утечку и оставить Debt & Bills Radar private-first.",
   "1. Read Survival Mode": "1. Читай Survival Mode",
   "Survival Mode compares time left, money left, current pace, and safe daily budget.": "Survival Mode сравнивает оставшееся время, оставшиеся деньги, текущий темп и безопасный дневной бюджет.",
   "It helps the user see whether the month is safe or starting to leak too fast.": "Он помогает понять, месяц ещё безопасный или уже начинает протекать слишком быстро.",
@@ -3068,7 +3079,7 @@ const ruText: Record<string, string> = {
   "4. Start challenges and public progress": "4. Запускай challenges и публичный прогресс",
   "Challenges turn leak control into a short mission.": "Challenges превращают контроль утечек в короткую миссию.",
   "Leaderboard and challenge progress are public-friendly when Public Proof Mode is respected.": "Leaderboard и прогресс challenges подходят для публичного показа, если соблюдается Public Proof Mode.",
-  "5. Connect Save with Growth": "5. Свяжи Save с Growth",
+  "5. Connect Rewards with Growth": "5. Свяжи Rewards с Growth",
   "Growth shows what that redirected leak could cover through Target Coverage or a Personal Goal.": "Growth показывает, что эта перенаправленная утечка могла бы покрыть через Target Coverage или Personal Goal.",
   "Together they create the full loop: find the leak, cut the leak, redirect the leak.": "Вместе они создают полный цикл: найти утечку, сократить утечку, перенаправить утечку.",
   "Settings: Currency, Privacy, and Sync": "Settings: валюта, приватность и sync",
@@ -4010,7 +4021,7 @@ const quickAddPresets = [
 const NEED_TYPE_HELP: Record<NeedType, string> = {
   Needed: "Survival cost = necessary. It protects accuracy and does not count as a leak.",
   Maybe: "Grey zone = questionable. $BROKE counts half of it as leak pressure.",
-  "Not needed": "Full leak = avoidable. It lowers Wallet HP and powers Save/Growth insights.",
+  "Not needed": "Full leak = avoidable. It lowers Wallet HP and powers Rewards/Growth insights.",
 };
 
 const NEED_TYPE_LABELS: Record<NeedType, { title: string; subtitle: string }> = {
@@ -4981,6 +4992,82 @@ function activeStreakProofActionShortLabel(action: ActiveStreakProofAction) {
   if (action === "one_fix") return "One Fix";
   if (action === "daily_challenge") return "Daily Challenge";
   return "Daily Routine";
+}
+
+function buildActiveStreakProofTimeline(
+  state: ActiveStreakProofState,
+  days = ACTIVE_STREAK_ELIGIBILITY_DAYS
+): ActiveStreakProofTimelineDay[] {
+  const normalized = normalizeActiveStreakProofState(state);
+  const today = dayKey(new Date());
+  const yesterday = getPreviousDayKey(today);
+  const recoveredSet = new Set(normalized.recoveredMissedDates);
+  const logsByDate = new Map(normalized.logs.map((log) => [log.date, log]));
+  const timeline: ActiveStreakProofTimelineDay[] = [];
+
+  for (let index = days - 1; index >= 0; index -= 1) {
+    const date = getPreviousDayKey(today, index);
+    const parsedDate = new Date(`${date}T00:00:00`);
+    const log = logsByDate.get(date);
+    const recovered = recoveredSet.has(date);
+    const actions = log?.actions || [];
+
+    timeline.push({
+      date,
+      label: parsedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      dayName: parsedDate.toLocaleDateString("en-US", { weekday: "short" }),
+      protected: actions.length > 0 || recovered,
+      recovered,
+      isToday: date === today,
+      isYesterday: date === yesterday,
+      actions,
+    });
+  }
+
+  return timeline;
+}
+
+function getActiveStreakTimelineSummary(status: ActiveStreakProofStatus) {
+  if (status.activeToday) {
+    const proof = status.todayActions.length
+      ? status.todayActions.map(activeStreakProofActionShortLabel).join(" · ")
+      : "Protected";
+
+    return {
+      title: "Today protected",
+      detail: `Proof: ${proof}.`,
+      tone: "protected" as const,
+    };
+  }
+
+  if (status.recoveryAvailable) {
+    return {
+      title: "Recovery available",
+      detail: `Complete ${Math.max(1, status.recoveryActionsNeeded)} more proof action${status.recoveryActionsNeeded === 1 ? "" : "s"} today to restore the missed day.`,
+      tone: "recovery" as const,
+    };
+  }
+
+  if (status.currentStreak > 0 && status.lastProofDate) {
+    return {
+      title: "Today needs proof",
+      detail: `Last protected day: ${status.lastProofDate}. Complete one proof action before the day ends.`,
+      tone: "warning" as const,
+    };
+  }
+
+  return {
+    title: "No active proof yet",
+    detail: "Complete Daily Routine, Track Leak, Clean Day, One Fix, or Daily Challenge to protect today.",
+    tone: "empty" as const,
+  };
+}
+
+function getActiveStreakTimelineDayLabel(day: ActiveStreakProofTimelineDay) {
+  if (day.recovered) return "Recovered";
+  if (day.actions.length > 0) return day.actions.map(activeStreakProofActionShortLabel).join(" · ");
+  if (day.isToday) return "Needs proof";
+  return "No proof";
 }
 
 function getActiveStreakRewardReadinessLabel(status: ActiveStreakProofStatus, settings: Settings) {
@@ -9679,6 +9766,8 @@ export default function Home() {
             exchangeRates={appRateState.rates}
             patternHistory={patternHistory}
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
+            activeStreakProof={activeStreakProof}
+            activeProofStatus={activeProofStatus}
             onBack={goHome}
             onExport={openExportHelp}
             onOpenAdd={() => setActiveTab("add")}
@@ -10073,6 +10162,16 @@ function HelpGuideModal({
             "One Fix is the fastest route from analysis to action.",
           ],
           icon: A.progressFlame,
+        },
+        {
+          title: "Active Streak Timeline",
+          body: [
+            "This block shows the last 7 proof days inside Chart.",
+            "It explains which days were protected and which action protected them: Track Leak, Daily Routine, Clean Day, One Fix, or Daily Challenge.",
+            "If the streak is 0, use this timeline to see whether today has proof, yesterday was missed, or recovery is available.",
+            "Chart is for history and trust. Use Rewards when you need to protect today.",
+          ],
+          icon: A.bestStreak,
         },
         {
           title: "Leak Pattern Lab",
@@ -16948,6 +17047,60 @@ function MonthlyLeakHistoryPanel({
   );
 }
 
+function ChartActiveStreakTimeline({
+  state,
+  status,
+}: {
+  state: ActiveStreakProofState;
+  status: ActiveStreakProofStatus;
+}) {
+  const timeline = useMemo(() => buildActiveStreakProofTimeline(state), [state]);
+  const summary = getActiveStreakTimelineSummary(status);
+  const protectedCount = timeline.filter((day) => day.protected).length;
+  const missingCount = Math.max(0, timeline.length - protectedCount);
+
+  return (
+    <section className={`chart-proof-timeline-card ${summary.tone}`}>
+      <div className="chart-proof-timeline-head">
+        <div>
+          <span>Active Streak Timeline</span>
+          <strong>{summary.title}</strong>
+          <p>{summary.detail}</p>
+        </div>
+        <b>{status.currentStreak}d</b>
+      </div>
+
+      <div className="chart-proof-week-strip" aria-label="Last 7 days active streak proof">
+        {timeline.map((day) => (
+          <article
+            key={day.date}
+            className={`${day.protected ? "protected" : "missed"}${day.recovered ? " recovered" : ""}${day.isToday ? " today" : ""}`}
+            title={`${day.label}: ${getActiveStreakTimelineDayLabel(day)}`}
+          >
+            <span>{day.dayName.slice(0, 1)}</span>
+            <b>{day.protected ? day.recovered ? "R" : "✓" : "—"}</b>
+            <small>{day.isToday ? "Today" : day.label}</small>
+          </article>
+        ))}
+      </div>
+
+      <div className="chart-proof-history-list">
+        {timeline.map((day) => (
+          <div key={`history-${day.date}`} className={day.protected ? "protected" : "missed"}>
+            <span>{day.isToday ? "Today" : day.isYesterday ? "Yesterday" : `${day.dayName}, ${day.label}`}</span>
+            <strong>{getActiveStreakTimelineDayLabel(day)}</strong>
+          </div>
+        ))}
+      </div>
+
+      <footer>
+        <span>{protectedCount}/{ACTIVE_STREAK_ELIGIBILITY_DAYS} protected days in view</span>
+        <small>{missingCount > 0 ? `${missingCount} day${missingCount === 1 ? "" : "s"} without proof` : "Clean 7-day proof window"}</small>
+      </footer>
+    </section>
+  );
+}
+
 function ChartScreen({
   settings,
   expenses,
@@ -16955,6 +17108,8 @@ function ChartScreen({
   exchangeRates,
   patternHistory,
   shareInitData,
+  activeStreakProof,
+  activeProofStatus,
   onBack,
   onExport,
   onOpenAdd,
@@ -16965,6 +17120,8 @@ function ChartScreen({
   exchangeRates: ExchangeRateMap;
   patternHistory: PatternHistoryRecord[];
   shareInitData: string;
+  activeStreakProof: ActiveStreakProofState;
+  activeProofStatus: ActiveStreakProofStatus;
   onBack: () => void;
   onExport: () => void;
   onOpenAdd: () => void;
@@ -17339,6 +17496,11 @@ function ChartScreen({
           <small>{money(dailyLeakBudget, settings.currency)} daily leak budget</small>
         </div>
       </section>
+
+      <ChartActiveStreakTimeline
+        state={activeStreakProof}
+        status={activeProofStatus}
+      />
 
       {!hasRangeData && (
         <section className="chart-empty-state v58-empty-card v58-chart-empty">

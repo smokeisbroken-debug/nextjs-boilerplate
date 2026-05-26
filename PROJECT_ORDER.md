@@ -1,15 +1,15 @@
-# PROJECT ORDER — v59.25.3
+# PROJECT ORDER — v59.26
 
-Current patch: **v59.25.3 — Daily Routine Streak Proof Hotfix**.
+Current patch: **v59.26 — Chart Proof Timeline + Full App Consistency Polish**.
 
 ## Scope
 
-This is a streak-only hotfix. It changes the Daily Routine reward behavior from old XP-oriented wording/claiming to Active Streak proof protection.
+This patch adds the Active Streak proof history to Chart and performs a visible-copy consistency audit across the app. It does not change reward distribution, wallet verification, balance formulas, or backend payout mechanics.
 
 ## Files changed
 
 - `app/page.tsx`
-- `app/api/broke/route.ts`
+- `app/globals.css`
 - `README.md`
 - `PROJECT_ORDER.md`
 - `TESTING.md`
@@ -20,14 +20,16 @@ This is a streak-only hotfix. It changes the Daily Routine reward behavior from 
 ## Product rules preserved
 
 - A normal day is protected by at least one valid proof action.
-- Recovery still requires two proof actions during the recovery day.
-- 7+ Active Streak is live eligibility foundation, not a one-time unlock.
-- Daily Routine now counts as a valid proof action after all 7 real tasks are completed.
-- Future Holder Rewards remain preparation-only in the app.
+- Daily Routine counts only after full 7/7 completion.
+- Recovery requires two proof actions during the recovery day.
+- 7+ Active Streak is a live eligibility foundation, not a permanent unlock.
+- Future Holder Rewards remain preparation-only.
 
-## Main fixes
+## Main changes
 
-1. Daily Routine 7/7 completion records `daily_routine` in Active Streak proof logs.
-2. Routine proof does not require Telegram cloud XP claim.
-3. Old Daily Routine XP labels were removed from the visible routine card.
-4. Cloud/server proof normalization accepts `daily_routine` so the proof survives sync.
+1. Added a Chart-only **Active Streak Timeline**.
+2. Shows the last 7 days as protected, missed, recovered, or today.
+3. Shows the proof action label: Track Leak, Daily Routine, Clean Day, One Fix, or Daily Challenge.
+4. Adds clear status text for Today protected / Recovery available / Today needs proof / No active proof yet.
+5. Updated Chart guide content for the new proof history block.
+6. Cleaned visible copy so old Save wording aligns with the current Rewards tab.

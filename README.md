@@ -1,15 +1,23 @@
-# $BROKE Life Tracker — v59.25.3 Daily Routine Streak Proof Hotfix
+# $BROKE Life Tracker — v59.26 Chart Proof Timeline + Full App Consistency Polish
 
-Patch-only update on top of v59.25.2.
+Patch-only update on top of v59.25.3.
 
 ## What changed
 
-- Daily Routine completion now protects the BROKE Active Streak directly.
-- Finishing the 7/7 Daily Routine tasks logs a new `daily_routine` Active Streak proof action.
-- Daily Routine no longer depends on the old daily XP claim flow for streak protection.
-- Removed visible XP reward wording from the Daily Routine card.
-- Updated Daily Routine copy so users understand the goal is now streak protection, not XP claiming.
-- Server-side Active Streak proof normalization now accepts the new `daily_routine` action, so cloud sync does not drop routine proof logs.
+- Added **Active Streak Timeline** to Chart.
+- Chart now shows the last 7 proof days, protected/missed days, recovery days, and the action that protected each day.
+- Added clearer Chart wording for why a streak is protected, needs proof, is in recovery, or has no active proof yet.
+- Updated the detailed `?` guide so Chart explains the new proof timeline and tells users to use Rewards for today’s proof action.
+- Audited visible old Save wording and aligned remaining user-facing copy with the current **Rewards** tab.
+- Kept Rewards as the action hub and Chart as the proof/history view.
+
+## Product logic
+
+- Rewards = protect today and complete proof actions.
+- Chart = inspect proof history, leaks, candles, and patterns.
+- Daily Routine still protects Active Streak only after the full 7/7 routine is completed.
+- Active Streak is still live/rolling, not a one-time unlock.
+- Recovery still requires two proof actions during the recovery day.
 
 ## Not changed
 
@@ -22,4 +30,3 @@ Patch-only update on top of v59.25.2.
 - No avatar backend changes.
 - No Telegram webhook changes.
 - No share-card export changes.
-- No broader Rewards rule changes.
