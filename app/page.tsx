@@ -1811,8 +1811,8 @@ const ruText: Record<string, string> = {
   "Add a note to one expense so the habit is visible.": "Добавь заметку к одному расходу, чтобы привычка стала видимой.",
   "Check $BROKE Chart": "Проверить $BROKE Chart",
   "Open the Chart tab and look at today’s damage.": "Открой график и посмотри сегодняшний урон.",
-  "Check Save plan": "Проверить план экономии",
-  "Open Save and review one What If scenario.": "Открой Экономию и проверь один сценарий What If.",
+  "Check Rewards plan": "Проверить план экономии",
+  "Open Rewards and review one leak-cut scenario.": "Открой Экономию и проверь один сценарий What If.",
   "Share public proof": "Поделиться публичным прогрессом",
   "Share or copy a safe progress card. No private money data.": "Поделись или скопируй безопасную карточку прогресса. Без личных финансовых данных.",
   "Discipline rule:": "Правило дисциплины:",
@@ -2574,7 +2574,7 @@ const ruText: Record<string, string> = {
   "Send card to TG bot generates a clean PNG card.": "Send card to TG bot создаёт чистую PNG-карточку.",
   "The bot sends it to the user chat, and the user can forward it anywhere.": "Бот отправляет её пользователю в чат, а пользователь может переслать её куда нужно.",
   "The card is designed for public sharing and does not show private income.": "Карточка создана для публичного share и не показывает личный доход.",
-  "Save Guide": "Гайд Save",
+  "Rewards Guide": "Гайд Rewards",
   "Save: Leak Cut Scenarios": "Save: сценарии сокращения утечек",
   "Save shows what could be saved if one leak was reduced. It is the practical side of $BROKE: stop one leak, protect Wallet HP, and build proof of progress.": "Save показывает, сколько можно сохранить, если уменьшить одну утечку. Это практическая часть $BROKE: остановить утечку, защитить Wallet HP и создать proof of progress.",
   "Save rule": "Правило Save",
@@ -2680,13 +2680,13 @@ const ruText: Record<string, string> = {
   "no leak detected yet": "утечка пока не найдена",
   "Start here": "Начни здесь",
   "Your wallet has no movement yet.": "У кошелька пока нет движения.",
-  "Track one real expense to unlock Wallet HP, Chart movement, Save scenarios, Growth Lab and share cards.": "Запиши один реальный расход, чтобы открыть Wallet HP, движение графика, Save-сценарии, Growth Lab и share-карточки.",
+  "Track one real expense to unlock Wallet HP, Chart movement, Rewards scenarios, Growth Lab and share cards.": "Запиши один реальный расход, чтобы открыть Wallet HP, движение графика, Save-сценарии, Growth Lab и share-карточки.",
   "Add first expense": "Добавь первый расход",
   "Use a real spend, not a fake test.": "Используй реальную трату, не фейковый тест.",
   "Mark the leak": "Отметь утечку",
   "Needed, Maybe or Not needed.": "Needed, Maybe или Not needed.",
   "Unlock the system": "Открой систему",
-  "Chart, Save, Growth and reports become real.": "Chart, Save, Growth и отчёты станут реальными.",
+  "Chart, Rewards, Growth and reports become real.": "Chart, Save, Growth и отчёты станут реальными.",
   "No leaks tracked yet.": "Утечки пока не записаны.",
   "Add your first expense to make Wallet HP, Chart and Growth Lab real.": "Добавь первый расход, чтобы Wallet HP, Chart и Growth Lab стали реальными.",
   "$BROKE Chart is waiting": "$BROKE Chart ждёт",
@@ -2741,7 +2741,7 @@ const ruText: Record<string, string> = {
   "Tomorrow Hook": "Крючок на завтра",
   "path": "путь",
   "Track your first real leak": "Запиши первую реальную утечку",
-  "One real expense unlocks Wallet HP, Chart, Save, Growth Lab and public share cards.": "Один реальный расход открывает Wallet HP, Chart, Save, Growth Lab и публичные share-карточки.",
+  "One real expense unlocks Wallet HP, Chart, Rewards, Growth Lab and public share cards.": "Один реальный расход открывает Wallet HP, Chart, Save, Growth Lab и публичные share-карточки.",
   "Check your wallet movement": "Проверь движение кошелька",
   "Open Chart once and find the category that started the biggest pressure.": "Открой Chart один раз и найди категорию, которая дала главное давление.",
   "Share safe public progress": "Поделись безопасным публичным прогрессом",
@@ -4996,11 +4996,19 @@ function getActiveStreakRewardReadinessLabel(status: ActiveStreakProofStatus, se
 function buildActiveStreakProofShareText(settings: Settings, status: ActiveStreakProofStatus) {
   const identityName = getPublicIdentityName(settings);
   const identityStatus = getPublicIdentityStatus(settings);
-  const holderTier = settings.wallet.holderTier.label;
-  const verified = settings.wallet.isVerified ? "Verified wallet" : "Wallet not verified yet";
-  const balanceLine = settings.wallet.brokeBalance > 0
-    ? `${formatTokenAmount(settings.wallet.brokeBalance)} BROKE`
-    : "Building holder balance";
+  const verifiedWallet = Boolean(settings.wallet.isVerified);
+  const verifiedHolderBalance = verifiedWallet ? settings.wallet.brokeBalance : 0;
+  const holderTier = verifiedHolderBalance > 0
+    ? settings.wallet.holderTier.label
+    : verifiedWallet
+      ? "Building holder balance"
+      : "Verify first";
+  const verified = verifiedWallet ? "Verified wallet" : "Wallet not verified yet";
+  const balanceLine = verifiedHolderBalance > 0
+    ? `${formatTokenAmount(verifiedHolderBalance)} BROKE`
+    : verifiedWallet
+      ? "Building holder balance"
+      : "Wallet not verified yet";
   const todayLine = status.activeToday
     ? "Today protected"
     : status.recoveryAvailable
@@ -5880,6 +5888,32 @@ function sumTrackedExpenses(expenses: Expense[]) {
 
 function sumLeakExpenses(expenses: Expense[]) {
   return sum(expenses.map(getExpenseLeakValue));
+}
+
+function buildWalletSummary(settings: Settings, expenses: Expense[]) {
+  const currentMonthExpenses = getCurrentMonthExpenses(expenses);
+  const totalIncome = getTotalIncome(settings);
+  const fixedCosts = getFixedCosts(settings);
+  const spentThisMonth = sumTrackedExpenses(currentMonthExpenses);
+  const totalLeaks = sumLeakExpenses(currentMonthExpenses);
+  const realBalance = totalIncome - fixedCosts - spentThisMonth;
+  const availableAfterLifeCost = Math.max(totalIncome - fixedCosts, 1);
+  const walletHp = clamp(
+    100 - Math.round((totalLeaks / availableAfterLifeCost) * 100),
+    5,
+    100
+  );
+
+  return {
+    currentMonthExpenses,
+    totalIncome,
+    fixedCosts,
+    spentThisMonth,
+    totalLeaks,
+    realBalance,
+    availableAfterLifeCost,
+    walletHp,
+  };
 }
 
 function getCategorySummaries(expenses: Expense[]): CategorySummary[] {
@@ -7809,16 +7843,17 @@ function buildWalletInsights(
   const insights: WalletInsight[] = [];
   const todayExpenses = getTodayExpenses(expenses);
   const weekExpenses = getLastSevenDaysExpenses(expenses);
-  const monthExpenses = getCurrentMonthExpenses(expenses);
+  const walletSummary = buildWalletSummary(settings, expenses);
+  const monthExpenses = walletSummary.currentMonthExpenses;
 
   const todayTrackedCategories = getCategoryTrackedSummaries(todayExpenses);
   const todayLeakCategories = getCategoryLeakSummaries(todayExpenses);
   const weekTrackedCategories = getCategoryTrackedSummaries(weekExpenses);
   const monthTrackedCategories = getCategoryTrackedSummaries(monthExpenses);
 
-  const totalIncome = getTotalIncome(settings);
-  const fixedCosts = getFixedCosts(settings);
-  const availableAfterLifeCost = Math.max(totalIncome - fixedCosts, 1);
+  const totalIncome = walletSummary.totalIncome;
+  const fixedCosts = walletSummary.fixedCosts;
+  const availableAfterLifeCost = walletSummary.availableAfterLifeCost;
   const fixedCostRatio = totalIncome > 0 ? fixedCosts / totalIncome : 0;
 
   if (totalIncome > 0 && fixedCostRatio >= 0.5) {
@@ -7908,13 +7943,9 @@ function buildWalletInsights(
     });
   }
 
-  const monthSpent = sumTrackedExpenses(monthExpenses);
-  const realBalance = totalIncome - fixedCosts - monthSpent;
-  const walletHp = clamp(
-    100 - Math.round((monthLeaks / availableAfterLifeCost) * 100),
-    5,
-    100
-  );
+  const monthSpent = walletSummary.spentThisMonth;
+  const realBalance = walletSummary.realBalance;
+  const walletHp = walletSummary.walletHp;
 
   const todayLeakTop = todayLeakCategories[0];
   const todayTrackedTop = todayTrackedCategories[0];
@@ -8436,7 +8467,11 @@ function buildChartData(
   const dailyLeakBudget = getChartDailyLeakBudget(settings);
   const cycleStartKey = getCycleStartKey(settings);
   const dates = getChartDatesForRange(range);
-  let runningBalance = baseBalance;
+  const firstDateKey = dates.length > 0 ? dayKey(dates[0]) : dayKey(new Date());
+  const priorTrackedThisMonth = sumTrackedExpenses(
+    getCurrentMonthExpenses(expenses).filter((expense) => dayKey(new Date(expense.createdAt)) < firstDateKey)
+  );
+  let runningBalance = baseBalance - priorTrackedThisMonth;
 
   return dates.map((date) => {
     const label =
@@ -9035,23 +9070,16 @@ export default function Home() {
     () => displaySettingsForMoney(settings, appRateState.rates),
     [settings, appRateState.rates]
   );
-  const currentMonthExpenses = useMemo(() => {
-    return getCurrentMonthExpenses(displayExpenses);
-  }, [displayExpenses]);
-
-  const totalIncome = getTotalIncome(displaySettings);
-  const fixedCosts = getFixedCosts(displaySettings);
-  const spentThisMonth = sumTrackedExpenses(currentMonthExpenses);
-
-  const totalLeaks = sumLeakExpenses(currentMonthExpenses);
-  const realBalance = totalIncome - fixedCosts - spentThisMonth;
-  const availableAfterLifeCost = Math.max(totalIncome - fixedCosts, 1);
-
-  const walletHp = clamp(
-    100 - Math.round((totalLeaks / availableAfterLifeCost) * 100),
-    5,
-    100
-  );
+  const walletSummary = useMemo(() => {
+    return buildWalletSummary(displaySettings, displayExpenses);
+  }, [displaySettings, displayExpenses]);
+  const currentMonthExpenses = walletSummary.currentMonthExpenses;
+  const totalIncome = walletSummary.totalIncome;
+  const fixedCosts = walletSummary.fixedCosts;
+  const spentThisMonth = walletSummary.spentThisMonth;
+  const totalLeaks = walletSummary.totalLeaks;
+  const realBalance = walletSummary.realBalance;
+  const walletHp = walletSummary.walletHp;
 
   const todaySpent = useMemo(() => {
     const today = dayKey(new Date());
@@ -9813,7 +9841,7 @@ function HelpGuideModal({
       icon: "/nav-home.png",
       footerTitle: "Home rule",
       footerBody:
-        "Use Home for the daily decision: read the status, follow one suggested action, then leave the deeper analysis for Chart, Save, or Growth.",
+        "Use Home for the daily decision: read the status, follow one suggested action, then leave the deeper analysis for Chart, Rewards, or Growth.",
       sections: [
         {
           title: "Bottom navigation: what every button opens",
@@ -9822,7 +9850,7 @@ function HelpGuideModal({
             "Add opens Track Leak. Press it when money leaves your wallet and you want the app to learn from it.",
             "Chart opens Wallet Pressure Chart and Leak Pattern Lab. Press it when you want to understand why the leak happened.",
             "Growth opens the planning lab. Press it when you want to see what leaked money could cover instead.",
-            "Save opens Survival Mode, leak cuts, challenges, leaderboard, and Debt & Bills Radar.",
+            "Rewards opens Survival Mode, leak cuts, challenges, leaderboard, Debt & Bills Radar, and Active Streak proof.",
             "Profile opens Personal Cabinet: identity, wallet proof, Share Studio, privacy, currency, sync, and data settings.",
           ],
           icon: A.navHome,
@@ -9875,7 +9903,7 @@ function HelpGuideModal({
           body: [
             "This block tells you the next useful button to press.",
             "If there are no records, it usually sends you to Add so the app has real data.",
-            "If a pattern exists, it may send you to Chart or Save.",
+            "If a pattern exists, it may send you to Chart or Rewards.",
             "If public proof is ready, it may suggest a safe share card.",
             "Follow one action. Do not try to fix the whole app in one session.",
           ],
@@ -9895,7 +9923,7 @@ function HelpGuideModal({
           title: "Daily Routine and streak logic",
           body: [
             "Routine tasks are meant to be real actions, not fake one-click farming.",
-            "Open the app, track expenses, mark leak type, check chart, check Save, and use share/proof actions when relevant.",
+            "Open the app, track expenses, mark leak type, check chart, check Rewards, and use share/proof actions when relevant.",
             "A streak shows repeated discipline across days.",
             "Future rewards and status mechanics can use streak as proof of activity, so it matters.",
           ],
@@ -9940,7 +9968,7 @@ function HelpGuideModal({
             "Needed means the expense was required. It reduces money but should not be treated as a leak.",
             "Maybe means the expense was questionable. It adds partial leak pressure.",
             "Not needed means the expense was avoidable. It adds full leak pressure.",
-            "Be honest here. This button controls Wallet HP, Chart pressure, Save scenarios, and Growth calculations.",
+            "Be honest here. This button controls Wallet HP, Chart pressure, Rewards scenarios, and Growth calculations.",
           ],
           icon: A.leaks,
         },
@@ -9970,7 +9998,7 @@ function HelpGuideModal({
           title: "Save / Track button",
           body: [
             "Press the main save button after amount, category, decision type, and optional triggers are correct.",
-            "After saving, Wallet HP updates and the record becomes part of Chart, Save, Growth, reports, and streak activity.",
+            "After saving, Wallet HP updates and the record becomes part of Chart, Rewards, Growth, reports, and streak activity.",
             "If cloud sync is available, the record is also saved to the account.",
             "If cloud sync fails, the app can still keep local data and show a warning.",
           ],
@@ -9991,7 +10019,7 @@ function HelpGuideModal({
           body: [
             "Use Add when money was spent and the app needs a new record.",
             "Use Chart after the record exists and you want analysis.",
-            "Use Save when you want to reduce the leak or start a challenge.",
+            "Use Rewards when you want to reduce the leak, protect proof, or start a challenge.",
             "Use Growth when you want to redirect the leak into a goal.",
           ],
           icon: A.addFrog,
@@ -10053,7 +10081,7 @@ function HelpGuideModal({
           title: "One Fix",
           body: [
             "One Fix gives one practical action instead of a long lecture.",
-            "It may suggest cutting a category, avoiding a timing trigger, checking Save, or changing tomorrow’s behavior.",
+            "It may suggest cutting a category, avoiding a timing trigger, checking Rewards, or changing tomorrow’s behavior.",
             "Use it when the chart is clear but you do not know what to do next.",
             "One Fix is the fastest route from analysis to action.",
           ],
@@ -11915,8 +11943,10 @@ function RewardsStatusHero({
   onOpenChallenge: () => void;
 }) {
   const verified = Boolean(settings.wallet.isVerified);
-  const hasBalance = settings.wallet.brokeBalance > 0;
-  const rewardReady = verified && hasBalance && status.eligible;
+  const verifiedHolderBalance = verified ? settings.wallet.brokeBalance : 0;
+  const meetsMinHold = verifiedHolderBalance >= FUTURE_HOLDER_REWARD_MIN_BALANCE;
+  const hasVerifiedBalance = verifiedHolderBalance > 0;
+  const rewardReady = verified && meetsMinHold && status.eligible;
   const todayState = status.activeToday
     ? "Protected"
     : status.recoveryMode || status.recoveryAvailable
@@ -11949,7 +11979,7 @@ function RewardsStatusHero({
         </article>
         <article>
           <span>Holder tier</span>
-          <strong>{hasBalance ? settings.wallet.holderTier.label : "No tier"}</strong>
+          <strong>{hasVerifiedBalance ? settings.wallet.holderTier.label : verified ? "No tier" : "Verify first"}</strong>
         </article>
         <article>
           <span>Reward status</span>
@@ -12240,9 +12270,12 @@ function RewardsLaunchOverviewCard({
     : status.recoveryAvailable
       ? "Recovery available"
       : "Needs one action";
-  const holdLabel = meetsMinHold
-    ? `${formatTokenAmount(settings.wallet.brokeBalance)} BROKE`
-    : `${formatTokenAmount(Math.max(0, FUTURE_HOLDER_REWARD_MIN_BALANCE - settings.wallet.brokeBalance))} left`;
+  const verifiedHolderBalance = verified ? settings.wallet.brokeBalance : 0;
+  const holdLabel = !verified
+    ? "Verify first"
+    : meetsMinHold
+      ? `${formatTokenAmount(verifiedHolderBalance)} BROKE`
+      : `${formatTokenAmount(Math.max(0, FUTURE_HOLDER_REWARD_MIN_BALANCE - verifiedHolderBalance))} left`;
 
   return (
     <section className={`rewards-launch-overview-card ${rewardReady ? "ready" : status.recoveryAvailable ? "recovery" : "building"}`}>
@@ -12318,6 +12351,13 @@ function ActiveStreakShareCard({
   const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
   const identityStyle = getIdentityStyleMeta(settings.identity.identityStyle);
   const shareText = buildActiveStreakProofShareText(settings, status);
+  const verifiedHolderBalance = settings.wallet.isVerified ? settings.wallet.brokeBalance : 0;
+  const rewardStatusReady = settings.wallet.isVerified && verifiedHolderBalance >= FUTURE_HOLDER_REWARD_MIN_BALANCE && status.eligible;
+  const holderTierLine = verifiedHolderBalance > 0
+    ? settings.wallet.holderTier.label
+    : settings.wallet.isVerified
+      ? "Building"
+      : "Verify first";
   const todayLine = status.activeToday
     ? "Today protected"
     : status.recoveryAvailable
@@ -12418,11 +12458,11 @@ function ActiveStreakShareCard({
           </article>
           <article>
             <span>Holder tier</span>
-            <strong>{settings.wallet.brokeBalance > 0 ? settings.wallet.holderTier.label : "Building"}</strong>
+            <strong>{holderTierLine}</strong>
           </article>
           <article>
             <span>Reward status</span>
-            <strong>{settings.wallet.isVerified && settings.wallet.brokeBalance > 0 && status.eligible ? "Ready" : "Preparing"}</strong>
+            <strong>{rewardStatusReady ? "Ready" : "Preparing"}</strong>
           </article>
         </div>
 
@@ -12950,7 +12990,7 @@ function SmartHomeFocusCard({
             eyebrow: "Today’s Focus",
             title: "Track your first real leak",
             detail:
-              "One real expense unlocks Wallet HP, Chart, Save, Growth Lab and public share cards.",
+              "One real expense unlocks Wallet HP, Chart, Rewards, Growth Lab and public share cards.",
             button: "Track first leak",
             action: onOpenAdd,
           }
@@ -13447,7 +13487,7 @@ function FirstRunPathCard({ onOpenAdd }: { onOpenAdd: () => void }) {
           <span>Start here</span>
           <strong>Your wallet has no movement yet.</strong>
           <p>
-            Track one real expense to unlock Wallet HP, Chart movement, Save scenarios,
+            Track one real expense to unlock Wallet HP, Chart movement, Rewards scenarios,
             Growth Lab and share cards.
           </p>
         </div>
@@ -13472,7 +13512,7 @@ function FirstRunPathCard({ onOpenAdd }: { onOpenAdd: () => void }) {
           <b>3</b>
           <div>
             <strong>Unlock the system</strong>
-            <span>Chart, Save, Growth and reports become real.</span>
+            <span>Chart, Rewards, Growth and reports become real.</span>
           </div>
         </article>
       </div>
@@ -14349,8 +14389,8 @@ function DailyRoutinePanel({
     },
     {
       id: "checkSave",
-      title: "Check Save plan",
-      body: "Open Save and review one What If scenario.",
+      title: "Check Rewards plan",
+      body: "Open Rewards and review one leak-cut scenario.",
       icon: A.navWhatIf,
       done: actions.checkedSave,
     },
@@ -21265,13 +21305,16 @@ function WhatIfScreen({
     : usdReferenceNote(survivalForecast.currentDailyPace, settings.currency, settings, debtRadarRateState.rates);
 
   const walletVerified = Boolean(settings.wallet.isVerified);
-  const holderHasBalance = settings.wallet.brokeBalance > 0;
-  const holderMeetsFutureRewardMinimum = settings.wallet.brokeBalance >= FUTURE_HOLDER_REWARD_MIN_BALANCE;
+  const verifiedHolderBalance = walletVerified ? settings.wallet.brokeBalance : 0;
+  const holderHasVerifiedBalance = verifiedHolderBalance > 0;
+  const holderMeetsFutureRewardMinimum = verifiedHolderBalance >= FUTURE_HOLDER_REWARD_MIN_BALANCE;
   const activeStreakReady = activeProofStatus.eligible;
   const rewardFoundationReady = walletVerified && holderMeetsFutureRewardMinimum && activeStreakReady;
-  const holderRewardWeight = holderHasBalance
-    ? "Share = your verified BROKE / total eligible BROKE"
-    : "No reward share yet";
+  const holderRewardWeight = !walletVerified
+    ? "Verify wallet before balance-share."
+    : holderHasVerifiedBalance
+      ? "Share = your verified BROKE / total eligible BROKE"
+      : "No eligible balance yet";
   const rewardChecklist = [
     {
       label: "Verified wallet",
@@ -21575,7 +21618,7 @@ function WhatIfScreen({
           </article>
           <article>
             <span>Reward share</span>
-            <strong>{holderHasBalance ? "Balance based" : "No balance"}</strong>
+            <strong>{holderHasVerifiedBalance ? "Balance based" : walletVerified ? "No balance" : "Verify first"}</strong>
             <small>{holderRewardWeight}</small>
           </article>
           <article>
@@ -21720,7 +21763,7 @@ function WhatIfScreen({
             </div>
           </div>
           <button type="button" className="v58-empty-primary" onClick={onOpenAdd}>
-            Add expense to unlock Save
+            Add expense to unlock Rewards
           </button>
         </section>
       )}

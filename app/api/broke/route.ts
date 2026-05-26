@@ -2034,22 +2034,54 @@ function getCurrentMonthExpenses(expenses: Expense[]) {
   return expenses.filter((expense) => monthKey(new Date(expense.createdAt)) === current);
 }
 
+function getIncomeMultiplier(settings: Settings) {
+  if (settings.profile.incomeStyle === "Weekly") return 4.35;
+  if (settings.profile.incomeStyle === "Daily") return 30;
+  return 1;
+}
+
 function getTotalIncome(settings: Settings) {
-  return sum([
+  const baseIncome = sum([
     settings.income.salary,
     settings.income.side,
     settings.income.other,
   ]);
+
+  return Math.round(baseIncome * getIncomeMultiplier(settings));
 }
 
 function getFixedCosts(settings: Settings) {
   return sum([
-    settings.fixedCosts.rent,
+    settings.profile.hasRent ? settings.fixedCosts.rent : 0,
     settings.fixedCosts.utilities,
     settings.fixedCosts.food,
     settings.fixedCosts.transport,
     settings.fixedCosts.phone,
+    settings.fixedCosts.data,
+    settings.fixedCosts.education,
   ]);
+}
+
+function getExpenseTrackedValue(expense: Expense) {
+  return Math.max(0, Number.isFinite(expense.amount) ? expense.amount : 0);
+}
+
+function getExpenseLeakMultiplier(expense: Expense) {
+  if (expense.needType === "Needed") return 0;
+  if (expense.needType === "Maybe") return 0.5;
+  return 1;
+}
+
+function getExpenseLeakValue(expense: Expense) {
+  return getExpenseTrackedValue(expense) * getExpenseLeakMultiplier(expense);
+}
+
+function sumTrackedExpenses(expenses: Expense[]) {
+  return sum(expenses.map(getExpenseTrackedValue));
+}
+
+function sumLeakExpenses(expenses: Expense[]) {
+  return sum(expenses.map(getExpenseLeakValue));
 }
 
 function dbToUserBadge(row: Record<string, unknown>): UserBadge {
@@ -2496,14 +2528,8 @@ async function buildBadgeMetrics(
   const monthExpenses = getCurrentMonthExpenses(expenses);
   const totalIncome = getTotalIncome(settings);
   const fixedCosts = getFixedCosts(settings);
-  const monthSpent = sum(monthExpenses.map((item) => item.amount));
-  const moneyLeaks = sum(
-    monthExpenses.filter((item) => item.needType === "Not needed").map((item) => item.amount)
-  );
-  const maybeLeaks = sum(
-    monthExpenses.filter((item) => item.needType === "Maybe").map((item) => item.amount * 0.5)
-  );
-  const totalLeaks = moneyLeaks + maybeLeaks;
+  const monthSpent = sumTrackedExpenses(monthExpenses);
+  const totalLeaks = sumLeakExpenses(monthExpenses);
   const availableAfterLifeCost = Math.max(totalIncome - fixedCosts, 1);
   const realBalance = totalIncome - fixedCosts - monthSpent;
   const walletHp = clamp(
