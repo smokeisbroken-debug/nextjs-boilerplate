@@ -48,13 +48,7 @@ type RewardEpochRow = {
 
 const FUTURE_HOLDER_REWARD_MIN_BALANCE = 100_000;
 const ACTIVE_STREAK_ELIGIBILITY_DAYS = 7;
-const ACTIVE_STREAK_ACTIONS: ActiveStreakProofAction[] = [
-  "track_leak",
-  "clean_day",
-  "one_fix",
-  "daily_challenge",
-  "daily_routine",
-];
+const ACTIVE_STREAK_ACTIONS: ActiveStreakProofAction[] = ["daily_routine"];
 
 function json(data: unknown, status = 200) {
   return NextResponse.json(data, {

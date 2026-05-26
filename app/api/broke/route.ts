@@ -1424,13 +1424,7 @@ function normalizeDailyRoutineReward(input?: Partial<DailyRoutineRewardState> | 
   };
 }
 
-const activeStreakProofActions: ActiveStreakProofAction[] = [
-  "track_leak",
-  "clean_day",
-  "one_fix",
-  "daily_challenge",
-  "daily_routine",
-];
+const activeStreakProofActions: ActiveStreakProofAction[] = ["daily_routine"];
 
 function normalizeActiveStreakProofAction(value: unknown): ActiveStreakProofAction | null {
   return activeStreakProofActions.includes(value as ActiveStreakProofAction)

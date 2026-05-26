@@ -26978,3 +26978,77 @@ body {
     text-align: left;
   }
 }
+
+/* ===== V59.28 REWARDS ROUTINE-ONLY STREAK + EMBEDDED SITE FIT ===== */
+.active-streak-proof-buttons.single-action,
+.rewards-status-actions.single-action,
+.daily-proof-checklist-list.single-action,
+.active-streak-share-actions {
+  grid-template-columns: 1fr !important;
+}
+
+.daily-proof-checklist-card.routine-only-proof-card .daily-proof-checklist-list button {
+  text-align: left;
+}
+
+html.embedded-app-view,
+html.embedded-app-view body {
+  min-height: 100dvh !important;
+  overflow-x: hidden !important;
+  background: #020402 !important;
+}
+
+html.embedded-app-view .app-shell {
+  width: 100% !important;
+  min-height: 100dvh !important;
+  padding: 0 !important;
+  align-items: flex-start !important;
+  justify-content: center !important;
+  background: #020402 !important;
+}
+
+html.embedded-app-view .phone {
+  width: min(100%, 460px) !important;
+  max-width: 460px !important;
+  min-height: 100dvh !important;
+  margin: 0 auto !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  overflow-x: hidden !important;
+  box-shadow: none !important;
+}
+
+html.embedded-app-view .screen {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 100dvh !important;
+  padding: 18px 14px 122px !important;
+}
+
+html.embedded-app-view .bottom-nav {
+  left: 50% !important;
+  right: auto !important;
+  bottom: max(10px, env(safe-area-inset-bottom)) !important;
+  width: min(430px, calc(100vw - 20px)) !important;
+  max-width: 430px !important;
+  transform: translateX(-50%) !important;
+  border-radius: 24px !important;
+}
+
+html.embedded-app-view .app-toast {
+  left: 50% !important;
+  right: auto !important;
+  bottom: 94px !important;
+  width: min(420px, calc(100vw - 24px)) !important;
+  transform: translateX(-50%) !important;
+}
+
+html.embedded-app-view .hero {
+  min-height: auto !important;
+  grid-template-columns: minmax(0, 1fr) minmax(116px, 0.72fr) !important;
+  gap: 12px !important;
+}
+
+html.embedded-app-view .hero h1 {
+  font-size: clamp(34px, 10vw, 48px) !important;
+}

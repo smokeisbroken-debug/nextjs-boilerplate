@@ -4688,15 +4688,9 @@ function writeDailyRoutineReward(date = dayKey(new Date()), claimed = true, noti
 const ACTIVE_STREAK_PROOF_KEY = "broke-active-streak-proof-v1";
 const ACTIVE_STREAK_ELIGIBILITY_DAYS = 7;
 const FUTURE_HOLDER_REWARD_MIN_BALANCE = 100_000;
-const ACTIVE_STREAK_RECOVERY_ACTIONS = 2;
+const ACTIVE_STREAK_RECOVERY_ACTIONS = 1;
 const ACTIVE_STREAK_RECOVERY_COOLDOWN_DAYS = 7;
-const activeStreakProofActions: ActiveStreakProofAction[] = [
-  "track_leak",
-  "clean_day",
-  "one_fix",
-  "daily_challenge",
-  "daily_routine",
-];
+const activeStreakProofActions: ActiveStreakProofAction[] = ["daily_routine"];
 
 function getPreviousDayKey(dateKey: string, daysBack = 1) {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -4918,18 +4912,18 @@ function buildActiveStreakProofStatus(state: ActiveStreakProofState): ActiveStre
   const activeToday = dateSet.has(today);
 
   let label = `${progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS}`;
-  let detail = `Keep a ${ACTIVE_STREAK_ELIGIBILITY_DAYS}+ day active streak to stay eligible for future Holder Rewards.`;
+  let detail = `Keep a ${ACTIVE_STREAK_ELIGIBILITY_DAYS}+ day Daily Routine streak to stay eligible for future Holder Rewards.`;
 
   if (eligible) {
     label = "Eligible";
-    detail = "7+ day active streak is live. Keep checking in daily to stay eligible.";
+    detail = "7+ day active streak is live. Complete Daily Routine daily to stay eligible.";
   } else if (recoveryMode || (recoveryAvailable && todayActions.length > 0)) {
     label = "Recovery";
     detail = recoveryAvailable
-      ? `Missed yesterday. Complete ${Math.max(1, recoveryActionsNeeded)} more action${recoveryActionsNeeded === 1 ? "" : "s"} today to restore the streak.`
+      ? "Missed yesterday. Complete today’s full Daily Routine to restore the streak."
       : "Recovery was already used this week. Build a new clean streak if it resets.";
   } else if (activeToday) {
-    detail = "Today is protected. Keep going until the 7-day active holder line.";
+    detail = "Today is protected by completed Daily Routine. Keep going until the 7-day holder line.";
   }
 
   return {
@@ -5043,7 +5037,7 @@ function getActiveStreakTimelineSummary(status: ActiveStreakProofStatus) {
   if (status.recoveryAvailable) {
     return {
       title: "Recovery available",
-      detail: `Complete ${Math.max(1, status.recoveryActionsNeeded)} more proof action${status.recoveryActionsNeeded === 1 ? "" : "s"} today to restore the missed day.`,
+      detail: "Complete today’s full Daily Routine to restore the missed day.",
       tone: "recovery" as const,
     };
   }
@@ -5051,14 +5045,14 @@ function getActiveStreakTimelineSummary(status: ActiveStreakProofStatus) {
   if (status.currentStreak > 0 && status.lastProofDate) {
     return {
       title: "Today needs proof",
-      detail: `Last protected day: ${status.lastProofDate}. Complete one proof action before the day ends.`,
+      detail: `Last protected day: ${status.lastProofDate}. Complete today’s full Daily Routine before the day ends.`,
       tone: "warning" as const,
     };
   }
 
   return {
     title: "No active proof yet",
-    detail: "Complete Daily Routine, Track Leak, Clean Day, One Fix, or Daily Challenge to protect today.",
+    detail: "Complete the full Daily Routine to protect today.",
     tone: "empty" as const,
   };
 }
@@ -5078,9 +5072,9 @@ function getActiveStreakRewardReadinessLabel(status: ActiveStreakProofStatus, se
   if (!verified) return "Verify wallet next";
   if (!meetsMinHold) return "Hold 100K+ $BROKE next";
   if (status.recoveryMode || status.recoveryAvailable) return "Recovery active";
-  if (status.activeToday) return "Today protected";
+  if (status.activeToday) return "Daily Routine protected today";
 
-  return "Proof needed today";
+  return "Daily Routine needed today";
 }
 
 function buildActiveStreakProofShareText(settings: Settings, status: ActiveStreakProofStatus) {
@@ -5102,8 +5096,8 @@ function buildActiveStreakProofShareText(settings: Settings, status: ActiveStrea
   const todayLine = status.activeToday
     ? "Today protected"
     : status.recoveryAvailable
-      ? `Recovery mode: ${status.recoveryActionsNeeded} proof action${status.recoveryActionsNeeded === 1 ? "" : "s"} needed`
-      : "Today needs proof";
+      ? "Recovery mode: Daily Routine needed"
+      : "Today needs Daily Routine";
 
   return [
     `${identityName} on $BROKE`,
@@ -5117,7 +5111,7 @@ function buildActiveStreakProofShareText(settings: Settings, status: ActiveStrea
     `Wallet: ${verified}`,
     `Balance proof: ${balanceLine}`,
     "",
-    "Keep a 7+ day active streak to stay eligible for future Holder Rewards.",
+    "Keep a 7+ day Daily Routine streak to stay eligible for future Holder Rewards.",
     "Built in $BROKE Life Tracker.",
   ].filter(Boolean).join("\n");
 }
@@ -5179,8 +5173,8 @@ function buildRewardReminderCopy(status: ActiveStreakProofStatus, prefs: RewardN
   const todayLine = status.activeToday
     ? "today is already protected"
     : status.recoveryAvailable
-      ? `${status.recoveryActionsNeeded} recovery action${status.recoveryActionsNeeded === 1 ? "" : "s"} needed today`
-      : "one proof action needed today";
+      ? "Daily Routine needed today for recovery"
+      : "Daily Routine needed today";
 
   return [
     "$BROKE Active Streak reminder",
@@ -5190,7 +5184,7 @@ function buildRewardReminderCopy(status: ActiveStreakProofStatus, prefs: RewardN
     prefs.recoveryReminder ? "Recovery alert: on" : "Recovery alert: off",
     prefs.milestoneReminder ? "7-day milestone alert: on" : "7-day milestone alert: off",
     "",
-    "Future Holder Rewards will use live 7+ day active streak proof.",
+    "Future Holder Rewards will use live 7+ day Daily Routine proof.",
   ].join("\n");
 }
 
@@ -8704,6 +8698,23 @@ export default function Home() {
   const [lastTrackedExpense, setLastTrackedExpense] = useState<Expense | null>(null);
   const [leakReflection, setLeakReflection] = useState<LeakReflection | null>(null);
 
+  useEffect(() => {
+    try {
+      const isEmbedded = window.self !== window.top;
+      document.documentElement.classList.toggle("embedded-app-view", isEmbedded);
+
+      return () => {
+        document.documentElement.classList.remove("embedded-app-view");
+      };
+    } catch {
+      document.documentElement.classList.add("embedded-app-view");
+
+      return () => {
+        document.documentElement.classList.remove("embedded-app-view");
+      };
+    }
+  }, []);
+
   const cloudInitData = telegram.isTelegram ? telegram.initData : "";
   const cloudAuthReady = Boolean(
     (telegram.isTelegram && telegram.initData) || webAuth.authenticated
@@ -9234,7 +9245,6 @@ export default function Home() {
     const nextExpenses = [expense, ...expenses];
 
     triggerHaptic("success");
-    recordActiveStreakProof("track_leak", false);
     setExpenses((prev) => [expense, ...prev]);
     setLastTrackedExpense(expense);
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
@@ -9284,7 +9294,6 @@ export default function Home() {
     const nextExpenses = [expense, ...expenses];
 
     triggerHaptic("success");
-    recordActiveStreakProof("track_leak", false);
     setExpenses((prev) => [expense, ...prev]);
     setLastTrackedExpense(expense);
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
@@ -9510,7 +9519,6 @@ export default function Home() {
 
   async function startChallenge(challengeId: string) {
     triggerHaptic("medium");
-    recordActiveStreakProof("daily_challenge", false);
 
     if (!cloudAuthReady) {
       notifyApp("Connect Telegram", "Sync your account first, then start challenges.");
@@ -9608,13 +9616,13 @@ export default function Home() {
   }
 
   function markCleanDayProof() {
-    triggerHaptic("success");
-    recordActiveStreakProof("clean_day");
+    triggerHaptic("light");
+    notifyApp("Daily Routine required", "Active Streak is protected only after the full 7/7 Daily Routine is complete.", "info");
   }
 
   function completeOneFixProof() {
-    triggerHaptic("success");
-    recordActiveStreakProof("one_fix");
+    triggerHaptic("light");
+    notifyApp("Daily Routine required", "One Fix remains useful, but the Active Streak is counted only by full Daily Routine completion.", "info");
     setActiveTab("chart");
   }
 
@@ -9805,7 +9813,6 @@ export default function Home() {
             onMarkCleanDay={markCleanDayProof}
             onCompleteOneFix={completeOneFixProof}
             onDailyChallengeProof={() => {
-              recordActiveStreakProof("daily_challenge");
               setActiveTab("whatif");
             }}
             onBack={goHome}
@@ -9999,9 +10006,9 @@ function HelpGuideModal({
           title: "Daily Routine and streak logic",
           body: [
             "Routine tasks are meant to be real actions, not fake one-click farming.",
-            "Open the app, track expenses, mark leak type, check chart, check Rewards, and use share/proof actions when relevant.",
-            "A streak shows repeated discipline across days.",
-            "Future rewards and status mechanics can use streak as proof of activity, so it matters.",
+            "Open the app, track expenses, mark leak type, check chart, check Rewards, and finish the final Share on X step.",
+            "Active Streak is protected only after the full 7/7 Daily Routine is complete.",
+            "Future reward readiness uses this Daily Routine streak, not separate Rewards button taps.",
           ],
           icon: A.dailyCheck,
         },
@@ -10167,7 +10174,7 @@ function HelpGuideModal({
           title: "Active Streak Timeline",
           body: [
             "This block shows the last 7 proof days inside Chart.",
-            "It explains which days were protected and which action protected them: Track Leak, Daily Routine, Clean Day, One Fix, or Daily Challenge.",
+            "It explains which days were protected by completed Daily Routine proof.",
             "If the streak is 0, use this timeline to see whether today has proof, yesterday was missed, or recovery is available.",
             "Chart is for history and trust. Use Rewards when you need to protect today.",
           ],
@@ -10301,79 +10308,49 @@ function HelpGuideModal({
       eyebrow: "Rewards Button Guide",
       title: "Rewards: Proof, Streak, Future Holder Rewards",
       intro:
-        "Rewards is the proof hub. Use it to protect today, build the live 7+ day Active Streak, prepare wallet proof, and understand future Holder Rewards rules before any payout system exists.",
+        "Rewards is the proof/readiness hub. Active Streak is protected from full Daily Routine completion only; Rewards explains the state, wallet proof, and future Holder Rewards rules before any payout system exists.",
       icon: "/nav-save.png",
       footerTitle: "Rewards rule",
       footerBody:
-        "Rewards are not a one-time unlock. Keep the streak live, verify wallet ownership, hold eligible $BROKE, and use the app consistently. No Creator Fee payouts or claims are active yet.",
+        "Rewards are not a one-time unlock. Keep the Daily Routine streak live, verify wallet ownership, and hold eligible $BROKE. No Creator Fee payouts or claims are active yet.",
       sections: [
         {
           title: "Rewards overview card",
           body: [
             "This is the short top card in Rewards.",
-            "It shows the planned June 1 direction: activity matters, 100K $BROKE minimum hold, 7+ day streak, wallet verification, and balance-share split.",
+            "It shows the planned June 1 direction: Daily Routine activity matters, 100K $BROKE minimum hold, 7+ day streak, wallet verification, and balance-share split.",
             "It is a preparation card, not a live payout screen.",
-            "Use Protect today when the app says today's proof is still needed.",
+            "Use Open Daily Routine when today’s proof is still needed.",
           ],
           icon: A.challengeTrophy,
         },
         {
           title: "Today’s Proof",
           body: [
-            "Today’s Proof is the daily action area.",
-            "On a normal day, one proof action protects the day.",
-            "Valid actions are Track Leak, Mark Clean Day, One Fix, Daily Challenge, or full Daily Routine completion.",
-            "If today is already protected, you do not need to press random buttons just to farm activity.",
+            "Today’s Proof shows whether the full Daily Routine has protected today.",
+            "There are no separate Rewards buttons for farming streak proof anymore.",
+            "The only valid Active Streak proof is Daily Routine 7/7 completion.",
+            "The final Daily Routine task must be Share on X, not copy text, Telegram share, or image download.",
           ],
           icon: A.dailyCheck,
         },
         {
-          title: "Track Leak button",
+          title: "Daily Routine proof",
           body: [
-            "Track Leak opens Add so you can record real spending or a real wallet decision.",
-            "Use it when money actually left the wallet or when a leak pattern needs to be logged.",
-            "A real tracked leak can count as proof activity for the active streak.",
-            "Do not create fake expenses just to protect a streak.",
+            "Open Daily Routine from Home or from the Rewards proof button.",
+            "Complete all seven real actions: open app, track expense, mark leak, add context, check Chart, check Rewards, and Share on X.",
+            "When 7/7 is complete, the app logs Daily Routine proof and protects today’s Active Streak.",
+            "Track Leak, Clean Day, One Fix, and Daily Challenge can still be useful features, but they do not activate Active Streak by themselves.",
           ],
-          icon: A.navAdd,
-        },
-        {
-          title: "Mark Clean Day button",
-          body: [
-            "Mark Clean Day protects the streak when there is no leak to record.",
-            "Use it only when the day was controlled or there was nothing meaningful to track.",
-            "This keeps honest users from being forced to invent expenses.",
-            "If you actually spent money, Track Leak is the better button.",
-          ],
-          icon: A.bestStreak,
-        },
-        {
-          title: "One Fix button",
-          body: [
-            "One Fix means one small corrective action after reading your wallet pattern.",
-            "It can be reducing a category, cancelling a small leak, avoiding one timing trigger, or choosing tomorrow’s control move.",
-            "The button sends you toward Chart because One Fix should be based on real pattern data.",
-            "Use it when you want action, not another report.",
-          ],
-          icon: A.progressFlame,
-        },
-        {
-          title: "Daily Challenge button",
-          body: [
-            "Daily Challenge opens the challenge area inside Rewards.",
-            "Challenges are leak-control missions based on spending behavior and pattern pressure.",
-            "Completing a real challenge can count as proof activity.",
-            "Challenge progress can also support badges, leaderboard, and public proof.",
-          ],
-          icon: A.challengeCompleted,
+          icon: A.dailyCheck,
         },
         {
           title: "7+ day Active Streak",
           body: [
-            "The Active Streak is live eligibility proof, not a permanent badge.",
-            "0–6 days means you are still building eligibility.",
-            "7+ days means the activity side is ready for future Holder Reward checks.",
-            "If the streak drops below 7 days, eligibility pauses until it is rebuilt or recovered.",
+            "The Active Streak is live Daily Routine eligibility proof, not a permanent badge.",
+            "0–6 completed routine days means you are still building eligibility.",
+            "7+ completed routine days means the activity side is ready for future Holder Reward checks.",
+            "If the routine streak drops below 7 days, eligibility pauses until it is rebuilt or recovered.",
           ],
           icon: A.bestStreak,
         },
@@ -10382,7 +10359,7 @@ function HelpGuideModal({
           body: [
             "Recovery is the safety window after a missed day.",
             "Recovery is limited to one recovery per 7 days.",
-            "During recovery, complete 2 proof actions in time to restore the streak.",
+            "During recovery, complete today’s full Daily Routine in time to restore the streak.",
             "If recovery expires, the active streak resets and must be rebuilt.",
           ],
           icon: A.calendar,
@@ -10391,7 +10368,7 @@ function HelpGuideModal({
           title: "Future Holder Rewards rules",
           body: [
             "Future Holder Rewards are planned, not live payouts yet.",
-            "Planned requirements: legitimate app activity, verified wallet, minimum 100,000 $BROKE hold, live 7+ day streak, and an active reward epoch.",
+            "Planned requirements: legitimate Daily Routine activity, verified wallet, minimum 100,000 $BROKE hold, live 7+ day streak, and an active reward epoch.",
             "Up to 50% of the Creator Fee may be allocated to a future rewards pool after the volume trigger.",
             "Holding alone is not enough. App activity and wallet proof matter too.",
           ],
@@ -11806,11 +11783,11 @@ function DashboardScreen({
         </details>
       )}
 
-      <details className="clean-details">
+      <details className="clean-details" id="daily-routine-panel">
         <summary>
           <div>
             <span>Daily Routine</span>
-            <small>7 actions to protect today’s Active Streak.</small>
+            <small>7 actions. Final task: Share on X.</small>
           </div>
           <b>Streak proof</b>
         </summary>
@@ -11949,16 +11926,10 @@ function DashboardScreen({
 
 function ActiveStreakProofCard({
   status,
-  onTrackLeak,
-  onMarkCleanDay,
-  onCompleteOneFix,
-  onOpenChallenge,
+  onOpenDailyRoutine,
 }: {
   status: ActiveStreakProofStatus;
-  onTrackLeak: () => void;
-  onMarkCleanDay: () => void;
-  onCompleteOneFix: () => void;
-  onOpenChallenge: () => void;
+  onOpenDailyRoutine: () => void;
 }) {
   const tone = status.eligible
     ? "eligible"
@@ -11994,11 +11965,11 @@ function ActiveStreakProofCard({
         </article>
         <article>
           <span>Today</span>
-          <strong>{status.activeToday ? "Protected" : status.recoveryMode ? "Recovery" : "Needs action"}</strong>
+          <strong>{status.activeToday ? "Routine complete" : status.recoveryMode ? "Recovery" : "Needs routine"}</strong>
         </article>
         <article>
-          <span>Recovery</span>
-          <strong>{status.recoveryUsedRecently ? "Used this week" : "1 / 7d"}</strong>
+          <span>Proof source</span>
+          <strong>Daily Routine</strong>
         </article>
       </div>
 
@@ -12010,15 +11981,12 @@ function ActiveStreakProofCard({
         </div>
       )}
 
-      <div className="active-streak-proof-buttons">
-        <button type="button" className="primary" onClick={onTrackLeak}>Track Leak</button>
-        <button type="button" onClick={onMarkCleanDay}>Mark Clean Day</button>
-        <button type="button" onClick={onCompleteOneFix}>One Fix</button>
-        <button type="button" onClick={onOpenChallenge}>Daily Challenge</button>
+      <div className="active-streak-proof-buttons single-action">
+        <button type="button" className="primary" onClick={onOpenDailyRoutine}>Open Daily Routine</button>
       </div>
 
       <p>
-        Future Holder Rewards will use the live streak state, not a one-time unlock. If the streak drops below 7 days, eligibility pauses until it is rebuilt or recovered.
+        Active Streak is no longer counted by separate Rewards buttons. Finish the full Daily Routine: 7/7 actions, with Share on X as the final public proof task.
       </p>
     </section>
   );
@@ -12027,15 +11995,11 @@ function ActiveStreakProofCard({
 function RewardsStatusHero({
   status,
   settings,
-  onTrackLeak,
-  onOpenChart,
-  onOpenChallenge,
+  onOpenDailyRoutine,
 }: {
   status: ActiveStreakProofStatus;
   settings: Settings;
-  onTrackLeak: () => void;
-  onOpenChart: () => void;
-  onOpenChallenge: () => void;
+  onOpenDailyRoutine: () => void;
 }) {
   const verified = Boolean(settings.wallet.isVerified);
   const verifiedHolderBalance = verified ? settings.wallet.brokeBalance : 0;
@@ -12043,10 +12007,10 @@ function RewardsStatusHero({
   const hasVerifiedBalance = verifiedHolderBalance > 0;
   const rewardReady = verified && meetsMinHold && status.eligible;
   const todayState = status.activeToday
-    ? "Protected"
+    ? "Routine complete"
     : status.recoveryMode || status.recoveryAvailable
       ? "Recovery"
-      : "Needs proof";
+      : "Needs Daily Routine";
 
   return (
     <section className={`rewards-status-hero ${rewardReady ? "ready" : status.recoveryAvailable ? "recovery" : "building"}`}>
@@ -12054,7 +12018,7 @@ function RewardsStatusHero({
         <span>Rewards Status</span>
         <h2>{rewardReady ? "Ready for future snapshots." : getActiveStreakRewardReadinessLabel(status, settings)}</h2>
         <p>
-          Keep the live 7+ day streak, verify wallet ownership, and hold $BROKE. Future reward checks use the current state, not a one-time unlock.
+          Active Streak proof now comes from one source only: complete the full Daily Routine. Separate clicks in Rewards no longer protect the streak.
         </p>
       </div>
 
@@ -12082,10 +12046,8 @@ function RewardsStatusHero({
         </article>
       </div>
 
-      <div className="rewards-status-actions">
-        <button type="button" onClick={onTrackLeak}>Track Leak</button>
-        <button type="button" onClick={onOpenChart}>Read Chart</button>
-        <button type="button" onClick={onOpenChallenge}>Open Challenge</button>
+      <div className="rewards-status-actions single-action">
+        <button type="button" onClick={onOpenDailyRoutine}>Open Daily Routine</button>
       </div>
     </section>
   );
@@ -12093,89 +12055,42 @@ function RewardsStatusHero({
 
 function DailyProofChecklist({
   status,
-  onTrackLeak,
-  onMarkCleanDay,
-  onCompleteOneFix,
-  onOpenChallenge,
+  onOpenDailyRoutine,
 }: {
   status: ActiveStreakProofStatus;
-  onTrackLeak: () => void;
-  onMarkCleanDay: () => void;
-  onCompleteOneFix: () => void;
-  onOpenChallenge: () => void;
+  onOpenDailyRoutine: () => void;
 }) {
-  const actionConfig: Array<{
-    action: ActiveStreakProofAction;
-    title: string;
-    detail: string;
-    onClick: () => void;
-  }> = [
-    {
-      action: "track_leak",
-      title: "Track Leak",
-      detail: "Log one real wallet leak or spending decision.",
-      onClick: onTrackLeak,
-    },
-    {
-      action: "clean_day",
-      title: "Mark Clean Day",
-      detail: "Protect the streak when there was no leak to record.",
-      onClick: onMarkCleanDay,
-    },
-    {
-      action: "one_fix",
-      title: "One Fix",
-      detail: "Make one small correction after reading the chart.",
-      onClick: onCompleteOneFix,
-    },
-    {
-      action: "daily_challenge",
-      title: "Daily Challenge",
-      detail: "Logs daily challenge proof and opens missions.",
-      onClick: onOpenChallenge,
-    },
-  ];
-  const requiredActions = status.recoveryAvailable || status.recoveryMode
-    ? ACTIVE_STREAK_RECOVERY_ACTIONS
-    : 1;
-  const completedCount = Math.min(status.todayActions.length, requiredActions);
+  const done = status.todayActions.includes("daily_routine");
   const checklistTitle = status.recoveryAvailable || status.recoveryMode
-    ? "Recovery proof checklist"
-    : "Today’s proof checklist";
+    ? "Recovery proof"
+    : "Today’s proof";
   const checklistDetail = status.recoveryAvailable || status.recoveryMode
-    ? `Complete ${requiredActions} proof actions today to restore the streak.`
-    : "Complete at least one proof action today to protect the active streak.";
+    ? "Complete today’s full Daily Routine to restore the missed day."
+    : "Complete the full 7/7 Daily Routine to protect today’s Active Streak.";
 
   return (
-    <section className="daily-proof-checklist-card">
+    <section className="daily-proof-checklist-card routine-only-proof-card">
       <div className="daily-proof-checklist-head">
         <div>
           <span>{checklistTitle}</span>
-          <strong>{completedCount}/{requiredActions} completed</strong>
+          <strong>{done ? "1/1 completed" : "0/1 completed"}</strong>
           <small>{checklistDetail}</small>
         </div>
-        <b>{status.activeToday ? "Safe" : status.recoveryAvailable ? "Recovery" : "Open"}</b>
+        <b>{done ? "Safe" : status.recoveryAvailable ? "Recovery" : "Open"}</b>
       </div>
 
-      <div className="daily-proof-checklist-list">
-        {actionConfig.map((item) => {
-          const done = status.todayActions.includes(item.action);
-
-          return (
-            <button
-              type="button"
-              key={item.action}
-              className={done ? "done" : "pending"}
-              onClick={item.onClick}
-            >
-              <b>{done ? "✓" : "□"}</b>
-              <span>
-                <strong>{item.title}</strong>
-                <small>{item.detail}</small>
-              </span>
-            </button>
-          );
-        })}
+      <div className="daily-proof-checklist-list single-action">
+        <button
+          type="button"
+          className={done ? "done" : "pending"}
+          onClick={onOpenDailyRoutine}
+        >
+          <b>{done ? "✓" : "□"}</b>
+          <span>
+            <strong>Finish Daily Routine</strong>
+            <small>Track the 7 real actions. The final task must be Share on X.</small>
+          </span>
+        </button>
       </div>
     </section>
   );
@@ -12195,8 +12110,8 @@ function RewardsNotificationPrepCard({
   const todayNotificationLine = status.activeToday
     ? "Already safe."
     : status.recoveryAvailable
-      ? `${status.recoveryActionsNeeded} recovery left.`
-      : "Needs proof.";
+      ? "Daily Routine needed."
+      : "Needs Daily Routine.";
   const milestoneLine = status.eligible
     ? "7-day line live."
     : `${Math.max(0, ACTIVE_STREAK_ELIGIBILITY_DAYS - status.progressDays)}d left.`;
@@ -12423,7 +12338,7 @@ function RewardsLaunchOverviewCard({
     ? "Protected today"
     : status.recoveryAvailable
       ? "Recovery available"
-      : "Needs one action";
+      : "Needs Daily Routine";
   const verifiedHolderBalance = verified ? settings.wallet.brokeBalance : 0;
   const holdLabel = !verified
     ? "Verify first"
@@ -12441,8 +12356,8 @@ function RewardsLaunchOverviewCard({
       <div className="rewards-launch-main">
         <div>
           <span>Holder Rewards</span>
-          <strong>Activity matters.</strong>
-          <p>June 1 prep. Hold $BROKE, verify wallet, keep 7+ active days.</p>
+          <strong>Daily Routine matters.</strong>
+          <p>June 1 prep. Hold $BROKE, verify wallet, keep 7+ Daily Routine days.</p>
         </div>
         <aside>
           <strong>{status.currentStreak}d</strong>
@@ -12463,8 +12378,8 @@ function RewardsLaunchOverviewCard({
         </article>
         <article>
           <span>Streak</span>
-          <strong>7+ days</strong>
-          <small>Live, not one-time.</small>
+          <strong>7+ routines</strong>
+          <small>Daily Routine only.</small>
         </article>
         <article>
           <span>Split</span>
@@ -12481,7 +12396,7 @@ function RewardsLaunchOverviewCard({
       </div>
 
       <div className="rewards-launch-actions">
-        <button type="button" className="primary" onClick={onTrackLeak}>Protect today</button>
+        <button type="button" className="primary" onClick={onTrackLeak}>Open Daily Routine</button>
         <button type="button" onClick={onOpenProfile}>Wallet proof</button>
       </div>
     </section>
@@ -12519,13 +12434,12 @@ function ActiveStreakShareCard({
       : "Needs proof today";
   const loggedLabels = status.todayActions.length
     ? status.todayActions.map(activeStreakProofActionShortLabel).join(" · ")
-    : "No proof action yet";
+    : "Daily Routine not done yet";
 
   async function copyProofText() {
     try {
       await navigator.clipboard.writeText(shareText);
       triggerHaptic("success");
-      markDailyRoutineAction("sharedProgress");
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
@@ -12544,7 +12458,6 @@ function ActiveStreakShareCard({
     if (!shareCardRef.current || imageSharing) return;
 
     triggerHaptic("light");
-    markDailyRoutineAction("sharedProgress");
     setImageSharing(true);
 
     try {
@@ -12661,7 +12574,7 @@ function ActiveHolderEligibilityStrip({
         <span>Future Holder Rewards</span>
         <strong>{label}</strong>
         <small>
-          Verified wallet + $BROKE balance + live 7+ day active streak. If the streak breaks, eligibility pauses.
+          Verified wallet + $BROKE balance + live 7+ day Daily Routine streak. If the streak breaks, eligibility pauses.
         </small>
       </div>
       <b>{ready ? "Ready" : status.eligible ? "Streak ready" : `${status.currentStreak}d`}</b>
@@ -12759,7 +12672,6 @@ function WeeklyBehaviorReportHomeCard({
 
     try {
       triggerHaptic("light");
-      markDailyRoutineAction("sharedProgress");
       setWeeklyImageSharing(true);
 
       const imageFile = await createShareImageFileFromElement(weeklyShareCardRef.current);
@@ -14214,7 +14126,6 @@ function ReportsPanel({
     if (reportSharing) return;
 
     triggerHaptic("light");
-    markDailyRoutineAction("sharedProgress");
     setReportSharing(reportType);
 
     try {
@@ -14553,8 +14464,8 @@ function DailyRoutinePanel({
     },
     {
       id: "publicProof",
-      title: "Share public proof",
-      body: "Share or copy a safe progress card. No private money data.",
+      title: "Share on X",
+      body: "Use a Share on X button. Copy, Telegram share, or image download does not complete this task.",
       icon: A.export,
       done: actions.sharedProgress,
     },
@@ -14597,10 +14508,9 @@ function DailyRoutinePanel({
 
       <div className="routine-hero">
         <div>
-          <strong>7 real actions protect the streak.</strong>
+          <strong>Daily Routine is the only streak proof.</strong>
           <p>
-            Complete the routine through real actions. Finish 7/7 to protect
-            today’s Active Streak.
+            Finish all 7 actions. The 7th action must be Share on X, then today’s Active Streak is protected.
           </p>
         </div>
 
@@ -14628,7 +14538,7 @@ function DailyRoutinePanel({
                 }`}
           </strong>
           <span>
-            Daily Routine now counts as Active Streak proof. No XP claim needed.
+            Active Streak is counted only after full Daily Routine completion. The final task must be Share on X.
           </span>
         </div>
       </div>
@@ -14650,7 +14560,7 @@ function DailyRoutinePanel({
 
       <div className="routine-rule">
         <strong>Discipline rule:</strong>
-        <span>you cannot tap tasks complete. Complete the action, then the checkmark appears.</span>
+        <span>you cannot tap tasks complete. Finish the real action; only Share on X completes the final public proof task.</span>
       </div>
     </section>
   );
@@ -14754,7 +14664,6 @@ function BiggestLeakChallengePanel({
     if (!mission || !shareText || missionImageSharing) return;
 
     triggerHaptic("light");
-    markDailyRoutineAction("sharedProgress");
     setMissionImageSharing(true);
 
     try {
@@ -15825,7 +15734,6 @@ function ShareResultCard({
 
   function openTelegramShare() {
     triggerHaptic("light");
-    markDailyRoutineAction("sharedProgress");
     const url = `https://t.me/share/url?url=${encodeURIComponent(
       PROJECT_TG_URL
     )}&text=${encodeURIComponent(shareText)}`;
@@ -15835,7 +15743,6 @@ function ShareResultCard({
   async function nativeShare() {
     try {
       triggerHaptic("light");
-      markDailyRoutineAction("sharedProgress");
       if (typeof navigator !== "undefined" && navigator.share) {
         await navigator.share({
           title: "$BROKE Life Tracker",
@@ -15853,7 +15760,6 @@ function ShareResultCard({
   async function copyShareText() {
     try {
       await navigator.clipboard.writeText(shareText);
-      markDailyRoutineAction("sharedProgress");
       triggerHaptic("success");
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
@@ -15867,7 +15773,6 @@ function ShareResultCard({
 
     try {
       triggerHaptic("light");
-      markDailyRoutineAction("sharedProgress");
       setImageSharing(true);
 
       const imageFile = await createShareImageFileFromElement(shareCardRef.current);
@@ -17279,7 +17184,6 @@ function ChartScreen({
     if (!weeklyReviewShareCardRef.current || weeklyReviewSharing) return;
 
     triggerHaptic("light");
-    markDailyRoutineAction("sharedProgress");
     setWeeklyReviewSharing(true);
 
     try {
@@ -17340,7 +17244,6 @@ function ChartScreen({
     if (!historyShareCardRef.current || historySharing) return;
 
     triggerHaptic("light");
-    markDailyRoutineAction("sharedProgress");
     setHistorySharing(true);
 
     try {
@@ -19598,8 +19501,6 @@ function GrowthLabScreen({
       } else {
         notifyApp("Telegram needed", "Open inside Telegram to send the card to the bot. The preview is ready below.");
       }
-
-      markDailyRoutineAction("sharedProgress");
       triggerHaptic("success");
     } catch {
       try {
@@ -21570,6 +21471,19 @@ function WhatIfScreen({
     window.setTimeout(() => openChallengeArea(), 0);
   }
 
+  function openDailyRoutineFromRewards() {
+    onBack();
+
+    window.setTimeout(() => {
+      const element = document.getElementById("daily-routine-panel") as HTMLDetailsElement | null;
+
+      if (element) {
+        element.open = true;
+        element.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 80);
+  }
+
   const survivalShareText = [
     "$BROKE Survival Mode",
     "",
@@ -21592,7 +21506,6 @@ function WhatIfScreen({
     if (!survivalCardRef.current || survivalSharing) return;
 
     triggerHaptic("light");
-    markDailyRoutineAction("sharedProgress");
     setSurvivalSharing(true);
 
     try {
@@ -21776,7 +21689,7 @@ function WhatIfScreen({
       <RewardsLaunchOverviewCard
         status={activeProofStatus}
         settings={settings}
-        onTrackLeak={onOpenAdd}
+        onTrackLeak={openDailyRoutineFromRewards}
         onOpenProfile={onOpenProfile}
       />
 
@@ -21784,23 +21697,18 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Today’s proof</span>
-            <small>Protect the streak with one clear action today.</small>
+            <small>Only full Daily Routine completion protects the streak.</small>
           </div>
           <b>{activeProofStatus.activeToday ? "Protected" : activeProofStatus.recoveryAvailable ? "Recovery" : "Open"}</b>
         </summary>
         <RewardsStatusHero
           status={activeProofStatus}
           settings={settings}
-          onTrackLeak={onOpenAdd}
-          onOpenChart={onOpenChart}
-          onOpenChallenge={completeDailyChallengeProof}
+          onOpenDailyRoutine={openDailyRoutineFromRewards}
         />
         <DailyProofChecklist
           status={activeProofStatus}
-          onTrackLeak={onOpenAdd}
-          onMarkCleanDay={onMarkCleanDay}
-          onCompleteOneFix={onCompleteOneFix}
-          onOpenChallenge={completeDailyChallengeProof}
+          onOpenDailyRoutine={openDailyRoutineFromRewards}
         />
       </details>
 
@@ -21808,16 +21716,13 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Streak & recovery</span>
-            <small>7+ days must stay live. Recovery is limited.</small>
+            <small>7+ Daily Routine days must stay live.</small>
           </div>
           <b>{activeProofStatus.currentStreak}d</b>
         </summary>
         <ActiveStreakProofCard
           status={activeProofStatus}
-          onTrackLeak={onOpenAdd}
-          onMarkCleanDay={onMarkCleanDay}
-          onCompleteOneFix={onCompleteOneFix}
-          onOpenChallenge={completeDailyChallengeProof}
+          onOpenDailyRoutine={openDailyRoutineFromRewards}
         />
       </details>
 
@@ -21825,7 +21730,7 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Future Holder Rewards</span>
-            <small>100K+ hold, wallet proof, 7+ active days.</small>
+            <small>100K+ hold, wallet proof, 7+ Daily Routine days.</small>
           </div>
           <b>{rewardFoundationReady ? "Ready" : "Prep"}</b>
         </summary>
@@ -21833,7 +21738,7 @@ function WhatIfScreen({
           <article className={rewardFoundationReady ? "ready" : "building"}>
             <span>Reward foundation</span>
             <strong>{rewardFoundationReady ? "Ready" : "Building"}</strong>
-            <small>Verified wallet + 100K+ $BROKE + live 7+ day streak.</small>
+            <small>Verified wallet + 100K+ $BROKE + live 7+ Daily Routine streak.</small>
           </article>
           <article>
             <span>Reward share</span>
@@ -21843,12 +21748,12 @@ function WhatIfScreen({
           <article>
             <span>Today proof</span>
             <strong>{activeProofStatus.activeToday ? "Protected" : activeProofStatus.recoveryMode ? "Recovery" : "Needs action"}</strong>
-            <small>{activeProofStatus.todayActions.length} proof action{activeProofStatus.todayActions.length === 1 ? "" : "s"} logged.</small>
+            <small>{activeProofStatus.activeToday ? "Daily Routine completed." : "Daily Routine not completed yet."}</small>
           </article>
           <article>
             <span>Recovery</span>
             <strong>{activeProofStatus.recoveryAvailable ? "Available" : activeProofStatus.recoveryUsedRecently ? "Used" : "Ready"}</strong>
-            <small>1 recovery per 7 days · 2 proof actions required.</small>
+            <small>Recovery also requires today’s full Daily Routine.</small>
           </article>
         </section>
 

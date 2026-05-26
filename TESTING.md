@@ -1,4 +1,4 @@
-# TESTING — v59.27 Reward Snapshot Ledger Foundation
+# TESTING — v59.28 Daily Routine Streak Lock + Site Embed Fit
 
 ## Build checks
 
@@ -10,81 +10,52 @@ npm run lint:quiet
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-## Supabase checks
-
-1. Run migration:
-
-```sql
-supabase/migrations/20260526_v59_27_reward_snapshot_ledger_foundation.sql
-```
-
-2. Run audit:
-
-```sql
-supabase/review/20260526_v59_27_reward_snapshot_ledger_audit.sql
-```
-
-3. Check app diagnostics:
-
-```txt
-/api/broke?check=supabase&key=YOUR_SECRET
-```
-
-Confirm these tables return `ok: true`:
-
-- `broke_reward_epochs`
-- `broke_reward_snapshots`
-
-## Admin route checks
-
-Dry run must not write rows:
-
-```bash
-curl -X POST "https://YOUR_APP/api/rewards/snapshot?key=YOUR_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"dryRun":true}'
-```
-
-Expected:
-
-- `dryRun: true`
-- `committed: false`
-- eligible/ineligible previews returned
-- no token transfer fields or claim execution
-
-Commit test:
-
-```bash
-curl -X POST "https://YOUR_APP/api/rewards/snapshot?key=YOUR_SECRET" \
-  -H "Content-Type: application/json" \
-  -d '{"commit":true,"epochCode":"test-prep","epochName":"Test Prep Snapshot"}'
-```
-
-Expected:
-
-- one epoch row created/updated;
-- snapshot rows created/updated;
-- balance-share percentages calculated only for eligible holders.
-
-## UI checks
-
-Open Rewards → Future Holder Rewards.
+## Active Streak checks
 
 Confirm:
 
-- Reward Snapshot Ledger card appears.
-- It says ledger only, no payout or claim active.
-- Ready state requires wallet verification, 100K+ verified BROKE, and 7+ active streak.
-- Main Rewards screen stays compact.
+- Track Leak does not directly protect Active Streak.
+- Mark Clean Day does not directly protect Active Streak.
+- One Fix does not directly protect Active Streak.
+- Daily Challenge does not directly protect Active Streak.
+- Completing all 7 Daily Routine actions records Daily Routine proof.
+- The final Daily Routine action is completed only by Share on X.
+- Copy text, Telegram share, native share, image download, and share-card export do not complete the final Daily Routine task.
+
+## Rewards checks
+
+Open Rewards and confirm:
+
+- Rewards no longer shows separate proof task buttons for Track Leak, Clean Day, One Fix, or Daily Challenge.
+- Rewards tells the user to open Daily Routine.
+- Today protected / needs proof states are based on Daily Routine proof.
+- Recovery wording says Daily Routine is needed.
+
+## Chart checks
+
+Open Chart and confirm:
+
+- Active Streak Timeline still renders.
+- Proof labels show Daily Routine proof instead of multiple independent proof tasks.
+- Chart remains read-only history.
+
+## Embedded-site checks
+
+Open the app inside the external website/iframe and confirm:
+
+- app content is centered;
+- content does not stretch to the full desktop site width;
+- bottom nav remains phone-width and centered;
+- major cards remain readable on desktop and mobile embedding.
 
 ## Non-regression checks
 
-Confirm unchanged:
+Confirm existing flows still work:
 
-- Track Leak.
-- Daily Routine proof.
-- Rewards proof actions.
-- Chart proof timeline.
-- Wallet verification.
-- Share cards.
-- Avatar upload.
+- expense save/delete;
+- Daily Routine checklist;
+- share cards;
+- wallet verification display;
+- reward snapshot ledger display;
+- Supabase sync;
+- Telegram Mini App loading.

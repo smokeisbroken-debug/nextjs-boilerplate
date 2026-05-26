@@ -1,8 +1,8 @@
-# PROJECT ORDER — v59.27 Reward Snapshot Ledger Foundation
+# PROJECT ORDER — v59.28 Daily Routine Streak Lock + Site Embed Fit
 
 ## Current patch
 
-v59.27 prepares the future Holder Rewards ledger without enabling payouts.
+v59.28 simplifies Active Streak into one clear rule: finish Daily Routine, including Share on X, to protect the streak.
 
 ## Files changed
 
@@ -10,8 +10,6 @@ v59.27 prepares the future Holder Rewards ledger without enabling payouts.
 - `app/globals.css`
 - `app/api/broke/route.ts`
 - `app/api/rewards/snapshot/route.ts`
-- `supabase/migrations/20260526_v59_27_reward_snapshot_ledger_foundation.sql`
-- `supabase/review/20260526_v59_27_reward_snapshot_ledger_audit.sql`
 - `README.md`
 - `PROJECT_ORDER.md`
 - `TESTING.md`
@@ -21,11 +19,12 @@ v59.27 prepares the future Holder Rewards ledger without enabling payouts.
 
 ## Product order
 
-1. Rewards tab keeps the compact user-facing rules.
-2. Chart keeps the proof history timeline.
-3. v59.27 adds snapshot ledger infrastructure.
-4. Future steps may add admin review UI, public snapshot summary, or claim/payout logic later.
+1. Daily Routine is the only Active Streak proof path.
+2. Rewards explains the rule and sends the user to Daily Routine.
+3. Chart remains read-only proof history.
+4. Snapshot ledger eligibility reads the same normalized Daily Routine proof log.
+5. External-site iframe display is kept phone-width and centered to avoid stretched Mini App layout.
 
 ## Safety line
 
-This patch is ledger-only. No Creator Fee distribution, claims, staking, token transfers, or automatic payouts are active.
+This patch is UX/proof-normalization only. It does not activate payouts, claims, staking, token transfers, Creator Fee distribution, or reward execution.
