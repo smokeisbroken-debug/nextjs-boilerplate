@@ -1,3 +1,47 @@
+# v59.34.2 Testing
+
+## Checks run in patch workspace
+
+```bash
+npm run typecheck
+npm run lint:quiet
+```
+
+Both passed.
+
+CSS brace balance passed.
+
+## Manual QA
+
+Admin modal:
+
+1. Open Profile as a normal user.
+2. Confirm the Admin button is not visible.
+3. Open as configured admin.
+4. Confirm the Admin button is visible beside Guide.
+5. Tap Admin and confirm the modal opens cleanly.
+
+Legitimate holder controls:
+
+1. Enter `REWARDS_ADMIN_SECRET` if needed.
+2. Confirm there is no Top 10 all-holder section.
+3. Confirm there is no RPC warning, token supply, treasury live balance, or RPC mode card.
+4. Set minimum hold to `100000` and streak to `7`.
+5. Tap Apply + load.
+6. Confirm Top 20 legitimate holders loads or shows the empty state.
+7. Lower the minimum hold/streak for testing and confirm the count recalculates.
+
+Distribution draft:
+
+1. Load legitimate holders.
+2. Enter a pool amount.
+3. Confirm payout rows use the loaded legitimate-holder rules.
+4. Tap Prepare distribution.
+5. Confirm a manifest is copied/prepared.
+6. Confirm no wallet signature, token transfer, claim, staking, or treasury spend occurs.
+
+---
+
 # Testing — v59.33 Private Admin Holder Intelligence Panel
 
 ## Automated checks

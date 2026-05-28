@@ -1,3 +1,64 @@
+# $BROKE Life Tracker — v59.34.2 Admin Legitimate-Only Controls Hotfix
+
+Patch-only update on top of confirmed v59.34.1.
+
+## What changed
+
+- Removed the live blockchain **Top 10 all holders** section from the private Admin Panel.
+- Removed the Admin UI dependency on Solana RPC for holder intelligence.
+- Removed treasury live balance, token supply, RPC mode, and RPC warning cards from the Admin holder view.
+- Admin holder intelligence now focuses only on **Top 20 legitimate holders** from app data.
+- Added editable private Admin eligibility controls:
+  - minimum $BROKE hold;
+  - required Daily Routine Active Streak days.
+- `/api/admin/holders` now accepts admin-only query params:
+  - `minHold`;
+  - `minStreak`.
+- Reward Distribution Draft now uses the currently loaded legitimate-holder rules.
+- The admin modal copy was simplified so the panel is cleaner on mobile.
+
+## Current legitimate-holder rule
+
+The default remains:
+
+```text
+verified wallet + 100,000+ $BROKE + 7+ Daily Routine Active Streak
+```
+
+Inside the private Admin Panel, the admin can temporarily load another rule for preview/distribution draft math. Example:
+
+```text
+minimum hold: 50,000 BROKE
+required streak: 3 days
+```
+
+The split formula remains unchanged:
+
+```text
+user reward = pool amount × user verified eligible BROKE / total verified eligible BROKE
+```
+
+## Important boundary
+
+This still does not send real rewards. It only calculates eligible recipients and creates/copies a draft manifest. Real payout execution still requires a later treasury signing flow.
+
+## What did not change
+
+- No Creator Fee distribution.
+- No live payouts.
+- No claims.
+- No staking.
+- No token transfers.
+- No treasury signing.
+- No private key storage.
+- No WalletConnect/Reown dependency.
+- No Jupiter Wallet Kit dependency.
+- No Supabase migration.
+- No wallet verification backend changes.
+- No Daily Routine / Active Streak proof logic changes.
+
+---
+
 # $BROKE Life Tracker — v59.33 Private Admin Holder Intelligence Panel
 
 Patch-only update on top of confirmed v59.32.

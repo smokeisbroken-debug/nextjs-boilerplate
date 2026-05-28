@@ -1,3 +1,31 @@
+# v59.34.2 — Admin Legitimate-Only Controls Hotfix
+
+1. Keep the private Admin Panel hidden from normal users.
+2. Remove the live Solana RPC Top 10 all-holder section from Admin.
+3. Remove treasury live balance, token supply, RPC mode, and RPC warning UI from holder intelligence.
+4. Keep only app-data legitimate holders.
+5. Add private Admin controls for legitimacy rules:
+   - minimum $BROKE hold;
+   - required Daily Routine Active Streak days.
+6. Pass these rules to `/api/admin/holders` through `minHold` and `minStreak`.
+7. Recalculate Top 20 legitimate holders and payout manifest from the loaded rules.
+8. Keep the balance-share formula unchanged.
+9. Keep all payout execution disabled.
+
+## Non-goals
+
+- No live blockchain Top 10 list.
+- No Solana RPC requirement for the Admin holder list.
+- No treasury balance read.
+- No automatic payout.
+- No send transaction.
+- No treasury signing.
+- No private key storage.
+- No Supabase migration.
+- No Daily Routine / Active Streak proof logic change.
+
+---
+
 # Project Order — v59.33 Private Admin Holder Intelligence Panel
 
 ## Patch base

@@ -992,14 +992,6 @@ type AdminAccessState = {
   walletConfigured: boolean;
 };
 
-type AdminAllHolderRow = {
-  rank: number;
-  ownerAddress: string;
-  balance: number;
-  percentOfSupply: number;
-  tokenAccounts: string[];
-};
-
 type AdminLegitimateHolderRow = {
   rank: number;
   telegramId: string;
@@ -1020,17 +1012,8 @@ type AdminHoldersResponse = {
   generatedAt?: string;
   mintAddress?: string;
   treasuryWallet?: string;
-  treasuryBrokeBalance?: number | null;
-  treasuryBalanceRpcError?: string;
-  tokenSupply?: number | null;
-  tokenSupplyAvailable?: boolean;
-  topAllHolders?: AdminAllHolderRow[];
-  topAllHoldersAvailable?: boolean;
   topLegitimateHolders?: AdminLegitimateHolderRow[];
   eligiblePayoutCandidates?: AdminLegitimateHolderRow[];
-  allHoldersRpcError?: string;
-  allHoldersRpcUrl?: string;
-  rpcProviderStatus?: string;
   summary?: {
     snapshotDate: string;
     totalUsersScanned: number;
@@ -22250,8 +22233,8 @@ function AdminPanelModal({
       <div className="admin-modal-shell">
         <div className="admin-modal-head">
           <div>
-            <span>Private admin</span>
-            <strong>Treasury + holder tools</strong>
+            <span>Rewards admin</span>
+            <strong>Legitimate holders + distribution</strong>
           </div>
           <button
             type="button"
@@ -22285,6 +22268,8 @@ function AdminTreasuryPanel({
   const [rewardPoolAmount, setRewardPoolAmount] = useState("");
   const [rewardPoolToken, setRewardPoolToken] = useState("USDC");
   const [distributionMessage, setDistributionMessage] = useState("");
+  const [eligibilityMinHold, setEligibilityMinHold] = useState("100000");
+  const [eligibilityMinStreak, setEligibilityMinStreak] = useState("7");
 
   const treasuryStatus = !access.treasuryConfigured
     ? "Treasury address not configured"
@@ -22313,7 +22298,11 @@ function AdminTreasuryPanel({
 
     try {
       const key = adminReadKey.trim();
-      const response = await fetch("/api/admin/holders", {
+      const params = new URLSearchParams({
+        minHold: eligibilityMinHold.trim() || "100000",
+        minStreak: eligibilityMinStreak.trim() || "7",
+      });
+      const response = await fetch(`/api/admin/holders?${params.toString()}`, {
         method: "GET",
         headers: key ? { Authorization: `Bearer ${key}` } : undefined,
         cache: "no-store",
@@ -22424,7 +22413,7 @@ function AdminTreasuryPanel({
           <div>
             <span>Snapshot eligibility</span>
             <strong>{activeProofStatus.currentStreak}d streak logic</strong>
-            <small>Eligibility stays public-rule based: verified holder + minimum hold + 7+ Daily Routine streak.</small>
+            <small>Eligibility is controlled below: verified holder + admin hold rule + Daily Routine streak rule.</small>
           </div>
         </section>
 
@@ -22432,14 +22421,11 @@ function AdminTreasuryPanel({
           <div className="admin-holder-intel-head">
             <div>
               <span>Holder intelligence</span>
-              <strong>Top holders + legitimate reward candidates</strong>
+              <strong>Legitimate reward candidates only</strong>
               <small>
-                Private read-only admin view. It does not send rewards, open claims, or sign transactions.
+                Private app-data view. Top 10 blockchain holders and live RPC reads were removed from this panel.
               </small>
             </div>
-            <button type="button" onClick={loadHolderIntel} disabled={holderIntelLoading}>
-              {holderIntelLoading ? "Loading..." : holderIntel ? "Refresh" : "Load"}
-            </button>
           </div>
 
           <label className="admin-secret-field">
@@ -22454,43 +22440,82 @@ function AdminTreasuryPanel({
           </label>
 
           {holderIntelError && <div className="admin-holder-error">{holderIntelError}</div>}
-          {(holderIntel?.allHoldersRpcError || holderIntel?.treasuryBalanceRpcError) && (
-            <div className="admin-holder-warning">
-              Live Solana RPC read is limited right now
-              {holderIntel.allHoldersRpcError ? `: ${holderIntel.allHoldersRpcError}` : ""}
-              {holderIntel.treasuryBalanceRpcError && holderIntel.treasuryBalanceRpcError !== holderIntel.allHoldersRpcError
-                ? ` / treasury balance: ${holderIntel.treasuryBalanceRpcError}`
-                : ""}
-              . Legitimate app holders can still load from Supabase. Add SOLANA_RPC_URL in Vercel for stable treasury balance, token supply, and Top 10 holder reads.
+
+          <section className="admin-eligibility-rules-card">
+            <div className="admin-eligibility-rules-head">
+              <div>
+                <span>Legitimacy rules</span>
+                <strong>Control who enters the reward candidate list</strong>
+                <small>These settings affect the private admin calculation and distribution draft. They do not send rewards.</small>
+              </div>
+              <b>{holderIntel?.summary ? `${holderIntel.summary.totalEligibleHolders} eligible` : "Not loaded"}</b>
             </div>
-          )}
+            <div className="admin-eligibility-rule-grid">
+              <label>
+                <span>Minimum hold</span>
+                <input
+                  inputMode="decimal"
+                  value={eligibilityMinHold}
+                  onChange={(event) => {
+                    setEligibilityMinHold(event.target.value.replace(/[^0-9.,]/g, ""));
+                    setHolderIntel(null);
+                    setDistributionMessage("");
+                  }}
+                  placeholder="100000"
+                />
+                <small>$BROKE required for legitimacy.</small>
+              </label>
+              <label>
+                <span>Required streak</span>
+                <input
+                  inputMode="numeric"
+                  value={eligibilityMinStreak}
+                  onChange={(event) => {
+                    setEligibilityMinStreak(event.target.value.replace(/[^0-9]/g, ""));
+                    setHolderIntel(null);
+                    setDistributionMessage("");
+                  }}
+                  placeholder="7"
+                />
+                <small>Daily Routine streak days required.</small>
+              </label>
+              <button type="button" onClick={loadHolderIntel} disabled={holderIntelLoading}>
+                {holderIntelLoading ? "Loading..." : holderIntel ? "Apply + refresh" : "Apply + load"}
+              </button>
+            </div>
+          </section>
 
           {holderIntel?.summary && (
-            <div className="admin-holder-summary-grid">
+            <div className="admin-holder-summary-grid legitimate-only">
               <article>
                 <span>Eligible holders</span>
                 <strong>{holderIntel.summary.totalEligibleHolders}</strong>
-                <small>Verified + minimum hold + 7d routine streak</small>
+                <small>Verified wallet + admin rule match.</small>
               </article>
               <article>
                 <span>Eligible balance</span>
                 <strong>{formatTokenAmount(holderIntel.summary.totalEligibleBalance)}</strong>
-                <small>Only legitimate reward candidates. This is not treasury balance.</small>
+                <small>Used for balance-share reward math.</small>
               </article>
               <article>
-                <span>Treasury $BROKE</span>
-                <strong>{typeof holderIntel.treasuryBrokeBalance === "number" ? formatTokenAmount(holderIntel.treasuryBrokeBalance) : "RPC unavailable"}</strong>
-                <small>{holderIntel.treasuryWallet ? compactWalletAddress(holderIntel.treasuryWallet) : compactWalletAddress(access.treasuryWallet)}</small>
+                <span>Minimum hold</span>
+                <strong>{formatTokenAmount(holderIntel.summary.minHold)}</strong>
+                <small>Current admin rule for this calculation.</small>
               </article>
               <article>
-                <span>Token supply</span>
-                <strong>{typeof holderIntel.tokenSupply === "number" ? formatTokenAmount(holderIntel.tokenSupply) : "RPC unavailable"}</strong>
-                <small>{holderIntel.mintAddress ? compactWalletAddress(holderIntel.mintAddress) : compactWalletAddress(BROKE_TOKEN_MINT_ADDRESS)}</small>
+                <span>Required streak</span>
+                <strong>{holderIntel.summary.minStreak}d</strong>
+                <small>Daily Routine-only Active Streak.</small>
               </article>
               <article>
-                <span>RPC mode</span>
-                <strong>{holderIntel.rpcProviderStatus === "private_rpc" ? "Private RPC" : "Public RPC"}</strong>
-                <small>{holderIntel.allHoldersRpcUrl ? compactWalletAddress(holderIntel.allHoldersRpcUrl.replace(/^https?:\/\//, "")) : "Set SOLANA_RPC_URL for stable reads"}</small>
+                <span>Verified wallets</span>
+                <strong>{holderIntel.summary.totalVerifiedWallets}</strong>
+                <small>Scanned from app wallet records.</small>
+              </article>
+              <article>
+                <span>Users scanned</span>
+                <strong>{holderIntel.summary.totalUsersScanned}</strong>
+                <small>Private app dataset only.</small>
               </article>
             </div>
           )}
@@ -22499,36 +22524,12 @@ function AdminTreasuryPanel({
             <div className="admin-holder-tables">
               <section>
                 <div className="admin-holder-table-title">
-                  <span>Top 10 all holders</span>
-                  <small>Live RPC view from largest token accounts, grouped by owner where visible.</small>
-                </div>
-                <div className="admin-holder-table">
-                  {(holderIntel.topAllHolders || []).length === 0 ? (
-                    <p>{holderIntel.topAllHoldersAvailable === false ? "Top holder RPC unavailable. Add SOLANA_RPC_URL and refresh." : "No holder rows returned yet."}</p>
-                  ) : (
-                    (holderIntel.topAllHolders || []).map((holder) => (
-                      <article key={`${holder.rank}-${holder.ownerAddress}`}>
-                        <b>#{holder.rank}</b>
-                        <div>
-                          <strong>{compactWalletAddress(holder.ownerAddress)}</strong>
-                          <small>{holder.tokenAccounts.length} token account{holder.tokenAccounts.length === 1 ? "" : "s"}</small>
-                        </div>
-                        <em>{formatTokenAmount(holder.balance)}</em>
-                        <i>{formatHolderPercent(holder.percentOfSupply)}</i>
-                      </article>
-                    ))
-                  )}
-                </div>
-              </section>
-
-              <section>
-                <div className="admin-holder-table-title">
                   <span>Top 20 legitimate holders</span>
-                  <small>Reward-eligible app users sorted by verified $BROKE balance.</small>
+                  <small>App-data only. Sorted by verified $BROKE balance and current legitimacy rules.</small>
                 </div>
                 <div className="admin-holder-table legitimate">
                   {(holderIntel.topLegitimateHolders || []).length === 0 ? (
-                    <p>No eligible legitimate holders yet.</p>
+                    <p>No eligible legitimate holders for the current rules. Lower the hold/streak rule or ask users to verify wallet + complete Daily Routine.</p>
                   ) : (
                     (holderIntel.topLegitimateHolders || []).map((holder) => (
                       <article key={`${holder.rank}-${holder.telegramId}-${holder.walletAddress}`}>
@@ -22560,7 +22561,7 @@ function AdminTreasuryPanel({
 
               {eligiblePayoutCandidates.length === 0 && (
                 <div className="admin-distribution-message muted">
-                  No legitimate recipients loaded yet. Treasury balance can exist, but rewards need eligible holders first.
+                  No legitimate recipients loaded yet. Rewards need eligible app users under the current hold/streak rules.
                 </div>
               )}
 
