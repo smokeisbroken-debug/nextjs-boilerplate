@@ -22386,11 +22386,13 @@ function SettingsScreen({
     settings.wallet.walletAddress && settings.wallet.walletAddress === normalizedWalletAddressDraft
   );
   const walletReadyStateLabel = !walletDraftHasValue
-    ? "Paste your public wallet address. Never paste a seed phrase."
+    ? walletProviderDetected
+      ? `${walletProviderName} detected. Verify can connect and fill the address automatically.`
+      : "Paste your public wallet address or open the app inside a Solana wallet browser. Never paste a seed phrase."
     : walletDraftLooksValid
       ? walletDraftIsLinked
         ? "Wallet linked. You can recheck the latest $BROKE balance."
-        : "Address ready to check."
+        : "Address ready to check, or press Verify to use the connected wallet instead."
       : "This does not look like a Solana address yet.";
   const walletPrimaryCta = walletChecking
     ? "Checking..."
@@ -22408,9 +22410,11 @@ function SettingsScreen({
         : "No injected Solana wallet detected in this browser yet.";
   const walletVerificationFlowText = settings.wallet.isVerified
     ? "This wallet is ownership-verified. Holder rewards can use this balance."
-    : settings.wallet.walletAddress
-      ? "Watch-only balance is saved. Verification needs one message signature, then Sync verification after returning."
-      : "First check balance as watch-only. Verification is the second step.";
+    : walletProviderDetected
+      ? "Choose a wallet, press Verify wallet, then sign one text message. The address fills automatically."
+      : settings.wallet.walletAddress
+        ? "Watch-only balance is saved. Verification needs one message signature from the matching wallet."
+        : "Connect a detected wallet to verify directly, or paste an address for watch-only balance.";
   const holderRewardState = getHolderProfileRewardState(settings.wallet);
   const nextHolderRewardGap = holderRewardState.next
     ? Math.max(0, holderRewardState.next.minBalance - settings.wallet.brokeBalance)
@@ -22829,7 +22833,7 @@ function SettingsScreen({
     setWalletProviderHelpOpen(!detected.ready && !settings.wallet.isVerified);
     setWalletMessage(
       detected.ready
-        ? `${detected.label} detected. Press Verify wallet to sign the ownership message.`
+        ? `${detected.label} detected. Press Verify wallet to connect and sign the ownership message.`
         : walletProviderOptions.length > 0
           ? "Wallet found, but this browser did not expose message signing. Try another wallet browser or rescan."
           : "No signing wallet detected here. Open this app inside a Solana wallet browser, then press Rescan provider."
@@ -22842,34 +22846,38 @@ function SettingsScreen({
     triggerHaptic("light");
   }
 
-  async function useConnectedWalletAddress() {
-    const detected = getDetectedSolanaWalletProvider();
+  async function connectSelectedWalletProviderForOwnership() {
+    const detected = syncDetectedWalletProviderState(selectedWalletProviderId);
     const provider = detected.provider;
 
-    if (!provider?.connect) {
-      setWalletProviderHelpOpen(true);
-      setWalletMessage("No connectable Solana wallet was detected in this browser.");
-      notifyApp("Wallet not found", "Open inside a Solana wallet browser or install a supported Solana wallet extension.", "info");
-      return;
+    if (!provider?.connect || !provider.signMessage) {
+      throw new Error("No message-signing Solana wallet was detected in this browser.");
     }
 
+    const connected = await provider.connect();
+    const connectedAddress = connected.publicKey?.toString() || provider.publicKey?.toString() || "";
+
+    if (!connectedAddress || !isLikelySolanaWalletAddress(connectedAddress)) {
+      throw new Error("Wallet connected but did not return a valid Solana address.");
+    }
+
+    return { detected, provider, connectedAddress };
+  }
+
+  async function useConnectedWalletAddress() {
     setWalletProviderHelpOpen(false);
-    setWalletMessage(`Connecting ${detected.label}...`);
+    setWalletMessage("Connecting selected wallet...");
 
     try {
-      const connected = await provider.connect();
-      const connectedAddress = connected.publicKey?.toString() || provider.publicKey?.toString() || "";
-
-      if (!connectedAddress) {
-        throw new Error("Wallet connected but did not return a public address.");
-      }
+      const { detected, connectedAddress } = await connectSelectedWalletProviderForOwnership();
 
       setWalletAddressDraft(connectedAddress);
-      setWalletMessage(`${detected.label} connected. Address pasted. You can check balance or verify ownership.`);
-      notifyApp("Wallet address ready", `${detected.label} address pasted into Profile.`, "info");
+      setWalletMessage(`${detected.label} connected. Address inserted automatically. You can check balance or verify ownership.`);
+      notifyApp("Wallet address ready", `${detected.label} address inserted into Profile.`, "info");
       triggerHaptic("success");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Wallet connect failed.";
+      setWalletProviderHelpOpen(true);
       setWalletMessage(message);
       notifyApp("Wallet connect failed", message, "info");
     }
@@ -22929,40 +22937,36 @@ function SettingsScreen({
   }
 
   async function verifyWalletOwnership() {
-    const walletAddress = walletAddressDraft.trim();
-
-    if (!isLikelySolanaWalletAddress(walletAddress)) {
-      setWalletMessage("Paste a valid Solana wallet address first.");
-      notifyApp("Invalid wallet", "Paste a valid Solana address before verification.", "info");
-      return;
-    }
-
-    const provider = getSolanaWalletProvider();
+    const typedWalletAddress = walletAddressDraft.trim();
+    const detected = syncDetectedWalletProviderState(selectedWalletProviderId);
+    const provider = detected.provider;
 
     if (!provider?.connect || !provider.signMessage) {
-      const detected = getDetectedSolanaWalletProvider();
       setWalletProviderName(detected.label);
       setWalletProviderDetected(false);
       setWalletProviderHelpOpen(true);
-      setWalletMessage("Balance is linked as watch-only. To verify ownership, open this app inside a supported Solana wallet browser, choose the provider if needed, then press Verify wallet again.");
-      notifyApp("Verification needs wallet browser", "Watch-only balance still works. Holder unlocks need a wallet browser with message signing.", "info");
+      setWalletMessage("No signing wallet is available here. Open the app inside an installed Solana wallet browser or desktop extension, then press Verify wallet again.");
+      notifyApp("Verification needs wallet", "Watch-only balance still works. Holder unlocks need one wallet message signature.", "info");
       return;
     }
 
     setWalletProviderHelpOpen(false);
     setWalletVerifying(true);
-    setWalletMessage("Waiting for wallet signature. No transaction will be sent.");
+    setWalletMessage(`Opening ${detected.label} for ownership signature. No transaction will be sent.`);
 
     try {
-      const connected = await provider.connect();
-      const connectedAddress = connected.publicKey?.toString() || provider.publicKey?.toString() || "";
+      const { connectedAddress } = await connectSelectedWalletProviderForOwnership();
+      const walletAddress = connectedAddress || typedWalletAddress;
 
-      if (!connectedAddress) {
-        throw new Error("Wallet did not return a public address.");
+      if (!isLikelySolanaWalletAddress(walletAddress)) {
+        throw new Error("Wallet did not return a valid Solana address.");
       }
 
-      if (connectedAddress !== walletAddress) {
-        throw new Error(`Connected wallet is ${compactWalletAddress(connectedAddress)}. Paste that address or switch wallets.`);
+      if (typedWalletAddress && typedWalletAddress !== connectedAddress) {
+        setWalletAddressDraft(connectedAddress);
+        setWalletMessage(`${detected.label} returned ${compactWalletAddress(connectedAddress)}. Using the connected wallet for verification.`);
+      } else if (!typedWalletAddress) {
+        setWalletAddressDraft(connectedAddress);
       }
 
       const nonceResponse = await fetch("/api/wallet/verify/nonce", {
@@ -23356,10 +23360,10 @@ function SettingsScreen({
             }`}
           >
             <label className="wallet-address-field">
-              <span>Paste Solana wallet address</span>
+              <span>Solana wallet address</span>
               <input
                 value={walletAddressDraft}
-                placeholder="Example: 8x3...Kp9"
+                placeholder={walletProviderDetected ? "Press Verify wallet to connect automatically" : "Example: 8x3...Kp9"}
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
@@ -23409,7 +23413,7 @@ function SettingsScreen({
               type="button"
               className={`wallet-verify-cta ${settings.wallet.isVerified ? "verified" : ""}`}
               onClick={verifyWalletOwnership}
-              disabled={!walletDraftLooksValid || walletChecking || walletVerifying || walletStatusRefreshing}
+              disabled={(!walletDraftLooksValid && !walletProviderDetected) || walletChecking || walletVerifying || walletStatusRefreshing}
             >
               {walletVerifying
                 ? "Verifying..."
@@ -23417,7 +23421,9 @@ function SettingsScreen({
                   ? "Syncing..."
                   : settings.wallet.isVerified
                     ? "Verified"
-                    : "Verify wallet"}
+                    : walletProviderDetected
+                      ? "Connect & verify"
+                      : "Verify wallet"}
             </button>
             {settings.wallet.walletAddress && !settings.wallet.isVerified && (
               <button
@@ -23474,7 +23480,7 @@ function SettingsScreen({
                 Rescan
               </button>
               <button type="button" onClick={useConnectedWalletAddress} disabled={!walletProviderDetected || walletVerifying || walletStatusRefreshing}>
-                Use wallet address
+                Connect address
               </button>
             </div>
           </section>
@@ -23488,8 +23494,8 @@ function SettingsScreen({
               </div>
               <div className="wallet-provider-step-list">
                 <article><b>1</b><span>Open this app link inside a Solana wallet browser such as Phantom, Solflare, Backpack, Jupiter Wallet, OKX, Glow, Exodus, Coinbase Wallet, Brave, Trust Wallet, or another injected wallet.</span></article>
-                <article><b>2</b><span>Press Rescan. If several wallets are detected, select the one you want to use.</span></article>
-                <article><b>3</b><span>Press Verify wallet and sign only the text message. No transaction, no token movement.</span></article>
+                <article><b>2</b><span>Press Rescan. If several wallets are detected, select the one you want from the wallet list.</span></article>
+                <article><b>3</b><span>Press Verify wallet. The app connects the selected wallet, inserts the address, and asks for one text signature. No transaction, no token movement.</span></article>
               </div>
               <div className="wallet-provider-help-actions">
                 <button type="button" onClick={() => openWalletBrowser("phantom")}>Open Phantom</button>

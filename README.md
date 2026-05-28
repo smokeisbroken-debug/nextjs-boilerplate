@@ -1,31 +1,23 @@
-# $BROKE Life Tracker — v59.30 Daily Routine No-Spend + Growth Fairness Polish
+# $BROKE Life Tracker — v59.31 Wallet Connect Verify + Button Alignment Hotfix
 
-Patch-only update on top of v59.29.1.
+Patch-only update on top of v59.30.
 
 ## What changed
 
-- Daily Routine no longer requires a user to add a daily expense/leak.
-- Replaced the expense-dependent Daily Routine tasks with no-spend-compatible discipline tasks:
-  - Check wallet state.
-  - Review today’s spend or confirm no extra spend.
-  - Lock one next move for the next 24h.
-- A day with no spending can now complete Daily Routine and protect Active Streak.
-- Active Streak still only activates/protects after full Daily Routine completion.
-- The final Daily Routine task remains **Share on X**.
-- Copy text, Telegram share, native share, image download, Track Leak, Clean Day, One Fix, and Daily Challenge still do not directly activate Active Streak.
-- Growth Lab now communicates the fairer formula:
-  - **Base saving + redirected leaks = goal progress**.
-- Growth Lab can now run even when no leaks are detected, using intentional base saving as the main engine and leaks as optional extra boost.
-- Growth Lab copy was adjusted so lower leaks feel like discipline, not punishment.
+- Wallet verification no longer requires manual address copy/paste when a supported Solana wallet provider is available.
+- Pressing **Verify wallet** now opens/connects the selected detected wallet, reads the public address, inserts it into Profile, requests one ownership message signature, and completes verification.
+- If several injected wallets are available, the existing wallet selector is used before verification.
+- If the typed/watched address differs from the connected wallet, verification now safely uses the connected wallet address instead of failing with a copy/paste loop.
+- Wallet copy was updated to explain the new direct flow: choose wallet → Verify wallet → sign one text message.
+- Wallet action buttons were aligned and made more stable on mobile:
+  - full-width wallet buttons on narrow screens;
+  - cleaner line wrapping;
+  - clearer verified/active verify states;
+  - provider action buttons use a consistent grid.
 
-## Why this patch exists
+## Current wallet rule
 
-Feedback showed two product issues:
-
-1. Daily Routine had an “add/track one leak” type requirement. That could punish disciplined users who had no spending that day.
-2. Growth Lab made goals depend too heavily on monthly leaks. If a user wasted less, the goal could look farther away, which felt backwards.
-
-This patch fixes both without changing reward execution, payout logic, wallet verification backend, or Supabase schema.
+Verification is still message-signature-only. No transaction is created, no token is moved, and no Treasury/payout signing is enabled in this patch.
 
 ## What did not change
 
@@ -44,7 +36,8 @@ This patch fixes both without changing reward execution, payout logic, wallet ve
 - No Supabase migration required.
 - No reward snapshot ledger schema changes.
 - No WalletConnect/Reown setup.
+- No Daily Routine / Active Streak rule changes.
 
-## Current product rule
+## Notes
 
-Active Streak is protected only by completing the full Daily Routine. The routine can be completed on both spending days and no-spend days. Users should never need to create a fake expense to keep streak eligibility alive.
+Telegram WebView can still hide injected wallet providers. In that case the app keeps the wallet help card and asks the user to open the app inside a Solana wallet browser or desktop extension. Where wallet injection exists, Verify wallet now handles the address automatically.

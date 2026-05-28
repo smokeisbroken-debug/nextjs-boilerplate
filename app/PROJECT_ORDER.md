@@ -1,8 +1,8 @@
-# PROJECT ORDER — v59.30 Daily Routine No-Spend + Growth Fairness Polish
+# PROJECT ORDER — v59.31 Wallet Connect Verify + Button Alignment Hotfix
 
 ## Current stable base
 
-Apply this patch on top of v59.29.1 Jupiter Wallet Provider Hotfix.
+Apply this patch on top of v59.30 Daily Routine No-Spend + Growth Fairness Polish.
 
 ## Patch scope
 
@@ -10,7 +10,6 @@ Files changed:
 
 - `app/page.tsx`
 - `app/globals.css`
-- `app/api/broke/route.ts`
 - `README.md`
 - `PROJECT_ORDER.md`
 - `TESTING.md`
@@ -18,40 +17,34 @@ Files changed:
 
 ## Implementation notes
 
-### Daily Routine
+### Verify wallet direct connect
 
-Daily Routine now uses no-spend-compatible actions:
+`verifyWalletOwnership()` now works as a direct connect-and-sign flow when a supported provider is detected:
 
-1. Open the app.
-2. Check wallet state.
-3. Review today’s spend or confirm no extra spend.
-4. Lock one next move.
-5. Check Chart.
-6. Check Rewards.
-7. Share on X.
+1. Sync detected wallet provider state.
+2. Connect the selected provider.
+3. Read the returned public address.
+4. Insert that address into the Profile wallet field.
+5. Request the existing nonce/message from the backend.
+6. Ask the wallet to sign the message.
+7. Confirm verification with the existing backend route.
 
-The full 7/7 completion is still the only source of `daily_routine` Active Streak proof.
+This removes the old requirement that users must paste the address before pressing Verify wallet.
 
-### App-state sync
+### Multi-wallet selector
 
-`dailyRoutineActions` now includes:
+The existing selector remains active when more than one wallet provider is exposed. Verification uses the selected provider, so users can choose Phantom, Solflare, Backpack, Jupiter Wallet, OKX, Glow, Exodus, Coinbase Wallet, Brave, Trust Wallet, Magic Eden Wallet, or generic injected Solana providers when available in the browser.
 
-- `reviewedWallet`
-- `reviewedDay`
-- `lockedNextMove`
+### Button alignment
 
-The server app-state normalizer was updated so these fields can sync instead of being dropped.
+Wallet/Profile action buttons were normalized with:
 
-### Growth Lab
-
-Growth Lab now separates:
-
-- base saving;
-- leak boost;
-- total monthly goal progress.
-
-This prevents the wrong impression that fewer leaks make the goal harder. If no leaks are detected, the user can still create a base-saving plan.
+- stable min heights;
+- centered button text;
+- safer wrapping;
+- one-column wallet action layout on small mobile screens;
+- consistent provider action grid.
 
 ## Safety boundaries
 
-This patch does not enable treasury payouts or token movement. It is a product logic and UX correction only.
+This patch does not add Treasury payouts, transaction signing, token movement, WalletConnect/Reown, claims, staking, Supabase migrations, or reward execution.

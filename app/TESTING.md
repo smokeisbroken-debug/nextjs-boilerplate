@@ -1,4 +1,4 @@
-# TESTING — v59.30 Daily Routine No-Spend + Growth Fairness Polish
+# TESTING — v59.31 Wallet Connect Verify + Button Alignment Hotfix
 
 ## Build checks
 
@@ -10,45 +10,40 @@ npm run lint:quiet
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-## Daily Routine checks
+## Wallet verification checks
 
 Confirm:
 
-- Daily Routine does not ask the user to add/track one expense as a required task.
-- A day with no expenses can still reach 7/7 Daily Routine completion.
-- Check wallet state can be marked from Daily Routine.
-- Confirm no extra spend / review today’s spend can be marked from Daily Routine.
-- Lock one next move can be marked from Daily Routine.
-- Chart task still completes by opening/checking Chart.
-- Rewards task still completes by opening/checking Rewards.
-- Final Daily Routine task still requires Share on X.
-- Completing all 7 Daily Routine actions records `daily_routine` proof.
-- Active Streak does not protect today before full 7/7 completion.
+- With no address pasted but a supported wallet provider detected, **Verify wallet** is enabled.
+- Pressing **Verify wallet** opens/connects the selected wallet.
+- The wallet public address is inserted into the Profile wallet field automatically.
+- The wallet asks for a message signature only.
+- Verification succeeds after the signed message is confirmed.
+- No transaction approval appears.
+- No token movement occurs.
+- If several wallet providers are detected, changing the selector changes which wallet is used for verification.
+- If the typed address differs from the connected wallet, the connected wallet address is used and shown.
+- If no signing provider is available, the provider help card appears.
 
-## Active Streak non-regression checks
+## Button/layout checks
 
-Confirm:
+Confirm on mobile width:
 
-- Track Leak does not directly protect Active Streak.
-- Mark Clean Day does not directly protect Active Streak.
-- One Fix does not directly protect Active Streak.
-- Daily Challenge does not directly protect Active Streak.
-- Copy text, Telegram share, native share, and image download do not complete the final public proof task.
-- Share on X completes the final public proof task.
-- Streak breaks only when the full Daily Routine is not completed for the day.
+- Wallet action buttons are not cramped or crooked.
+- Verify wallet button text wraps cleanly if needed.
+- Check balance / Connect & verify / Sync verification / Remove wallet are easy to tap.
+- Provider actions are aligned cleanly.
+- Wallet selector does not overflow the card.
 
-## Growth Lab checks
+## Non-regression checks
 
-Confirm:
+Confirm v59.30 still holds:
 
-- Growth Lab hero explains base saving + leak boost.
-- If no leaks are detected, Growth Lab does not block the user or demand a fake leak.
-- Use base saving sets a base-saving plan.
-- Use detected leaks still fills the leak boost from detected monthly leaks.
-- Result card shows base/month, leak boost/month, and total/month.
-- Personal goal time uses the combined monthly total.
-
-## Wallet/provider non-regression checks
+- Daily Routine does not require adding/tracking an expense.
+- Active Streak protects only after full 7/7 Daily Routine completion.
+- Final Daily Routine task remains Share on X.
+- Track Leak, Clean Day, One Fix, Daily Challenge, copy text, Telegram share, native share, and image download do not directly protect Active Streak.
+- Growth Lab still uses base saving + redirected leaks.
 
 Confirm v59.29.1 still holds:
 
@@ -56,21 +51,4 @@ Confirm v59.29.1 still holds:
 - Solflare provider detection still works.
 - Backpack provider detection still works.
 - Jupiter Wallet provider detection still works when injected.
-- Multi-provider selector still works when several Solana providers are exposed.
-- Use wallet address still connects selected provider and fills the public address.
-- Wallet verification remains message-signature-only.
-
-## General non-regression checks
-
-Confirm existing flows still work:
-
-- expense save/delete;
-- Home display;
-- Chart display;
-- Rewards overview;
-- share cards;
-- wallet verification display;
-- reward snapshot ledger display;
-- Supabase sync;
-- Telegram Mini App loading;
-- external-site/iframe display guard.
+- OKX / Glow / Exodus / Coinbase / Brave / Trust / Magic Eden / generic injected Solana provider detection remains available.
