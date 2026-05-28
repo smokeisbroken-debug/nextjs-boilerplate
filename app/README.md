@@ -69,3 +69,51 @@ Notes:
 - No avatar backend changes.
 - No Telegram webhook changes.
 - No Daily Routine / Active Streak rule changes.
+
+# v59.34 — Admin Panel Launcher + Distribution Draft Prep
+
+Patch-only update on top of v59.33.
+
+## What changed
+
+- Moved the private Admin Panel out of the Profile page body.
+- Added a compact **Admin** header button beside the Profile guide button.
+- The Admin button is still visible only to configured Telegram admins or verified admin/treasury wallets.
+- Admin content now opens in a private modal instead of occupying the Profile page.
+- Fixed the `RPC HTTP 429` experience: Solana Top 10 all-holder RPC failures no longer break the full admin load.
+  - Legitimate app holders can still load from Supabase/app data.
+  - The UI now shows a warning and recommends setting `SOLANA_RPC_URL` to a private RPC endpoint for stable holder reads.
+- Added a safe **Reward distribution draft** window:
+  - admin enters a reward pool amount;
+  - chooses USDC, SOL, or $BROKE as the draft token label;
+  - the app calculates each legitimate holder's payout using balance-share percentage;
+  - the app prepares/copies a payout manifest.
+
+## Important safety boundary
+
+The distribution draft does **not** send tokens. It does not sign wallet transactions, open claims, stake, transfer, or spend treasury funds.
+
+Current behavior:
+
+```text
+Load legitimate holders → enter pool amount → calculate each % → copy payout manifest
+```
+
+Future real payout behavior should still be:
+
+```text
+Create payout batch → connect verified treasury wallet → manual wallet signing → save tx signatures
+```
+
+## What did not change
+
+- No Creator Fee distribution.
+- No live payouts.
+- No token transfers.
+- No treasury signing.
+- No private key storage.
+- No WalletConnect/Reown dependency.
+- No Jupiter Wallet Kit dependency.
+- No Supabase migration.
+- No reward eligibility formula change.
+- No Daily Routine / Active Streak rule change.

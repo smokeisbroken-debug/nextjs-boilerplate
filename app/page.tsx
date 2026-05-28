@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, SetStateAction } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 
 type Tab = "home" | "add" | "chart" | "growth" | "whatif" | "settings";
 type NeedType = "Needed" | "Not needed" | "Maybe";
@@ -1022,6 +1022,9 @@ type AdminHoldersResponse = {
   tokenSupply?: number;
   topAllHolders?: AdminAllHolderRow[];
   topLegitimateHolders?: AdminLegitimateHolderRow[];
+  eligiblePayoutCandidates?: AdminLegitimateHolderRow[];
+  allHoldersRpcError?: string;
+  allHoldersRpcUrl?: string;
   summary?: {
     snapshotDate: string;
     totalUsersScanned: number;
@@ -3713,6 +3716,14 @@ function formatHolderPercent(value: number) {
   if (!Number.isFinite(value) || value <= 0) return "0%";
   if (value < 0.0001) return "<0.0001%";
   return `${value.toFixed(value >= 1 ? 2 : 4)}%`;
+}
+
+function formatRewardTokenAmount(value: number, token: string) {
+  if (!Number.isFinite(value) || value <= 0) return `0 ${token}`;
+  return `${new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: value >= 100 ? 2 : value >= 1 ? 4 : 6,
+    minimumFractionDigits: 0,
+  }).format(value)} ${token}`;
 }
 
 function formatAdminDate(value?: string | null) {
@@ -11468,12 +11479,14 @@ function Header({
   title,
   showBack = false,
   rightIcon,
+  extraRight,
   onBack,
   onRight,
 }: {
   title: string;
   showBack?: boolean;
   rightIcon?: string;
+  extraRight?: ReactNode;
   onBack?: () => void;
   onRight?: () => void;
 }) {
@@ -11502,6 +11515,7 @@ function Header({
       <div className="header-title">{title}</div>
 
       <div className="header-side right">
+        {extraRight}
         <button
           className="header-button"
           type="button"
@@ -22218,6 +22232,37 @@ function WhatIfScreen({
   );
 }
 
+function AdminPanelModal({
+  children,
+  onClose,
+}: {
+  children: ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-label="Private admin panel">
+      <div className="admin-modal-shell">
+        <div className="admin-modal-head">
+          <div>
+            <span>Private admin</span>
+            <strong>Treasury + holder tools</strong>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic("light");
+              onClose();
+            }}
+          >
+            Close
+          </button>
+        </div>
+        <div className="admin-modal-scroll">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 function AdminTreasuryPanel({
   access,
   wallet,
@@ -22231,6 +22276,9 @@ function AdminTreasuryPanel({
   const [holderIntel, setHolderIntel] = useState<AdminHoldersResponse | null>(null);
   const [holderIntelLoading, setHolderIntelLoading] = useState(false);
   const [holderIntelError, setHolderIntelError] = useState("");
+  const [rewardPoolAmount, setRewardPoolAmount] = useState("");
+  const [rewardPoolToken, setRewardPoolToken] = useState("USDC");
+  const [distributionMessage, setDistributionMessage] = useState("");
 
   const treasuryStatus = !access.treasuryConfigured
     ? "Treasury address not configured"
@@ -22276,6 +22324,50 @@ function AdminTreasuryPanel({
       setHolderIntelError(error instanceof Error ? error.message : "Could not load holder intelligence.");
     } finally {
       setHolderIntelLoading(false);
+    }
+  }
+
+  const rewardPoolValue = Number(rewardPoolAmount.replace(",", "."));
+  const eligiblePayoutCandidates = holderIntel?.eligiblePayoutCandidates || holderIntel?.topLegitimateHolders || [];
+  const payoutRows = Number.isFinite(rewardPoolValue) && rewardPoolValue > 0
+    ? eligiblePayoutCandidates.map((holder) => ({
+        ...holder,
+        rewardAmount: Number(((rewardPoolValue * holder.balanceSharePercent) / 100).toFixed(6)),
+      }))
+    : [];
+  const payoutTotal = payoutRows.reduce((total, row) => total + row.rewardAmount, 0);
+  const payoutPreviewReady = payoutRows.length > 0 && rewardPoolValue > 0;
+
+  function prepareDistributionDraft() {
+    if (!payoutPreviewReady) {
+      setDistributionMessage("Load legitimate holders and enter a reward pool amount first.");
+      return;
+    }
+
+    const manifest = {
+      type: "BROKE_REWARD_DISTRIBUTION_DRAFT",
+      generatedAt: new Date().toISOString(),
+      token: rewardPoolToken,
+      poolAmount: rewardPoolValue,
+      eligibleHolders: payoutRows.length,
+      treasuryWallet: access.treasuryWallet || "not_configured",
+      note: "Draft only. No token transfer, claim, staking, or wallet signing was executed.",
+      payouts: payoutRows.map((row) => ({
+        rank: row.rank,
+        telegramId: row.telegramId,
+        walletAddress: row.walletAddress,
+        verifiedBalance: row.verifiedBalance,
+        balanceSharePercent: row.balanceSharePercent,
+        rewardAmount: row.rewardAmount,
+        token: rewardPoolToken,
+      })),
+    };
+
+    try {
+      void navigator.clipboard?.writeText(JSON.stringify(manifest, null, 2));
+      setDistributionMessage(`Distribution draft copied for ${payoutRows.length} holders. No tokens were sent yet.`);
+    } catch {
+      setDistributionMessage(`Distribution draft prepared for ${payoutRows.length} holders. No tokens were sent yet.`);
     }
   }
 
@@ -22356,6 +22448,11 @@ function AdminTreasuryPanel({
           </label>
 
           {holderIntelError && <div className="admin-holder-error">{holderIntelError}</div>}
+          {holderIntel?.allHoldersRpcError && (
+            <div className="admin-holder-warning">
+              All-holder RPC is rate limited right now: {holderIntel.allHoldersRpcError}. Legitimate holders can still load from app data. Set SOLANA_RPC_URL to a private RPC for stable Top 10 holder reads.
+            </div>
+          )}
 
           {holderIntel?.summary && (
             <div className="admin-holder-summary-grid">
@@ -22427,6 +22524,77 @@ function AdminTreasuryPanel({
                 </div>
               </section>
             </div>
+          )}
+
+          {holderIntel && (
+            <section className="admin-distribution-draft">
+              <div className="admin-distribution-head">
+                <div>
+                  <span>Reward distribution draft</span>
+                  <strong>Enter pool amount → split by legitimate holder %</strong>
+                  <small>Safe prep only. This button creates/copies a payout manifest; wallet signing and real transfers are still not live.</small>
+                </div>
+                <b>{eligiblePayoutCandidates.length} eligible</b>
+              </div>
+
+              <div className="admin-distribution-controls">
+                <label>
+                  <span>Pool token</span>
+                  <select value={rewardPoolToken} onChange={(event) => setRewardPoolToken(event.target.value)}>
+                    <option value="USDC">USDC</option>
+                    <option value="SOL">SOL</option>
+                    <option value="$BROKE">$BROKE</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Amount to distribute</span>
+                  <input
+                    inputMode="decimal"
+                    value={rewardPoolAmount}
+                    onChange={(event) => {
+                      setRewardPoolAmount(event.target.value.replace(/[^0-9.,]/g, ""));
+                      setDistributionMessage("");
+                    }}
+                    placeholder="Example: 100"
+                  />
+                </label>
+                <button type="button" onClick={prepareDistributionDraft} disabled={!payoutPreviewReady}>
+                  Prepare distribution
+                </button>
+              </div>
+
+              <div className="admin-distribution-summary">
+                <article>
+                  <span>Pool</span>
+                  <strong>{rewardPoolValue > 0 ? formatRewardTokenAmount(rewardPoolValue, rewardPoolToken) : `0 ${rewardPoolToken}`}</strong>
+                </article>
+                <article>
+                  <span>Calculated</span>
+                  <strong>{formatRewardTokenAmount(payoutTotal, rewardPoolToken)}</strong>
+                </article>
+                <article>
+                  <span>Status</span>
+                  <strong>{payoutPreviewReady ? "Draft ready" : "Need amount"}</strong>
+                </article>
+              </div>
+
+              {payoutRows.length > 0 && (
+                <div className="admin-distribution-preview">
+                  {payoutRows.slice(0, 8).map((row) => (
+                    <article key={`payout-${row.rank}-${row.walletAddress}`}>
+                      <div>
+                        <strong>{row.username ? `@${row.username}` : row.displayName || compactWalletAddress(row.walletAddress)}</strong>
+                        <small>{compactWalletAddress(row.walletAddress)} · {formatHolderPercent(row.balanceSharePercent)}</small>
+                      </div>
+                      <b>{formatRewardTokenAmount(row.rewardAmount, rewardPoolToken)}</b>
+                    </article>
+                  ))}
+                  {payoutRows.length > 8 && <p>+{payoutRows.length - 8} more recipients in the copied manifest.</p>}
+                </div>
+              )}
+
+              {distributionMessage && <div className="admin-distribution-message">{distributionMessage}</div>}
+            </section>
           )}
 
           {holderIntel?.generatedAt && (
@@ -22512,6 +22680,7 @@ function SettingsScreen({
   const [repairBusy, setRepairBusy] = useState(false);
   const [repairMessage, setRepairMessage] = useState("");
   const [profileShareCardOpen, setProfileShareCardOpen] = useState(false);
+  const [adminPanelOpen, setAdminPanelOpen] = useState(false);
   const [walletAddressDraft, setWalletAddressDraft] = useState(settings.wallet.walletAddress);
   const [walletChecking, setWalletChecking] = useState(false);
   const [walletVerifying, setWalletVerifying] = useState(false);
@@ -23728,7 +23897,28 @@ function SettingsScreen({
 
   return (
     <div className="screen">
-      <Header title="Profile" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
+      <Header
+        title="Profile"
+        showBack
+        rightIcon={A.help}
+        onBack={onBack}
+        onRight={onHelp}
+        extraRight={
+          adminAccess.canSeePanel ? (
+            <button
+              type="button"
+              className="header-button admin-header-button"
+              onClick={() => {
+                triggerHaptic("light");
+                setAdminPanelOpen(true);
+              }}
+              aria-label="Open admin panel"
+            >
+              Admin
+            </button>
+          ) : undefined
+        }
+      />
 
       <section className={`profile-cabinet-card identity-style-${settings.identity.identityStyle || "classic"}`}>
         <div className="profile-cabinet-top">
@@ -24197,12 +24387,14 @@ function SettingsScreen({
           </div>
         </details>
 
-        {adminAccess.canSeePanel && (
-          <AdminTreasuryPanel
-            access={adminAccess}
-            wallet={settings.wallet}
-            activeProofStatus={activeProofStatus}
-          />
+        {adminAccess.canSeePanel && adminPanelOpen && (
+          <AdminPanelModal onClose={() => setAdminPanelOpen(false)}>
+            <AdminTreasuryPanel
+              access={adminAccess}
+              wallet={settings.wallet}
+              activeProofStatus={activeProofStatus}
+            />
+          </AdminPanelModal>
         )}
 
         <details className="profile-share-studio-card profile-compact-details">

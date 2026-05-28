@@ -54,3 +54,30 @@ holder verified eligible balance / total verified eligible balance
 - No Supabase migration.
 - No Rewards eligibility formula change.
 - No Daily Routine / Active Streak logic change.
+
+# v59.34 — Admin Panel Launcher + Distribution Draft Prep
+
+1. Keep v59.33 Admin Panel private.
+2. Remove the bulky inline Profile admin block.
+3. Add an admin-only header button beside the Profile guide button.
+4. Open Admin Panel in a modal so normal Profile remains clean.
+5. Keep server-side holder data protected by `REWARDS_ADMIN_SECRET` or Telegram admin session.
+6. Make `/api/admin/holders` resilient when public Solana RPC returns HTTP 429.
+7. Return legitimate app holder data even when the Top 10 all-holder RPC call fails.
+8. Add a draft-only reward distribution calculator:
+   - pool token label;
+   - pool amount;
+   - all eligible legitimate holders;
+   - balance-share reward amount per holder;
+   - copyable payout manifest.
+9. Keep all real payout execution disabled.
+
+## Non-goals
+
+- No automatic payout.
+- No send transaction.
+- No treasury signing.
+- No claim window.
+- No private key storage.
+- No reward eligibility rule change.
+- No Daily Routine / Active Streak logic change.

@@ -506,14 +506,13 @@ async function buildLegitimateHolders(snapshotDate: string) {
   });
   const eligibleParticipants = participants.filter((participant) => participant.eligible);
   const totalEligibleBalance = eligibleParticipants.reduce((sum, participant) => sum + participant.verifiedBalance, 0);
-  const topLegitimateHolders = eligibleParticipants
+  const eligiblePayoutCandidates = eligibleParticipants
     .map((participant) => ({
       ...participant,
       balanceSharePercent:
         totalEligibleBalance > 0 ? Number(((participant.verifiedBalance / totalEligibleBalance) * 100).toFixed(8)) : 0,
     }))
     .sort((a, b) => b.verifiedBalance - a.verifiedBalance)
-    .slice(0, 20)
     .map((participant, index) => ({
       rank: index + 1,
       telegramId: participant.telegramId,
@@ -527,9 +526,11 @@ async function buildLegitimateHolders(snapshotDate: string) {
       verifiedAt: participant.verifiedAt,
       lastCheckedAt: participant.lastCheckedAt,
     }));
+  const topLegitimateHolders = eligiblePayoutCandidates.slice(0, 20);
 
   return {
     topLegitimateHolders,
+    eligiblePayoutCandidates,
     summary: {
       snapshotDate,
       totalUsersScanned: settingsRows.length,
@@ -560,10 +561,25 @@ export async function GET(request: NextRequest) {
     ).trim();
     const rpcUrl = String(getOptionalEnv("SOLANA_RPC_URL") || DEFAULT_SOLANA_RPC_URL).trim();
     const snapshotDate = dayKey(new Date());
-    const [allHolders, legitimate] = await Promise.all([
+    const [allHoldersResult, legitimate] = await Promise.allSettled([
       buildTopAllHolders({ rpcUrl, mintAddress }),
       buildLegitimateHolders(snapshotDate),
     ]);
+
+    if (legitimate.status !== "fulfilled") {
+      throw legitimate.reason instanceof Error ? legitimate.reason : new Error("Could not load legitimate holder data.");
+    }
+
+    const allHolders =
+      allHoldersResult.status === "fulfilled"
+        ? allHoldersResult.value
+        : { tokenSupply: 0, topAllHolders: [] };
+    const allHoldersRpcError =
+      allHoldersResult.status === "rejected"
+        ? allHoldersResult.reason instanceof Error
+          ? allHoldersResult.reason.message
+          : "Solana RPC holder read failed"
+        : "";
 
     return json({
       ok: true,
@@ -572,10 +588,15 @@ export async function GET(request: NextRequest) {
       mintAddress,
       tokenSupply: allHolders.tokenSupply,
       topAllHolders: allHolders.topAllHolders,
-      topLegitimateHolders: legitimate.topLegitimateHolders,
-      summary: legitimate.summary,
+      topLegitimateHolders: legitimate.value.topLegitimateHolders,
+      eligiblePayoutCandidates: legitimate.value.eligiblePayoutCandidates,
+      allHoldersRpcError,
+      allHoldersRpcUrl: rpcUrl,
+      summary: legitimate.value.summary,
       notes: [
-        "Top all holders uses Solana RPC getTokenLargestAccounts and groups returned token accounts by owner where visible.",
+        allHoldersRpcError
+          ? "Top all holders could not load from RPC in this request. Set SOLANA_RPC_URL to a private RPC endpoint for stable holder reads."
+          : "Top all holders uses Solana RPC getTokenLargestAccounts and groups returned token accounts by owner where visible.",
         "Top legitimate holders uses app eligibility: verified wallet, 100K+ BROKE, and 7+ Active Streak from Daily Routine proof.",
         "This endpoint is read-only. It does not send rewards, sign transactions, open claims, staking, or token transfers.",
       ],

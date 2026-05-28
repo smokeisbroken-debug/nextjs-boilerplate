@@ -92,3 +92,49 @@ Confirm unchanged:
 - Connect & verify still requests only one message signature.
 - No token transaction is requested.
 - No payout, claim, staking, or treasury signing button is visible.
+
+# v59.34 Testing
+
+## Checks run in patch workspace
+
+```bash
+npm run typecheck
+npm run lint:quiet
+```
+
+Both passed.
+
+CSS brace balance passed.
+
+`NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully, then timed out in the sandbox during the Next.js TypeScript/build finalization step. Standalone `tsc --noEmit` passed.
+
+## Manual QA
+
+Admin visibility:
+
+1. Open Profile as a normal user.
+2. Confirm no Admin button is visible beside Guide.
+3. Open Profile as configured Telegram admin or verified admin wallet.
+4. Confirm Admin button is visible beside the Guide button.
+5. Tap Admin.
+6. Confirm the private modal opens.
+7. Close modal and confirm Profile remains clean.
+
+Holder intelligence:
+
+1. Enter `REWARDS_ADMIN_SECRET` if not authorized by Telegram admin session.
+2. Tap Load.
+3. If Solana RPC returns HTTP 429, confirm legitimate holders still load and a warning appears.
+4. If a private `SOLANA_RPC_URL` is configured, confirm Top 10 all holders loads.
+
+Distribution draft:
+
+1. Load holder intelligence.
+2. Enter a pool amount such as `100`.
+3. Choose USDC, SOL, or $BROKE.
+4. Confirm each legitimate holder receives reward amount based on balance-share percent.
+5. Tap Prepare distribution.
+6. Confirm a manifest is copied/prepared.
+7. Confirm no wallet signature request appears.
+8. Confirm no token transaction appears.
+9. Confirm no claim, staking, or transfer is executed.
