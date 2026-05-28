@@ -368,6 +368,10 @@ type Expense = {
   note: string;
   createdAt: string;
   triggerTags?: LeakTriggerId[];
+  /** Optional smarter-cost baseline. If present, only amount - necessaryAmount counts as leak pressure. */
+  necessaryAmount?: number;
+  /** Cached avoidable excess. Kept explicit so older records can stay backward-compatible. */
+  avoidableLeakAmount?: number;
   currency?: Currency;
   originalAmount?: number;
   originalCurrency?: Currency;
@@ -952,6 +956,8 @@ type LeakReflection = {
   needType: NeedType;
   categoryCount: number;
   categoryTotalLabel: string;
+  necessaryAmountLabel?: string;
+  leakAmountLabel: string;
   question: string;
   exampleAnswer: string;
   icon: string;
@@ -5676,6 +5682,12 @@ function usdReferenceNoteFromDisplay(
 
 function expenseToDisplayExpense(expense: Expense, settings: Settings, rates: ExchangeRateMap): Expense {
   const display = getDisplayAmount(expense.amount, expense.currency, settings, rates);
+  const necessaryDisplay = Number.isFinite(expense.necessaryAmount)
+    ? getDisplayAmount(Number(expense.necessaryAmount), expense.currency, settings, rates)
+    : null;
+  const avoidableDisplay = Number.isFinite(expense.avoidableLeakAmount)
+    ? getDisplayAmount(Number(expense.avoidableLeakAmount), expense.currency, settings, rates)
+    : null;
   const usdReference = getUsdReferenceAmount(display.originalAmount, display.originalCurrency, settings, rates);
   const shouldAttachUsdReference = Boolean(
     usdReference &&
@@ -5688,6 +5700,8 @@ function expenseToDisplayExpense(expense: Expense, settings: Settings, rates: Ex
   return {
     ...expense,
     amount: display.amount,
+    ...(necessaryDisplay ? { necessaryAmount: necessaryDisplay.amount } : {}),
+    ...(avoidableDisplay ? { avoidableLeakAmount: avoidableDisplay.amount } : {}),
     currency: display.currency,
     originalAmount: display.originalAmount,
     originalCurrency: display.originalCurrency,
@@ -5815,6 +5829,8 @@ function safeNumber(value: string) {
 
 function normalizeExpense(input: Partial<Expense>): Expense {
   const currency = normalizeOptionalCurrency(input.currency);
+  const necessaryAmount = Number(input.necessaryAmount);
+  const avoidableLeakAmount = Number(input.avoidableLeakAmount);
 
   return {
     id: String(input.id || uid()),
@@ -5827,6 +5843,8 @@ function normalizeExpense(input: Partial<Expense>): Expense {
     note: String(input.note || ""),
     createdAt: String(input.createdAt || new Date().toISOString()),
     triggerTags: normalizeLeakTriggerTags(input.triggerTags, String(input.note || "")),
+    ...(Number.isFinite(necessaryAmount) ? { necessaryAmount } : {}),
+    ...(Number.isFinite(avoidableLeakAmount) ? { avoidableLeakAmount } : {}),
     ...(currency ? { currency } : {}),
   };
 }
@@ -5841,8 +5859,10 @@ function expenseSyncKey(expense: Expense) {
   const needKey = String(expense.needType || "Needed").trim().toLocaleLowerCase();
   const noteKey = String(expense.note || "").replace(/\s+/g, " ").trim().slice(0, 160);
   const currencyKey = normalizeOptionalCurrency(expense.currency) || "";
+  const necessaryKey = Number.isFinite(expense.necessaryAmount) ? Number(expense.necessaryAmount).toFixed(2) : "";
+  const avoidableKey = Number.isFinite(expense.avoidableLeakAmount) ? Number(expense.avoidableLeakAmount).toFixed(2) : "";
 
-  return [createdKey, amountKey, categoryKey, needKey, noteKey, currencyKey].join("|");
+  return [createdKey, amountKey, categoryKey, needKey, noteKey, currencyKey, necessaryKey, avoidableKey].join("|");
 }
 
 function mergeExpensesForSync(localExpenses: Expense[], cloudExpenses: Expense[]) {
@@ -6096,6 +6116,30 @@ function getExpenseTrackedValue(expense: Expense) {
   return Math.max(0, Number.isFinite(expense.amount) ? expense.amount : 0);
 }
 
+function getExpenseNecessaryValue(expense: Expense) {
+  const tracked = getExpenseTrackedValue(expense);
+  const necessary = Number(expense.necessaryAmount);
+
+  if (!Number.isFinite(necessary)) return null;
+
+  return clamp(necessary, 0, tracked);
+}
+
+function getExpenseAvoidableLeakValue(expense: Expense) {
+  const tracked = getExpenseTrackedValue(expense);
+  const cachedAvoidable = Number(expense.avoidableLeakAmount);
+
+  if (Number.isFinite(cachedAvoidable)) {
+    return clamp(cachedAvoidable, 0, tracked);
+  }
+
+  const necessary = getExpenseNecessaryValue(expense);
+
+  if (necessary === null) return null;
+
+  return clamp(tracked - necessary, 0, tracked);
+}
+
 function getExpenseLeakMultiplier(expense: Expense) {
   if (expense.needType === "Needed") return 0;
   if (expense.needType === "Maybe") return 0.5;
@@ -6103,6 +6147,12 @@ function getExpenseLeakMultiplier(expense: Expense) {
 }
 
 function getExpenseLeakValue(expense: Expense) {
+  if (expense.needType === "Needed") return 0;
+
+  const avoidableLeak = getExpenseAvoidableLeakValue(expense);
+
+  if (avoidableLeak !== null) return avoidableLeak;
+
   return getExpenseTrackedValue(expense) * getExpenseLeakMultiplier(expense);
 }
 
@@ -6318,6 +6368,10 @@ function buildLeakReflection(
   const categoryCount = categoryExpenses.length;
   const average = categoryCount > 0 ? categoryTotal / categoryCount : expense.amount;
   const amountLabel = money(expense.amount, settings.currency);
+  const necessaryValue = getExpenseNecessaryValue(expense);
+  const avoidableLeakValue = getExpenseLeakValue(expense);
+  const necessaryAmountLabel = necessaryValue !== null ? money(necessaryValue, settings.currency) : undefined;
+  const leakAmountLabel = money(avoidableLeakValue, settings.currency);
   const categoryText = sentenceCase(categoryLabel(expense.category));
   const tenTimes = money(expense.amount * 10, settings.currency);
   const monthlyPace = money(categoryTotal, settings.currency);
@@ -6329,7 +6383,12 @@ function buildLeakReflection(
   let body = "This expense is now part of your wallet history.";
   let insight = "Small actions are only small until they repeat.";
 
-  if (expense.needType === "Needed") {
+  if (expense.needType !== "Needed" && necessaryValue !== null) {
+    tone = avoidableLeakValue <= 0 ? "needed" : expense.needType === "Maybe" ? "maybe" : "leak";
+    title = avoidableLeakValue <= 0 ? "No excess leak counted" : "Only the excess counted as leak";
+    body = `${amountLabel} tracked. Smarter baseline: ${necessaryAmountLabel}. Leak counted: ${leakAmountLabel}.`;
+    insight = "This is the realistic leak rule: spending can be partly necessary and partly avoidable.";
+  } else if (expense.needType === "Needed") {
     tone = "needed";
     title = "Needed expense recorded";
     body = "This is not a leak. This is life cost.";
@@ -6361,7 +6420,7 @@ function buildLeakReflection(
     insight = "The first step is admitting where the wallet is leaking.";
   }
 
-  if (categoryCount >= 5 && expense.needType !== "Needed") {
+  if (categoryCount >= 5 && expense.needType !== "Needed" && necessaryValue === null) {
     tone = "pattern";
     title = `${categoryText} again`;
     body = `${categoryCount} ${categoryText} records this month. Total: ${monthlyPace}.`;
@@ -6378,6 +6437,8 @@ function buildLeakReflection(
     needType: expense.needType,
     categoryCount,
     categoryTotalLabel: monthlyPace,
+    necessaryAmountLabel,
+    leakAmountLabel,
     question: reflectionQuestion.question,
     exampleAnswer: reflectionQuestion.example,
     icon,
@@ -8950,6 +9011,7 @@ export default function Home() {
   const [note, setNote] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Coffee");
   const [expenseType, setExpenseType] = useState<NeedType>("Needed");
+  const [necessaryAmount, setNecessaryAmount] = useState("");
   const [selectedLeakTriggers, setSelectedLeakTriggers] = useState<LeakTriggerId[]>([]);
   const [lastTrackedExpense, setLastTrackedExpense] = useState<Expense | null>(null);
   const [leakReflection, setLeakReflection] = useState<LeakReflection | null>(null);
@@ -9499,6 +9561,13 @@ export default function Home() {
     if (value <= 0) return;
 
     const noteWithTriggers = buildNoteWithLeakTriggers(note, selectedLeakTriggers);
+    const necessaryInput = necessaryAmount.trim();
+    const parsedNecessaryAmount = necessaryInput ? safeNumber(necessaryInput) : NaN;
+    const hasSmartLeakBaseline =
+      expenseType !== "Needed" && necessaryInput !== "" && Number.isFinite(parsedNecessaryAmount);
+    const normalizedNecessaryAmount = hasSmartLeakBaseline ? clamp(parsedNecessaryAmount, 0, value) : null;
+    const normalizedAvoidableLeakAmount =
+      normalizedNecessaryAmount !== null ? clamp(value - normalizedNecessaryAmount, 0, value) : null;
 
     const expense: Expense = {
       id: uid(),
@@ -9508,6 +9577,9 @@ export default function Home() {
       note: noteWithTriggers,
       createdAt: new Date().toISOString(),
       triggerTags: normalizeLeakTriggerTags(selectedLeakTriggers),
+      ...(normalizedNecessaryAmount !== null
+        ? { necessaryAmount: normalizedNecessaryAmount, avoidableLeakAmount: normalizedAvoidableLeakAmount ?? 0 }
+        : {}),
       currency: settings.currency,
     };
 
@@ -9519,6 +9591,7 @@ export default function Home() {
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
     setAmount("");
     setNote("");
+    setNecessaryAmount("");
     setSelectedLeakTriggers([]);
     setExpenseType("Needed");
     setActiveTab("add");
@@ -9531,7 +9604,7 @@ export default function Home() {
 
         if (data.expense) {
           setExpenses((prev) =>
-            prev.map((item) => (item.id === expense.id ? data.expense! : item))
+            prev.map((item) => (item.id === expense.id ? { ...data.expense!, necessaryAmount: expense.necessaryAmount, avoidableLeakAmount: expense.avoidableLeakAmount } : item))
           );
           if (data.streak) setStreak(data.streak);
           if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
@@ -9568,6 +9641,7 @@ export default function Home() {
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
     setAmount("");
     setNote("");
+    setNecessaryAmount("");
     setSelectedLeakTriggers([]);
     setSelectedCategory(category);
     setExpenseType(needType);
@@ -10034,6 +10108,8 @@ export default function Home() {
             setSelectedCategory={setSelectedCategory}
             expenseType={expenseType}
             setExpenseType={setExpenseType}
+            necessaryAmount={necessaryAmount}
+            setNecessaryAmount={setNecessaryAmount}
             selectedLeakTriggers={selectedLeakTriggers}
             setSelectedLeakTriggers={setSelectedLeakTriggers}
             lastTrackedExpense={lastTrackedExpense}
@@ -11083,6 +11159,20 @@ function LeakReflectionPopupView({
         </div>
 
         <div className="leak-reflection-mini-grid">
+          <div>
+            <span>Tracked</span>
+            <strong>{reflection.amountLabel}</strong>
+          </div>
+          <div>
+            <span>Leak counted</span>
+            <strong>{reflection.leakAmountLabel}</strong>
+          </div>
+          {reflection.necessaryAmountLabel && (
+            <div>
+              <span>Necessary</span>
+              <strong>{reflection.necessaryAmountLabel}</strong>
+            </div>
+          )}
           <div>
             <span>This month</span>
             <strong>{reflection.categoryCount}x</strong>
@@ -16395,6 +16485,8 @@ function AddExpenseScreen({
   setSelectedCategory,
   expenseType,
   setExpenseType,
+  necessaryAmount,
+  setNecessaryAmount,
   selectedLeakTriggers,
   setSelectedLeakTriggers,
   lastTrackedExpense,
@@ -16411,6 +16503,8 @@ function AddExpenseScreen({
   setSelectedCategory: (value: string) => void;
   expenseType: NeedType;
   setExpenseType: (value: NeedType) => void;
+  necessaryAmount: string;
+  setNecessaryAmount: (value: string) => void;
   selectedLeakTriggers: LeakTriggerId[];
   setSelectedLeakTriggers: (value: LeakTriggerId[]) => void;
   lastTrackedExpense: Expense | null;
@@ -16424,6 +16518,11 @@ function AddExpenseScreen({
         .map((trigger) => trigger.label)
         .join(" · ")
     : "No trigger selected yet";
+  const trackedAmountPreview = safeNumber(amount);
+  const necessaryAmountPreview = necessaryAmount.trim() ? safeNumber(necessaryAmount) : NaN;
+  const hasSmartLeakPreview = expenseType !== "Needed" && Number.isFinite(necessaryAmountPreview);
+  const normalizedNecessaryPreview = hasSmartLeakPreview ? clamp(necessaryAmountPreview, 0, Math.max(trackedAmountPreview, 0)) : 0;
+  const avoidableLeakPreview = hasSmartLeakPreview ? clamp(trackedAmountPreview - normalizedNecessaryPreview, 0, Math.max(trackedAmountPreview, 0)) : 0;
 
   function toggleLeakTrigger(triggerId: LeakTriggerId) {
     triggerHaptic("light");
@@ -16503,6 +16602,7 @@ function AddExpenseScreen({
               onClick={() => {
                 setSelectedCategory(preset.category);
                 setAmount(String(preset.amount));
+                setNecessaryAmount("");
                 setExpenseType("Not needed");
                 triggerHaptic("light");
               }}
@@ -16543,7 +16643,10 @@ function AddExpenseScreen({
               <button
                 type="button"
                 key={type}
-                onClick={() => setExpenseType(type)}
+                onClick={() => {
+                  setExpenseType(type);
+                  if (type === "Needed") setNecessaryAmount("");
+                }}
                 className={`choice decision-choice ${tone} ${expenseType === type ? "active" : ""}`}
               >
                 <strong>{label.title}</strong>
@@ -16554,6 +16657,46 @@ function AddExpenseScreen({
         </div>
         <p className="tiny-note">{NEED_TYPE_HELP[expenseType]}</p>
       </section>
+
+      {expenseType !== "Needed" && (
+        <section className="smart-leak-panel">
+          <div className="section-title">
+            <span>Real leak amount</span>
+            <small>optional smart baseline</small>
+          </div>
+          <p>Not every purchase is fully bad. Enter what the cheaper or necessary version would have cost, and only the extra part counts as leak pressure.</p>
+          <label className="smart-leak-input">
+            <span>Necessary / smarter cost</span>
+            <div>
+              <b>{currencySymbol(settings.currency)}</b>
+              <input
+                value={necessaryAmount}
+                inputMode="decimal"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Example: 3"
+                onChange={(event) => setNecessaryAmount(event.target.value)}
+              />
+            </div>
+          </label>
+          <div className="smart-leak-preview">
+            <article>
+              <span>Tracked spend</span>
+              <strong>{money(Math.max(trackedAmountPreview, 0), settings.currency)}</strong>
+            </article>
+            <article>
+              <span>Necessary part</span>
+              <strong>{hasSmartLeakPreview ? money(normalizedNecessaryPreview, settings.currency) : "—"}</strong>
+            </article>
+            <article>
+              <span>Leak counted</span>
+              <strong>{hasSmartLeakPreview ? money(avoidableLeakPreview, settings.currency) : "Auto"}</strong>
+            </article>
+          </div>
+          <small className="tiny-note">Example: outside food {money(5, settings.currency)}, home version {money(3, settings.currency)} → leak counted {money(2, settings.currency)}.</small>
+        </section>
+      )}
 
       <section className="trigger-panel">
         <div className="section-title">
@@ -22562,7 +22705,7 @@ function AdminTreasuryPanel({
       poolAmount: rewardPoolValue,
       eligibleHolders: payoutRows.length,
       treasuryWallet: access.treasuryWallet || "not_configured",
-      note: "Draft only. No token transfer, claim, staking, or wallet signing was executed.",
+      note: "First distribution test draft only. No token transfer, claim, staking, or wallet signing was executed. Use this manifest to manually review recipients before enabling treasury wallet signing.",
       payouts: payoutRows.map((row) => ({
         rank: row.rank,
         telegramId: row.telegramId,
@@ -22769,8 +22912,8 @@ function AdminTreasuryPanel({
               <div className="admin-distribution-head">
                 <div>
                   <span>Reward distribution draft</span>
-                  <strong>Enter pool amount → split by legitimate holder %</strong>
-                  <small>Safe prep only. This button creates/copies a payout manifest; wallet signing and real transfers are still not live.</small>
+                  <strong>First distribution test</strong>
+                  <small>Enter a small test pool, review each recipient, then copy the payout manifest. Real token sending still requires manual treasury-wallet signing outside this draft.</small>
                 </div>
                 <b>{eligiblePayoutCandidates.length} eligible</b>
               </div>
@@ -22803,7 +22946,7 @@ function AdminTreasuryPanel({
                   />
                 </label>
                 <button type="button" onClick={prepareDistributionDraft} disabled={!payoutPreviewReady}>
-                  {eligiblePayoutCandidates.length === 0 ? "No eligible recipients" : "Prepare distribution"}
+                  {eligiblePayoutCandidates.length === 0 ? "No eligible recipients" : "Prepare first distribution"}
                 </button>
               </div>
 

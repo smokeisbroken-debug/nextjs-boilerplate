@@ -234,3 +234,12 @@ Distribution draft:
 - Reward Distribution Draft now clearly blocks when there are no eligible recipients, even if the treasury wallet has funds.
 - Documents `SOLANA_RPC_URL` as a server-only private mainnet RPC env var for stable Top 10 holder, token supply, and treasury balance reads.
 - No payouts, claims, staking, token transfers, treasury signing, private key storage, Supabase migration, wallet backend changes, holder threshold changes, balance formula changes, avatar backend, Telegram webhook, reward execution, or Daily Routine/Active Streak rule changes.
+
+## v59.36 Smart Leak Excess + First Distribution Test Prep
+
+- Added partial leak accounting: when a user marks an expense as Maybe or Not needed, they can enter the cheaper/necessary version of the same purchase. Only the excess counts as leak pressure. Example: $5 outside food with a $3 home baseline counts $2 as the actual leak.
+- Added optional expense fields `necessary_amount` and `avoidable_leak_amount` with a Supabase migration and fallback behavior if the migration has not been applied yet.
+- Leak reflection now shows tracked spend, necessary baseline, and leak counted. Wallet HP, Chart pressure, Growth Lab, category leak totals, and reports use the adjusted leak value.
+- Admin distribution draft wording now supports a first test distribution workflow: enter a small pool, calculate legitimate holder shares, and copy a payout manifest for review. It still does not send tokens or request treasury signing.
+- No live payouts, token transfers, claims, staking, treasury signing, private key storage, wallet backend changes, or Daily Routine / Active Streak rule changes.
+

@@ -276,6 +276,8 @@ type Expense = {
   note: string;
   createdAt: string;
   triggerTags?: LeakTriggerId[];
+  necessaryAmount?: number;
+  avoidableLeakAmount?: number;
   currency?: Currency;
 };
 
@@ -1724,6 +1726,18 @@ function isMissingExpenseTriggerTagsColumnError(error: unknown) {
   );
 }
 
+function isMissingExpenseSmartLeakColumnError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return (
+    (message.includes("necessary_amount") || message.includes("avoidable_leak_amount")) &&
+    (message.includes("Could not find") ||
+      message.includes("column") ||
+      message.includes("PGRST204") ||
+      message.includes("schema cache"))
+  );
+}
+
 function isMissingPatternHistoryTableError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
 
@@ -1869,6 +1883,8 @@ function dbToSettings(row: Record<string, unknown>, localFallback?: Partial<Sett
 
 function dbToExpense(row: Record<string, unknown>): Expense {
   const currency = normalizeOptionalCurrency(row.currency);
+  const necessaryAmount = Number(row.necessary_amount);
+  const avoidableLeakAmount = Number(row.avoidable_leak_amount);
 
   return {
     id: String(row.id),
@@ -1878,6 +1894,8 @@ function dbToExpense(row: Record<string, unknown>): Expense {
     note: String(row.note ?? ""),
     createdAt: String(row.created_at ?? new Date().toISOString()),
     triggerTags: normalizeLeakTriggerTags(row.trigger_tags, String(row.note ?? "")),
+    ...(Number.isFinite(necessaryAmount) ? { necessaryAmount } : {}),
+    ...(Number.isFinite(avoidableLeakAmount) ? { avoidableLeakAmount } : {}),
     ...(currency ? { currency } : {}),
   };
 }
@@ -2074,6 +2092,30 @@ function getExpenseTrackedValue(expense: Expense) {
   return Math.max(0, Number.isFinite(expense.amount) ? expense.amount : 0);
 }
 
+function getExpenseNecessaryValue(expense: Expense) {
+  const tracked = getExpenseTrackedValue(expense);
+  const necessary = Number(expense.necessaryAmount);
+
+  if (!Number.isFinite(necessary)) return null;
+
+  return Math.min(tracked, Math.max(0, necessary));
+}
+
+function getExpenseAvoidableLeakValue(expense: Expense) {
+  const tracked = getExpenseTrackedValue(expense);
+  const cachedAvoidable = Number(expense.avoidableLeakAmount);
+
+  if (Number.isFinite(cachedAvoidable)) {
+    return Math.min(tracked, Math.max(0, cachedAvoidable));
+  }
+
+  const necessary = getExpenseNecessaryValue(expense);
+
+  if (necessary === null) return null;
+
+  return Math.min(tracked, Math.max(0, tracked - necessary));
+}
+
 function getExpenseLeakMultiplier(expense: Expense) {
   if (expense.needType === "Needed") return 0;
   if (expense.needType === "Maybe") return 0.5;
@@ -2081,6 +2123,12 @@ function getExpenseLeakMultiplier(expense: Expense) {
 }
 
 function getExpenseLeakValue(expense: Expense) {
+  if (expense.needType === "Needed") return 0;
+
+  const avoidableLeak = getExpenseAvoidableLeakValue(expense);
+
+  if (avoidableLeak !== null) return avoidableLeak;
+
   return getExpenseTrackedValue(expense) * getExpenseLeakMultiplier(expense);
 }
 
@@ -3009,8 +3057,10 @@ function expenseSyncKey(expense: Expense) {
   const needKey = String(expense.needType || "Needed").trim().toLocaleLowerCase();
   const noteKey = String(expense.note || "").replace(/\s+/g, " ").trim().slice(0, 160);
   const currencyKey = normalizeOptionalCurrency(expense.currency) || "";
+  const necessaryKey = Number.isFinite(expense.necessaryAmount) ? Number(expense.necessaryAmount).toFixed(2) : "";
+  const avoidableKey = Number.isFinite(expense.avoidableLeakAmount) ? Number(expense.avoidableLeakAmount).toFixed(2) : "";
 
-  return [createdKey, amountKey, categoryKey, needKey, noteKey, currencyKey].join("|");
+  return [createdKey, amountKey, categoryKey, needKey, noteKey, currencyKey, necessaryKey, avoidableKey].join("|");
 }
 
 async function importLocalExpensesIfMissing(telegramId: number, expenses: Expense[]) {
@@ -3034,6 +3084,8 @@ async function importLocalExpensesIfMissing(telegramId: number, expenses: Expens
     note: expense.note || "",
     trigger_tags: normalizeLeakTriggerTags(expense.triggerTags, expense.note),
     created_at: expense.createdAt || new Date().toISOString(),
+    ...(Number.isFinite(expense.necessaryAmount) ? { necessary_amount: Number(expense.necessaryAmount) } : {}),
+    ...(Number.isFinite(expense.avoidableLeakAmount) ? { avoidable_leak_amount: Number(expense.avoidableLeakAmount) } : {}),
     ...(normalizeOptionalCurrency(expense.currency) ? { currency: normalizeOptionalCurrency(expense.currency) } : {}),
   }));
 
@@ -3045,8 +3097,9 @@ async function importLocalExpensesIfMissing(telegramId: number, expenses: Expens
   } catch (error) {
     const missingCurrency = isMissingExpenseCurrencyColumnError(error);
     const missingTriggerTags = isMissingExpenseTriggerTagsColumnError(error);
+    const missingSmartLeakColumns = isMissingExpenseSmartLeakColumnError(error);
 
-    if (!missingCurrency && !missingTriggerTags) {
+    if (!missingCurrency && !missingTriggerTags && !missingSmartLeakColumns) {
       throw error;
     }
 
@@ -3059,6 +3112,11 @@ async function importLocalExpensesIfMissing(telegramId: number, expenses: Expens
 
       if (missingTriggerTags) {
         delete nextRow.trigger_tags;
+      }
+
+      if (missingSmartLeakColumns) {
+        delete nextRow.necessary_amount;
+        delete nextRow.avoidable_leak_amount;
       }
 
       return nextRow;
@@ -3083,6 +3141,8 @@ async function addExpense(telegramId: number, expense: Expense) {
     note: expense.note || "",
     trigger_tags: normalizeLeakTriggerTags(expense.triggerTags, expense.note),
     created_at: expense.createdAt || new Date().toISOString(),
+    ...(Number.isFinite(expense.necessaryAmount) ? { necessary_amount: Number(expense.necessaryAmount) } : {}),
+    ...(Number.isFinite(expense.avoidableLeakAmount) ? { avoidable_leak_amount: Number(expense.avoidableLeakAmount) } : {}),
     ...(expenseCurrency ? { currency: expenseCurrency } : {}),
   };
 
@@ -3095,12 +3155,13 @@ async function addExpense(telegramId: number, expense: Expense) {
       body: JSON.stringify(rowWithCurrency),
     })) as Record<string, unknown>[];
 
-    return dbToExpense(rows[0]);
+    return { ...dbToExpense(rows[0]), necessaryAmount: expense.necessaryAmount, avoidableLeakAmount: expense.avoidableLeakAmount };
   } catch (error) {
     const missingCurrency = isMissingExpenseCurrencyColumnError(error);
     const missingTriggerTags = isMissingExpenseTriggerTagsColumnError(error);
+    const missingSmartLeakColumns = isMissingExpenseSmartLeakColumnError(error);
 
-    if (!missingCurrency && !missingTriggerTags) {
+    if (!missingCurrency && !missingTriggerTags && !missingSmartLeakColumns) {
       throw error;
     }
 
@@ -3114,6 +3175,11 @@ async function addExpense(telegramId: number, expense: Expense) {
       delete legacyRow.trigger_tags;
     }
 
+    if (missingSmartLeakColumns) {
+      delete legacyRow.necessary_amount;
+      delete legacyRow.avoidable_leak_amount;
+    }
+
     const rows = (await supabaseFetch("broke_expenses?select=*", {
       method: "POST",
       headers: {
@@ -3122,7 +3188,7 @@ async function addExpense(telegramId: number, expense: Expense) {
       body: JSON.stringify(legacyRow),
     })) as Record<string, unknown>[];
 
-    return dbToExpense(rows[0]);
+    return { ...dbToExpense(rows[0]), necessaryAmount: expense.necessaryAmount, avoidableLeakAmount: expense.avoidableLeakAmount };
   }
 }
 
