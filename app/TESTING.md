@@ -1,3 +1,45 @@
+# v59.35 Testing
+
+## Automated checks
+
+```bash
+npm run typecheck
+npm run lint:quiet
+```
+
+Both passed. CSS brace balance passed.
+
+`NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully, then timed out in this sandbox during Next.js TypeScript/build finalization. Standalone `tsc --noEmit` passed through `npm run typecheck`.
+
+## Manual QA
+
+Standard / Pro mode:
+
+1. Open Home.
+2. Confirm a compact mode button appears beside Guide.
+3. In Standard Mode, confirm bottom nav shows Home, Add, Chart, Profile only.
+4. Confirm Standard Home shows the core loop only and hides advanced blocks.
+5. Tap Switch to Pro or the mode toggle.
+6. Confirm Growth and Rewards return to bottom nav.
+7. Confirm Pro Home shows advanced blocks again.
+8. Switch back to Standard while on Growth or Rewards and confirm the app returns to Home.
+
+Leak reflection prompts:
+
+1. Add a test expense.
+2. Confirm the leak reflection popup still opens.
+3. Confirm it includes a practical “Leak check” question and example answer.
+4. Confirm the popup still has Got it / Check history / Open Survival actions.
+
+Regression:
+
+1. Complete Daily Routine.
+2. Confirm Active Streak still only protects after full Daily Routine.
+3. Confirm admin modal and legitimate-holder controls remain available only to admin.
+4. Confirm no payout, claim, transfer, or wallet-signing prompt is triggered by this patch.
+
+---
+
 # v59.34.2 Testing
 
 ## Checks run in patch workspace

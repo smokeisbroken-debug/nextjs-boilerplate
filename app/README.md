@@ -1,3 +1,60 @@
+# $BROKE Life Tracker — v59.35 Standard / Pro Mode + Leak Reflection Questions
+
+Patch-only update on top of confirmed v59.34.2.
+
+## What changed
+
+- Added a Home header mode switch beside Guide:
+  - **Standard Mode** = clean/simple experience.
+  - **Pro Mode** = full advanced app.
+- Standard Mode now hides the heavy Home modules and keeps only the core loop:
+  - Wallet Snapshot;
+  - Today’s Focus;
+  - First Leak Mission for new users;
+  - Daily Routine;
+  - Wallet Survival Report;
+  - $BROKE Chart preview;
+  - Recent Expenses;
+  - Account / Sync.
+- Pro Mode keeps the full experience:
+  - Weekly Behavior Report;
+  - Comeback Mode;
+  - Biggest Leak Challenge;
+  - Share Reports;
+  - Smart Insights Lab;
+  - Badges;
+  - Profile Share Card;
+  - Growth;
+  - Rewards;
+  - advanced mechanics.
+- Bottom nav now adapts to the mode:
+  - Standard: Home, Add, Chart, Profile.
+  - Pro: Home, Add, Chart, Growth, Rewards, Profile.
+- If the user switches to Standard while inside a Pro-only tab, the app safely returns to Home.
+- Added a Standard Mode notice card on Home explaining the simplified flow.
+- Added the spending-reflection prompt set to the post-add leak popup. The app now shows one practical question such as convenience tax, optional amount, impulse amount, or disciplined version cost.
+- App mode is local-first and included in the cloud app-state payload so it can sync through the existing app-state flow.
+
+## Important boundary
+
+This does not change reward eligibility, admin distribution logic, wallet verification, Daily Routine proof, or token movement. It is a UX/navigation and reflection-polish patch.
+
+## What did not change
+
+- No Creator Fee distribution.
+- No live payouts.
+- No claims.
+- No staking.
+- No token transfers.
+- No treasury signing.
+- No private key storage.
+- No WalletConnect/Reown dependency.
+- No Supabase migration.
+- No wallet verification backend changes.
+- No Daily Routine / Active Streak proof logic changes.
+
+---
+
 # $BROKE Life Tracker — v59.34.2 Admin Legitimate-Only Controls Hotfix
 
 Patch-only update on top of confirmed v59.34.1.

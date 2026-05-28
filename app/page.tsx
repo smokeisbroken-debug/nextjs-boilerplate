@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 
 type Tab = "home" | "add" | "chart" | "growth" | "whatif" | "settings";
+type AppMode = "standard" | "pro";
 type NeedType = "Needed" | "Not needed" | "Maybe";
 type Language = "en" | "ru";
 type Currency =
@@ -337,6 +338,7 @@ type CloudAppState = {
   activeStreakProof?: ActiveStreakProofState;
   rewardNotificationPrefs?: RewardNotificationPrefs;
   localLeakMission?: LocalLeakMission | null;
+  appMode?: AppMode;
   updatedAt?: string;
 };
 
@@ -950,6 +952,8 @@ type LeakReflection = {
   needType: NeedType;
   categoryCount: number;
   categoryTotalLabel: string;
+  question: string;
+  exampleAnswer: string;
   icon: string;
   tone: LeakReflectionTone;
 };
@@ -1083,6 +1087,7 @@ declare global {
 const STORAGE_KEY = "broke-life-tracker-v1";
 const LEAK_MISSION_KEY = "broke-local-leak-mission-v1";
 const ONBOARDING_KEY = "broke-life-tracker-onboarding-completed-v1";
+const APP_MODE_KEY = "broke-app-mode-v1";
 const LOCAL_APP_STATE_CHANGE_EVENT = "broke-local-app-state-change";
 const PROJECT_X_URL = "https://x.com/SmokeIsBroke";
 const PROJECT_TG_URL = "https://t.me/SmokeIsBrokeSol";
@@ -4634,12 +4639,13 @@ const navItems: {
   id: Tab;
   label: string;
   icon: string;
+  proOnly?: boolean;
 }[] = [
   { id: "home", label: "Home", icon: "/nav-home.png" },
   { id: "add", label: "Add", icon: "/nav-add.png" },
   { id: "chart", label: "Chart", icon: "/nav-chart.png" },
-  { id: "growth", label: "Growth", icon: "/nav-growth.png" },
-  { id: "whatif", label: "Rewards", icon: "/nav-save.png" },
+  { id: "growth", label: "Growth", icon: "/nav-growth.png", proOnly: true },
+  { id: "whatif", label: "Rewards", icon: "/nav-save.png", proOnly: true },
   { id: "settings", label: "Profile", icon: "/nav-settings.png" },
 ];
 
@@ -6204,6 +6210,103 @@ function getExpensesForMonthKey(expenses: Expense[], key: string) {
   return expenses.filter((expense) => monthKey(new Date(expense.createdAt)) === key);
 }
 
+
+const APP_MODE_LABELS: Record<AppMode, { label: string; detail: string }> = {
+  standard: {
+    label: "Standard",
+    detail: "Clean mode: leaks, routine, streak, wallet status, and simple reports.",
+  },
+  pro: {
+    label: "Pro",
+    detail: "Full mode: advanced reports, rewards, share cards, challenges, and deeper stats.",
+  },
+};
+
+const STANDARD_MODE_ALLOWED_TABS: Tab[] = ["home", "add", "chart", "settings"];
+
+function normalizeAppMode(input?: unknown): AppMode {
+  return input === "pro" ? "pro" : "standard";
+}
+
+function readAppMode(): AppMode {
+  if (typeof window === "undefined") return "standard";
+
+  try {
+    return normalizeAppMode(localStorage.getItem(APP_MODE_KEY));
+  } catch {
+    return "standard";
+  }
+}
+
+function writeAppMode(mode: AppMode, notifyChange = true) {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem(APP_MODE_KEY, mode);
+    if (notifyChange) window.dispatchEvent(new Event(LOCAL_APP_STATE_CHANGE_EVENT));
+  } catch {
+    // Mode preference is local-first. Ignore storage errors.
+  }
+}
+
+function isStandardModeTab(tab: Tab) {
+  return STANDARD_MODE_ALLOWED_TABS.includes(tab);
+}
+
+const LEAK_REFLECTION_QUESTIONS: Array<{ question: string; example: string }> = [
+  {
+    question: "What part of this spending was just extra comfort?",
+    example: "Example: $3",
+  },
+  {
+    question: "How much cheaper could this realistically have been?",
+    example: "Example: could’ve been $2 instead of $5",
+  },
+  {
+    question: "What amount here was convenience tax?",
+    example: "Example: +$4 for delivery",
+  },
+  {
+    question: "If you made the smarter version of this choice, what would it cost?",
+    example: "Example: probably $6 instead of $11",
+  },
+  {
+    question: "How much of this purchase was actually optional?",
+    example: "Example: about half of it",
+  },
+  {
+    question: "What part of this spending came from impulse instead of necessity?",
+    example: "Example: $8",
+  },
+  {
+    question: "If you repeated this 20 times, what part would become the real leak?",
+    example: "Example: the extra $2 every time",
+  },
+  {
+    question: "How much did speed, laziness, or convenience add to the cost?",
+    example: "Example: +$5",
+  },
+  {
+    question: "What was the “I didn’t really need this part” amount?",
+    example: "Example: $3–4",
+  },
+  {
+    question: "What would the disciplined version of this purchase cost?",
+    example: "Example: probably 30% less",
+  },
+];
+
+function pickLeakReflectionQuestion(expense: Expense) {
+  const source = `${expense.id}-${expense.createdAt}-${expense.amount}`;
+  let hash = 0;
+
+  for (let index = 0; index < source.length; index += 1) {
+    hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
+  }
+
+  return LEAK_REFLECTION_QUESTIONS[hash % LEAK_REFLECTION_QUESTIONS.length];
+}
+
 function buildLeakReflection(
   expense: Expense,
   allExpenses: Expense[],
@@ -6219,6 +6322,7 @@ function buildLeakReflection(
   const tenTimes = money(expense.amount * 10, settings.currency);
   const monthlyPace = money(categoryTotal, settings.currency);
   const icon = getCategoryIcon(expense.category);
+  const reflectionQuestion = pickLeakReflectionQuestion(expense);
 
   let tone: LeakReflectionTone = "leak";
   let title = "Leak recorded";
@@ -6274,6 +6378,8 @@ function buildLeakReflection(
     needType: expense.needType,
     categoryCount,
     categoryTotalLabel: monthlyPace,
+    question: reflectionQuestion.question,
+    exampleAnswer: reflectionQuestion.example,
     icon,
     tone,
   };
@@ -8831,6 +8937,7 @@ export default function Home() {
   const [leakMission, setLeakMission] = useState<LocalLeakMission | null>(null);
   const [activeStreakProof, setActiveStreakProof] = useState<ActiveStreakProofState>(() => readActiveStreakProofState());
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [appMode, setAppMode] = useState<AppMode>("standard");
 
   const openAppTrackedRef = useRef(false);
   const badgesReadyRef = useRef(false);
@@ -9062,6 +9169,7 @@ export default function Home() {
           settings?: Settings;
           expenses?: Expense[];
           onboardingCompleted?: boolean;
+          appMode?: AppMode;
         };
 
         if (parsed.settings) {
@@ -9075,12 +9183,17 @@ export default function Home() {
         if (parsed.onboardingCompleted === true) {
           setOnboardingCompleted(true);
         }
+
+        if (parsed.appMode) {
+          setAppMode(normalizeAppMode(parsed.appMode));
+        }
       }
 
       if (localStorage.getItem(ONBOARDING_KEY) === "true") {
         setOnboardingCompleted(true);
       }
 
+      setAppMode(readAppMode());
       setLeakMission(readLocalLeakMission());
     } catch {
       localStorage.removeItem(STORAGE_KEY);
@@ -9197,9 +9310,16 @@ export default function Home() {
         settings,
         expenses,
         onboardingCompleted,
+        appMode,
       })
     );
-  }, [loaded, settings, expenses, onboardingCompleted]);
+    writeAppMode(appMode, false);
+  }, [loaded, settings, expenses, onboardingCompleted, appMode]);
+
+  useEffect(() => {
+    if (!loaded || appMode !== "standard" || isStandardModeTab(activeTab)) return;
+    setActiveTab("home");
+  }, [loaded, appMode, activeTab]);
 
   useEffect(() => {
     if (!loaded || cloudStatus !== "cloud" || !cloudAuthReady) return;
@@ -9890,6 +10010,14 @@ export default function Home() {
             cloudStatus={cloudStatus}
             cloudError={cloudError}
             cloudAuthReady={cloudAuthReady}
+            appMode={appMode}
+            onToggleAppMode={() => {
+              setAppMode((current) => {
+                const next = current === "standard" ? "pro" : "standard";
+                showToast(`${APP_MODE_LABELS[next].label} Mode`, APP_MODE_LABELS[next].detail, "info");
+                return next;
+              });
+            }}
             onRoutineComplete={completeDailyRoutineStreakProof}
             onBellClick={openHelp}
           />
@@ -10006,7 +10134,7 @@ export default function Home() {
         )}
 
         {loaded && onboardingCompleted && (
-          <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+          <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} appMode={appMode} />
         )}
 
         {helpOpen && <HelpGuideModal activeTab={activeTab} onClose={() => setHelpOpen(false)} />}
@@ -10948,6 +11076,12 @@ function LeakReflectionPopupView({
           <strong>{reflection.insight}</strong>
         </div>
 
+        <div className="leak-reflection-question">
+          <span>Leak check</span>
+          <strong>{reflection.question}</strong>
+          <small>{reflection.exampleAnswer}</small>
+        </div>
+
         <div className="leak-reflection-mini-grid">
           <div>
             <span>This month</span>
@@ -11464,6 +11598,55 @@ function OnboardingScreen({
 }
 
 
+
+function AppModeToggle({
+  mode,
+  onToggle,
+}: {
+  mode: AppMode;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className={`app-mode-toggle ${mode}`}
+      aria-label={`Switch to ${mode === "standard" ? "Pro" : "Standard"} mode`}
+      onClick={() => {
+        triggerHaptic("light");
+        onToggle();
+      }}
+    >
+      <span>{mode === "standard" ? "Standard" : "Pro"}</span>
+      <b>{mode === "standard" ? "Lite" : "Full"}</b>
+    </button>
+  );
+}
+
+function StandardModeNoticeCard({
+  onOpenAdd,
+  onOpenChart,
+  onSwitchToPro,
+}: {
+  onOpenAdd: () => void;
+  onOpenChart: () => void;
+  onSwitchToPro: () => void;
+}) {
+  return (
+    <section className="standard-mode-notice-card">
+      <div>
+        <span>Standard Mode</span>
+        <strong>Only the core loop is visible.</strong>
+        <p>Track leaks, finish Daily Routine, protect streak, check wallet status, and read simple reports. Pro tools are hidden until you need them.</p>
+      </div>
+      <div className="standard-mode-actions">
+        <button type="button" onClick={onOpenAdd}>Track leak</button>
+        <button type="button" onClick={onOpenChart}>Simple report</button>
+        <button type="button" onClick={onSwitchToPro}>Switch to Pro</button>
+      </div>
+    </section>
+  );
+}
+
 function Header({
   title,
   showBack = false,
@@ -11558,6 +11741,8 @@ function DashboardScreen({
   cloudStatus,
   cloudError,
   cloudAuthReady,
+  appMode,
+  onToggleAppMode,
   onRoutineComplete,
   onBellClick,
 }: {
@@ -11598,6 +11783,8 @@ function DashboardScreen({
   cloudStatus: CloudStatus;
   cloudError: string;
   cloudAuthReady: boolean;
+  appMode: AppMode;
+  onToggleAppMode: () => void;
   onRoutineComplete: () => Promise<boolean>;
   onBellClick: () => void;
 }) {
@@ -11682,10 +11869,16 @@ function DashboardScreen({
   const comebackState = useMemo(() => {
     return buildComebackState(allExpenses, settings);
   }, [allExpenses, settings]);
+  const isProMode = appMode === "pro";
 
   return (
     <div className="screen home-screen">
-      <Header title="$BROKE Life Tracker" rightIcon={A.help} onRight={onBellClick} />
+      <Header
+        title="$BROKE Life Tracker"
+        rightIcon={A.help}
+        extraRight={<AppModeToggle mode={appMode} onToggle={onToggleAppMode} />}
+        onRight={onBellClick}
+      />
 
       <section className="hero home-compact-hero" aria-label="Home wallet status">
         <div className="home-compact-hero-copy">
@@ -11712,6 +11905,14 @@ function DashboardScreen({
           }}
         />
       </section>
+
+      {appMode === "standard" && (
+        <StandardModeNoticeCard
+          onOpenAdd={onOpenAdd}
+          onOpenChart={onOpenChart}
+          onSwitchToPro={onToggleAppMode}
+        />
+      )}
 
       <details open className="home-compact-details home-wallet-snapshot-card home-collapsed-section">
         <summary className="home-compact-summary home-wallet-snapshot-summary">
@@ -11838,6 +12039,7 @@ function DashboardScreen({
         </div>
       </details>
 
+      {isProMode && (
       <details className="home-compact-details home-weekly-report-details home-collapsed-section">
         <summary className="home-compact-summary home-weekly-report-summary">
           <div>
@@ -11861,6 +12063,7 @@ function DashboardScreen({
           />
         </div>
       </details>
+      )}
 
       {allExpenses.length === 0 && (
         <section className="first-user-clarity-card">
@@ -11875,7 +12078,7 @@ function DashboardScreen({
         </section>
       )}
 
-      {comebackState && (
+      {isProMode && comebackState && (
         <details className="home-compact-details home-comeback-details home-collapsed-section">
           <summary className="home-compact-summary home-comeback-summary">
             <div>
@@ -11898,6 +12101,7 @@ function DashboardScreen({
         </details>
       )}
 
+      {isProMode && (
       <details className="clean-details">
         <summary>
           <div>
@@ -11917,6 +12121,7 @@ function DashboardScreen({
           onOpenAdd={onOpenAdd}
         />
       </details>
+      )}
 
       {expenses.length === 0 && (
         <details className="clean-details">
@@ -11962,6 +12167,7 @@ function DashboardScreen({
         <V2IdentityPanel settings={settings} identityStats={identityStats} />
       </details>
 
+      {isProMode && (
       <details className="clean-details">
         <summary>
           <div>
@@ -11979,7 +12185,9 @@ function DashboardScreen({
           shareInitData={telegram.isTelegram ? telegram.initData : ""}
         />
       </details>
+      )}
 
+      {isProMode && (
       <details className="clean-details">
         <summary>
           <div>
@@ -11990,7 +12198,9 @@ function DashboardScreen({
         </summary>
         <WalletInsightsPanel insights={walletInsights} />
       </details>
+      )}
 
+      {isProMode && (
       <details className="clean-details">
         <summary>
           <span>Badges</span>
@@ -11998,7 +12208,9 @@ function DashboardScreen({
         </summary>
         <BadgeMiniStrip badges={badges} />
       </details>
+      )}
 
+      {isProMode && (
       <details className="clean-details" id="share-result-card-panel">
         <summary>
           <div>
@@ -12019,6 +12231,7 @@ function DashboardScreen({
           shareInitData={telegram.isTelegram ? telegram.initData : ""}
         />
       </details>
+      )}
 
       <details className="clean-details">
         <summary>
@@ -20642,6 +20855,7 @@ function normalizeCloudAppState(input?: Partial<CloudAppState> | null): CloudApp
     ...(activeStreakProof ? { activeStreakProof } : {}),
     ...(rewardNotificationPrefs ? { rewardNotificationPrefs } : {}),
     localLeakMission: input?.localLeakMission || null,
+    appMode: normalizeAppMode(input?.appMode),
     updatedAt: input?.updatedAt,
   };
 }
@@ -20659,6 +20873,7 @@ function readLocalCloudAppState(): CloudAppState {
     activeStreakProof: readActiveStreakProofState(),
     rewardNotificationPrefs: readRewardNotificationPrefs(),
     localLeakMission: readLocalLeakMission(),
+    appMode: readAppMode(),
     updatedAt: new Date().toISOString(),
   });
 }
@@ -20681,6 +20896,7 @@ function writeLocalCloudAppState(input: Partial<CloudAppState>) {
   }
   if (appState.rewardNotificationPrefs) writeRewardNotificationPrefs(appState.rewardNotificationPrefs, false);
   if ("localLeakMission" in appState) writeLocalLeakMission(appState.localLeakMission || null, false);
+  if (appState.appMode) writeAppMode(appState.appMode, false);
   window.dispatchEvent(new Event(CLOUD_APP_STATE_SYNC_EVENT));
 }
 
@@ -25319,13 +25535,19 @@ function MiniChart({ chartDays }: { chartDays: ChartPoint[] }) {
 function BottomNav({
   activeTab,
   setActiveTab,
+  appMode,
 }: {
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
+  appMode: AppMode;
 }) {
+  const visibleItems = appMode === "standard"
+    ? navItems.filter((item) => !item.proOnly)
+    : navItems;
+
   return (
-    <nav className="bottom-nav">
-      {navItems.map((item) => (
+    <nav className={`bottom-nav ${appMode === "standard" ? "standard-mode-nav" : "pro-mode-nav"}`}>
+      {visibleItems.map((item) => (
         <button
           key={item.id}
           onClick={() => {

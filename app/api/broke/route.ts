@@ -88,6 +88,7 @@ const supportedCurrencies: Currency[] = [
 const defaultCurrency: Currency = "USD";
 type CurrencyMode = "display" | "convert";
 type NeedType = "Needed" | "Not needed" | "Maybe";
+type AppMode = "standard" | "pro";
 type LeakTriggerId =
   | "stress"
   | "boredom"
@@ -363,6 +364,7 @@ type AppState = {
   dailyRoutineReward?: DailyRoutineRewardState;
   activeStreakProof?: ActiveStreakProofState;
   localLeakMission?: LocalLeakMission | null;
+  appMode?: AppMode;
   updatedAt?: string;
 };
 
@@ -1537,6 +1539,10 @@ function normalizeLocalLeakMission(input?: Partial<LocalLeakMission> | null): Lo
   };
 }
 
+function normalizeAppMode(input?: unknown): AppMode {
+  return input === "pro" ? "pro" : "standard";
+}
+
 function normalizeAppState(input?: Partial<AppState> | null): AppState {
   const hasActiveStreakProof = Boolean(
     input && Object.prototype.hasOwnProperty.call(input, "activeStreakProof")
@@ -1564,6 +1570,7 @@ function normalizeAppState(input?: Partial<AppState> | null): AppState {
       : {}),
     ...(activeStreakProof ? { activeStreakProof } : {}),
     localLeakMission: normalizeLocalLeakMission(input?.localLeakMission),
+    appMode: normalizeAppMode(input?.appMode),
     updatedAt: input?.updatedAt || new Date().toISOString(),
   };
 }

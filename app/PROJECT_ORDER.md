@@ -1,3 +1,35 @@
+# v59.35 — Standard / Pro Mode + Leak Reflection Questions
+
+1. Keep v59.34.2 Admin Legitimate-Only Controls unchanged.
+2. Add app mode state with `standard` and `pro`.
+3. Persist mode locally and include it in cloud app-state sync.
+4. Add a compact Home header toggle beside Guide.
+5. Keep Standard Mode focused on the core product loop: track leak, Daily Routine, streak, wallet status, simple report.
+6. Hide Growth and Rewards from Standard bottom navigation.
+7. Hide advanced Home blocks in Standard Mode.
+8. Keep Pro Mode as the existing full-power app.
+9. Add the spending-reflection question bank to the leak reflection popup.
+10. Do not change rewards, payouts, wallet verification, or Active Streak proof logic.
+
+## Standard Mode visible surface
+
+- Home
+- Add
+- Chart
+- Profile
+- Wallet Snapshot
+- Today’s Focus
+- Daily Routine
+- Wallet Survival Report
+- Recent Expenses
+- Account / Sync
+
+## Pro Mode visible surface
+
+Everything from Standard plus Growth, Rewards, weekly patterns, challenges, share cards, badges, leaderboards, smart insights, and advanced reports.
+
+---
+
 # v59.34.2 — Admin Legitimate-Only Controls Hotfix
 
 1. Keep the private Admin Panel hidden from normal users.
