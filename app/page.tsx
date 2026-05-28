@@ -992,6 +992,48 @@ type AdminAccessState = {
   walletConfigured: boolean;
 };
 
+type AdminAllHolderRow = {
+  rank: number;
+  ownerAddress: string;
+  balance: number;
+  percentOfSupply: number;
+  tokenAccounts: string[];
+};
+
+type AdminLegitimateHolderRow = {
+  rank: number;
+  telegramId: string;
+  username: string;
+  displayName: string;
+  walletAddress: string;
+  verifiedBalance: number;
+  activeStreakDays: number;
+  balanceSharePercent: number;
+  todayProtected: boolean;
+  verifiedAt: string | null;
+  lastCheckedAt: string | null;
+};
+
+type AdminHoldersResponse = {
+  ok: boolean;
+  error?: string;
+  generatedAt?: string;
+  mintAddress?: string;
+  tokenSupply?: number;
+  topAllHolders?: AdminAllHolderRow[];
+  topLegitimateHolders?: AdminLegitimateHolderRow[];
+  summary?: {
+    snapshotDate: string;
+    totalUsersScanned: number;
+    totalVerifiedWallets: number;
+    totalEligibleHolders: number;
+    totalEligibleBalance: number;
+    minHold: number;
+    minStreak: number;
+  };
+  notes?: string[];
+};
+
 type CloudStatus = "local" | "syncing" | "cloud" | "error";
 
 type BrokeApiResponse = {
@@ -1056,7 +1098,10 @@ const TELEGRAM_WEB_APP_SCRIPT = "https://telegram.org/js/telegram-web-app.js";
 const TELEGRAM_LOGIN_SCRIPT = "https://telegram.org/js/telegram-widget.js?22";
 const TELEGRAM_BOT_USERNAME =
   process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "BrokeLifeTrackerBot";
-const TREASURY_WALLET_ADDRESS = (process.env.NEXT_PUBLIC_TREASURY_WALLET_ADDRESS || "").trim();
+const DEFAULT_TREASURY_WALLET_ADDRESS = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
+const DEFAULT_BROKE_TOKEN_MINT_ADDRESS = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
+const BROKE_TOKEN_MINT_ADDRESS = (process.env.NEXT_PUBLIC_BROKE_TOKEN_MINT || DEFAULT_BROKE_TOKEN_MINT_ADDRESS).trim();
+const TREASURY_WALLET_ADDRESS = (process.env.NEXT_PUBLIC_TREASURY_WALLET_ADDRESS || DEFAULT_TREASURY_WALLET_ADDRESS).trim();
 const ADMIN_TELEGRAM_IDS = parseAdminCsv(
   process.env.NEXT_PUBLIC_BROKE_ADMIN_TELEGRAM_IDS || process.env.NEXT_PUBLIC_ADMIN_TELEGRAM_IDS || ""
 );
@@ -3668,6 +3713,13 @@ function formatHolderPercent(value: number) {
   if (!Number.isFinite(value) || value <= 0) return "0%";
   if (value < 0.0001) return "<0.0001%";
   return `${value.toFixed(value >= 1 ? 2 : 4)}%`;
+}
+
+function formatAdminDate(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toISOString().slice(0, 10);
 }
 
 
@@ -22175,6 +22227,11 @@ function AdminTreasuryPanel({
   wallet: WalletLinkSettings;
   activeProofStatus: ActiveStreakProofStatus;
 }) {
+  const [adminReadKey, setAdminReadKey] = useState("");
+  const [holderIntel, setHolderIntel] = useState<AdminHoldersResponse | null>(null);
+  const [holderIntelLoading, setHolderIntelLoading] = useState(false);
+  const [holderIntelError, setHolderIntelError] = useState("");
+
   const treasuryStatus = !access.treasuryConfigured
     ? "Treasury address not configured"
     : access.treasuryMatched
@@ -22195,6 +22252,32 @@ function AdminTreasuryPanel({
     { label: "Connected wallet", value: access.connectedWallet ? compactWalletAddress(access.connectedWallet) : "Not connected", detail: wallet.isVerified ? "Verified message signature proof." : "Wallet must be verified before it can be treated as treasury-ready." },
     { label: "Reward payouts", value: "Off", detail: "This version does not send tokens, open claims, or sign payout transactions." },
   ];
+
+  async function loadHolderIntel() {
+    setHolderIntelLoading(true);
+    setHolderIntelError("");
+
+    try {
+      const key = adminReadKey.trim();
+      const response = await fetch("/api/admin/holders", {
+        method: "GET",
+        headers: key ? { Authorization: `Bearer ${key}` } : undefined,
+        cache: "no-store",
+      });
+      const data = (await response.json()) as AdminHoldersResponse;
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Could not load holder intelligence.");
+      }
+
+      setHolderIntel(data);
+    } catch (error) {
+      setHolderIntel(null);
+      setHolderIntelError(error instanceof Error ? error.message : "Could not load holder intelligence.");
+    } finally {
+      setHolderIntelLoading(false);
+    }
+  }
 
   return (
     <details className="admin-treasury-panel profile-compact-details" open>
@@ -22236,10 +22319,121 @@ function AdminTreasuryPanel({
             <small>Only the public address belongs in config. Never store a seed phrase or private key.</small>
           </div>
           <div>
+            <span>$BROKE contract</span>
+            <strong>{compactWalletAddress(BROKE_TOKEN_MINT_ADDRESS)}</strong>
+            <small>Used by the private holder intelligence endpoint and future reward pool calculations.</small>
+          </div>
+          <div>
             <span>Snapshot eligibility</span>
             <strong>{activeProofStatus.currentStreak}d streak logic</strong>
             <small>Eligibility stays public-rule based: verified holder + minimum hold + 7+ Daily Routine streak.</small>
           </div>
+        </section>
+
+        <section className="admin-holder-intel-card">
+          <div className="admin-holder-intel-head">
+            <div>
+              <span>Holder intelligence</span>
+              <strong>Top holders + legitimate reward candidates</strong>
+              <small>
+                Private read-only admin view. It does not send rewards, open claims, or sign transactions.
+              </small>
+            </div>
+            <button type="button" onClick={loadHolderIntel} disabled={holderIntelLoading}>
+              {holderIntelLoading ? "Loading..." : holderIntel ? "Refresh" : "Load"}
+            </button>
+          </div>
+
+          <label className="admin-secret-field">
+            <span>Admin read key</span>
+            <input
+              type="password"
+              value={adminReadKey}
+              onChange={(event) => setAdminReadKey(event.target.value)}
+              placeholder="REWARDS_ADMIN_SECRET, if Telegram admin session is not active"
+            />
+            <small>Leave empty if server can authorize your Telegram admin session. Wallet-only visibility still needs the read key for server data.</small>
+          </label>
+
+          {holderIntelError && <div className="admin-holder-error">{holderIntelError}</div>}
+
+          {holderIntel?.summary && (
+            <div className="admin-holder-summary-grid">
+              <article>
+                <span>Eligible holders</span>
+                <strong>{holderIntel.summary.totalEligibleHolders}</strong>
+                <small>Verified + minimum hold + 7d routine streak</small>
+              </article>
+              <article>
+                <span>Eligible balance</span>
+                <strong>{formatTokenAmount(holderIntel.summary.totalEligibleBalance)}</strong>
+                <small>Used for balance-share reward math</small>
+              </article>
+              <article>
+                <span>Token supply</span>
+                <strong>{formatTokenAmount(holderIntel.tokenSupply || 0)}</strong>
+                <small>{holderIntel.mintAddress ? compactWalletAddress(holderIntel.mintAddress) : compactWalletAddress(BROKE_TOKEN_MINT_ADDRESS)}</small>
+              </article>
+            </div>
+          )}
+
+          {holderIntel && (
+            <div className="admin-holder-tables">
+              <section>
+                <div className="admin-holder-table-title">
+                  <span>Top 10 all holders</span>
+                  <small>Live RPC view from largest token accounts, grouped by owner where visible.</small>
+                </div>
+                <div className="admin-holder-table">
+                  {(holderIntel.topAllHolders || []).length === 0 ? (
+                    <p>No holder rows returned yet.</p>
+                  ) : (
+                    (holderIntel.topAllHolders || []).map((holder) => (
+                      <article key={`${holder.rank}-${holder.ownerAddress}`}>
+                        <b>#{holder.rank}</b>
+                        <div>
+                          <strong>{compactWalletAddress(holder.ownerAddress)}</strong>
+                          <small>{holder.tokenAccounts.length} token account{holder.tokenAccounts.length === 1 ? "" : "s"}</small>
+                        </div>
+                        <em>{formatTokenAmount(holder.balance)}</em>
+                        <i>{formatHolderPercent(holder.percentOfSupply)}</i>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </section>
+
+              <section>
+                <div className="admin-holder-table-title">
+                  <span>Top 20 legitimate holders</span>
+                  <small>Reward-eligible app users sorted by verified $BROKE balance.</small>
+                </div>
+                <div className="admin-holder-table legitimate">
+                  {(holderIntel.topLegitimateHolders || []).length === 0 ? (
+                    <p>No eligible legitimate holders yet.</p>
+                  ) : (
+                    (holderIntel.topLegitimateHolders || []).map((holder) => (
+                      <article key={`${holder.rank}-${holder.telegramId}-${holder.walletAddress}`}>
+                        <b>#{holder.rank}</b>
+                        <div>
+                          <strong>{holder.username ? `@${holder.username}` : holder.displayName || `TG ${holder.telegramId}`}</strong>
+                          <small>{compactWalletAddress(holder.walletAddress)} · {holder.activeStreakDays}d streak · {holder.todayProtected ? "today protected" : "today not locked"}</small>
+                        </div>
+                        <em>{formatTokenAmount(holder.verifiedBalance)}</em>
+                        <i>{formatHolderPercent(holder.balanceSharePercent)}</i>
+                      </article>
+                    ))
+                  )}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {holderIntel?.generatedAt && (
+            <div className="admin-holder-footnote">
+              Updated {formatAdminDate(holderIntel.generatedAt)}. Reward-share logic remains balance based: holder balance / total eligible balance.
+            </div>
+          )}
         </section>
 
         <div className="admin-treasury-warning">
@@ -22250,7 +22444,6 @@ function AdminTreasuryPanel({
     </details>
   );
 }
-
 
 function SettingsScreen({
   settings,
