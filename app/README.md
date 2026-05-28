@@ -1,18 +1,24 @@
-# $BROKE Life Tracker — v59.28 Daily Routine Streak Lock + Site Embed Fit
+# $BROKE Life Tracker — v59.29.1 Jupiter Wallet Provider Hotfix
 
-Patch-only update on top of v59.27.
+Patch-only hotfix on top of v59.29.
 
 ## What changed
 
-- Active Streak proof is now locked to **Daily Routine completion only**.
-- Rewards no longer presents separate streak-proof tasks such as Track Leak, Clean Day, One Fix, or Daily Challenge.
-- Track Leak, Clean Day, One Fix, and Daily Challenge can still exist as app tools, but they no longer activate/protect Active Streak directly.
-- Daily Routine remains a 7-action path.
-- The final Daily Routine action is now **Share on X**.
-- Copy text, Telegram share, native share, image download, and other share helpers no longer complete the final Daily Routine proof action.
-- Rewards buttons now point users back to Daily Routine instead of creating separate proof actions inside Rewards.
-- Active Streak copy, Rewards guide copy, Chart timeline text, notifications, and share-card text now describe Daily Routine as the only streak proof source.
-- Added an embedded-site display guard that detects iframe/site embedding and constrains the app to a centered phone-style width so the Mini App does not stretch or render crooked on the external site.
+- Expanded Solana wallet provider detection beyond the earlier Phantom/Solflare/Backpack-focused path.
+- Added detection for multiple injected/browser Solana wallets when available, including Phantom, Solflare, Backpack, Jupiter Wallet, OKX Wallet, Bitget/BitKeep, Coinbase Wallet, Glow, Exodus, Brave Wallet, Trust Wallet, Magic Eden Wallet, and generic `window.solana` providers.
+- Added support for `window.solana.providers[]` so browsers exposing several Solana providers can show more than one option.
+- Added a wallet provider selector when multiple wallets are detected.
+- Added **Use wallet address** to connect the selected provider and paste the connected public address into Profile automatically.
+- Wallet verification still uses message signing only. No transaction is sent during verification.
+- Provider Help copy now explains the broader wallet-browser/desktop-extension flow instead of implying only Phantom/Solflare/Backpack.
+- Kept the v59.28 Daily Routine-only Active Streak rule unchanged.
+
+## v59.29.1 hotfix
+
+- Added Jupiter Wallet to the visible supported wallet list.
+- Added Jupiter Wallet provider detection for likely injected/browser shapes such as `window.jupiter`, `window.jupiterWallet`, `window.jupiterSolana`, provider flags, provider names, and `window.solana.providers[]`.
+- Updated Provider Help, Rescan copy, and supported-wallet docs to mention Jupiter Wallet.
+- Kept verification as message-signature-only. No transaction, payout, treasury signing, WalletConnect/Reown, or token movement was added.
 
 ## What did not change
 
@@ -30,11 +36,10 @@ Patch-only update on top of v59.27.
 - No Telegram webhook changes.
 - No Supabase migration required.
 - No reward snapshot ledger schema changes.
+- No WalletConnect/Reown project setup yet.
 
 ## Product rule after this patch
 
-Active Streak is protected only when the user finishes the full Daily Routine.
+Users can keep using watch-only wallet balance checks, but ownership verification can now use a broader set of Solana injected/browser wallets when the browser exposes `connect` and `signMessage`.
 
-The 7th Daily Routine action must be completed through a **Share on X** button.
-
-Other app actions may still help the user build discipline, but they do not directly count as Active Streak proof.
+Treasury payout signing is still not enabled. This patch only prepares broader wallet compatibility for verification and future admin treasury flows.

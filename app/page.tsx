@@ -10493,7 +10493,7 @@ function HelpGuideModal({
           title: "Verify wallet / Sync verification buttons",
           body: [
             "Verify wallet proves ownership by message signature.",
-            "Telegram browser may not expose a signing provider, so open the app inside Phantom, Solflare, Backpack, or another Solana wallet browser if needed.",
+            "Telegram browser may not expose a signing provider, so open the app inside a supported Solana wallet browser or desktop extension if needed.",
             "Signature proof does not move tokens and does not approve spending.",
             "Sync verification refreshes the app after returning from a wallet browser or another session.",
           ],
@@ -10503,7 +10503,7 @@ function HelpGuideModal({
           title: "Provider Help / Rescan provider",
           body: [
             "Provider Help explains whether the app can detect a wallet signing provider.",
-            "Rescan provider checks again for Phantom, Solflare, Backpack, or another injected Solana provider.",
+            "Rescan provider checks again for Phantom, Solflare, Backpack, Jupiter Wallet, OKX, Glow, Exodus, Coinbase Wallet, Brave, Trust, Magic Eden, and other injected Solana providers.",
             "Use it if the wallet app was opened after the page loaded.",
             "If provider still does not appear, open the app inside the wallet browser instead of Telegram WebView.",
           ],
@@ -22090,6 +22090,8 @@ function SettingsScreen({
   const [walletProviderHelpOpen, setWalletProviderHelpOpen] = useState(false);
   const [walletProviderName, setWalletProviderName] = useState("Browser check pending");
   const [walletProviderDetected, setWalletProviderDetected] = useState(false);
+  const [walletProviderOptions, setWalletProviderOptions] = useState<Array<{ id: string; label: string; ready: boolean }>>([]);
+  const [selectedWalletProviderId, setSelectedWalletProviderId] = useState("");
   const [walletStatusRefreshing, setWalletStatusRefreshing] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState("");
@@ -22111,9 +22113,19 @@ function SettingsScreen({
 
   useEffect(() => {
     function syncWalletProviderState() {
+      const providers = getDetectedSolanaWalletProviders();
       const detected = getDetectedSolanaWalletProvider();
+      const options = providers.map((item) => ({ id: item.id, label: item.label, ready: item.ready }));
+
+      setWalletProviderOptions(options);
       setWalletProviderName(detected.label);
-      setWalletProviderDetected(Boolean(detected.provider?.connect && detected.provider.signMessage));
+      setWalletProviderDetected(detected.ready);
+
+      if (!selectedWalletProviderId && detected.id) {
+        setSelectedWalletProviderId(detected.id);
+      } else if (selectedWalletProviderId && options.length > 0 && !options.some((item) => item.id === selectedWalletProviderId)) {
+        setSelectedWalletProviderId(detected.id || options[0]?.id || "");
+      }
     }
 
     syncWalletProviderState();
@@ -22126,7 +22138,7 @@ function SettingsScreen({
       window.removeEventListener("focus", syncWalletProviderState);
       window.removeEventListener("visibilitychange", syncWalletProviderState);
     };
-  }, []);
+  }, [selectedWalletProviderId]);
 
   function incomeClarityNote(key: keyof Settings["income"]) {
     return settingsMoneyClarityNote(
@@ -22318,10 +22330,14 @@ function SettingsScreen({
       ? "Recheck $BROKE balance"
       : "Check $BROKE balance";
   const walletProviderStatusText = walletProviderDetected
-    ? `${walletProviderName} detected · message signing should be available.`
-    : telegram.isTelegram
-      ? "Telegram browser usually cannot sign. Open the app inside Phantom, Solflare, Backpack, or another Solana wallet browser."
-      : "No injected Solana wallet detected in this browser yet.";
+    ? walletProviderOptions.length > 1
+      ? `${walletProviderOptions.length} wallets detected · ${walletProviderName} selected.`
+      : `${walletProviderName} detected · message signing should be available.`
+    : walletProviderOptions.length > 0
+      ? `${walletProviderOptions.length} wallet provider${walletProviderOptions.length === 1 ? "" : "s"} detected, but this one cannot sign messages here.`
+      : telegram.isTelegram
+        ? "Telegram browser usually cannot sign. Open the app inside a Solana wallet browser, then rescan."
+        : "No injected Solana wallet detected in this browser yet.";
   const walletVerificationFlowText = settings.wallet.isVerified
     ? "This wallet is ownership-verified. Holder rewards can use this balance."
     : settings.wallet.walletAddress
@@ -22572,58 +22588,223 @@ function SettingsScreen({
   }
 
   type SolanaWalletProvider = {
+    name?: string;
     isPhantom?: boolean;
     isSolflare?: boolean;
     isBackpack?: boolean;
-    connect?: () => Promise<{ publicKey?: { toString: () => string } }>;
+    isGlow?: boolean;
+    isExodus?: boolean;
+    isBraveWallet?: boolean;
+    isCoinbaseWallet?: boolean;
+    isOKXWallet?: boolean;
+    isOkxWallet?: boolean;
+    isBitKeep?: boolean;
+    isBitget?: boolean;
+    isTrust?: boolean;
+    isMagicEden?: boolean;
+    isJupiter?: boolean;
+    isJupiterWallet?: boolean;
+    providers?: SolanaWalletProvider[];
+    connect?: (options?: { onlyIfTrusted?: boolean }) => Promise<{ publicKey?: { toString: () => string } }>;
     publicKey?: { toString: () => string };
     signMessage?: (message: Uint8Array, encoding?: string) => Promise<Uint8Array | { signature?: Uint8Array }>;
   };
 
-  function getDetectedSolanaWalletProvider() {
-    if (typeof window === "undefined") {
-      return { provider: null as SolanaWalletProvider | null, label: "Browser check pending" };
-    }
+  type DetectedSolanaWalletProvider = {
+    id: string;
+    label: string;
+    provider: SolanaWalletProvider | null;
+    ready: boolean;
+    publicKey: string;
+  };
+
+  function getProviderPublicKey(provider: SolanaWalletProvider | null) {
+    return provider?.publicKey?.toString?.() || "";
+  }
+
+  function providerCanSign(provider: SolanaWalletProvider | null) {
+    return Boolean(provider?.connect && provider.signMessage);
+  }
+
+  function pushSolanaWalletProvider(
+    providers: DetectedSolanaWalletProvider[],
+    seen: Set<SolanaWalletProvider>,
+    id: string,
+    label: string,
+    provider: SolanaWalletProvider | null | undefined
+  ) {
+    if (!provider || seen.has(provider)) return;
+
+    seen.add(provider);
+    providers.push({
+      id,
+      label,
+      provider,
+      ready: providerCanSign(provider),
+      publicKey: getProviderPublicKey(provider),
+    });
+  }
+
+  function getProviderLabel(provider: SolanaWalletProvider | null | undefined, fallback = "Solana wallet") {
+    if (!provider) return fallback;
+    if (provider.isPhantom) return "Phantom";
+    if (provider.isSolflare) return "Solflare";
+    if (provider.isBackpack) return "Backpack";
+    if (provider.isOKXWallet || provider.isOkxWallet) return "OKX Wallet";
+    if (provider.isBitKeep) return "Bitget / BitKeep";
+    if (provider.isBitget) return "Bitget Wallet";
+    if (provider.isGlow) return "Glow";
+    if (provider.isExodus) return "Exodus";
+    if (provider.isBraveWallet) return "Brave Wallet";
+    if (provider.isCoinbaseWallet) return "Coinbase Wallet";
+    if (provider.isTrust) return "Trust Wallet";
+    if (provider.isMagicEden) return "Magic Eden Wallet";
+    if (provider.isJupiter || provider.isJupiterWallet || /jupiter/i.test(provider.name || "")) return "Jupiter Wallet";
+    return provider.name || fallback;
+  }
+
+  function getDetectedSolanaWalletProviders() {
+    if (typeof window === "undefined") return [] as DetectedSolanaWalletProvider[];
 
     const candidateWindow = window as unknown as {
       solana?: SolanaWalletProvider;
       phantom?: { solana?: SolanaWalletProvider };
       solflare?: SolanaWalletProvider;
       backpack?: { solana?: SolanaWalletProvider };
+      okxwallet?: { solana?: SolanaWalletProvider } | SolanaWalletProvider;
+      bitkeep?: { solana?: SolanaWalletProvider } | SolanaWalletProvider;
+      bitgetWallet?: { solana?: SolanaWalletProvider } | SolanaWalletProvider;
+      coinbaseSolana?: SolanaWalletProvider;
+      coinbaseWalletSolana?: SolanaWalletProvider;
+      coinbaseWallet?: { solana?: SolanaWalletProvider };
+      glowSolana?: SolanaWalletProvider;
+      glow?: { solana?: SolanaWalletProvider } | SolanaWalletProvider;
+      exodus?: { solana?: SolanaWalletProvider };
+      braveSolana?: SolanaWalletProvider;
+      trustwallet?: { solana?: SolanaWalletProvider };
+      trustWallet?: { solana?: SolanaWalletProvider };
+      magicEden?: { solana?: SolanaWalletProvider } | SolanaWalletProvider;
+      jupiter?: { solana?: SolanaWalletProvider } | SolanaWalletProvider;
+      jupiterWallet?: { solana?: SolanaWalletProvider } | SolanaWalletProvider;
+      jupiterSolana?: SolanaWalletProvider;
     };
+    const providers: DetectedSolanaWalletProvider[] = [];
+    const seen = new Set<SolanaWalletProvider>();
+    function unwrapSolanaProvider(value: { solana?: SolanaWalletProvider } | SolanaWalletProvider | undefined): SolanaWalletProvider | undefined {
+      if (!value) return undefined;
+      const wrapped = value as { solana?: SolanaWalletProvider };
+      return wrapped.solana || (value as SolanaWalletProvider);
+    }
 
-    const provider =
-      candidateWindow.phantom?.solana ||
-      candidateWindow.backpack?.solana ||
-      candidateWindow.solflare ||
-      candidateWindow.solana ||
-      null;
+    pushSolanaWalletProvider(providers, seen, "phantom", "Phantom", candidateWindow.phantom?.solana);
+    pushSolanaWalletProvider(providers, seen, "solflare", "Solflare", candidateWindow.solflare);
+    pushSolanaWalletProvider(providers, seen, "backpack", "Backpack", candidateWindow.backpack?.solana);
+    pushSolanaWalletProvider(providers, seen, "okx", "OKX Wallet", unwrapSolanaProvider(candidateWindow.okxwallet));
+    pushSolanaWalletProvider(providers, seen, "bitkeep", "Bitget / BitKeep", unwrapSolanaProvider(candidateWindow.bitkeep));
+    pushSolanaWalletProvider(providers, seen, "bitget", "Bitget Wallet", unwrapSolanaProvider(candidateWindow.bitgetWallet));
+    pushSolanaWalletProvider(providers, seen, "coinbase", "Coinbase Wallet", candidateWindow.coinbaseSolana || candidateWindow.coinbaseWalletSolana || candidateWindow.coinbaseWallet?.solana);
+    pushSolanaWalletProvider(providers, seen, "glow", "Glow", unwrapSolanaProvider(candidateWindow.glow) || candidateWindow.glowSolana);
+    pushSolanaWalletProvider(providers, seen, "exodus", "Exodus", candidateWindow.exodus?.solana);
+    pushSolanaWalletProvider(providers, seen, "brave", "Brave Wallet", candidateWindow.braveSolana);
+    pushSolanaWalletProvider(providers, seen, "trust", "Trust Wallet", candidateWindow.trustwallet?.solana || candidateWindow.trustWallet?.solana);
+    pushSolanaWalletProvider(providers, seen, "magiceden", "Magic Eden Wallet", unwrapSolanaProvider(candidateWindow.magicEden));
+    pushSolanaWalletProvider(providers, seen, "jupiter", "Jupiter Wallet", unwrapSolanaProvider(candidateWindow.jupiter));
+    pushSolanaWalletProvider(providers, seen, "jupiter-wallet", "Jupiter Wallet", unwrapSolanaProvider(candidateWindow.jupiterWallet));
+    pushSolanaWalletProvider(providers, seen, "jupiter-solana", "Jupiter Wallet", candidateWindow.jupiterSolana);
 
-    if (!provider) return { provider: null, label: "No wallet provider detected" };
-    if (provider.isPhantom || candidateWindow.phantom?.solana === provider) return { provider, label: "Phantom" };
-    if (provider.isSolflare || candidateWindow.solflare === provider) return { provider, label: "Solflare" };
-    if (provider.isBackpack || candidateWindow.backpack?.solana === provider) return { provider, label: "Backpack" };
+    candidateWindow.solana?.providers?.forEach((provider, index) => {
+      pushSolanaWalletProvider(providers, seen, `standard-${index}`, getProviderLabel(provider), provider);
+    });
+    pushSolanaWalletProvider(providers, seen, "window-solana", getProviderLabel(candidateWindow.solana), candidateWindow.solana);
 
-    return { provider, label: "Solana wallet" };
+    return providers.sort((a, b) => Number(b.ready) - Number(a.ready) || a.label.localeCompare(b.label));
+  }
+
+  function getDetectedSolanaWalletProvider(preferredId = selectedWalletProviderId) {
+    const providers = getDetectedSolanaWalletProviders();
+    const selectedProvider = preferredId ? providers.find((item) => item.id === preferredId) : null;
+    const provider = selectedProvider || providers.find((item) => item.ready) || providers[0] || null;
+
+    if (!provider) {
+      return {
+        id: "",
+        provider: null as SolanaWalletProvider | null,
+        label: "No wallet provider detected",
+        ready: false,
+        publicKey: "",
+      };
+    }
+
+    return provider;
+  }
+
+  function syncDetectedWalletProviderState(preferredId = selectedWalletProviderId) {
+    const providers = getDetectedSolanaWalletProviders();
+    const detected = getDetectedSolanaWalletProvider(preferredId);
+    const options = providers.map((item) => ({ id: item.id, label: item.label, ready: item.ready }));
+
+    setWalletProviderOptions(options);
+    setWalletProviderName(detected.label);
+    setWalletProviderDetected(detected.ready);
+
+    if (!preferredId && detected.id) {
+      setSelectedWalletProviderId(detected.id);
+    } else if (preferredId && options.length > 0 && !options.some((item) => item.id === preferredId)) {
+      setSelectedWalletProviderId(detected.id || options[0]?.id || "");
+    }
+
+    return detected;
   }
 
   function rescanWalletProvider() {
-    const detected = getDetectedSolanaWalletProvider();
-    const ready = Boolean(detected.provider?.connect && detected.provider.signMessage);
-    setWalletProviderName(detected.label);
-    setWalletProviderDetected(ready);
-    setWalletProviderHelpOpen(!ready && !settings.wallet.isVerified);
+    const detected = syncDetectedWalletProviderState();
+    setWalletProviderHelpOpen(!detected.ready && !settings.wallet.isVerified);
     setWalletMessage(
-      ready
+      detected.ready
         ? `${detected.label} detected. Press Verify wallet to sign the ownership message.`
-        : "No signing wallet detected here. Open this app inside a Solana wallet browser, then press Rescan provider."
+        : walletProviderOptions.length > 0
+          ? "Wallet found, but this browser did not expose message signing. Try another wallet browser or rescan."
+          : "No signing wallet detected here. Open this app inside a Solana wallet browser, then press Rescan provider."
     );
     notifyApp(
-      ready ? "Wallet provider ready" : "Wallet provider not found",
-      ready ? "Message signing should be available now." : "Open inside Phantom, Solflare, Backpack or another wallet browser.",
+      detected.ready ? "Wallet provider ready" : "Wallet provider not found",
+      detected.ready ? "Message signing should be available now." : "Open inside a Solana wallet browser such as Phantom, Solflare, Backpack, Jupiter Wallet, OKX, Glow, or Exodus.",
       "info"
     );
     triggerHaptic("light");
+  }
+
+  async function useConnectedWalletAddress() {
+    const detected = getDetectedSolanaWalletProvider();
+    const provider = detected.provider;
+
+    if (!provider?.connect) {
+      setWalletProviderHelpOpen(true);
+      setWalletMessage("No connectable Solana wallet was detected in this browser.");
+      notifyApp("Wallet not found", "Open inside a Solana wallet browser or install a supported Solana wallet extension.", "info");
+      return;
+    }
+
+    setWalletProviderHelpOpen(false);
+    setWalletMessage(`Connecting ${detected.label}...`);
+
+    try {
+      const connected = await provider.connect();
+      const connectedAddress = connected.publicKey?.toString() || provider.publicKey?.toString() || "";
+
+      if (!connectedAddress) {
+        throw new Error("Wallet connected but did not return a public address.");
+      }
+
+      setWalletAddressDraft(connectedAddress);
+      setWalletMessage(`${detected.label} connected. Address pasted. You can check balance or verify ownership.`);
+      notifyApp("Wallet address ready", `${detected.label} address pasted into Profile.`, "info");
+      triggerHaptic("success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Wallet connect failed.";
+      setWalletMessage(message);
+      notifyApp("Wallet connect failed", message, "info");
+    }
   }
 
   function getSolanaWalletProvider() {
@@ -22670,12 +22851,12 @@ function SettingsScreen({
   async function copyWalletVerifyLink() {
     try {
       await navigator.clipboard.writeText(getCurrentAppUrlForWalletBrowser());
-      setWalletMessage("App link copied. Open it inside Phantom/Solflare browser, then press Verify wallet again.");
+      setWalletMessage("App link copied. Open it inside a Solana wallet browser, then press Verify wallet again.");
       notifyApp("Link copied", "Open the app link inside a Solana wallet browser to verify ownership.", "info");
       triggerHaptic("success");
     } catch {
-      setWalletMessage("Could not copy the app link. Open this app inside Phantom/Solflare browser to verify ownership.");
-      notifyApp("Copy blocked", "Open this app inside Phantom/Solflare browser to verify ownership.", "info");
+      setWalletMessage("Could not copy the app link. Open this app inside a Solana wallet browser to verify ownership.");
+      notifyApp("Copy blocked", "Open this app inside a Solana wallet browser to verify ownership.", "info");
     }
   }
 
@@ -22695,7 +22876,7 @@ function SettingsScreen({
       setWalletProviderName(detected.label);
       setWalletProviderDetected(false);
       setWalletProviderHelpOpen(true);
-      setWalletMessage("Balance is linked as watch-only. To verify ownership, open this app inside Phantom, Solflare, Backpack, or another Solana wallet browser, then press Verify wallet again.");
+      setWalletMessage("Balance is linked as watch-only. To verify ownership, open this app inside a supported Solana wallet browser, choose the provider if needed, then press Verify wallet again.");
       notifyApp("Verification needs wallet browser", "Watch-only balance still works. Holder unlocks need a wallet browser with message signing.", "info");
       return;
     }
@@ -23200,23 +23381,47 @@ function SettingsScreen({
               <span>{walletProviderDetected ? "Provider ready" : "Provider help"}</span>
               <strong>{walletProviderStatusText}</strong>
               <small>{walletVerificationFlowText}</small>
+              {walletProviderOptions.length > 1 && (
+                <label className="wallet-provider-select">
+                  <span>Selected wallet</span>
+                  <select
+                    value={selectedWalletProviderId}
+                    onChange={(event) => {
+                      setSelectedWalletProviderId(event.target.value);
+                      const selected = syncDetectedWalletProviderState(event.target.value);
+                      setWalletMessage(`${selected.label} selected for wallet verification.`);
+                    }}
+                  >
+                    {walletProviderOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}{option.ready ? "" : " · no signing"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
-            <button type="button" onClick={rescanWalletProvider} disabled={walletVerifying || walletStatusRefreshing}>
-              Rescan provider
-            </button>
+            <div className="wallet-provider-readiness-actions">
+              <button type="button" onClick={rescanWalletProvider} disabled={walletVerifying || walletStatusRefreshing}>
+                Rescan
+              </button>
+              <button type="button" onClick={useConnectedWalletAddress} disabled={!walletProviderDetected || walletVerifying || walletStatusRefreshing}>
+                Use wallet address
+              </button>
+            </div>
           </section>
 
           {walletProviderHelpOpen && !settings.wallet.isVerified && (
             <section className="wallet-provider-help-card">
               <div>
                 <span>Wallet provider not found</span>
-                <strong>Open inside a wallet browser to verify.</strong>
-                <small>Telegram can show the app without Phantom/Solflare/Backpack injection. Watch-only balance still works here; holder unlocks need one message signature in a wallet browser.</small>
+                <strong>Open inside a Solana wallet browser to verify.</strong>
+                <small>Telegram can show the app without wallet injection. Watch-only balance still works here; holder unlocks need one message signature in a wallet browser or desktop extension.</small>
               </div>
               <div className="wallet-provider-step-list">
-                <article><b>1</b><span>Open this app link inside Phantom, Solflare, Backpack, or another Solana wallet browser.</span></article>
-                <article><b>2</b><span>Press Verify wallet and sign only the text message. No transaction, no token movement.</span></article>
-                <article><b>3</b><span>Return to Telegram/web and press Sync verification if the profile still shows watch-only.</span></article>
+                <article><b>1</b><span>Open this app link inside a Solana wallet browser such as Phantom, Solflare, Backpack, Jupiter Wallet, OKX, Glow, Exodus, Coinbase Wallet, Brave, Trust Wallet, or another injected wallet.</span></article>
+                <article><b>2</b><span>Press Rescan. If several wallets are detected, select the one you want to use.</span></article>
+                <article><b>3</b><span>Press Verify wallet and sign only the text message. No transaction, no token movement.</span></article>
               </div>
               <div className="wallet-provider-help-actions">
                 <button type="button" onClick={() => openWalletBrowser("phantom")}>Open Phantom</button>
