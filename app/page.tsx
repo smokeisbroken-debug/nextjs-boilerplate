@@ -1019,12 +1019,18 @@ type AdminHoldersResponse = {
   error?: string;
   generatedAt?: string;
   mintAddress?: string;
-  tokenSupply?: number;
+  treasuryWallet?: string;
+  treasuryBrokeBalance?: number | null;
+  treasuryBalanceRpcError?: string;
+  tokenSupply?: number | null;
+  tokenSupplyAvailable?: boolean;
   topAllHolders?: AdminAllHolderRow[];
+  topAllHoldersAvailable?: boolean;
   topLegitimateHolders?: AdminLegitimateHolderRow[];
   eligiblePayoutCandidates?: AdminLegitimateHolderRow[];
   allHoldersRpcError?: string;
   allHoldersRpcUrl?: string;
+  rpcProviderStatus?: string;
   summary?: {
     snapshotDate: string;
     totalUsersScanned: number;
@@ -22448,9 +22454,14 @@ function AdminTreasuryPanel({
           </label>
 
           {holderIntelError && <div className="admin-holder-error">{holderIntelError}</div>}
-          {holderIntel?.allHoldersRpcError && (
+          {(holderIntel?.allHoldersRpcError || holderIntel?.treasuryBalanceRpcError) && (
             <div className="admin-holder-warning">
-              All-holder RPC is rate limited right now: {holderIntel.allHoldersRpcError}. Legitimate holders can still load from app data. Set SOLANA_RPC_URL to a private RPC for stable Top 10 holder reads.
+              Live Solana RPC read is limited right now
+              {holderIntel.allHoldersRpcError ? `: ${holderIntel.allHoldersRpcError}` : ""}
+              {holderIntel.treasuryBalanceRpcError && holderIntel.treasuryBalanceRpcError !== holderIntel.allHoldersRpcError
+                ? ` / treasury balance: ${holderIntel.treasuryBalanceRpcError}`
+                : ""}
+              . Legitimate app holders can still load from Supabase. Add SOLANA_RPC_URL in Vercel for stable treasury balance, token supply, and Top 10 holder reads.
             </div>
           )}
 
@@ -22464,12 +22475,22 @@ function AdminTreasuryPanel({
               <article>
                 <span>Eligible balance</span>
                 <strong>{formatTokenAmount(holderIntel.summary.totalEligibleBalance)}</strong>
-                <small>Used for balance-share reward math</small>
+                <small>Only legitimate reward candidates. This is not treasury balance.</small>
+              </article>
+              <article>
+                <span>Treasury $BROKE</span>
+                <strong>{typeof holderIntel.treasuryBrokeBalance === "number" ? formatTokenAmount(holderIntel.treasuryBrokeBalance) : "RPC unavailable"}</strong>
+                <small>{holderIntel.treasuryWallet ? compactWalletAddress(holderIntel.treasuryWallet) : compactWalletAddress(access.treasuryWallet)}</small>
               </article>
               <article>
                 <span>Token supply</span>
-                <strong>{formatTokenAmount(holderIntel.tokenSupply || 0)}</strong>
+                <strong>{typeof holderIntel.tokenSupply === "number" ? formatTokenAmount(holderIntel.tokenSupply) : "RPC unavailable"}</strong>
                 <small>{holderIntel.mintAddress ? compactWalletAddress(holderIntel.mintAddress) : compactWalletAddress(BROKE_TOKEN_MINT_ADDRESS)}</small>
+              </article>
+              <article>
+                <span>RPC mode</span>
+                <strong>{holderIntel.rpcProviderStatus === "private_rpc" ? "Private RPC" : "Public RPC"}</strong>
+                <small>{holderIntel.allHoldersRpcUrl ? compactWalletAddress(holderIntel.allHoldersRpcUrl.replace(/^https?:\/\//, "")) : "Set SOLANA_RPC_URL for stable reads"}</small>
               </article>
             </div>
           )}
@@ -22483,7 +22504,7 @@ function AdminTreasuryPanel({
                 </div>
                 <div className="admin-holder-table">
                   {(holderIntel.topAllHolders || []).length === 0 ? (
-                    <p>No holder rows returned yet.</p>
+                    <p>{holderIntel.topAllHoldersAvailable === false ? "Top holder RPC unavailable. Add SOLANA_RPC_URL and refresh." : "No holder rows returned yet."}</p>
                   ) : (
                     (holderIntel.topAllHolders || []).map((holder) => (
                       <article key={`${holder.rank}-${holder.ownerAddress}`}>
@@ -22537,6 +22558,12 @@ function AdminTreasuryPanel({
                 <b>{eligiblePayoutCandidates.length} eligible</b>
               </div>
 
+              {eligiblePayoutCandidates.length === 0 && (
+                <div className="admin-distribution-message muted">
+                  No legitimate recipients loaded yet. Treasury balance can exist, but rewards need eligible holders first.
+                </div>
+              )}
+
               <div className="admin-distribution-controls">
                 <label>
                   <span>Pool token</span>
@@ -22559,7 +22586,7 @@ function AdminTreasuryPanel({
                   />
                 </label>
                 <button type="button" onClick={prepareDistributionDraft} disabled={!payoutPreviewReady}>
-                  Prepare distribution
+                  {eligiblePayoutCandidates.length === 0 ? "No eligible recipients" : "Prepare distribution"}
                 </button>
               </div>
 
@@ -22574,7 +22601,7 @@ function AdminTreasuryPanel({
                 </article>
                 <article>
                   <span>Status</span>
-                  <strong>{payoutPreviewReady ? "Draft ready" : "Need amount"}</strong>
+                  <strong>{eligiblePayoutCandidates.length === 0 ? "No eligible recipients" : payoutPreviewReady ? "Draft ready" : "Need amount"}</strong>
                 </article>
               </div>
 

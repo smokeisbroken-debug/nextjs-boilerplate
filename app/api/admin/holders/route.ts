@@ -49,6 +49,28 @@ type MultipleAccountsResult = {
   } | null>;
 };
 
+type TokenAccountsByOwnerResult = {
+  value?: Array<{
+    pubkey?: string;
+    account?: {
+      data?: {
+        parsed?: {
+          info?: {
+            mint?: string;
+            owner?: string;
+            tokenAmount?: {
+              amount?: string;
+              decimals?: number;
+              uiAmount?: number | null;
+              uiAmountString?: string;
+            };
+          };
+        };
+      };
+    };
+  }>;
+};
+
 type SettingsRow = {
   telegram_id: number | string;
   app_state_payload?: unknown;
@@ -142,6 +164,15 @@ function getAdminTelegramIds() {
       .join(",")
   );
 }
+
+function getTreasuryWalletAddress() {
+  return String(
+    getOptionalEnv("TREASURY_WALLET_ADDRESS") ||
+      getOptionalEnv("NEXT_PUBLIC_TREASURY_WALLET_ADDRESS") ||
+      "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9"
+  ).trim();
+}
+
 
 function getWebAuthSecret() {
   return getOptionalEnv("WEB_AUTH_SECRET") || getOptionalEnv("TELEGRAM_BOT_TOKEN");
@@ -471,6 +502,23 @@ async function buildTopAllHolders(args: { rpcUrl: string; mintAddress: string })
   };
 }
 
+async function buildTreasuryBrokeBalance(args: { rpcUrl: string; mintAddress: string; ownerAddress: string }) {
+  if (!args.ownerAddress) return null;
+
+  const tokenAccounts = await rpc<TokenAccountsByOwnerResult>(args.rpcUrl, "getTokenAccountsByOwner", [
+    args.ownerAddress,
+    { mint: args.mintAddress },
+    { encoding: "jsonParsed" },
+  ]);
+
+  const balance = (tokenAccounts.value || []).reduce((sum, item) => {
+    const amount = item.account?.data?.parsed?.info?.tokenAmount;
+    return sum + parseUiAmountString(amount?.uiAmountString || amount?.uiAmount);
+  }, 0);
+
+  return Number(balance.toFixed(6));
+}
+
 async function buildLegitimateHolders(snapshotDate: string) {
   const [settingsRows, walletRows, userRows] = await Promise.all([readSettingsRows(), readWalletRows(), readUserRows()]);
   const walletByTelegramId = pickBestWalletByTelegramId(walletRows);
@@ -560,9 +608,11 @@ export async function GET(request: NextRequest) {
         DEFAULT_BROKE_TOKEN_MINT
     ).trim();
     const rpcUrl = String(getOptionalEnv("SOLANA_RPC_URL") || DEFAULT_SOLANA_RPC_URL).trim();
+    const treasuryWallet = getTreasuryWalletAddress();
     const snapshotDate = dayKey(new Date());
-    const [allHoldersResult, legitimate] = await Promise.allSettled([
+    const [allHoldersResult, treasuryBalanceResult, legitimate] = await Promise.allSettled([
       buildTopAllHolders({ rpcUrl, mintAddress }),
+      buildTreasuryBrokeBalance({ rpcUrl, mintAddress, ownerAddress: treasuryWallet }),
       buildLegitimateHolders(snapshotDate),
     ]);
 
@@ -573,12 +623,18 @@ export async function GET(request: NextRequest) {
     const allHolders =
       allHoldersResult.status === "fulfilled"
         ? allHoldersResult.value
-        : { tokenSupply: 0, topAllHolders: [] };
+        : { tokenSupply: null, topAllHolders: [] };
     const allHoldersRpcError =
       allHoldersResult.status === "rejected"
         ? allHoldersResult.reason instanceof Error
           ? allHoldersResult.reason.message
           : "Solana RPC holder read failed"
+        : "";
+    const treasuryBalanceRpcError =
+      treasuryBalanceResult.status === "rejected"
+        ? treasuryBalanceResult.reason instanceof Error
+          ? treasuryBalanceResult.reason.message
+          : "Solana RPC treasury balance read failed"
         : "";
 
     return json({
@@ -586,17 +642,24 @@ export async function GET(request: NextRequest) {
       route: "/api/admin/holders",
       generatedAt: new Date().toISOString(),
       mintAddress,
+      treasuryWallet,
+      treasuryBrokeBalance: treasuryBalanceResult.status === "fulfilled" ? treasuryBalanceResult.value : null,
+      treasuryBalanceRpcError,
       tokenSupply: allHolders.tokenSupply,
+      tokenSupplyAvailable: allHolders.tokenSupply !== null,
       topAllHolders: allHolders.topAllHolders,
+      topAllHoldersAvailable: allHoldersResult.status === "fulfilled",
       topLegitimateHolders: legitimate.value.topLegitimateHolders,
       eligiblePayoutCandidates: legitimate.value.eligiblePayoutCandidates,
       allHoldersRpcError,
       allHoldersRpcUrl: rpcUrl,
+      rpcProviderStatus: rpcUrl === DEFAULT_SOLANA_RPC_URL ? "public_rpc" : "private_rpc",
       summary: legitimate.value.summary,
       notes: [
-        allHoldersRpcError
-          ? "Top all holders could not load from RPC in this request. Set SOLANA_RPC_URL to a private RPC endpoint for stable holder reads."
+        allHoldersRpcError || treasuryBalanceRpcError
+          ? "One or more live Solana RPC reads failed. Set SOLANA_RPC_URL to a private mainnet RPC endpoint for stable holder and treasury balance reads."
           : "Top all holders uses Solana RPC getTokenLargestAccounts and groups returned token accounts by owner where visible.",
+        "Treasury balance is a live read for the configured treasury wallet and BROKE mint; it is separate from eligible holder balance.",
         "Top legitimate holders uses app eligibility: verified wallet, 100K+ BROKE, and 7+ Active Streak from Daily Routine proof.",
         "This endpoint is read-only. It does not send rewards, sign transactions, open claims, staking, or token transfers.",
       ],

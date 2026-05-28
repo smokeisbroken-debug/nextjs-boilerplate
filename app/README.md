@@ -117,3 +117,13 @@ Create payout batch → connect verified treasury wallet → manual wallet signi
 - No Supabase migration.
 - No reward eligibility formula change.
 - No Daily Routine / Active Streak rule change.
+
+
+## v59.34.1 — Admin RPC Setup + Treasury Balance Clarity Hotfix
+
+- Clarifies the private Admin holder view when Solana public RPC is rate-limited: token supply and Top 10 holder sections now show RPC unavailable instead of misleading `0 BROKE`.
+- Adds a live treasury $BROKE balance read for the configured treasury wallet and BROKE mint when `SOLANA_RPC_URL` is available.
+- Separates treasury balance from eligible reward balance: eligible balance remains only verified app users with 100K+ BROKE and a 7+ Daily Routine Active Streak.
+- Reward Distribution Draft now clearly blocks when there are no eligible recipients, even if the treasury wallet has funds.
+- Documents `SOLANA_RPC_URL` as a server-only private mainnet RPC env var for stable Top 10 holder, token supply, and treasury balance reads.
+- No payouts, claims, staking, token transfers, treasury signing, private key storage, Supabase migration, wallet backend changes, holder threshold changes, balance formula changes, avatar backend, Telegram webhook, reward execution, or Daily Routine/Active Streak rule changes.
