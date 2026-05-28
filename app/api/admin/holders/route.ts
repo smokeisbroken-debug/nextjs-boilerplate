@@ -3,74 +3,6 @@ import crypto from "crypto";
 
 export const runtime = "nodejs";
 
-type SolanaRpcResponse<T> = {
-  result?: T;
-  error?: {
-    code?: number;
-    message?: string;
-  };
-};
-
-type TokenLargestAccountsResult = {
-  value?: Array<{
-    address?: string;
-    amount?: string;
-    decimals?: number;
-    uiAmount?: number | null;
-    uiAmountString?: string;
-  }>;
-};
-
-type TokenSupplyResult = {
-  value?: {
-    amount?: string;
-    decimals?: number;
-    uiAmount?: number | null;
-    uiAmountString?: string;
-  };
-};
-
-type MultipleAccountsResult = {
-  value?: Array<{
-    data?: {
-      parsed?: {
-        info?: {
-          owner?: string;
-          mint?: string;
-          tokenAmount?: {
-            amount?: string;
-            decimals?: number;
-            uiAmount?: number | null;
-            uiAmountString?: string;
-          };
-        };
-      };
-    };
-  } | null>;
-};
-
-type TokenAccountsByOwnerResult = {
-  value?: Array<{
-    pubkey?: string;
-    account?: {
-      data?: {
-        parsed?: {
-          info?: {
-            mint?: string;
-            owner?: string;
-            tokenAmount?: {
-              amount?: string;
-              decimals?: number;
-              uiAmount?: number | null;
-              uiAmountString?: string;
-            };
-          };
-        };
-      };
-    };
-  }>;
-};
-
 type SettingsRow = {
   telegram_id: number | string;
   app_state_payload?: unknown;
@@ -117,9 +49,8 @@ type WebAuthSession = {
 
 const WEB_AUTH_COOKIE = "broke_tg_session";
 const DEFAULT_BROKE_TOKEN_MINT = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
-const DEFAULT_SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com";
-const FUTURE_HOLDER_REWARD_MIN_BALANCE = 100_000;
-const ACTIVE_STREAK_ELIGIBILITY_DAYS = 7;
+const DEFAULT_REWARD_MIN_HOLD = 100_000;
+const DEFAULT_REWARD_MIN_STREAK = 7;
 const ACTIVE_STREAK_ACTIONS: ActiveStreakProofAction[] = ["daily_routine"];
 
 function json(data: unknown, status = 200) {
@@ -272,47 +203,9 @@ async function supabaseFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-async function rpc<T>(rpcUrl: string, method: string, params: unknown[]) {
-  const response = await fetch(rpcUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: "broke-admin-holders",
-      method,
-      params,
-    }),
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`RPC HTTP ${response.status}`);
-  }
-
-  const data = (await response.json()) as SolanaRpcResponse<T>;
-
-  if (data.error) {
-    throw new Error(data.error.message || "Solana RPC error");
-  }
-
-  if (!data.result) {
-    throw new Error("Empty Solana RPC response");
-  }
-
-  return data.result;
-}
-
 function safeNumber(value: unknown, fallback = 0) {
   const parsed = Number(String(value ?? ""));
   return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function parseUiAmountString(value?: string | number | null) {
-  if (value === undefined || value === null) return 0;
-  const parsed = Number(String(value));
-  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function safeJson(value: unknown) {
@@ -461,65 +354,63 @@ function pickBestWalletByTelegramId(walletRows: WalletLinkRow[]) {
   return map;
 }
 
-async function buildTopAllHolders(args: { rpcUrl: string; mintAddress: string }) {
-  const [largest, supply] = await Promise.all([
-    rpc<TokenLargestAccountsResult>(args.rpcUrl, "getTokenLargestAccounts", [args.mintAddress]),
-    rpc<TokenSupplyResult>(args.rpcUrl, "getTokenSupply", [args.mintAddress]),
-  ]);
-  const accounts = (largest.value || []).filter((account) => account.address);
-  const tokenAccountAddresses = accounts.map((account) => String(account.address));
-  const accountDetails = tokenAccountAddresses.length
-    ? await rpc<MultipleAccountsResult>(args.rpcUrl, "getMultipleAccounts", [tokenAccountAddresses, { encoding: "jsonParsed" }])
-    : { value: [] };
-  const supplyAmount = parseUiAmountString(supply.value?.uiAmountString);
-  const owners = new Map<string, { ownerAddress: string; balance: number; tokenAccounts: string[] }>();
 
-  accounts.forEach((account, index) => {
-    const details = accountDetails.value?.[index];
-    const ownerAddress = details?.data?.parsed?.info?.owner || account.address || "unknown";
-    const amount = parseUiAmountString(
-      details?.data?.parsed?.info?.tokenAmount?.uiAmountString || account.uiAmountString || account.uiAmount
-    );
-    const current = owners.get(ownerAddress) || { ownerAddress, balance: 0, tokenAccounts: [] };
+type EligibilityRules = {
+  minHold: number;
+  minStreak: number;
+};
 
-    current.balance += amount;
-    if (account.address) current.tokenAccounts.push(String(account.address));
-    owners.set(ownerAddress, current);
-  });
-
-  return {
-    tokenSupply: supplyAmount,
-    topAllHolders: Array.from(owners.values())
-      .sort((a, b) => b.balance - a.balance)
-      .slice(0, 10)
-      .map((holder, index) => ({
-        rank: index + 1,
-        ownerAddress: holder.ownerAddress,
-        balance: Number(holder.balance.toFixed(6)),
-        percentOfSupply: supplyAmount > 0 ? Number(((holder.balance / supplyAmount) * 100).toFixed(8)) : 0,
-        tokenAccounts: holder.tokenAccounts,
-      })),
-  };
+function clampNumber(value: number, min: number, max: number, fallback: number) {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, value));
 }
 
-async function buildTreasuryBrokeBalance(args: { rpcUrl: string; mintAddress: string; ownerAddress: string }) {
-  if (!args.ownerAddress) return null;
-
-  const tokenAccounts = await rpc<TokenAccountsByOwnerResult>(args.rpcUrl, "getTokenAccountsByOwner", [
-    args.ownerAddress,
-    { mint: args.mintAddress },
-    { encoding: "jsonParsed" },
-  ]);
-
-  const balance = (tokenAccounts.value || []).reduce((sum, item) => {
-    const amount = item.account?.data?.parsed?.info?.tokenAmount;
-    return sum + parseUiAmountString(amount?.uiAmountString || amount?.uiAmount);
-  }, 0);
-
-  return Number(balance.toFixed(6));
+function parsePositiveNumber(value: string | null, fallback: number) {
+  if (!value) return fallback;
+  const parsed = Number(value.replace(/,/g, "."));
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-async function buildLegitimateHolders(snapshotDate: string) {
+function getDefaultMinHold() {
+  return clampNumber(
+    parsePositiveNumber(getOptionalEnv("BROKE_REWARD_MIN_HOLD") || getOptionalEnv("NEXT_PUBLIC_BROKE_REWARD_MIN_HOLD"), DEFAULT_REWARD_MIN_HOLD),
+    0,
+    1_000_000_000_000,
+    DEFAULT_REWARD_MIN_HOLD
+  );
+}
+
+function getDefaultMinStreak() {
+  return Math.round(
+    clampNumber(
+      parsePositiveNumber(getOptionalEnv("BROKE_REWARD_MIN_STREAK") || getOptionalEnv("NEXT_PUBLIC_BROKE_REWARD_MIN_STREAK"), DEFAULT_REWARD_MIN_STREAK),
+      0,
+      365,
+      DEFAULT_REWARD_MIN_STREAK
+    )
+  );
+}
+
+function getEligibilityRules(request: NextRequest): EligibilityRules {
+  const minHold = clampNumber(
+    parsePositiveNumber(request.nextUrl.searchParams.get("minHold"), getDefaultMinHold()),
+    0,
+    1_000_000_000_000,
+    getDefaultMinHold()
+  );
+  const minStreak = Math.round(
+    clampNumber(
+      parsePositiveNumber(request.nextUrl.searchParams.get("minStreak"), getDefaultMinStreak()),
+      0,
+      365,
+      getDefaultMinStreak()
+    )
+  );
+
+  return { minHold, minStreak };
+}
+
+async function buildLegitimateHolders(snapshotDate: string, rules: EligibilityRules) {
   const [settingsRows, walletRows, userRows] = await Promise.all([readSettingsRows(), readWalletRows(), readUserRows()]);
   const walletByTelegramId = pickBestWalletByTelegramId(walletRows);
   const userByTelegramId = new Map(userRows.map((user) => [String(user.telegram_id || ""), user]));
@@ -534,8 +425,8 @@ async function buildLegitimateHolders(snapshotDate: string) {
     const eligible = Boolean(
       wallet?.is_verified &&
         wallet.wallet_address &&
-        balance >= FUTURE_HOLDER_REWARD_MIN_BALANCE &&
-        currentStreak >= ACTIVE_STREAK_ELIGIBILITY_DAYS
+        balance >= rules.minHold &&
+        currentStreak >= rules.minStreak
     );
 
     return {
@@ -585,8 +476,8 @@ async function buildLegitimateHolders(snapshotDate: string) {
       totalVerifiedWallets: walletRows.length,
       totalEligibleHolders: eligibleParticipants.length,
       totalEligibleBalance: Number(totalEligibleBalance.toFixed(6)),
-      minHold: FUTURE_HOLDER_REWARD_MIN_BALANCE,
-      minStreak: ACTIVE_STREAK_ELIGIBILITY_DAYS,
+      minHold: rules.minHold,
+      minStreak: rules.minStreak,
     },
   };
 }
@@ -607,35 +498,10 @@ export async function GET(request: NextRequest) {
         getOptionalEnv("NEXT_PUBLIC_BROKE_TOKEN_MINT") ||
         DEFAULT_BROKE_TOKEN_MINT
     ).trim();
-    const rpcUrl = String(getOptionalEnv("SOLANA_RPC_URL") || DEFAULT_SOLANA_RPC_URL).trim();
     const treasuryWallet = getTreasuryWalletAddress();
     const snapshotDate = dayKey(new Date());
-    const [allHoldersResult, treasuryBalanceResult, legitimate] = await Promise.allSettled([
-      buildTopAllHolders({ rpcUrl, mintAddress }),
-      buildTreasuryBrokeBalance({ rpcUrl, mintAddress, ownerAddress: treasuryWallet }),
-      buildLegitimateHolders(snapshotDate),
-    ]);
-
-    if (legitimate.status !== "fulfilled") {
-      throw legitimate.reason instanceof Error ? legitimate.reason : new Error("Could not load legitimate holder data.");
-    }
-
-    const allHolders =
-      allHoldersResult.status === "fulfilled"
-        ? allHoldersResult.value
-        : { tokenSupply: null, topAllHolders: [] };
-    const allHoldersRpcError =
-      allHoldersResult.status === "rejected"
-        ? allHoldersResult.reason instanceof Error
-          ? allHoldersResult.reason.message
-          : "Solana RPC holder read failed"
-        : "";
-    const treasuryBalanceRpcError =
-      treasuryBalanceResult.status === "rejected"
-        ? treasuryBalanceResult.reason instanceof Error
-          ? treasuryBalanceResult.reason.message
-          : "Solana RPC treasury balance read failed"
-        : "";
+    const eligibilityRules = getEligibilityRules(request);
+    const legitimate = await buildLegitimateHolders(snapshotDate, eligibilityRules);
 
     return json({
       ok: true,
@@ -643,24 +509,13 @@ export async function GET(request: NextRequest) {
       generatedAt: new Date().toISOString(),
       mintAddress,
       treasuryWallet,
-      treasuryBrokeBalance: treasuryBalanceResult.status === "fulfilled" ? treasuryBalanceResult.value : null,
-      treasuryBalanceRpcError,
-      tokenSupply: allHolders.tokenSupply,
-      tokenSupplyAvailable: allHolders.tokenSupply !== null,
-      topAllHolders: allHolders.topAllHolders,
-      topAllHoldersAvailable: allHoldersResult.status === "fulfilled",
-      topLegitimateHolders: legitimate.value.topLegitimateHolders,
-      eligiblePayoutCandidates: legitimate.value.eligiblePayoutCandidates,
-      allHoldersRpcError,
-      allHoldersRpcUrl: rpcUrl,
-      rpcProviderStatus: rpcUrl === DEFAULT_SOLANA_RPC_URL ? "public_rpc" : "private_rpc",
-      summary: legitimate.value.summary,
+      topLegitimateHolders: legitimate.topLegitimateHolders,
+      eligiblePayoutCandidates: legitimate.eligiblePayoutCandidates,
+      summary: legitimate.summary,
       notes: [
-        allHoldersRpcError || treasuryBalanceRpcError
-          ? "One or more live Solana RPC reads failed. Set SOLANA_RPC_URL to a private mainnet RPC endpoint for stable holder and treasury balance reads."
-          : "Top all holders uses Solana RPC getTokenLargestAccounts and groups returned token accounts by owner where visible.",
-        "Treasury balance is a live read for the configured treasury wallet and BROKE mint; it is separate from eligible holder balance.",
-        "Top legitimate holders uses app eligibility: verified wallet, 100K+ BROKE, and 7+ Active Streak from Daily Routine proof.",
+        `Legitimate holders use admin-selected rules: verified wallet, ${eligibilityRules.minHold.toLocaleString("en-US")}+ BROKE, and ${eligibilityRules.minStreak}+ Daily Routine streak.`,
+        "This endpoint no longer performs live Solana RPC Top 10 holder reads, token supply reads, or treasury balance reads.",
+        "Balances come from the verified wallet data already stored by the app. Ask holders to recheck balance before a real reward snapshot.",
         "This endpoint is read-only. It does not send rewards, sign transactions, open claims, staking, or token transfers.",
       ],
       safety: {
