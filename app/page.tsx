@@ -1017,7 +1017,7 @@ type TelegramWebApp = {
   setHeaderColor?: (color: string) => void;
   setBackgroundColor?: (color: string) => void;
   openTelegramLink?: (url: string) => void;
-  openLink?: (url: string) => void;
+  openLink?: (url: string, options?: { try_instant_view?: boolean }) => void;
   HapticFeedback?: {
     impactOccurred?: (style: "light" | "medium" | "heavy" | "rigid" | "soft") => void;
     notificationOccurred?: (type: "error" | "success" | "warning") => void;
@@ -7674,11 +7674,26 @@ function openExternalUrl(url: string) {
   const webApp = getTelegramWebApp();
 
   if (webApp?.openLink) {
-    webApp.openLink(url);
-    return;
+    try {
+      webApp.openLink(url, { try_instant_view: false });
+      return;
+    } catch {
+      // Fall back to a normal browser navigation below.
+    }
   }
 
-  window.open(url, "_blank", "noopener,noreferrer");
+  try {
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    return;
+  } catch {
+    window.location.href = url;
+  }
 }
 
 function openTelegramUrl(url: string) {
@@ -22155,7 +22170,7 @@ function SettingsScreen({
   const [walletChecking, setWalletChecking] = useState(false);
   const [walletVerifying, setWalletVerifying] = useState(false);
   const [walletMessage, setWalletMessage] = useState("");
-  const [walletProviderHelpOpen, setWalletProviderHelpOpen] = useState(false);
+  const [, setWalletProviderHelpOpen] = useState(false);
   const [walletProviderName, setWalletProviderName] = useState("Browser check pending");
   const [walletProviderDetected, setWalletProviderDetected] = useState(false);
   const [walletProviderOptions, setWalletProviderOptions] = useState<Array<{ id: string; label: string; ready: boolean }>>([]);
@@ -22197,14 +22212,16 @@ function SettingsScreen({
     }
 
     syncWalletProviderState();
-    const timer = window.setTimeout(syncWalletProviderState, 850);
+    const timers = [250, 850, 1600, 3000].map((delay) => window.setTimeout(syncWalletProviderState, delay));
     window.addEventListener("focus", syncWalletProviderState);
     window.addEventListener("visibilitychange", syncWalletProviderState);
+    window.addEventListener("wallet-standard:register-wallet", syncWalletProviderState as EventListener);
 
     return () => {
-      window.clearTimeout(timer);
+      timers.forEach((timer) => window.clearTimeout(timer));
       window.removeEventListener("focus", syncWalletProviderState);
       window.removeEventListener("visibilitychange", syncWalletProviderState);
+      window.removeEventListener("wallet-standard:register-wallet", syncWalletProviderState as EventListener);
     };
   }, [selectedWalletProviderId]);
 
@@ -22690,6 +22707,166 @@ function SettingsScreen({
     publicKey: string;
   };
 
+  type SolanaStandardWalletAccount = {
+    address?: string;
+    publicKey?: Uint8Array;
+    chains?: string[];
+    features?: string[];
+  };
+
+  type SolanaStandardWallet = {
+    name?: string;
+    icon?: string;
+    chains?: string[];
+    accounts?: SolanaStandardWalletAccount[];
+    features?: Record<string, unknown>;
+  };
+
+  type SolanaStandardWalletRegistry = {
+    wallets: SolanaStandardWallet[];
+    api: { register: (...wallets: SolanaStandardWallet[]) => void };
+    ready: boolean;
+  };
+
+  function getStandardAccountAddress(account: SolanaStandardWalletAccount | null | undefined) {
+    if (!account) return "";
+    return account.address || "";
+  }
+
+  function getStandardSolanaAccount(wallet: SolanaStandardWallet | null | undefined) {
+    const accounts = wallet?.accounts || [];
+    return accounts.find((account) => account.chains?.some((chain) => chain.startsWith("solana:"))) || accounts[0] || null;
+  }
+
+  function getStandardFeature<T>(wallet: SolanaStandardWallet | null | undefined, key: string) {
+    return wallet?.features?.[key] as T | undefined;
+  }
+
+  function getSolanaStandardWallets() {
+    if (typeof window === "undefined") return [] as SolanaStandardWallet[];
+
+    const candidateWindow = window as unknown as Window & {
+      __brokeWalletStandardRegistry?: SolanaStandardWalletRegistry;
+      navigator: Navigator & {
+        wallets?: { push?: (...callbacks: Array<(api: SolanaStandardWalletRegistry["api"]) => void>) => void };
+      };
+    };
+
+    if (!candidateWindow.__brokeWalletStandardRegistry) {
+      const registry: SolanaStandardWalletRegistry = {
+        wallets: [],
+        ready: false,
+        api: {
+          register: (...wallets: SolanaStandardWallet[]) => {
+            wallets.forEach((wallet) => {
+              if (!wallet) return;
+              const alreadyRegistered = registry.wallets.some((item) => item === wallet || item.name === wallet.name);
+              if (!alreadyRegistered) registry.wallets.push(wallet);
+            });
+          },
+        },
+      };
+      candidateWindow.__brokeWalletStandardRegistry = registry;
+    }
+
+    const registry = candidateWindow.__brokeWalletStandardRegistry;
+
+    if (!registry.ready) {
+      registry.ready = true;
+
+      try {
+        window.addEventListener("wallet-standard:register-wallet", ((event: Event) => {
+          const detail = (event as CustomEvent<(api: SolanaStandardWalletRegistry["api"]) => void>).detail;
+          if (typeof detail === "function") detail(registry.api);
+        }) as EventListener);
+      } catch {
+        // Wallet Standard is optional. Legacy injected providers still work without it.
+      }
+
+      try {
+        const navigatorWithWallets = candidateWindow.navigator;
+        if (!navigatorWithWallets.wallets) {
+          Object.defineProperty(navigatorWithWallets, "wallets", {
+            configurable: false,
+            enumerable: false,
+            value: Object.freeze({
+              push: (...callbacks: Array<(api: SolanaStandardWalletRegistry["api"]) => void>) => {
+                callbacks.forEach((callback) => {
+                  try {
+                    callback(registry.api);
+                  } catch {
+                    // Ignore wallet registration callbacks that throw.
+                  }
+                });
+              },
+            }),
+          });
+        }
+      } catch {
+        // Some in-app browsers lock navigator properties. This is safe to ignore.
+      }
+    }
+
+    try {
+      window.dispatchEvent(new CustomEvent("wallet-standard:app-ready", { detail: registry.api }));
+    } catch {
+      // Some webviews block custom events. Direct injected providers are checked below.
+    }
+
+    return registry.wallets.filter((wallet) =>
+      (wallet.chains || []).some((chain) => chain.startsWith("solana:")) ||
+      Boolean(wallet.features?.["solana:signMessage"] || wallet.features?.["solana:signTransaction"])
+    );
+  }
+
+  function createSolanaStandardProvider(wallet: SolanaStandardWallet): SolanaWalletProvider | null {
+    const connectFeature = getStandardFeature<{
+      connect?: (input?: { silent?: boolean }) => Promise<{ accounts?: SolanaStandardWalletAccount[] } | void>;
+    }>(wallet, "standard:connect");
+    const signMessageFeature = getStandardFeature<{
+      signMessage?: (input: { account: SolanaStandardWalletAccount; message: Uint8Array }) => Promise<
+        | Uint8Array
+        | { signature?: Uint8Array }
+        | Array<{ signature?: Uint8Array }>
+      >;
+    }>(wallet, "solana:signMessage");
+
+    if (!connectFeature?.connect || !signMessageFeature?.signMessage) return null;
+
+    let activeAccount = getStandardSolanaAccount(wallet);
+    const provider = {
+      name: wallet.name || "Solana Wallet Standard",
+      isJupiter: /jupiter/i.test(wallet.name || ""),
+      get publicKey() {
+        const address = getStandardAccountAddress(activeAccount || getStandardSolanaAccount(wallet));
+        return address ? { toString: () => address } : undefined;
+      },
+      async connect() {
+        const result = await connectFeature.connect?.({ silent: false });
+        activeAccount = result?.accounts?.[0] || getStandardSolanaAccount(wallet) || activeAccount;
+        const address = getStandardAccountAddress(activeAccount);
+        return { publicKey: address ? { toString: () => address } : undefined };
+      },
+      async signMessage(message: Uint8Array) {
+        if (!activeAccount) {
+          const result = await connectFeature.connect?.({ silent: false });
+          activeAccount = result?.accounts?.[0] || getStandardSolanaAccount(wallet);
+        }
+
+        if (!activeAccount) throw new Error("Wallet Standard did not return a Solana account.");
+
+        const result = await signMessageFeature.signMessage?.({ account: activeAccount, message });
+        const signatureResult = Array.isArray(result) ? result[0] : result;
+
+        if (signatureResult instanceof Uint8Array) return signatureResult;
+        if (signatureResult?.signature) return { signature: signatureResult.signature };
+        throw new Error("Wallet Standard did not return a message signature.");
+      },
+    } satisfies SolanaWalletProvider;
+
+    return provider;
+  }
+
   function getProviderPublicKey(provider: SolanaWalletProvider | null) {
     return provider?.publicKey?.toString?.() || "";
   }
@@ -22784,6 +22961,17 @@ function SettingsScreen({
     pushSolanaWalletProvider(providers, seen, "jupiter-wallet", "Jupiter Wallet", unwrapSolanaProvider(candidateWindow.jupiterWallet));
     pushSolanaWalletProvider(providers, seen, "jupiter-solana", "Jupiter Wallet", candidateWindow.jupiterSolana);
 
+    getSolanaStandardWallets().forEach((wallet, index) => {
+      const provider = createSolanaStandardProvider(wallet);
+      pushSolanaWalletProvider(
+        providers,
+        seen,
+        `wallet-standard-${(wallet.name || "solana").toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${index}`,
+        wallet.name || "Solana Wallet Standard",
+        provider
+      );
+    });
+
     candidateWindow.solana?.providers?.forEach((provider, index) => {
       pushSolanaWalletProvider(providers, seen, `standard-${index}`, getProviderLabel(provider), provider);
     });
@@ -22830,17 +23018,19 @@ function SettingsScreen({
 
   function rescanWalletProvider() {
     const detected = syncDetectedWalletProviderState();
-    setWalletProviderHelpOpen(!detected.ready && !settings.wallet.isVerified);
+    setWalletProviderHelpOpen(false);
     setWalletMessage(
       detected.ready
         ? `${detected.label} detected. Press Verify wallet to connect and sign the ownership message.`
         : walletProviderOptions.length > 0
-          ? "Wallet found, but this browser did not expose message signing. Try another wallet browser or rescan."
-          : "No signing wallet detected here. Open this app inside a Solana wallet browser, then press Rescan provider."
+          ? "Wallet found, but this browser did not expose message signing. Use a wallet browser or paste the public address for watch-only balance."
+          : telegram.isTelegram
+            ? "No signing wallet inside Telegram. Use Open in Phantom/Solflare or copy the app link into your wallet browser."
+            : "No signing wallet was exposed by this browser. Press Rescan; if Jupiter still does not appear, use Phantom/Solflare until WalletConnect support is added."
     );
     notifyApp(
-      detected.ready ? "Wallet provider ready" : "Wallet provider not found",
-      detected.ready ? "Message signing should be available now." : "Open inside a Solana wallet browser such as Phantom, Solflare, Backpack, Jupiter Wallet, OKX, Glow, or Exodus.",
+      detected.ready ? "Wallet provider ready" : "Wallet needed",
+      detected.ready ? "Message signing should be available now." : "Telegram can show the app, but verification needs a wallet browser.",
       "info"
     );
     triggerHaptic("light");
@@ -22877,9 +23067,9 @@ function SettingsScreen({
       triggerHaptic("success");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Wallet connect failed.";
-      setWalletProviderHelpOpen(true);
-      setWalletMessage(message);
-      notifyApp("Wallet connect failed", message, "info");
+      setWalletProviderHelpOpen(false);
+      setWalletMessage(`${message} Use Open in Phantom/Solflare or copy the app link into your wallet browser.`);
+      notifyApp("Wallet not connected", "Open the app inside a wallet browser, then press Verify wallet again.", "info");
     }
   }
 
@@ -22944,9 +23134,24 @@ function SettingsScreen({
     if (!provider?.connect || !provider.signMessage) {
       setWalletProviderName(detected.label);
       setWalletProviderDetected(false);
-      setWalletProviderHelpOpen(true);
-      setWalletMessage("No signing wallet is available here. Open the app inside an installed Solana wallet browser or desktop extension, then press Verify wallet again.");
-      notifyApp("Verification needs wallet", "Watch-only balance still works. Holder unlocks need one wallet message signature.", "info");
+      setWalletProviderHelpOpen(false);
+      setWalletMessage(
+        telegram.isTelegram
+          ? "Telegram cannot verify directly. Open the app in a Solana wallet browser, or paste a public address for watch-only balance."
+          : "This browser did not expose a signing wallet. Press Rescan; if Jupiter still is not detected, use Phantom/Solflare for now or add WalletConnect/Reown support next."
+      );
+      notifyApp(
+        telegram.isTelegram ? "Open in wallet browser" : "Wallet signer not exposed",
+        telegram.isTelegram
+          ? "Tap Open Phantom/Solflare or copy the app link. No seed phrase is needed."
+          : "No signer was exposed to the app in this browser session.",
+        "info"
+      );
+
+      if (telegram.isTelegram && typeof window !== "undefined") {
+        window.setTimeout(() => openWalletBrowser("phantom"), 50);
+      }
+
       return;
     }
 
@@ -23413,7 +23618,7 @@ function SettingsScreen({
               type="button"
               className={`wallet-verify-cta ${settings.wallet.isVerified ? "verified" : ""}`}
               onClick={verifyWalletOwnership}
-              disabled={(!walletDraftLooksValid && !walletProviderDetected) || walletChecking || walletVerifying || walletStatusRefreshing}
+              disabled={walletChecking || walletVerifying || walletStatusRefreshing}
             >
               {walletVerifying
                 ? "Verifying..."
@@ -23423,7 +23628,9 @@ function SettingsScreen({
                     ? "Verified"
                     : walletProviderDetected
                       ? "Connect & verify"
-                      : "Verify wallet"}
+                      : telegram.isTelegram
+                        ? "Open wallet app"
+                        : "Verify wallet"}
             </button>
             {settings.wallet.walletAddress && !settings.wallet.isVerified && (
               <button
@@ -23450,11 +23657,21 @@ function SettingsScreen({
             </small>
           </div>
 
-          <section className={`wallet-provider-readiness-card ${walletProviderDetected ? "ready" : "missing"}`}>
+          <section className={`wallet-provider-readiness-card compact-wallet-connect-card ${walletProviderDetected ? "ready" : "missing"}`}>
             <div>
-              <span>{walletProviderDetected ? "Provider ready" : "Provider help"}</span>
-              <strong>{walletProviderStatusText}</strong>
-              <small>{walletVerificationFlowText}</small>
+              <span>{walletProviderDetected ? "Wallet ready" : telegram.isTelegram ? "Telegram mode" : "Wallet not detected"}</span>
+              <strong>
+                {walletProviderDetected
+                  ? walletProviderStatusText
+                  : "Telegram can show the app, but wallet signing must happen inside a wallet browser."}
+              </strong>
+              <small>
+                {walletProviderDetected
+                  ? walletVerificationFlowText
+                  : telegram.isTelegram
+                    ? "Use one wallet button below, or copy the app link and open it inside a wallet browser. Never paste a seed phrase."
+                    : "This browser has not exposed a signer yet. Rescan after the page loads; if Jupiter still is not detected, Phantom/Solflare are the current reliable mobile path."}
+              </small>
               {walletProviderOptions.length > 1 && (
                 <label className="wallet-provider-select">
                   <span>Selected wallet</span>
@@ -23476,34 +23693,33 @@ function SettingsScreen({
               )}
             </div>
             <div className="wallet-provider-readiness-actions">
-              <button type="button" onClick={rescanWalletProvider} disabled={walletVerifying || walletStatusRefreshing}>
-                Rescan
-              </button>
-              <button type="button" onClick={useConnectedWalletAddress} disabled={!walletProviderDetected || walletVerifying || walletStatusRefreshing}>
-                Connect address
-              </button>
+              {walletProviderDetected ? (
+                <>
+                  <button type="button" onClick={rescanWalletProvider} disabled={walletVerifying || walletStatusRefreshing}>
+                    Rescan
+                  </button>
+                  <button type="button" onClick={useConnectedWalletAddress} disabled={walletVerifying || walletStatusRefreshing}>
+                    Use wallet address
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button type="button" className="primary" onClick={() => openWalletBrowser("phantom")}>
+                    Open Phantom
+                  </button>
+                  <button type="button" onClick={() => openWalletBrowser("solflare")}>
+                    Open Solflare
+                  </button>
+                  <button type="button" onClick={copyWalletVerifyLink}>
+                    Copy link
+                  </button>
+                  <button type="button" onClick={rescanWalletProvider} disabled={walletVerifying || walletStatusRefreshing}>
+                    Rescan
+                  </button>
+                </>
+              )}
             </div>
           </section>
-
-          {walletProviderHelpOpen && !settings.wallet.isVerified && (
-            <section className="wallet-provider-help-card">
-              <div>
-                <span>Wallet provider not found</span>
-                <strong>Open inside a Solana wallet browser to verify.</strong>
-                <small>Telegram can show the app without wallet injection. Watch-only balance still works here; holder unlocks need one message signature in a wallet browser or desktop extension.</small>
-              </div>
-              <div className="wallet-provider-step-list">
-                <article><b>1</b><span>Open this app link inside a Solana wallet browser such as Phantom, Solflare, Backpack, Jupiter Wallet, OKX, Glow, Exodus, Coinbase Wallet, Brave, Trust Wallet, or another injected wallet.</span></article>
-                <article><b>2</b><span>Press Rescan. If several wallets are detected, select the one you want from the wallet list.</span></article>
-                <article><b>3</b><span>Press Verify wallet. The app connects the selected wallet, inserts the address, and asks for one text signature. No transaction, no token movement.</span></article>
-              </div>
-              <div className="wallet-provider-help-actions">
-                <button type="button" onClick={() => openWalletBrowser("phantom")}>Open Phantom</button>
-                <button type="button" onClick={() => openWalletBrowser("solflare")}>Open Solflare</button>
-                <button type="button" onClick={copyWalletVerifyLink}>Copy app link</button>
-              </div>
-            </section>
-          )}
 
           <section className={`holder-proof-dashboard ${settings.wallet.isVerified ? "verified" : "watched"}`}>
             <div className="holder-proof-dashboard-head">

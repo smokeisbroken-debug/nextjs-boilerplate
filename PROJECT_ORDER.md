@@ -1,34 +1,30 @@
-# Project Order — v59.31.1 Wallet Telegram UX Cleanup
+# Project Order — v59.31.2 Wallet Standard + Jupiter Detection Hotfix
 
 ## Patch base
 
-Apply this patch on top of v59.31.
+Apply this patch on top of v59.31.1.
 
 ## Objective
 
-Make the wallet verification area understandable inside Telegram WebView, where injected Solana wallet providers are often unavailable.
+Improve wallet detection for Jupiter and other Solana wallets that may register through Wallet Standard instead of exposing only `window.solana`.
 
 ## Implementation order
 
-1. Keep the v59.31 direct connect-and-sign verification flow for real wallet browsers/extensions.
-2. Stop auto-opening the oversized provider-help block when no provider is detected.
-3. Replace the old help block with one compact connection card.
-4. Keep only the necessary actions visible:
-   - Open Phantom
-   - Open Solflare
-   - Copy link
-   - Rescan
-5. Keep **Use wallet address** only when an actual signing provider is detected.
-6. Allow **Verify wallet** to be pressed even when Telegram has no provider, so users get a clear action instead of a disabled button.
-7. In Telegram without a provider, use Verify wallet to explain the limitation and attempt to open Phantom’s app-browser deeplink.
-8. Improve external-link opening with Telegram `openLink(..., { try_instant_view: false })` plus browser fallback.
-9. Tighten mobile wallet button CSS and reduce bottom-nav overlap.
-10. Preserve all reward, staking, payout, snapshot, and Daily Routine logic.
+1. Preserve v59.31.1 compact wallet UI and Telegram cleanup.
+2. Add a local Wallet Standard registry listener for `wallet-standard:register-wallet`.
+3. Dispatch `wallet-standard:app-ready` from the app when wallet detection runs.
+4. Support the deprecated `navigator.wallets.push(...)` compatibility path when the browser allows it.
+5. Convert registered Solana Wallet Standard wallets into the app's existing provider shape.
+6. Require both `standard:connect` and `solana:signMessage` before treating a standard wallet as ready for verification.
+7. Include standard wallets in the existing provider selector and Verify wallet flow.
+8. Add repeated delayed rescans after page load because some wallet browsers register late.
+9. Clarify non-Telegram no-provider messages so Jupiter/browser failures are not described as Telegram-only issues.
+10. Preserve all reward, payout, snapshot, Daily Routine, and backend logic.
 
 ## Non-goals
 
 - No WalletConnect/Reown integration.
-- No Jupiter Wallet Kit integration.
+- No Jupiter Wallet Kit dependency.
 - No transaction signing.
 - No SPL token transfers.
 - No treasury payout execution.

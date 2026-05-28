@@ -1,54 +1,61 @@
-# TESTING — v59.31 Wallet Connect Verify + Button Alignment Hotfix
+# Testing — v59.31.2 Wallet Standard + Jupiter Detection Hotfix
 
-## Build checks
+## Automated checks
 
 Run:
 
 ```bash
 npm run typecheck
 npm run lint:quiet
+```
+
+Optional:
+
+```bash
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-## Wallet verification checks
+## Jupiter / Wallet Standard checks
+
+Open the app inside Jupiter Mobile dApp browser and go to Profile → Wallet & $BROKE balance.
 
 Confirm:
 
-- With no address pasted but a supported wallet provider detected, **Verify wallet** is enabled.
-- Pressing **Verify wallet** opens/connects the selected wallet.
-- The wallet public address is inserted into the Profile wallet field automatically.
-- The wallet asks for a message signature only.
-- Verification succeeds after the signed message is confirmed.
-- No transaction approval appears.
-- No token movement occurs.
-- If several wallet providers are detected, changing the selector changes which wallet is used for verification.
-- If the typed address differs from the connected wallet, the connected wallet address is used and shown.
-- If no signing provider is available, the provider help card appears.
+- The app no longer relies only on direct `window.jupiter` / `window.solana` checks.
+- **Rescan** runs Wallet Standard detection again.
+- If Jupiter exposes `standard:connect` + `solana:signMessage`, it appears as a detected wallet and Verify wallet can connect/sign.
+- If Jupiter still does not expose a signer, the app shows a direct “signer not exposed” message instead of Telegram-only copy.
+- The compact wallet UI remains readable and does not restore the large old help block.
 
-## Button/layout checks
+## Other wallet browser checks
 
-Confirm on mobile width:
+Open the app inside Phantom, Solflare, Backpack, OKX, Glow, Exodus, Coinbase Wallet, Brave, Trust, Magic Eden, or another Solana wallet browser.
 
-- Wallet action buttons are not cramped or crooked.
-- Verify wallet button text wraps cleanly if needed.
-- Check balance / Connect & verify / Sync verification / Remove wallet are easy to tap.
-- Provider actions are aligned cleanly.
-- Wallet selector does not overflow the card.
+Confirm:
 
-## Non-regression checks
+- Direct injected providers still appear.
+- Wallet Standard providers can also appear in the selector.
+- **Connect & verify** opens the selected wallet and asks for one message signature.
+- Address is inserted automatically after wallet connection.
+- No token transaction is requested.
 
-Confirm v59.30 still holds:
+## Telegram WebView checks
 
-- Daily Routine does not require adding/tracking an expense.
-- Active Streak protects only after full 7/7 Daily Routine completion.
+Open the app inside Telegram mobile WebView.
+
+Confirm:
+
+- Telegram still shows only the compact wallet connection card when no provider is available.
+- **Verify wallet** is not stuck disabled.
+- Pressing **Verify wallet** inside Telegram still explains that a wallet browser is required.
+- Bottom nav does not aggressively cover wallet controls.
+
+## Regression checks
+
+Confirm unchanged:
+
+- Daily Routine remains the only Active Streak proof source.
 - Final Daily Routine task remains Share on X.
-- Track Leak, Clean Day, One Fix, Daily Challenge, copy text, Telegram share, native share, and image download do not directly protect Active Streak.
-- Growth Lab still uses base saving + redirected leaks.
-
-Confirm v59.29.1 still holds:
-
-- Phantom provider detection still works.
-- Solflare provider detection still works.
-- Backpack provider detection still works.
-- Jupiter Wallet provider detection still works when injected.
-- OKX / Glow / Exodus / Coinbase / Brave / Trust / Magic Eden / generic injected Solana provider detection remains available.
+- Rewards snapshot ledger behavior is unchanged.
+- Wallet balance watch-only mode still works by public address.
+- No payout, claim, staking, or treasury transfer flow appears.

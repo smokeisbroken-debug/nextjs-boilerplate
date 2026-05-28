@@ -1,23 +1,23 @@
-# $BROKE Life Tracker — v59.31 Wallet Connect Verify + Button Alignment Hotfix
+# $BROKE Life Tracker — v59.31.2 Wallet Standard + Jupiter Detection Hotfix
 
-Patch-only update on top of v59.30.
+Patch-only hotfix on top of v59.31.1.
 
 ## What changed
 
-- Wallet verification no longer requires manual address copy/paste when a supported Solana wallet provider is available.
-- Pressing **Verify wallet** now opens/connects the selected detected wallet, reads the public address, inserts it into Profile, requests one ownership message signature, and completes verification.
-- If several injected wallets are available, the existing wallet selector is used before verification.
-- If the typed/watched address differs from the connected wallet, verification now safely uses the connected wallet address instead of failing with a copy/paste loop.
-- Wallet copy was updated to explain the new direct flow: choose wallet → Verify wallet → sign one text message.
-- Wallet action buttons were aligned and made more stable on mobile:
-  - full-width wallet buttons on narrow screens;
-  - cleaner line wrapping;
-  - clearer verified/active verify states;
-  - provider action buttons use a consistent grid.
+- Added a lightweight Solana Wallet Standard registry listener so wallets that do not expose `window.solana` directly can still be detected when they register through `wallet-standard:register-wallet` / `wallet-standard:app-ready`.
+- Added a Wallet Standard provider wrapper for `standard:connect` + `solana:signMessage` so Verify wallet can use standard registered wallets when available.
+- Improved delayed rescans after page load: provider checks now run at 250ms, 850ms, 1600ms, and 3000ms, plus focus/visibility changes and Wallet Standard registration events.
+- Jupiter Wallet detection now has a second path: direct injected/browser shapes from v59.29.1 plus Wallet Standard registration when Jupiter exposes it through the app browser.
+- Rescan/Verify messages are clearer outside Telegram: if a wallet browser does not expose a signer, the app says that directly instead of showing Telegram-only wording.
+- The compact wallet connection UI from v59.31.1 stays in place; no large provider wall was restored.
 
-## Current wallet rule
+## Current wallet behavior
 
-Verification is still message-signature-only. No transaction is created, no token is moved, and no Treasury/payout signing is enabled in this patch.
+- Phantom/Solflare-style injected providers continue to work through the existing connect-and-sign flow.
+- Wallet Standard-compatible Solana wallets can now be detected without needing a custom global like `window.jupiter` or `window.solana`.
+- If Jupiter Mobile still does not expose a signer in the current browser session, the app cannot force a signature from it without a deeper Wallet Kit / WalletConnect setup.
+- Watch-only balance remains possible by pasting a public wallet address.
+- Seed phrase is never requested.
 
 ## What did not change
 
@@ -27,17 +27,12 @@ Verification is still message-signature-only. No transaction is created, no toke
 - No staking.
 - No token transfers.
 - No treasury signing.
-- No reward claim window.
+- No WalletConnect/Reown integration.
+- No Jupiter Wallet Kit dependency.
 - No wallet verification backend flow changes.
+- No Supabase migration required.
 - No holder threshold changes.
 - No balance formula changes.
 - No avatar backend changes.
 - No Telegram webhook changes.
-- No Supabase migration required.
-- No reward snapshot ledger schema changes.
-- No WalletConnect/Reown setup.
 - No Daily Routine / Active Streak rule changes.
-
-## Notes
-
-Telegram WebView can still hide injected wallet providers. In that case the app keeps the wallet help card and asks the user to open the app inside a Solana wallet browser or desktop extension. Where wallet injection exists, Verify wallet now handles the address automatically.

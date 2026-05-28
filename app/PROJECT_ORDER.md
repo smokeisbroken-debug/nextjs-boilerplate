@@ -1,50 +1,33 @@
-# PROJECT ORDER — v59.31 Wallet Connect Verify + Button Alignment Hotfix
+# Project Order — v59.31.2 Wallet Standard + Jupiter Detection Hotfix
 
-## Current stable base
+## Patch base
 
-Apply this patch on top of v59.30 Daily Routine No-Spend + Growth Fairness Polish.
+Apply this patch on top of v59.31.1.
 
-## Patch scope
+## Objective
 
-Files changed:
+Improve wallet detection for Jupiter and other Solana wallets that may register through Wallet Standard instead of exposing only `window.solana`.
 
-- `app/page.tsx`
-- `app/globals.css`
-- `README.md`
-- `PROJECT_ORDER.md`
-- `TESTING.md`
-- matching docs under `app/`
+## Implementation order
 
-## Implementation notes
+1. Preserve v59.31.1 compact wallet UI and Telegram cleanup.
+2. Add a local Wallet Standard registry listener for `wallet-standard:register-wallet`.
+3. Dispatch `wallet-standard:app-ready` from the app when wallet detection runs.
+4. Support the deprecated `navigator.wallets.push(...)` compatibility path when the browser allows it.
+5. Convert registered Solana Wallet Standard wallets into the app's existing provider shape.
+6. Require both `standard:connect` and `solana:signMessage` before treating a standard wallet as ready for verification.
+7. Include standard wallets in the existing provider selector and Verify wallet flow.
+8. Add repeated delayed rescans after page load because some wallet browsers register late.
+9. Clarify non-Telegram no-provider messages so Jupiter/browser failures are not described as Telegram-only issues.
+10. Preserve all reward, payout, snapshot, Daily Routine, and backend logic.
 
-### Verify wallet direct connect
+## Non-goals
 
-`verifyWalletOwnership()` now works as a direct connect-and-sign flow when a supported provider is detected:
-
-1. Sync detected wallet provider state.
-2. Connect the selected provider.
-3. Read the returned public address.
-4. Insert that address into the Profile wallet field.
-5. Request the existing nonce/message from the backend.
-6. Ask the wallet to sign the message.
-7. Confirm verification with the existing backend route.
-
-This removes the old requirement that users must paste the address before pressing Verify wallet.
-
-### Multi-wallet selector
-
-The existing selector remains active when more than one wallet provider is exposed. Verification uses the selected provider, so users can choose Phantom, Solflare, Backpack, Jupiter Wallet, OKX, Glow, Exodus, Coinbase Wallet, Brave, Trust Wallet, Magic Eden Wallet, or generic injected Solana providers when available in the browser.
-
-### Button alignment
-
-Wallet/Profile action buttons were normalized with:
-
-- stable min heights;
-- centered button text;
-- safer wrapping;
-- one-column wallet action layout on small mobile screens;
-- consistent provider action grid.
-
-## Safety boundaries
-
-This patch does not add Treasury payouts, transaction signing, token movement, WalletConnect/Reown, claims, staking, Supabase migrations, or reward execution.
+- No WalletConnect/Reown integration.
+- No Jupiter Wallet Kit dependency.
+- No transaction signing.
+- No SPL token transfers.
+- No treasury payout execution.
+- No private key storage.
+- No reward claim windows.
+- No Supabase migration.
