@@ -1,24 +1,31 @@
-# $BROKE Life Tracker — v59.29.1 Jupiter Wallet Provider Hotfix
+# $BROKE Life Tracker — v59.30 Daily Routine No-Spend + Growth Fairness Polish
 
-Patch-only hotfix on top of v59.29.
+Patch-only update on top of v59.29.1.
 
 ## What changed
 
-- Expanded Solana wallet provider detection beyond the earlier Phantom/Solflare/Backpack-focused path.
-- Added detection for multiple injected/browser Solana wallets when available, including Phantom, Solflare, Backpack, Jupiter Wallet, OKX Wallet, Bitget/BitKeep, Coinbase Wallet, Glow, Exodus, Brave Wallet, Trust Wallet, Magic Eden Wallet, and generic `window.solana` providers.
-- Added support for `window.solana.providers[]` so browsers exposing several Solana providers can show more than one option.
-- Added a wallet provider selector when multiple wallets are detected.
-- Added **Use wallet address** to connect the selected provider and paste the connected public address into Profile automatically.
-- Wallet verification still uses message signing only. No transaction is sent during verification.
-- Provider Help copy now explains the broader wallet-browser/desktop-extension flow instead of implying only Phantom/Solflare/Backpack.
-- Kept the v59.28 Daily Routine-only Active Streak rule unchanged.
+- Daily Routine no longer requires a user to add a daily expense/leak.
+- Replaced the expense-dependent Daily Routine tasks with no-spend-compatible discipline tasks:
+  - Check wallet state.
+  - Review today’s spend or confirm no extra spend.
+  - Lock one next move for the next 24h.
+- A day with no spending can now complete Daily Routine and protect Active Streak.
+- Active Streak still only activates/protects after full Daily Routine completion.
+- The final Daily Routine task remains **Share on X**.
+- Copy text, Telegram share, native share, image download, Track Leak, Clean Day, One Fix, and Daily Challenge still do not directly activate Active Streak.
+- Growth Lab now communicates the fairer formula:
+  - **Base saving + redirected leaks = goal progress**.
+- Growth Lab can now run even when no leaks are detected, using intentional base saving as the main engine and leaks as optional extra boost.
+- Growth Lab copy was adjusted so lower leaks feel like discipline, not punishment.
 
-## v59.29.1 hotfix
+## Why this patch exists
 
-- Added Jupiter Wallet to the visible supported wallet list.
-- Added Jupiter Wallet provider detection for likely injected/browser shapes such as `window.jupiter`, `window.jupiterWallet`, `window.jupiterSolana`, provider flags, provider names, and `window.solana.providers[]`.
-- Updated Provider Help, Rescan copy, and supported-wallet docs to mention Jupiter Wallet.
-- Kept verification as message-signature-only. No transaction, payout, treasury signing, WalletConnect/Reown, or token movement was added.
+Feedback showed two product issues:
+
+1. Daily Routine had an “add/track one leak” type requirement. That could punish disciplined users who had no spending that day.
+2. Growth Lab made goals depend too heavily on monthly leaks. If a user wasted less, the goal could look farther away, which felt backwards.
+
+This patch fixes both without changing reward execution, payout logic, wallet verification backend, or Supabase schema.
 
 ## What did not change
 
@@ -27,7 +34,7 @@ Patch-only hotfix on top of v59.29.
 - No claims.
 - No staking.
 - No token transfers.
-- No treasury wallet logic.
+- No treasury signing.
 - No reward claim window.
 - No wallet verification backend flow changes.
 - No holder threshold changes.
@@ -36,10 +43,8 @@ Patch-only hotfix on top of v59.29.
 - No Telegram webhook changes.
 - No Supabase migration required.
 - No reward snapshot ledger schema changes.
-- No WalletConnect/Reown project setup yet.
+- No WalletConnect/Reown setup.
 
-## Product rule after this patch
+## Current product rule
 
-Users can keep using watch-only wallet balance checks, but ownership verification can now use a broader set of Solana injected/browser wallets when the browser exposes `connect` and `signMessage`.
-
-Treasury payout signing is still not enabled. This patch only prepares broader wallet compatibility for verification and future admin treasury flows.
+Active Streak is protected only by completing the full Daily Routine. The routine can be completed on both spending days and no-spend days. Users should never need to create a fake expense to keep streak eligibility alive.

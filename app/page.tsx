@@ -802,6 +802,9 @@ type V2IdentityStats = {
 
 type DailyRoutineActionKey =
   | "openedApp"
+  | "reviewedWallet"
+  | "reviewedDay"
+  | "lockedNextMove"
   | "checkedChart"
   | "checkedSave"
   | "sharedProgress";
@@ -809,6 +812,9 @@ type DailyRoutineActionKey =
 type DailyRoutineActions = {
   date: string;
   openedApp: boolean;
+  reviewedWallet: boolean;
+  reviewedDay: boolean;
+  lockedNextMove: boolean;
   checkedChart: boolean;
   checkedSave: boolean;
   sharedProgress: boolean;
@@ -3005,6 +3011,7 @@ const ruText: Record<string, string> = {
   "Monthly leaks into a personal saving goal": "Месячные утечки в личную цель накопления",
   "Monthly Leak Plan": "Месячный план утечек",
   "Turn this month’s leaks into a real goal plan.": "Преврати утечки этого месяца в реальный план цели.",
+  "Base saving + redirected leaks = real goal progress.": "Базовое накопление + перенаправленные утечки = реальный прогресс цели.",
   "Create leak plan": "Создать план утечек",
   "Plan name": "Название плана",
   "Redirected amount": "Перенаправленная сумма",
@@ -3015,6 +3022,11 @@ const ruText: Record<string, string> = {
   "Redirected": "Перенаправлено",
   "Saved plans": "Сохранённые планы",
   "No investment assumptions here. This plan simply redirects monthly leaks toward costs or a saving goal.": "Здесь нет инвестиционных предположений. План просто перенаправляет месячные утечки в расходы или цель накопления.",
+  "Base saving": "Базовое накопление",
+  "Leak boost": "Буст от утечек",
+  "Total/month": "Всего/месяц",
+  "Base/month": "База/месяц",
+  "Leak boost/month": "Буст утечек/месяц",
   "Growth Lab: Monthly Leak Plan": "Growth Lab: месячный план утечек",
   "Growth Lab uses Monthly leaks from the current month and turns them into a simple plan. It does not talk about investing. It does not hold money. It only shows what monthly leaks could cover or help you save toward.": "Growth Lab берёт утечки этого месяца и превращает их в простой план. Он не про инвестиции и не хранит деньги. Он показывает, что месячные утечки могли бы покрыть или к какой цели помочь двигаться.",
   "This is planning only: no deposits, no custody, no staking, no investments, no guaranteed returns, and no financial advice.": "Это только планирование: без депозитов, хранения средств, стейкинга, инвестиций, гарантированной доходности и финансового совета.",
@@ -4538,6 +4550,9 @@ function getDefaultDailyRoutineActions(date: string): DailyRoutineActions {
   return {
     date,
     openedApp: false,
+    reviewedWallet: false,
+    reviewedDay: false,
+    lockedNextMove: false,
     checkedChart: false,
     checkedSave: false,
     sharedProgress: false,
@@ -10006,7 +10021,7 @@ function HelpGuideModal({
           title: "Daily Routine and streak logic",
           body: [
             "Routine tasks are meant to be real actions, not fake one-click farming.",
-            "Open the app, track expenses, mark leak type, check chart, check Rewards, and finish the final Share on X step.",
+            "Open the app, check wallet state, review today, lock one next move, check Chart, check Rewards, and finish the final Share on X step.",
             "Active Streak is protected only after the full 7/7 Daily Routine is complete.",
             "Future reward readiness uses this Daily Routine streak, not separate Rewards button taps.",
           ],
@@ -10247,7 +10262,7 @@ function HelpGuideModal({
           body: [
             "Goal name is the thing the user actually wants: phone upgrade, trip, debt payment, laptop, emergency buffer, or family support.",
             "Goal amount is the target value.",
-            "Monthly redirected amount should be realistic and based on leaks the user can actually reduce.",
+            "Monthly redirected amount should combine a realistic base saving amount plus leak boost the user can actually reduce.",
             "Currency and USD reference make the goal easier to understand globally.",
           ],
           icon: GROWTH_PUBLIC_ASSETS.trophy,
@@ -10338,9 +10353,9 @@ function HelpGuideModal({
           title: "Daily Routine proof",
           body: [
             "Open Daily Routine from Home or from the Rewards proof button.",
-            "Complete all seven real actions: open app, track expense, mark leak, add context, check Chart, check Rewards, and Share on X.",
+            "Complete all seven real actions: open app, check wallet state, review today/no-spend day, lock one next move, check Chart, check Rewards, and Share on X.",
             "When 7/7 is complete, the app logs Daily Routine proof and protects today’s Active Streak.",
-            "Track Leak, Clean Day, One Fix, and Daily Challenge can still be useful features, but they do not activate Active Streak by themselves.",
+            "Track Leak, Clean Day, One Fix, and Daily Challenge can still be useful features, but they do not activate Active Streak by themselves, and the routine never requires a fake daily expense.",
           ],
           icon: A.dailyCheck,
         },
@@ -14413,10 +14428,14 @@ function DailyRoutinePanel({
     return expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === today);
   }, [expenses, today]);
 
-  const leakMarked = todayExpenses.some((expense) => expense.needType !== "Needed");
-  const noteAdded = todayExpenses.some((expense) => expense.note.trim().length > 0);
-
-  const routineItems = [
+  const routineItems: Array<{
+    id: DailyRoutineActionKey;
+    title: string;
+    body: string;
+    icon: string;
+    done: boolean;
+    actionLabel?: string;
+  }> = [
     {
       id: "openedApp",
       title: "Open the app",
@@ -14425,45 +14444,47 @@ function DailyRoutinePanel({
       done: actions.openedApp,
     },
     {
-      id: "trackExpense",
-      title: "Track 1 expense",
-      body:
-        todayExpenses.length > 0
-          ? `${todayExpenses.length} record${todayExpenses.length === 1 ? "" : "s"} tracked today.`
-          : "Add at least one real expense today.",
-      icon: A.addFrog,
-      done: todayExpenses.length > 0,
+      id: "reviewedWallet",
+      title: "Check wallet state",
+      body: `Real balance: ${money(summary.realBalance, settings.currency)} · Wallet HP ${summary.walletHp}/100.`,
+      icon: A.walletHp,
+      done: actions.reviewedWallet,
+      actionLabel: "Checked",
     },
     {
-      id: "markLeak",
-      title: "Mark a real leak",
-      body: "Add one expense as Not needed or Maybe.",
-      icon: A.leaks,
-      done: leakMarked,
+      id: "reviewedDay",
+      title: todayExpenses.length > 0 ? "Review today’s spend" : "Confirm no extra spend",
+      body: todayExpenses.length > 0
+        ? `${todayExpenses.length} record${todayExpenses.length === 1 ? "" : "s"} today. Review the decision instead of forcing another leak.`
+        : "No spend day still counts. Confirm you had no extra wallet leak today.",
+      icon: todayExpenses.length > 0 ? A.leaks : A.dailyCheck,
+      done: actions.reviewedDay,
+      actionLabel: todayExpenses.length > 0 ? "Reviewed" : "No spend",
     },
     {
-      id: "addContext",
-      title: "Add context",
-      body: "Add a note to one expense so the habit is visible.",
-      icon: A.pencil,
-      done: noteAdded,
+      id: "lockedNextMove",
+      title: "Lock one next move",
+      body: "Choose one small discipline move for the next 24h. No spending required.",
+      icon: A.challengeTrophy,
+      done: actions.lockedNextMove,
+      actionLabel: "Locked",
     },
     {
-      id: "checkChart",
+      id: "checkedChart",
       title: "Check $BROKE Chart",
-      body: "Open the Chart tab and look at today’s damage.",
+      body: "Open the Chart tab and look at today’s wallet signal.",
       icon: A.navChart,
       done: actions.checkedChart,
     },
     {
-      id: "checkSave",
+      id: "checkedSave",
       title: "Check Rewards plan",
-      body: "Open Rewards and review one leak-cut scenario.",
+      body: "Open Rewards and review your eligibility state.",
       icon: A.navWhatIf,
       done: actions.checkedSave,
     },
     {
-      id: "publicProof",
+      id: "sharedProgress",
       title: "Share on X",
       body: "Use a Share on X button. Copy, Telegram share, or image download does not complete this task.",
       icon: A.export,
@@ -14510,7 +14531,7 @@ function DailyRoutinePanel({
         <div>
           <strong>Daily Routine is the only streak proof.</strong>
           <p>
-            Finish all 7 actions. The 7th action must be Share on X, then today’s Active Streak is protected.
+            Finish all 7 actions. A no-spend day can complete the routine; the 7th action must be Share on X, then today’s Active Streak is protected.
           </p>
         </div>
 
@@ -14538,7 +14559,7 @@ function DailyRoutinePanel({
                 }`}
           </strong>
           <span>
-            Active Streak is counted only after full Daily Routine completion. The final task must be Share on X.
+            Active Streak is counted only after full Daily Routine completion. No fake leak is required; the final task must be Share on X.
           </span>
         </div>
       </div>
@@ -14553,14 +14574,27 @@ function DailyRoutinePanel({
               <span>{item.body}</span>
             </div>
 
-            <b>{item.done ? "✓" : "—"}</b>
+            {item.actionLabel && !item.done ? (
+              <button
+                type="button"
+                className="routine-task-action"
+                onClick={() => {
+                  markDailyRoutineAction(item.id);
+                  setActions(readDailyRoutineActions(today));
+                }}
+              >
+                {item.actionLabel}
+              </button>
+            ) : (
+              <b>{item.done ? "✓" : "—"}</b>
+            )}
           </article>
         ))}
       </div>
 
       <div className="routine-rule">
         <strong>Discipline rule:</strong>
-        <span>you cannot tap tasks complete. Finish the real action; only Share on X completes the final public proof task.</span>
+        <span>No-spend days are valid. The routine never requires adding a fake leak; only the final public proof task must be completed through Share on X.</span>
       </div>
     </section>
   );
@@ -19060,6 +19094,7 @@ function GrowthLabScreen({
   const [title, setTitle] = useState("Monthly Leak Plan");
   const [startingAmount, setStartingAmount] = useState("0");
   const [contributionAmount, setContributionAmount] = useState("25");
+  const [baseSavingAmount, setBaseSavingAmount] = useState("0");
   const [contributionFrequency, setContributionFrequency] = useState<GrowthFrequency>("weekly");
   const [durationMonths, setDurationMonths] = useState("12");
   const [expectedAnnualGrowth, setExpectedAnnualGrowth] = useState("0");
@@ -19183,7 +19218,7 @@ function GrowthLabScreen({
       normalizeGrowthSimulation({
         title,
         startingAmount: safeNumber(startingAmount),
-        contributionAmount: safeNumber(contributionAmount),
+        contributionAmount: safeNumber(contributionAmount) + safeNumber(baseSavingAmount),
         contributionFrequency,
         durationMonths: safeNumber(durationMonths),
         expectedAnnualGrowth: safeNumber(expectedAnnualGrowth),
@@ -19194,6 +19229,7 @@ function GrowthLabScreen({
       title,
       startingAmount,
       contributionAmount,
+      baseSavingAmount,
       contributionFrequency,
       durationMonths,
       expectedAnnualGrowth,
@@ -19206,6 +19242,8 @@ function GrowthLabScreen({
   const finalPoint = points[points.length - 1];
   const cases = useMemo(() => getGrowthCases(preview), [preview]);
   const monthlyContribution = monthlyGrowthContribution(preview);
+  const monthlyLeakBoost = safeNumber(contributionAmount) * growthFrequencyMultiplier(contributionFrequency);
+  const monthlyBaseSaving = safeNumber(baseSavingAmount) * growthFrequencyMultiplier(contributionFrequency);
   const bars = points.filter((point) => point.month > 0).slice(-6);
   const maxBar = Math.max(...bars.map((point) => point.balance), 1);
   const lifeMeaningItems = useMemo(
@@ -19376,7 +19414,21 @@ function GrowthLabScreen({
     setTitle(topLeak ? `${topLeak.category} Monthly Leak Plan` : "Monthly Leak Plan");
     setStartingAmount("0");
     setContributionFrequency("monthly");
-    setContributionAmount(String(leakAmount > 0 ? monthlyLeak : 25));
+    setContributionAmount(String(monthlyLeak));
+    setBaseSavingAmount((current) => current || "0");
+    setDurationMonths("12");
+    setExpectedAnnualGrowth("0");
+    setRiskLevel("low");
+    setReinvest(false);
+    triggerHaptic("success");
+  }
+
+  function useBaseSavingOnly() {
+    setTitle("Base Saving Plan");
+    setStartingAmount("0");
+    setContributionFrequency("monthly");
+    setContributionAmount("0");
+    setBaseSavingAmount((current) => current && safeNumber(current) > 0 ? current : "25");
     setDurationMonths("12");
     setExpectedAnnualGrowth("0");
     setRiskLevel("low");
@@ -19540,9 +19592,9 @@ function GrowthLabScreen({
       <section className="growth-hero-card">
         <div>
           <span>Monthly Leak Plan</span>
-          <h2>Turn this month’s leaks into a real goal plan.</h2>
+          <h2>Base saving + redirected leaks = real goal progress.</h2>
           <p>
-            Planning only. No real funds, no custody, no staking, and no investments.
+            Leaks are the boost, not the whole engine. Lower leaks should make the user look disciplined, not farther from the goal.
           </p>
         </div>
         <img
@@ -19593,13 +19645,13 @@ function GrowthLabScreen({
           <strong>{money(leakAmount, settings.currency)}</strong>
           <p>
             {topLeak
-              ? `Biggest leak: ${categoryLabel(topLeak.category)}`
-              : "No leaks yet. Add expenses to create a real plan."}
+              ? `Biggest leak boost: ${categoryLabel(topLeak.category)}`
+              : "No leaks detected. Use intentional saving as the base and leaks as optional extra boost."}
           </p>
         </div>
 
-        <button type="button" onClick={leakAmount > 0 ? useMyLeaks : onOpenAdd}>
-          {leakAmount > 0 ? "Use detected leaks" : "Track first leak"}
+        <button type="button" onClick={leakAmount > 0 ? useMyLeaks : useBaseSavingOnly}>
+          {leakAmount > 0 ? "Use detected leaks" : "Use base saving"}
         </button>
       </section>
 
@@ -19614,16 +19666,15 @@ function GrowthLabScreen({
               }}
             />
             <div>
-              <span>Growth Lab needs one real leak</span>
-              <strong>No leaks detected yet.</strong>
+              <span>Growth Lab can run without a leak</span>
+              <strong>No leaks detected. That is good behavior.</strong>
               <p>
-                Add one Not needed or Maybe expense first. Then Growth Lab can turn
-                that leak into a realistic plan.
+                Add a base monthly saving amount below. If leaks appear later, they become an extra boost instead of the whole plan.
               </p>
             </div>
           </div>
-          <button type="button" className="v58-empty-primary" onClick={onOpenAdd}>
-            Add first leak
+          <button type="button" className="v58-empty-primary" onClick={useBaseSavingOnly}>
+            Use base saving
           </button>
         </section>
       )}
@@ -19650,7 +19701,16 @@ function GrowthLabScreen({
           </label>
 
           <label className="growth-field">
-            <span>Redirected amount</span>
+            <span>Base saving</span>
+            <input
+              inputMode="decimal"
+              value={baseSavingAmount}
+              onChange={(event) => setBaseSavingAmount(event.target.value)}
+            />
+          </label>
+
+          <label className="growth-field">
+            <span>Leak boost</span>
             <input
               inputMode="decimal"
               value={contributionAmount}
@@ -19685,7 +19745,7 @@ function GrowthLabScreen({
         </div>
 
         <p className="growth-plan-note">
-          No investment assumptions here. This plan simply redirects monthly leaks toward costs or a saving goal.
+          No investment assumptions here. Goal progress is base saving plus optional redirected leaks, so lower leaks do not make the plan look worse.
         </p>
       </section>
 
@@ -19706,7 +19766,15 @@ function GrowthLabScreen({
           </div>
 
           <div>
-            <span>Redirected/month</span>
+            <span>Base/month</span>
+            <strong>{money(monthlyBaseSaving, settings.currency)}</strong>
+          </div>
+          <div>
+            <span>Leak boost/month</span>
+            <strong>{money(monthlyLeakBoost, settings.currency)}</strong>
+          </div>
+          <div>
+            <span>Total/month</span>
             <strong>{money(monthlyContribution, settings.currency)}</strong>
           </div>
         </div>
@@ -19943,7 +20011,7 @@ function GrowthLabScreen({
                   {activeGoalUsdNote && <small className="usd-reference-note">{activeGoalUsdNote}</small>}
                 </div>
                 <div>
-                  <span>Redirected/month</span>
+                  <span>Total/month</span>
                   <strong>{money(monthlyContribution, settings.currency)}</strong>
                 </div>
               </div>
@@ -19953,7 +20021,7 @@ function GrowthLabScreen({
               </div>
 
               <p>
-                If you redirect your leaks into this goal, you could reach it in{" "}
+                With base saving plus redirected leak boost, you could reach it in{" "}
                 <strong>{formatGoalTime(goalMonths)}</strong>.
               </p>
             </section>

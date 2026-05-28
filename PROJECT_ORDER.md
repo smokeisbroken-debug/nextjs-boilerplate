@@ -1,42 +1,57 @@
-# PROJECT ORDER — v59.29.1 Jupiter Wallet Provider Hotfix
+# PROJECT ORDER — v59.30 Daily Routine No-Spend + Growth Fairness Polish
 
-## Current patch
+## Current stable base
 
-v59.29 broadens Solana wallet support before building treasury-funded payouts. The app no longer treats Phantom as the only practical signer path.
+Apply this patch on top of v59.29.1 Jupiter Wallet Provider Hotfix.
 
-## Files changed
+## Patch scope
+
+Files changed:
 
 - `app/page.tsx`
 - `app/globals.css`
+- `app/api/broke/route.ts`
 - `README.md`
 - `PROJECT_ORDER.md`
 - `TESTING.md`
-- `app/README.md`
-- `app/PROJECT_ORDER.md`
-- `app/TESTING.md`
+- matching docs under `app/`
 
-## Product order
+## Implementation notes
 
-1. Daily Routine remains the only Active Streak proof path.
-2. Rewards and snapshot eligibility stay unchanged.
-3. Wallet verification supports a broader injected-provider layer.
-4. If several Solana wallets are detected, the user can select one.
-5. The selected wallet can paste its connected public address into Profile.
-6. Verification still requires a signed text message only.
-7. Future treasury payout work should reuse this provider selector for admin signing, but not store private keys in the app.
+### Daily Routine
 
-## Supported provider path
+Daily Routine now uses no-spend-compatible actions:
 
-The app now checks for common Solana injected/browser providers including Phantom, Solflare, Backpack, OKX Wallet, Bitget/BitKeep, Coinbase Wallet, Glow, Exodus, Brave Wallet, Trust Wallet, Magic Eden Wallet, `window.solana.providers[]`, and generic `window.solana`.
+1. Open the app.
+2. Check wallet state.
+3. Review today’s spend or confirm no extra spend.
+4. Lock one next move.
+5. Check Chart.
+6. Check Rewards.
+7. Share on X.
 
-## Safety line
+The full 7/7 completion is still the only source of `daily_routine` Active Streak proof.
 
-This patch is wallet-compatibility UI/client logic only. It does not activate payouts, claims, staking, token transfers, Creator Fee distribution, treasury transfers, or reward execution.
+### App-state sync
 
-## v59.29.1 Jupiter Wallet Provider Hotfix
+`dailyRoutineActions` now includes:
 
-Scope: small wallet compatibility hotfix on top of v59.29.
+- `reviewedWallet`
+- `reviewedDay`
+- `lockedNextMove`
 
-- Add Jupiter Wallet to supported wallet detection and visible help copy.
-- Keep the broader v59.29 wallet selector and Use wallet address behavior.
-- Do not add payout execution, treasury signing, WalletConnect/Reown, token transfers, staking, claims, or Supabase migrations.
+The server app-state normalizer was updated so these fields can sync instead of being dropped.
+
+### Growth Lab
+
+Growth Lab now separates:
+
+- base saving;
+- leak boost;
+- total monthly goal progress.
+
+This prevents the wrong impression that fewer leaks make the goal harder. If no leaks are detected, the user can still create a base-saving plan.
+
+## Safety boundaries
+
+This patch does not enable treasury payouts or token movement. It is a product logic and UX correction only.

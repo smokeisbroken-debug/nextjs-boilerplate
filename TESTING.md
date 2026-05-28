@@ -1,4 +1,4 @@
-# TESTING — v59.29.1 Jupiter Wallet Provider Hotfix
+# TESTING — v59.30 Daily Routine No-Spend + Growth Fairness Polish
 
 ## Build checks
 
@@ -10,44 +10,64 @@ npm run lint:quiet
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-## Wallet provider checks
+## Daily Routine checks
 
 Confirm:
 
-- Jupiter Wallet appears in supported wallet help/copy.
-- Jupiter Wallet can be detected if the browser injects a Jupiter Solana provider through `window.jupiter`, `window.jupiterWallet`, `window.jupiterSolana`, provider flags/names, or `window.solana.providers[]`.
+- Daily Routine does not ask the user to add/track one expense as a required task.
+- A day with no expenses can still reach 7/7 Daily Routine completion.
+- Check wallet state can be marked from Daily Routine.
+- Confirm no extra spend / review today’s spend can be marked from Daily Routine.
+- Lock one next move can be marked from Daily Routine.
+- Chart task still completes by opening/checking Chart.
+- Rewards task still completes by opening/checking Rewards.
+- Final Daily Routine task still requires Share on X.
+- Completing all 7 Daily Routine actions records `daily_routine` proof.
+- Active Streak does not protect today before full 7/7 completion.
 
-- Profile still opens normally.
-- Existing pasted wallet address flow still works.
-- Check $BROKE balance still works as watch-only.
-- Rescan provider still works when no wallet is injected.
-- Provider Help appears when no signing provider is available.
-- In Phantom browser/extension, provider is detected and Verify wallet can request a message signature.
-- In Solflare browser/extension, provider is detected and Verify wallet can request a message signature.
-- In Backpack browser/extension, provider is detected when injected and Verify wallet can request a message signature.
-- In Jupiter Wallet browser/extension, provider is detected when injected and Verify wallet can request a message signature.
-- If the browser exposes multiple Solana providers, the provider selector appears.
-- Selecting a provider changes the wallet used for verification.
-- Use wallet address connects the selected provider and pastes the connected public address.
-- Verification rejects if the connected wallet address does not match the pasted address.
+## Active Streak non-regression checks
 
-## Daily Routine / Rewards checks
-
-Confirm v59.28 rules still hold:
+Confirm:
 
 - Track Leak does not directly protect Active Streak.
 - Mark Clean Day does not directly protect Active Streak.
 - One Fix does not directly protect Active Streak.
 - Daily Challenge does not directly protect Active Streak.
-- Completing all 7 Daily Routine actions records Daily Routine proof.
-- The final Daily Routine action is completed only by Share on X.
+- Copy text, Telegram share, native share, and image download do not complete the final public proof task.
+- Share on X completes the final public proof task.
+- Streak breaks only when the full Daily Routine is not completed for the day.
 
-## Non-regression checks
+## Growth Lab checks
+
+Confirm:
+
+- Growth Lab hero explains base saving + leak boost.
+- If no leaks are detected, Growth Lab does not block the user or demand a fake leak.
+- Use base saving sets a base-saving plan.
+- Use detected leaks still fills the leak boost from detected monthly leaks.
+- Result card shows base/month, leak boost/month, and total/month.
+- Personal goal time uses the combined monthly total.
+
+## Wallet/provider non-regression checks
+
+Confirm v59.29.1 still holds:
+
+- Phantom provider detection still works.
+- Solflare provider detection still works.
+- Backpack provider detection still works.
+- Jupiter Wallet provider detection still works when injected.
+- Multi-provider selector still works when several Solana providers are exposed.
+- Use wallet address still connects selected provider and fills the public address.
+- Wallet verification remains message-signature-only.
+
+## General non-regression checks
 
 Confirm existing flows still work:
 
 - expense save/delete;
-- Daily Routine checklist;
+- Home display;
+- Chart display;
+- Rewards overview;
 - share cards;
 - wallet verification display;
 - reward snapshot ledger display;

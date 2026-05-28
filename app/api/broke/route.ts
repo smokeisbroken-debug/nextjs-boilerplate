@@ -170,6 +170,9 @@ type ProfileShareSettings = {
 type DailyRoutineActions = {
   date: string;
   openedApp: boolean;
+  reviewedWallet: boolean;
+  reviewedDay: boolean;
+  lockedNextMove: boolean;
   checkedChart: boolean;
   checkedSave: boolean;
   sharedProgress: boolean;
@@ -1409,6 +1412,9 @@ function normalizeDailyRoutineActions(input?: Partial<DailyRoutineActions> | nul
   return {
     date: String(input.date),
     openedApp: Boolean(input.openedApp),
+    reviewedWallet: Boolean(input.reviewedWallet),
+    reviewedDay: Boolean(input.reviewedDay),
+    lockedNextMove: Boolean(input.lockedNextMove),
     checkedChart: Boolean(input.checkedChart),
     checkedSave: Boolean(input.checkedSave),
     sharedProgress: Boolean(input.sharedProgress),
