@@ -1,23 +1,38 @@
-# $BROKE Life Tracker — v59.31.2 Wallet Standard + Jupiter Detection Hotfix
+# $BROKE Life Tracker — v59.32 Private Admin Treasury Panel Foundation
 
-Patch-only hotfix on top of v59.31.1.
+Patch-only update on top of confirmed v59.31.2.
 
 ## What changed
 
-- Added a lightweight Solana Wallet Standard registry listener so wallets that do not expose `window.solana` directly can still be detected when they register through `wallet-standard:register-wallet` / `wallet-standard:app-ready`.
-- Added a Wallet Standard provider wrapper for `standard:connect` + `solana:signMessage` so Verify wallet can use standard registered wallets when available.
-- Improved delayed rescans after page load: provider checks now run at 250ms, 850ms, 1600ms, and 3000ms, plus focus/visibility changes and Wallet Standard registration events.
-- Jupiter Wallet detection now has a second path: direct injected/browser shapes from v59.29.1 plus Wallet Standard registration when Jupiter exposes it through the app browser.
-- Rescan/Verify messages are clearer outside Telegram: if a wallet browser does not expose a signer, the app says that directly instead of showing Telegram-only wording.
-- The compact wallet connection UI from v59.31.1 stays in place; no large provider wall was restored.
+- Added a hidden Profile-side **Admin Panel** surface for future Treasury / Reward Distribution controls.
+- The Admin Panel is not rendered for normal users.
+- Admin visibility can be unlocked only by configured Telegram admin IDs or configured verified admin wallet addresses.
+- Added Treasury status preview:
+  - expected treasury public address;
+  - connected verified wallet;
+  - treasury match / different wallet / not configured;
+  - payout mode remains off.
+- Public Rewards wording was cleaned up so normal users see project/snapshot language instead of internal admin wording.
+- No public nav item or public Rewards admin block was added.
 
-## Current wallet behavior
+## Admin config
 
-- Phantom/Solflare-style injected providers continue to work through the existing connect-and-sign flow.
-- Wallet Standard-compatible Solana wallets can now be detected without needing a custom global like `window.jupiter` or `window.solana`.
-- If Jupiter Mobile still does not expose a signer in the current browser session, the app cannot force a signature from it without a deeper Wallet Kit / WalletConnect setup.
-- Watch-only balance remains possible by pasting a public wallet address.
-- Seed phrase is never requested.
+Use public addresses/IDs only. Do not store seed phrases or private keys.
+
+Recommended Vercel env values:
+
+```bash
+NEXT_PUBLIC_TREASURY_WALLET_ADDRESS=<treasury public wallet address>
+NEXT_PUBLIC_BROKE_ADMIN_TELEGRAM_IDS=<comma-separated Telegram user IDs>
+NEXT_PUBLIC_BROKE_ADMIN_WALLET_ADDRESSES=<comma-separated verified admin wallet addresses>
+```
+
+Notes:
+
+- `NEXT_PUBLIC_TREASURY_WALLET_ADDRESS` is a public address and is safe to show shortened in the admin UI.
+- `NEXT_PUBLIC_BROKE_ADMIN_TELEGRAM_IDS` controls whether the private panel appears for specific Telegram/web-auth users.
+- `NEXT_PUBLIC_BROKE_ADMIN_WALLET_ADDRESSES` lets verified admin wallets unlock the panel.
+- Real admin API calls still must use server-side secrets such as `REWARDS_ADMIN_SECRET`. Client visibility is not a replacement for backend authorization.
 
 ## What did not change
 

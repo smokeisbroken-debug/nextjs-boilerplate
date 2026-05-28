@@ -979,6 +979,19 @@ type WebAuthState = {
   user: TelegramUser | null;
 };
 
+type AdminAccessState = {
+  canSeePanel: boolean;
+  sourceLabel: string;
+  telegramId: string;
+  connectedWallet: string;
+  treasuryWallet: string;
+  walletAllowed: boolean;
+  treasuryMatched: boolean;
+  telegramAllowed: boolean;
+  treasuryConfigured: boolean;
+  walletConfigured: boolean;
+};
+
 type CloudStatus = "local" | "syncing" | "cloud" | "error";
 
 type BrokeApiResponse = {
@@ -1043,6 +1056,15 @@ const TELEGRAM_WEB_APP_SCRIPT = "https://telegram.org/js/telegram-web-app.js";
 const TELEGRAM_LOGIN_SCRIPT = "https://telegram.org/js/telegram-widget.js?22";
 const TELEGRAM_BOT_USERNAME =
   process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "BrokeLifeTrackerBot";
+const TREASURY_WALLET_ADDRESS = (process.env.NEXT_PUBLIC_TREASURY_WALLET_ADDRESS || "").trim();
+const ADMIN_TELEGRAM_IDS = parseAdminCsv(
+  process.env.NEXT_PUBLIC_BROKE_ADMIN_TELEGRAM_IDS || process.env.NEXT_PUBLIC_ADMIN_TELEGRAM_IDS || ""
+);
+const ADMIN_WALLET_ADDRESSES = parseAdminCsv(
+  [process.env.NEXT_PUBLIC_BROKE_ADMIN_WALLET_ADDRESSES || "", TREASURY_WALLET_ADDRESS]
+    .filter(Boolean)
+    .join(",")
+);
 
 const emptyTelegramState: TelegramState = {
   isTelegram: false,
@@ -3572,6 +3594,51 @@ function compactWalletAddress(value: string) {
   const trimmed = value.trim();
   if (trimmed.length <= 12) return trimmed || "Not linked";
   return `${trimmed.slice(0, 4)}…${trimmed.slice(-4)}`;
+}
+
+function parseAdminCsv(value: string) {
+  return value
+    .split(/[\s,;]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function walletAddressEquals(a: string, b: string) {
+  return a.trim() !== "" && b.trim() !== "" && a.trim() === b.trim();
+}
+
+function getAdminAccessState(telegram: TelegramState, webAuth: WebAuthState, settings: Settings): AdminAccessState {
+  const telegramUser = telegram.user || webAuth.user;
+  const telegramId = telegramUser?.id ? String(telegramUser.id) : "";
+  const telegramAllowed = Boolean(telegramId && ADMIN_TELEGRAM_IDS.includes(telegramId));
+  const connectedWallet = settings.wallet.isVerified ? settings.wallet.walletAddress.trim() : "";
+  const walletAllowed = Boolean(
+    connectedWallet && ADMIN_WALLET_ADDRESSES.some((address) => walletAddressEquals(address, connectedWallet))
+  );
+  const treasuryMatched = Boolean(
+    connectedWallet && TREASURY_WALLET_ADDRESS && walletAddressEquals(TREASURY_WALLET_ADDRESS, connectedWallet)
+  );
+  const canSeePanel = telegramAllowed || walletAllowed || treasuryMatched;
+  const sourceLabel = telegramAllowed
+    ? "Telegram admin"
+    : treasuryMatched
+      ? "Treasury wallet"
+      : walletAllowed
+        ? "Admin wallet"
+        : "Hidden";
+
+  return {
+    canSeePanel,
+    sourceLabel,
+    telegramId,
+    connectedWallet,
+    treasuryWallet: TREASURY_WALLET_ADDRESS,
+    walletAllowed,
+    treasuryMatched,
+    telegramAllowed,
+    treasuryConfigured: Boolean(TREASURY_WALLET_ADDRESS),
+    walletConfigured: ADMIN_WALLET_ADDRESSES.length > 0,
+  };
 }
 
 function formatTokenAmount(value: number, mode: "compact" | "full" = "compact") {
@@ -10427,10 +10494,10 @@ function HelpGuideModal({
         {
           title: "Reward Snapshot Ledger",
           body: [
-            "The snapshot ledger is the future admin record of who was eligible at a specific moment.",
+            "The snapshot ledger is the future project record of who was eligible at a specific moment.",
             "It records verified wallet, verified $BROKE balance, active streak days, eligibility reason, and balance-share percentage.",
             "It does not send tokens, open claims, create staking, or distribute Creator Fee by itself.",
-            "Final share is locked only when an admin snapshot is run for an active reward epoch.",
+            "Final share is locked only when a reward epoch snapshot is run.",
           ],
           icon: A.calendar,
         },
@@ -12318,7 +12385,7 @@ function RewardSnapshotLedgerCard({
     <section className={`reward-snapshot-ledger-card ${snapshotReady ? "ready" : "building"}`}>
       <div className="section-title compact-title">
         <span>Reward Snapshot Ledger</span>
-        <small>Admin snapshot foundation. No payout or claim active.</small>
+        <small>Project snapshot foundation. No payout or claim active.</small>
       </div>
       <div className="reward-snapshot-ledger-grid">
         <article>
@@ -22099,6 +22166,92 @@ function WhatIfScreen({
   );
 }
 
+function AdminTreasuryPanel({
+  access,
+  wallet,
+  activeProofStatus,
+}: {
+  access: AdminAccessState;
+  wallet: WalletLinkSettings;
+  activeProofStatus: ActiveStreakProofStatus;
+}) {
+  const treasuryStatus = !access.treasuryConfigured
+    ? "Treasury address not configured"
+    : access.treasuryMatched
+      ? "Treasury matched"
+      : access.connectedWallet
+        ? "Different wallet connected"
+        : "Connect treasury wallet";
+  const treasuryDetail = !access.treasuryConfigured
+    ? "Set NEXT_PUBLIC_TREASURY_WALLET_ADDRESS in Vercel to show the expected treasury address here."
+    : access.treasuryMatched
+      ? "This verified wallet matches the configured treasury address."
+      : access.connectedWallet
+        ? "Admin panel is visible, but future payout signing should require the configured treasury wallet."
+        : "Admin panel is visible by Telegram/admin access. Connect and verify the treasury wallet before future payout signing.";
+  const readinessItems = [
+    { label: "Panel visibility", value: "Admin only", detail: `Unlocked by ${access.sourceLabel}.` },
+    { label: "Treasury status", value: treasuryStatus, detail: treasuryDetail },
+    { label: "Connected wallet", value: access.connectedWallet ? compactWalletAddress(access.connectedWallet) : "Not connected", detail: wallet.isVerified ? "Verified message signature proof." : "Wallet must be verified before it can be treated as treasury-ready." },
+    { label: "Reward payouts", value: "Off", detail: "This version does not send tokens, open claims, or sign payout transactions." },
+  ];
+
+  return (
+    <details className="admin-treasury-panel profile-compact-details" open>
+      <summary className="profile-compact-summary admin-treasury-summary">
+        <div>
+          <span>Admin Panel</span>
+          <strong>Treasury foundation</strong>
+          <small>Hidden from normal users. No payout buttons are public.</small>
+        </div>
+        <b>{access.treasuryMatched ? "Ready" : "Private"}</b>
+      </summary>
+      <div className="profile-compact-body admin-treasury-body">
+        <section className="admin-treasury-hero">
+          <div>
+            <span>Private project controls</span>
+            <strong>{access.treasuryMatched ? "Treasury wallet confirmed" : "Admin access confirmed"}</strong>
+            <p>
+              This block is rendered only for configured Telegram admins or verified admin wallets.
+              Public users still see only the normal Profile and Rewards screens.
+            </p>
+          </div>
+          <b>{access.sourceLabel}</b>
+        </section>
+
+        <div className="admin-treasury-grid">
+          {readinessItems.map((item) => (
+            <article key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </article>
+          ))}
+        </div>
+
+        <section className="admin-treasury-address-card">
+          <div>
+            <span>Expected treasury wallet</span>
+            <strong>{access.treasuryWallet ? compactWalletAddress(access.treasuryWallet) : "Not configured"}</strong>
+            <small>Only the public address belongs in config. Never store a seed phrase or private key.</small>
+          </div>
+          <div>
+            <span>Snapshot eligibility</span>
+            <strong>{activeProofStatus.currentStreak}d streak logic</strong>
+            <small>Eligibility stays public-rule based: verified holder + minimum hold + 7+ Daily Routine streak.</small>
+          </div>
+        </section>
+
+        <div className="admin-treasury-warning">
+          <b>No private key stored</b>
+          <span>Future distributions should still require server admin authorization plus manual wallet signing. This panel only prepares the private admin surface.</span>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+
 function SettingsScreen({
   settings,
   setSettings,
@@ -22178,6 +22331,10 @@ function SettingsScreen({
   const [walletStatusRefreshing, setWalletStatusRefreshing] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState("");
+  const adminAccess = useMemo(
+    () => getAdminAccessState(telegram, webAuth, settings),
+    [telegram.user?.id, webAuth.user?.id, settings.wallet.walletAddress, settings.wallet.isVerified]
+  );
 
   useEffect(() => {
     setRepairCurrency(settings.currency);
@@ -23846,6 +24003,14 @@ function SettingsScreen({
           {walletMessage && <p className="wallet-balance-message">{walletMessage}</p>}
           </div>
         </details>
+
+        {adminAccess.canSeePanel && (
+          <AdminTreasuryPanel
+            access={adminAccess}
+            wallet={settings.wallet}
+            activeProofStatus={activeProofStatus}
+          />
+        )}
 
         <details className="profile-share-studio-card profile-compact-details">
           <summary className="profile-compact-summary share-studio-compact-summary">

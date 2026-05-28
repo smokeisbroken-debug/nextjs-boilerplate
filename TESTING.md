@@ -1,4 +1,4 @@
-# Testing — v59.31.2 Wallet Standard + Jupiter Detection Hotfix
+# Testing — v59.32 Private Admin Treasury Panel Foundation
 
 ## Automated checks
 
@@ -15,40 +15,38 @@ Optional:
 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-## Jupiter / Wallet Standard checks
+## Admin visibility checks
 
-Open the app inside Jupiter Mobile dApp browser and go to Profile → Wallet & $BROKE balance.
+With no admin env variables configured:
 
-Confirm:
+- Open Profile.
+- Confirm no Admin Panel is visible.
+- Confirm normal users still see Wallet, Share Studio, Privacy, Settings, and other normal Profile sections.
 
-- The app no longer relies only on direct `window.jupiter` / `window.solana` checks.
-- **Rescan** runs Wallet Standard detection again.
-- If Jupiter exposes `standard:connect` + `solana:signMessage`, it appears as a detected wallet and Verify wallet can connect/sign.
-- If Jupiter still does not expose a signer, the app shows a direct “signer not exposed” message instead of Telegram-only copy.
-- The compact wallet UI remains readable and does not restore the large old help block.
+With `NEXT_PUBLIC_BROKE_ADMIN_TELEGRAM_IDS` containing the current Telegram/web-auth user ID:
 
-## Other wallet browser checks
+- Open Profile.
+- Confirm Admin Panel appears.
+- Confirm it shows Admin access confirmed and payout mode Off.
 
-Open the app inside Phantom, Solflare, Backpack, OKX, Glow, Exodus, Coinbase Wallet, Brave, Trust, Magic Eden, or another Solana wallet browser.
+With `NEXT_PUBLIC_TREASURY_WALLET_ADDRESS` and/or `NEXT_PUBLIC_BROKE_ADMIN_WALLET_ADDRESSES` configured:
 
-Confirm:
+- Verify the matching wallet in Profile.
+- Confirm Admin Panel appears for the verified matching admin wallet.
+- Confirm the treasury status says Treasury matched when the verified wallet equals `NEXT_PUBLIC_TREASURY_WALLET_ADDRESS`.
+- Confirm a different wallet does not show treasury matched.
 
-- Direct injected providers still appear.
-- Wallet Standard providers can also appear in the selector.
-- **Connect & verify** opens the selected wallet and asks for one message signature.
-- Address is inserted automatically after wallet connection.
-- No token transaction is requested.
+## Public Rewards checks
 
-## Telegram WebView checks
-
-Open the app inside Telegram mobile WebView.
+Open Rewards as a normal user.
 
 Confirm:
 
-- Telegram still shows only the compact wallet connection card when no provider is available.
-- **Verify wallet** is not stuck disabled.
-- Pressing **Verify wallet** inside Telegram still explains that a wallet browser is required.
-- Bottom nav does not aggressively cover wallet controls.
+- No Admin Panel is visible.
+- No payout button is visible.
+- No claim button is visible.
+- No treasury signing button is visible.
+- Reward Snapshot Ledger uses public project/snapshot wording.
 
 ## Regression checks
 
@@ -56,6 +54,7 @@ Confirm unchanged:
 
 - Daily Routine remains the only Active Streak proof source.
 - Final Daily Routine task remains Share on X.
-- Rewards snapshot ledger behavior is unchanged.
-- Wallet balance watch-only mode still works by public address.
-- No payout, claim, staking, or treasury transfer flow appears.
+- Wallet Standard/Jupiter detection from v59.31.2 still works.
+- Watch-only wallet balance still works.
+- Connect & verify still requests only one message signature.
+- No token transaction is requested.

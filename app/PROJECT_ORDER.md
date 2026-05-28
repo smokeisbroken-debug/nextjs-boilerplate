@@ -1,33 +1,32 @@
-# Project Order — v59.31.2 Wallet Standard + Jupiter Detection Hotfix
+# Project Order — v59.32 Private Admin Treasury Panel Foundation
 
 ## Patch base
 
-Apply this patch on top of v59.31.1.
+Apply this patch on top of v59.31.2.
 
 ## Objective
 
-Improve wallet detection for Jupiter and other Solana wallets that may register through Wallet Standard instead of exposing only `window.solana`.
+Move Treasury/Admin preparation into a private admin-only surface instead of exposing future admin controls to every user.
 
 ## Implementation order
 
-1. Preserve v59.31.1 compact wallet UI and Telegram cleanup.
-2. Add a local Wallet Standard registry listener for `wallet-standard:register-wallet`.
-3. Dispatch `wallet-standard:app-ready` from the app when wallet detection runs.
-4. Support the deprecated `navigator.wallets.push(...)` compatibility path when the browser allows it.
-5. Convert registered Solana Wallet Standard wallets into the app's existing provider shape.
-6. Require both `standard:connect` and `solana:signMessage` before treating a standard wallet as ready for verification.
-7. Include standard wallets in the existing provider selector and Verify wallet flow.
-8. Add repeated delayed rescans after page load because some wallet browsers register late.
-9. Clarify non-Telegram no-provider messages so Jupiter/browser failures are not described as Telegram-only issues.
-10. Preserve all reward, payout, snapshot, Daily Routine, and backend logic.
+1. Preserve the v59.31.2 wallet detection and verification flow.
+2. Add client-side admin visibility helpers for configured Telegram IDs and verified admin wallet addresses.
+3. Add optional treasury public-address config.
+4. Render the new Admin Panel only when the current session matches a configured admin condition.
+5. Keep the Admin Panel inside Profile, with no public nav item.
+6. Show treasury readiness, connected wallet, and payout-off status inside the private panel.
+7. Clean public Rewards copy so normal users see project-level snapshot wording, not internal admin wording.
+8. Preserve backend snapshot authorization through server-side secrets.
+9. Do not add token transfers, claims, payouts, treasury signing, or private key handling.
 
 ## Non-goals
 
-- No WalletConnect/Reown integration.
-- No Jupiter Wallet Kit dependency.
-- No transaction signing.
-- No SPL token transfers.
-- No treasury payout execution.
-- No private key storage.
+- No SPL token transfer execution.
+- No Phantom/Jupiter transaction signing for payouts.
+- No payout batch generation.
 - No reward claim windows.
+- No private key storage.
 - No Supabase migration.
+- No Rewards eligibility formula change.
+- No Daily Routine / Active Streak logic change.

@@ -27196,3 +27196,190 @@ html.embedded-app-view .hero h1 {
     min-height: 44px;
   }
 }
+
+/* v59.31.1 — Wallet Telegram UX Cleanup */
+.compact-wallet-connect-card {
+  gap: 12px;
+  margin-top: 10px;
+  padding: 12px;
+}
+
+.compact-wallet-connect-card.missing {
+  border-color: rgba(167, 255, 41, 0.18);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(167, 255, 41, 0.11), transparent 38%),
+    rgba(5, 14, 8, 0.72);
+}
+
+.compact-wallet-connect-card strong {
+  font-size: 0.88rem;
+  line-height: 1.18;
+}
+
+.compact-wallet-connect-card small {
+  font-size: 0.74rem;
+  line-height: 1.32;
+}
+
+.compact-wallet-connect-card .wallet-provider-readiness-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: min(100%, 260px);
+}
+
+.compact-wallet-connect-card .wallet-provider-readiness-actions button {
+  min-height: 42px;
+  border-radius: 15px;
+  font-size: 0.72rem;
+  letter-spacing: -0.01em;
+}
+
+.compact-wallet-connect-card .wallet-provider-readiness-actions button.primary,
+.compact-wallet-connect-card:not(.ready) .wallet-provider-readiness-actions button:first-child {
+  color: #071006;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--neon), #d9ff54);
+}
+
+.wallet-primary-actions .wallet-verify-cta:not(:disabled):not(.verified) {
+  color: #071006;
+  border-color: transparent;
+  background: linear-gradient(135deg, rgba(167, 255, 41, 0.94), rgba(217, 255, 84, 0.88));
+}
+
+.wallet-address-mini-actions button,
+.wallet-primary-actions button,
+.wallet-provider-readiness-actions button {
+  touch-action: manipulation;
+}
+
+@media (max-width: 430px) {
+  .compact-wallet-connect-card .wallet-provider-readiness-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .compact-wallet-connect-card .wallet-provider-readiness-actions button {
+    min-height: 40px;
+    padding-inline: 8px;
+    font-size: 0.7rem;
+  }
+
+  .wallet-compact-body {
+    padding-bottom: 96px;
+  }
+}
+
+/* v59.32 — Private Admin Treasury Panel */
+.admin-treasury-panel {
+  border-color: rgba(167, 255, 41, 0.24);
+  background:
+    linear-gradient(180deg, rgba(167, 255, 41, 0.08), rgba(7, 17, 8, 0.84)),
+    rgba(5, 14, 8, 0.76);
+}
+
+.admin-treasury-summary b {
+  color: #071006;
+  background: linear-gradient(135deg, rgba(167, 255, 41, 0.96), rgba(217, 255, 84, 0.88));
+  border-color: transparent;
+}
+
+.admin-treasury-body {
+  gap: 12px;
+}
+
+.admin-treasury-hero,
+.admin-treasury-address-card,
+.admin-treasury-warning {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(167, 255, 41, 0.16);
+  border-radius: 20px;
+  background: rgba(3, 10, 5, 0.5);
+}
+
+.admin-treasury-hero {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.admin-treasury-hero span,
+.admin-treasury-address-card span,
+.admin-treasury-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.admin-treasury-hero strong,
+.admin-treasury-address-card strong,
+.admin-treasury-grid strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 0.98rem;
+  line-height: 1.15;
+}
+
+.admin-treasury-hero p,
+.admin-treasury-address-card small,
+.admin-treasury-grid small,
+.admin-treasury-warning span {
+  margin: 5px 0 0;
+  color: rgba(245, 255, 235, 0.72);
+  font-size: 0.76rem;
+  line-height: 1.36;
+}
+
+.admin-treasury-hero b {
+  padding: 8px 11px;
+  border: 1px solid rgba(167, 255, 41, 0.22);
+  border-radius: 999px;
+  color: var(--neon);
+  background: rgba(167, 255, 41, 0.08);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.admin-treasury-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-treasury-grid article {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(167, 255, 41, 0.13);
+  border-radius: 18px;
+  background: rgba(2, 8, 4, 0.48);
+}
+
+.admin-treasury-address-card {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-treasury-warning {
+  border-color: rgba(255, 214, 102, 0.2);
+  background: rgba(255, 214, 102, 0.07);
+}
+
+.admin-treasury-warning b {
+  color: #ffe38c;
+  font-size: 0.84rem;
+}
+
+@media (max-width: 520px) {
+  .admin-treasury-hero,
+  .admin-treasury-address-card,
+  .admin-treasury-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-treasury-hero b {
+    width: fit-content;
+  }
+}
