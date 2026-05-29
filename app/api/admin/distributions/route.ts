@@ -41,6 +41,8 @@ type DistributionManifestInput = {
   };
   note?: string;
   payouts?: PayoutInput[];
+  serverAutoSend?: boolean;
+  serverAutoConfirm?: string;
 };
 
 type ManualSendRecord = {
@@ -89,7 +91,11 @@ const DEFAULT_TREASURY_WALLET = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
 const REAL_DISTRIBUTION_CONFIRM_PHRASE = "PREPARE REAL DISTRIBUTION";
 
 function json(data: unknown, status = 200) {
-  return NextResponse.json(data, {
+  const payload = data && typeof data === "object" && !Array.isArray(data)
+    ? { ...(data as Record<string, unknown>), buildVersion: ADMIN_DISTRIBUTION_BUILD_VERSION }
+    : data;
+
+  return NextResponse.json(payload, {
     status,
     headers: {
       "Cache-Control": "no-store, max-age=0",
@@ -328,6 +334,7 @@ function parseManualSendRecords(input: DistributionPatchInput) {
     .slice(0, 500);
 }
 
+const ADMIN_DISTRIBUTION_BUILD_VERSION = "v59.42.8";
 const SERVER_AUTO_SEND_CONFIRM_PHRASE = "SERVER AUTO SEND";
 const DEFAULT_BROKE_MINT = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
 const DEFAULT_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -997,6 +1004,41 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify(payoutRows),
     });
 
+    if (mode === "real_manual" && body.serverAutoSend) {
+      if (cleanString(body.serverAutoConfirm, 80) !== SERVER_AUTO_SEND_CONFIRM_PHRASE) {
+        return json({ ok: false, error: `Type ${SERVER_AUTO_SEND_CONFIRM_PHRASE} before server auto-send.` }, 400);
+      }
+
+      const autoSend = await serverAutoSendPreparedDistribution(id);
+
+      return json({
+        ok: true,
+        distribution: {
+          id,
+          status: autoSend.status,
+          mode,
+          poolToken: token,
+          poolAmount,
+          recipientCount: payouts.length,
+          calculatedTotal,
+          createdAt,
+        },
+        autoSend,
+        updated: autoSend.updated,
+        sentCount: autoSend.sentCount,
+        totalCount: autoSend.totalCount,
+        status: autoSend.status,
+        payoutWallet: autoSend.payoutWallet,
+        records: autoSend.records,
+        safety: {
+          noPrivateKey: false,
+          noServerTokenTransfers: false,
+          dedicatedPayoutWalletOnly: true,
+          mainTreasuryKeyNotUsed: true,
+        },
+      });
+    }
+
     return json({
       ok: true,
       distribution: {
@@ -1030,6 +1072,97 @@ export async function POST(request: NextRequest) {
       500
     );
   }
+}
+
+async function serverAutoSendPreparedDistribution(distributionId: string) {
+  if (getOptionalEnv("BROKE_PAYOUT_AUTO_SEND_ENABLED") !== "true") {
+    throw new Error("Set BROKE_PAYOUT_AUTO_SEND_ENABLED=true before using server auto-send.");
+  }
+
+  const distributions = await supabaseFetch<DistributionRow[]>(
+    `broke_reward_distributions?select=*&id=eq.${encodeURIComponent(distributionId)}&limit=1`
+  );
+  const distribution = distributions[0];
+
+  if (!distribution) throw new Error("Distribution batch not found.");
+  if (distribution.status !== "prepared") throw new Error(`Distribution status must be prepared. Current: ${distribution.status}.`);
+
+  const payouts = (await getPayoutRows(distributionId)).filter((row) => row.status !== "manual_sent");
+  if (payouts.length === 0) throw new Error("No pending payout rows to send.");
+
+  const maxRecipients = Math.max(1, Math.min(100, Number(getOptionalEnv("BROKE_PAYOUT_MAX_RECIPIENTS") || 30)));
+  if (payouts.length > maxRecipients) {
+    throw new Error(`Server auto-send is capped at ${maxRecipients} recipients for safety.`);
+  }
+
+  const maxPool = safeNumber(getOptionalEnv("BROKE_PAYOUT_MAX_POOL"), 0);
+  const calculatedTotal = safeNumber(distribution.calculated_total);
+  if (maxPool > 0 && calculatedTotal > maxPool) {
+    throw new Error(`Distribution total ${calculatedTotal} exceeds BROKE_PAYOUT_MAX_POOL ${maxPool}.`);
+  }
+
+  const { privateKey, publicAddress } = serverParsePayoutSecretKey();
+  const token = normalizeToken(distribution.pool_token);
+  const isSol = token === "SOL";
+  const mint = serverGetTokenMint(token);
+  const chunkSize = isSol ? 6 : 2;
+  const chunks = serverChunkRows(payouts, chunkSize);
+  const sentRecords: Array<{ rank: number; walletAddress: string; txSignature: string }> = [];
+  let sourceTokenAccount = "";
+  let decimals = isSol ? 9 : 0;
+
+  if (!isSol) {
+    decimals = await serverGetMintDecimals(mint);
+    sourceTokenAccount = await serverFindTokenAccount(publicAddress, mint, true);
+  }
+
+  for (const chunk of chunks) {
+    const recentBlockhash = await serverGetLatestBlockhash();
+    const instructions: ServerTransactionInstruction[] = [];
+
+    if (isSol) {
+      chunk.forEach((row) => {
+        instructions.push(serverBuildSolTransferInstruction(publicAddress, row.wallet_address, safeNumber(row.reward_amount)));
+      });
+    } else {
+      for (const row of chunk) {
+        const destinationTokenAccount = await serverFindTokenAccount(row.wallet_address, mint, false);
+        instructions.push(
+          serverBuildTransferCheckedInstruction({
+            sourceTokenAccount,
+            mintAddress: mint,
+            destinationTokenAccount,
+            ownerAddress: publicAddress,
+            amount: safeNumber(row.reward_amount),
+            decimals,
+          })
+        );
+      }
+    }
+
+    const message = serverBuildLegacyMessage(publicAddress, recentBlockhash, instructions);
+    const txSignature = await serverSendSignedTransaction(message, privateKey);
+    const records = chunk.map((row) => ({ rank: row.rank, walletAddress: row.wallet_address, txSignature }));
+    await serverMarkPayoutRowsSent(distributionId, records);
+    sentRecords.push(...records);
+  }
+
+  const updatedPayouts = await getPayoutRows(distributionId);
+  const sentCount = updatedPayouts.filter((row) => row.status === "manual_sent" && row.tx_signature).length;
+  const totalCount = updatedPayouts.length;
+  const nextStatus = totalCount > 0 && sentCount >= totalCount ? "manual_sent" : "prepared";
+
+  await updateDistributionStatus(distributionId, nextStatus);
+
+  return {
+    distributionId,
+    updated: sentRecords.length,
+    sentCount,
+    totalCount,
+    status: nextStatus,
+    payoutWallet: publicAddress,
+    records: sentRecords,
+  };
 }
 
 export async function PATCH(request: NextRequest) {
@@ -1066,94 +1199,17 @@ export async function PATCH(request: NextRequest) {
         return json({ ok: false, error: `Type ${SERVER_AUTO_SEND_CONFIRM_PHRASE} to unlock server auto-send.` }, 400);
       }
 
-      if (getOptionalEnv("BROKE_PAYOUT_AUTO_SEND_ENABLED") !== "true") {
-        return json({ ok: false, error: "Set BROKE_PAYOUT_AUTO_SEND_ENABLED=true before using server auto-send." }, 400);
-      }
-
-      const distributions = await supabaseFetch<DistributionRow[]>(
-        `broke_reward_distributions?select=*&id=eq.${encodeURIComponent(distributionId)}&limit=1`
-      );
-      const distribution = distributions[0];
-
-      if (!distribution) return json({ ok: false, error: "Distribution batch not found." }, 404);
-      if (distribution.status !== "prepared") return json({ ok: false, error: `Distribution status must be prepared. Current: ${distribution.status}.` }, 400);
-
-      const payouts = (await getPayoutRows(distributionId)).filter((row) => row.status !== "manual_sent");
-      if (payouts.length === 0) return json({ ok: false, error: "No pending payout rows to send." }, 400);
-
-      const maxRecipients = Math.max(1, Math.min(100, Number(getOptionalEnv("BROKE_PAYOUT_MAX_RECIPIENTS") || 30)));
-      if (payouts.length > maxRecipients) {
-        return json({ ok: false, error: `Server auto-send is capped at ${maxRecipients} recipients for safety.` }, 400);
-      }
-
-      const maxPool = safeNumber(getOptionalEnv("BROKE_PAYOUT_MAX_POOL"), 0);
-      const calculatedTotal = safeNumber(distribution.calculated_total);
-      if (maxPool > 0 && calculatedTotal > maxPool) {
-        return json({ ok: false, error: `Distribution total ${calculatedTotal} exceeds BROKE_PAYOUT_MAX_POOL ${maxPool}.` }, 400);
-      }
-
-      const { privateKey, publicAddress } = serverParsePayoutSecretKey();
-      const token = normalizeToken(distribution.pool_token);
-      const isSol = token === "SOL";
-      const mint = serverGetTokenMint(token);
-      const chunkSize = isSol ? 6 : 2;
-      const chunks = serverChunkRows(payouts, chunkSize);
-      const sentRecords: Array<{ rank: number; walletAddress: string; txSignature: string }> = [];
-      let sourceTokenAccount = "";
-      let decimals = isSol ? 9 : 0;
-
-      if (!isSol) {
-        decimals = await serverGetMintDecimals(mint);
-        sourceTokenAccount = await serverFindTokenAccount(publicAddress, mint, true);
-      }
-
-      for (const chunk of chunks) {
-        const recentBlockhash = await serverGetLatestBlockhash();
-        const instructions: ServerTransactionInstruction[] = [];
-
-        if (isSol) {
-          chunk.forEach((row) => {
-            instructions.push(serverBuildSolTransferInstruction(publicAddress, row.wallet_address, safeNumber(row.reward_amount)));
-          });
-        } else {
-          for (const row of chunk) {
-            const destinationTokenAccount = await serverFindTokenAccount(row.wallet_address, mint, false);
-            instructions.push(
-              serverBuildTransferCheckedInstruction({
-                sourceTokenAccount,
-                mintAddress: mint,
-                destinationTokenAccount,
-                ownerAddress: publicAddress,
-                amount: safeNumber(row.reward_amount),
-                decimals,
-              })
-            );
-          }
-        }
-
-        const message = serverBuildLegacyMessage(publicAddress, recentBlockhash, instructions);
-        const txSignature = await serverSendSignedTransaction(message, privateKey);
-        const records = chunk.map((row) => ({ rank: row.rank, walletAddress: row.wallet_address, txSignature }));
-        await serverMarkPayoutRowsSent(distributionId, records);
-        sentRecords.push(...records);
-      }
-
-      const updatedPayouts = await getPayoutRows(distributionId);
-      const sentCount = updatedPayouts.filter((row) => row.status === "manual_sent" && row.tx_signature).length;
-      const totalCount = updatedPayouts.length;
-      const nextStatus = totalCount > 0 && sentCount >= totalCount ? "manual_sent" : "prepared";
-
-      await updateDistributionStatus(distributionId, nextStatus);
+      const autoSend = await serverAutoSendPreparedDistribution(distributionId);
 
       return json({
         ok: true,
         distributionId,
-        updated: sentRecords.length,
-        sentCount,
-        totalCount,
-        status: nextStatus,
-        payoutWallet: publicAddress,
-        records: sentRecords,
+        updated: autoSend.updated,
+        sentCount: autoSend.sentCount,
+        totalCount: autoSend.totalCount,
+        status: autoSend.status,
+        payoutWallet: autoSend.payoutWallet,
+        records: autoSend.records,
       });
     }
 

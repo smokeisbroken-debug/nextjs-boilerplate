@@ -1050,6 +1050,13 @@ type AdminDistributionSaveResponse = {
     walletSigningNotExecutedByServer?: boolean;
     readyForManualTreasurySend?: boolean;
   };
+  autoSend?: AdminDistributionUpdateResponse;
+  updated?: number;
+  sentCount?: number;
+  totalCount?: number;
+  status?: string;
+  payoutWallet?: string;
+  records?: Array<{ rank: number; walletAddress: string; txSignature: string }>;
 };
 
 type AdminDistributionUpdateResponse = {
@@ -23711,46 +23718,31 @@ function AdminTreasuryPanel({
       setRealDistributionConfirm(realDistributionConfirmPhrase);
       setServerAutoConfirm("SERVER AUTO SEND");
 
+      const manifest = {
+        ...buildDistributionManifestFromRows("real_manual", rows, poolValue),
+        serverAutoSend: true,
+        serverAutoConfirm: "SERVER AUTO SEND",
+      };
+
       const saveResponse = await fetch("/api/admin/distributions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${key}`,
         },
-        body: JSON.stringify(buildDistributionManifestFromRows("real_manual", rows, poolValue)),
+        body: JSON.stringify(manifest),
       });
       const saveData = (await saveResponse.json()) as AdminDistributionSaveResponse;
 
       if (!saveResponse.ok || !saveData.ok || !saveData.distribution?.id) {
-        throw new Error(saveData.error || "Could not prepare distribution.");
+        throw new Error(saveData.error || "Could not distribute rewards.");
       }
 
       setDistributionRecord(saveData.distribution);
-      setBatchSenderProgress("Sending from dedicated payout wallet...");
-
-      const sendResponse = await fetch("/api/admin/distributions", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${key}`,
-        },
-        body: JSON.stringify({
-          action: "server_auto_send",
-          distributionId: saveData.distribution.id,
-          confirmPhrase: "SERVER AUTO SEND",
-        }),
-      });
-      const sendData = (await sendResponse.json()) as AdminDistributionUpdateResponse;
-
-      if (!sendResponse.ok || !sendData.ok) {
-        throw new Error(sendData.error || "Auto-send failed.");
-      }
-
-      setDistributionRecord((prev) => prev ? { ...prev, status: sendData.status || prev.status } : prev);
-      const signatureRows = (sendData.records || []).map((record) => `${record.rank},${record.txSignature}`);
+      const signatureRows = (saveData.records || saveData.autoSend?.records || []).map((record) => `${record.rank},${record.txSignature}`);
       setManualSignatureText(signatureRows.join("\n"));
       setBatchSenderProgress("");
-      setDistributionMessage(`Done. Sent ${sendData.sentCount || sendData.updated || 0}/${sendData.totalCount || rows.length} payout(s).`);
+      setDistributionMessage(`Done. Sent ${saveData.sentCount || saveData.updated || saveData.autoSend?.sentCount || saveData.autoSend?.updated || 0}/${saveData.totalCount || saveData.autoSend?.totalCount || rows.length} payout(s).`);
       triggerHaptic("success");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Distribution failed.";
@@ -23758,9 +23750,7 @@ function AdminTreasuryPanel({
         ? "Auto-send is not enabled in Vercel. Set BROKE_PAYOUT_AUTO_SEND_ENABLED=true and configure the payout wallet."
         : message.includes("BROKE_PAYOUT_WALLET_SECRET_KEY")
           ? "Payout wallet is not configured in Vercel. Add BROKE_PAYOUT_WALLET_SECRET_KEY for a separate funded payout wallet."
-          : /method not found/i.test(message)
-            ? "SOLANA_RPC_URL is not a valid Solana JSON-RPC endpoint. Use a mainnet RPC URL such as https://mainnet.helius-rpc.com/?api-key=YOUR_KEY, then redeploy."
-            : message;
+          : message;
       setBatchSenderProgress("");
       setDistributionMessage(cleanMessage);
       triggerHaptic("error");
@@ -23778,7 +23768,7 @@ function AdminTreasuryPanel({
         <div>
           <span>Private admin</span>
           <strong>Reward distribution</strong>
-          <small>Hidden from normal users. Set rules, enter a $BROKE amount, check eligible, then distribute.</small>
+          <small>Build v59.42.8 · one server request. Check eligible first, review recipients, then distribute.</small>
         </div>
         <b>{access.sourceLabel}</b>
       </div>
