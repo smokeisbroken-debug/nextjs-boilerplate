@@ -337,13 +337,40 @@ const SERVER_SOLANA_TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ
 const SERVER_BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 const SERVER_BASE58_MAP = new Map(SERVER_BASE58_ALPHABET.split("").map((char, index) => [char, index]));
 
-function serverGetRpcUrl() {
-  return (
-    getOptionalEnv("SOLANA_RPC_URL") ||
-    getOptionalEnv("HELIUS_RPC_URL") ||
-    getOptionalEnv("NEXT_PUBLIC_SOLANA_RPC_URL") ||
-    SERVER_SOLANA_MAINNET_RPC
-  ).trim();
+function serverCleanRpcUrl(value: string) {
+  return value.trim().replace(/^['"]|['"]$/g, "").trim();
+}
+
+function serverLooksLikeSolanaJsonRpcUrl(value: string) {
+  const rpcUrl = serverCleanRpcUrl(value);
+  if (!rpcUrl) return false;
+
+  try {
+    const parsed = new URL(rpcUrl);
+    if (!/^https?:$/.test(parsed.protocol)) return false;
+
+    // Helius Enhanced API URLs such as /v0/transactions are REST endpoints, not Solana JSON-RPC.
+    // They return "Method not found" for standard Solana RPC methods.
+    if (/\/v\d+\//i.test(parsed.pathname)) return false;
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function serverGetRpcUrls() {
+  const candidates = [
+    getOptionalEnv("SOLANA_RPC_URL"),
+    getOptionalEnv("HELIUS_RPC_URL"),
+    getOptionalEnv("NEXT_PUBLIC_SOLANA_RPC_URL"),
+    getOptionalEnv("NEXT_PUBLIC_HELIUS_RPC_URL"),
+    SERVER_SOLANA_MAINNET_RPC,
+  ]
+    .map((value) => serverCleanRpcUrl(value || ""))
+    .filter((value) => serverLooksLikeSolanaJsonRpcUrl(value));
+
+  return Array.from(new Set(candidates.length ? candidates : [SERVER_SOLANA_MAINNET_RPC]));
 }
 
 function serverGetTokenMint(token: string) {
@@ -586,9 +613,9 @@ function serverBuildTransferCheckedInstruction({
 }
 
 async function serverSolanaRpc<T>(method: string, params: unknown[] = []): Promise<T> {
-  const configuredRpcUrl = serverGetRpcUrl();
-  const rpcUrls = Array.from(new Set([configuredRpcUrl, SERVER_SOLANA_MAINNET_RPC].filter(Boolean)));
+  const rpcUrls = serverGetRpcUrls();
   let lastError = "Solana RPC request failed.";
+  let sawMethodNotFound = false;
 
   for (const rpcUrl of rpcUrls) {
     try {
@@ -612,24 +639,23 @@ async function serverSolanaRpc<T>(method: string, params: unknown[] = []): Promi
       if (!response.ok || data.error) {
         const rpcMessage = data.error?.message || `Solana RPC ${response.status}`;
         lastError = rpcMessage;
+        if (/method not found/i.test(rpcMessage)) sawMethodNotFound = true;
 
-        // If the configured endpoint is an API/REST URL instead of a Solana JSON-RPC URL,
-        // retry public mainnet once so small admin payouts are not blocked by a bad env value.
-        if (/method not found/i.test(rpcMessage) && rpcUrl !== SERVER_SOLANA_MAINNET_RPC) continue;
-
-        throw new Error(rpcMessage);
+        // If a configured endpoint is an API/REST URL instead of a Solana JSON-RPC URL,
+        // keep trying the remaining candidates instead of failing the whole distribution.
+        continue;
       }
 
       return data.result as T;
     } catch (error) {
       lastError = error instanceof Error ? error.message : lastError;
-      if (/method not found|did not return JSON-RPC/i.test(lastError) && rpcUrl !== SERVER_SOLANA_MAINNET_RPC) continue;
-      if (rpcUrl !== rpcUrls[rpcUrls.length - 1]) continue;
+      if (/method not found/i.test(lastError)) sawMethodNotFound = true;
+      continue;
     }
   }
 
-  if (/method not found/i.test(lastError)) {
-    throw new Error("SOLANA_RPC_URL is not a valid Solana JSON-RPC endpoint. Use a mainnet RPC URL such as https://mainnet.helius-rpc.com/?api-key=YOUR_KEY.");
+  if (sawMethodNotFound) {
+    throw new Error("RPC endpoint is not Solana JSON-RPC. In Vercel remove old Helius Enhanced API URLs and keep only SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY, then redeploy.");
   }
 
   throw new Error(lastError);

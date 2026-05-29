@@ -19,3 +19,8 @@ Patch on top of v59.42.3.
 ## Verification
 - Targeted base58 decoder check confirms `11111111111111111111111111111111` decodes to 32 bytes.
 - TSX/API/CSS brace balance passed.
+
+
+## v59.42.5 Admin RPC Fallback Hardening Hotfix
+
+Fixes the repeated Admin distribution RPC loop by filtering obvious Helius Enhanced API/REST URLs out of the server RPC candidate list, trimming accidental quotes around env values, trying valid RPC candidates in order, and falling back to public Solana mainnet instead of immediately blocking distribution on a stale bad endpoint. Also keeps the v59.42.4 base58 fix where the System Program public key (`11111111111111111111111111111111`) decodes to 32 bytes correctly. No eligibility formula, payout amount logic, token mint, Supabase schema, Daily Routine, or Active Streak changes.
