@@ -1,8 +1,16 @@
-# PROJECT ORDER — v59.40.2 Treasury Batch Sender Access Fallback Hotfix
+# PROJECT ORDER — v59.42 Clean One-Button Admin Distribution
 
-Base: confirmed v59.40.1 Treasury Batch Sender BigInt Build Hotfix.
+Base: confirmed v59.41 Dedicated Payout Wallet Auto-Send Fallback.
 
-## Changed files
+## Objective
+
+Reduce the private Admin distribution flow to a usable production-style screen:
+
+```text
+conditions + amount + one button
+```
+
+## Patch files
 
 - `app/page.tsx`
 - `app/globals.css`
@@ -10,33 +18,38 @@ Base: confirmed v59.40.1 Treasury Batch Sender BigInt Build Hotfix.
 - `README.md`
 - `PROJECT_ORDER.md`
 - `TESTING.md`
-- `app/README.md`
-- `app/PROJECT_ORDER.md`
-- `app/TESTING.md`
+- matching `app/` docs
 
-## Summary
+## Implementation
 
-v59.40.2 improves the real distribution batch sender when mobile wallet browsers return `Access forbidden` from direct Wallet Standard send. The sender now tries direct `signAndSendTransaction` first, then falls back to `signTransaction` plus browser-side RPC broadcast when available.
+### Admin UI
 
-## Not changed
+The Admin modal now shows a clean form:
 
-- Supabase schema
-- reward eligibility formula
-- Daily Routine / Active Streak logic
-- wallet verification backend
-- treasury private-key handling
-- claims/staking/payout backend
+- Admin key.
+- Minimum hold.
+- Streak days.
+- Token.
+- Amount.
+- `Distribute rewards`.
 
+The old visible controls for wallet batch signing, payment-link queue, copy rows, tx paste, test/real mode toggles, and long technical explanations were removed from the main Admin UI.
 
-## v59.40.3 — Standalone Batch Send Guard
+### One-button distribution
 
-- Treasury Batch Sender now blocks batch signing inside embedded/site preview frames, where Phantom/Jupiter/Solflare can return `Access forbidden` or open only the wallet home screen.
-- Added a clear `Open full app for batch send` button in the private Admin payout queue.
-- Admin must run `Send all with treasury wallet` from the full standalone app tab/desktop extension context, not from the site preview iframe.
-- No private key storage, server-side signing, server-side token transfer, Supabase schema changes, reward formula changes, or Daily Routine changes.
+`Distribute rewards` runs this sequence:
 
-## v59.41 Dedicated Payout Wallet Auto-Send Fallback
+1. `GET /api/admin/holders` with the selected `minHold` and `minStreak`.
+2. Build local payout rows by balance-share percent.
+3. `POST /api/admin/distributions` to create a real distribution batch.
+4. `PATCH /api/admin/distributions` with `server_auto_send` to send through the dedicated payout wallet.
+5. Update UI with sent count and saved tx signatures.
 
-Adds an optional admin-only server auto-send path for real reward distributions when Phantom/Jupiter/Solflare block browser batch signing with `Access forbidden`. This path is intentionally separate from the main treasury wallet: use a small, dedicated payout wallet funded only with the exact distribution amount. Required env gates: `BROKE_PAYOUT_AUTO_SEND_ENABLED=true`, `BROKE_PAYOUT_WALLET_SECRET_KEY`, optional `BROKE_PAYOUT_WALLET_ADDRESS`, `BROKE_PAYOUT_MAX_RECIPIENTS`, `BROKE_PAYOUT_MAX_POOL`, and stable `SOLANA_RPC_URL`. Admin must still prepare a real batch and type `SERVER AUTO SEND` in the private Admin modal. The API sends pending payout rows from the dedicated payout wallet, records tx signatures in the existing ledger, and keeps payment links/manual tx paste as fallback.
+### API
 
-No main treasury private key should be stored. No eligibility formula, Daily Routine, Active Streak, Supabase schema, claims, staking, or public UI changes.
+- Fixed duplicate `const rows` declaration in payout normalization.
+- Real distribution preparation now accepts the dedicated payout-wallet flow when `BROKE_PAYOUT_AUTO_SEND_ENABLED=true`, instead of requiring browser treasury-wallet signing.
+
+## Safety boundary
+
+The one-button flow uses the dedicated payout wallet env from v59.41. The main treasury seed must not be used. No Supabase schema changes are included.

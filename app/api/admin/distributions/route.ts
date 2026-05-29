@@ -843,8 +843,9 @@ export async function POST(request: NextRequest) {
         return json({ ok: false, error: `Type ${REAL_DISTRIBUTION_CONFIRM_PHRASE} before preparing a real distribution.` }, 400);
       }
 
-      if (!treasuryMatched) {
-        return json({ ok: false, error: "Connect and verify the configured treasury wallet before preparing a real distribution." }, 400);
+      const serverAutoSendEnabled = getOptionalEnv("BROKE_PAYOUT_AUTO_SEND_ENABLED") === "true";
+      if (!treasuryMatched && !serverAutoSendEnabled) {
+        return json({ ok: false, error: "Connect and verify the configured treasury wallet, or enable BROKE_PAYOUT_AUTO_SEND_ENABLED for dedicated payout wallet distribution." }, 400);
       }
     }
 

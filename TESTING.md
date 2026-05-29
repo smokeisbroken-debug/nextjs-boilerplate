@@ -1,38 +1,60 @@
-# TESTING — v59.40.2 Treasury Batch Sender Access Fallback Hotfix
+# TESTING — v59.42 Clean One-Button Admin Distribution
 
-## Expected checks
+## Static checks run in sandbox
 
-1. Open the app as admin.
-2. Verify the configured treasury wallet.
-3. Open Admin.
-4. Load legitimate holders.
-5. Prepare a real manual distribution batch.
-6. Confirm `Final payout queue` is shown.
-7. Press `Send all with treasury wallet`.
-8. Wallet should request grouped transaction signing.
-9. If direct `signAndSendTransaction` is blocked with `Access forbidden`, the app should retry with `signTransaction` + RPC broadcast when available.
-10. After successful send, tx signatures should be recorded automatically.
-11. If both wallet signing paths are blocked, payment links and manual signature paste should still work.
+```text
+TypeScript transpile diagnostics: app/page.tsx — OK
+TypeScript transpile diagnostics: app/api/admin/distributions/route.ts — OK
+CSS brace balance — OK
+TSX/API brace balance — OK
+No BigInt literal suffixes in app/page.tsx — OK
+```
 
-## Verification performed in sandbox
+Full `npm run typecheck`, `npm run lint:quiet`, and `npm run build` were not rerun in this sandbox because the dependency workspace has been unreliable in recent patches.
 
-- TSX transpile diagnostics passed for `app/page.tsx`.
-- API route transpile diagnostics passed for `app/api/admin/distributions/route.ts`.
-- CSS brace balance passed for `app/globals.css`.
-- Targeted scan confirms no remaining BigInt literal suffixes in `app/page.tsx`.
+## Manual test path
 
-Full npm checks were not rerun because dependency installation is unreliable in the sandbox environment.
+1. Apply the patch.
+2. Ensure v59.37 distribution ledger migration has already been applied.
+3. Set Vercel env:
 
+```env
+REWARDS_ADMIN_SECRET=...
+BROKE_PAYOUT_AUTO_SEND_ENABLED=true
+BROKE_PAYOUT_WALLET_SECRET_KEY=...
+BROKE_PAYOUT_WALLET_ADDRESS=...
+SOLANA_RPC_URL=...
+BROKE_TOKEN_MINT=9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray
+NEXT_PUBLIC_BROKE_TOKEN_MINT=9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray
+```
 
-## v59.40.3 — Standalone Batch Send Guard
+4. Redeploy.
+5. Open Admin modal.
+6. Enter Admin key.
+7. Set test rules, for example:
 
-- Treasury Batch Sender now blocks batch signing inside embedded/site preview frames, where Phantom/Jupiter/Solflare can return `Access forbidden` or open only the wallet home screen.
-- Added a clear `Open full app for batch send` button in the private Admin payout queue.
-- Admin must run `Send all with treasury wallet` from the full standalone app tab/desktop extension context, not from the site preview iframe.
-- No private key storage, server-side signing, server-side token transfer, Supabase schema changes, reward formula changes, or Daily Routine changes.
+```text
+Minimum hold: 1
+Streak days: 0
+Token: $BROKE
+Amount: small test amount
+```
 
-## v59.41 Dedicated Payout Wallet Auto-Send Fallback
+8. Press `Distribute rewards`.
+9. Verify:
 
-Adds an optional admin-only server auto-send path for real reward distributions when Phantom/Jupiter/Solflare block browser batch signing with `Access forbidden`. This path is intentionally separate from the main treasury wallet: use a small, dedicated payout wallet funded only with the exact distribution amount. Required env gates: `BROKE_PAYOUT_AUTO_SEND_ENABLED=true`, `BROKE_PAYOUT_WALLET_SECRET_KEY`, optional `BROKE_PAYOUT_WALLET_ADDRESS`, `BROKE_PAYOUT_MAX_RECIPIENTS`, `BROKE_PAYOUT_MAX_POOL`, and stable `SOLANA_RPC_URL`. Admin must still prepare a real batch and type `SERVER AUTO SEND` in the private Admin modal. The API sends pending payout rows from the dedicated payout wallet, records tx signatures in the existing ledger, and keeps payment links/manual tx paste as fallback.
+- legitimate holders load;
+- distribution row is created;
+- payout rows are sent from the dedicated payout wallet;
+- tx signatures are saved;
+- UI shows `Done. Sent X/Y payout(s).`.
 
-No main treasury private key should be stored. No eligibility formula, Daily Routine, Active Streak, Supabase schema, claims, staking, or public UI changes.
+## Expected failure messages
+
+- If `BROKE_PAYOUT_AUTO_SEND_ENABLED` is missing, UI asks to enable it.
+- If `BROKE_PAYOUT_WALLET_SECRET_KEY` is missing, UI asks to configure the payout wallet.
+- If there are no legitimate recipients, UI says no legitimate recipients match the rules.
+
+## Not tested here
+
+Live token transfer on mainnet was not executed in the sandbox.

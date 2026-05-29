@@ -28687,3 +28687,233 @@ html.embedded-app-view .hero h1 {
     width: 100%;
   }
 }
+
+/* v59.42 — clean one-button admin distribution */
+.admin-clean-panel {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+}
+
+.admin-clean-hero,
+.admin-clean-summary,
+.admin-clean-recipients,
+.admin-clean-secret,
+.admin-clean-footnote {
+  border: 1px solid rgba(167, 255, 41, 0.14);
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.admin-clean-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+}
+
+.admin-clean-hero span,
+.admin-clean-grid span,
+.admin-clean-secret span,
+.admin-clean-summary span,
+.admin-clean-recipients span {
+  display: block;
+  color: var(--neon);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-clean-hero strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 1.18rem;
+  line-height: 1.08;
+}
+
+.admin-clean-hero small,
+.admin-clean-footnote {
+  color: rgba(245, 255, 235, 0.66);
+  font-size: 0.76rem;
+  font-weight: 760;
+  line-height: 1.34;
+}
+
+.admin-clean-hero b {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid rgba(167, 255, 41, 0.22);
+  border-radius: 999px;
+  color: var(--neon);
+  background: rgba(167, 255, 41, 0.08);
+  font-size: 0.68rem;
+  white-space: nowrap;
+}
+
+.admin-clean-secret {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+}
+
+.admin-clean-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-clean-grid label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.admin-clean-secret input,
+.admin-clean-grid input,
+.admin-clean-grid select {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--text);
+  padding: 0 13px;
+  font-size: 0.98rem;
+  font-weight: 860;
+  outline: none;
+}
+
+.admin-clean-distribute-button {
+  min-height: 58px;
+  border: 0;
+  border-radius: 19px;
+  color: #071006;
+  background: linear-gradient(135deg, rgba(167, 255, 41, 1), rgba(217, 255, 84, 0.92));
+  box-shadow: 0 18px 44px rgba(167, 255, 41, 0.18);
+  font-size: 1rem;
+  font-weight: 1000;
+}
+
+.admin-clean-distribute-button:disabled {
+  opacity: 0.55;
+}
+
+.admin-clean-status {
+  padding: 12px 13px;
+  border: 1px solid rgba(255, 227, 140, 0.24);
+  border-radius: 17px;
+  color: #ffe38c;
+  background: rgba(255, 227, 140, 0.08);
+  font-size: 0.8rem;
+  font-weight: 840;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.admin-clean-status.success {
+  color: var(--neon);
+  border-color: rgba(167, 255, 41, 0.25);
+  background: rgba(167, 255, 41, 0.08);
+}
+
+.admin-clean-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+}
+
+.admin-clean-summary article {
+  min-width: 0;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.admin-clean-summary strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.admin-clean-recipients {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.admin-clean-recipients > div strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.admin-clean-recipients article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.admin-clean-recipients b {
+  display: block;
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.16;
+  overflow-wrap: anywhere;
+}
+
+.admin-clean-recipients small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(245, 255, 235, 0.58);
+  font-size: 0.68rem;
+}
+
+.admin-clean-recipients em {
+  color: #ffe38c;
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.admin-clean-footnote {
+  margin: 0;
+  padding: 12px;
+}
+
+@media (max-width: 560px) {
+  .admin-clean-panel {
+    padding: 10px;
+  }
+
+  .admin-clean-hero,
+  .admin-clean-summary,
+  .admin-clean-grid,
+  .admin-clean-recipients article {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-clean-hero {
+    display: grid;
+  }
+
+  .admin-clean-hero b {
+    width: fit-content;
+  }
+
+  .admin-clean-recipients em {
+    white-space: normal;
+  }
+}

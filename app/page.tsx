@@ -23288,26 +23288,30 @@ function AdminTreasuryPanel({
     void copyPayoutText([header, ...rows].join("\n"), `Copied ${payoutRows.length} wallet payment link(s).`);
   }
 
-  function buildDistributionManifest(mode: "test" | "real_manual" = distributionMode) {
+  function buildDistributionManifestFromRows(
+    mode: "test" | "real_manual",
+    rows: Array<AdminLegitimateHolderRow & { rewardAmount: number }>,
+    poolValue: number
+  ) {
     return {
       type: mode === "real_manual" ? "BROKE_REWARD_DISTRIBUTION_REAL_MANUAL_MANIFEST" : "BROKE_REWARD_DISTRIBUTION_TEST_MANIFEST",
       mode,
       generatedAt: new Date().toISOString(),
       token: rewardPoolToken,
-      poolAmount: rewardPoolValue,
-      eligibleHolders: payoutRows.length,
+      poolAmount: poolValue,
+      eligibleHolders: rows.length,
       treasuryWallet: access.treasuryWallet || "not_configured",
       connectedWallet: access.connectedWallet || "not_connected",
-      confirmRealDistribution: mode === "real_manual" ? realDistributionConfirm.trim() : "",
+      confirmRealDistribution: mode === "real_manual" ? realDistributionConfirmPhrase : "",
       rules: {
         minHold: Number(eligibilityMinHold.replace(",", ".")) || 0,
         minStreak: Number(eligibilityMinStreak) || 0,
       },
       note:
         mode === "real_manual"
-          ? "Real manual distribution batch. Treasury/admin must send manually and record tx signatures after sending."
+          ? "Real distribution batch prepared for the dedicated payout wallet sender."
           : "Manual test ledger only. No token transfer, claim, staking, wallet signing, or treasury spend was executed.",
-      payouts: payoutRows.map((row) => ({
+      payouts: rows.map((row) => ({
         rank: row.rank,
         telegramId: row.telegramId,
         username: row.username,
@@ -23319,6 +23323,10 @@ function AdminTreasuryPanel({
         token: rewardPoolToken,
       })),
     };
+  }
+
+  function buildDistributionManifest(mode: "test" | "real_manual" = distributionMode) {
+    return buildDistributionManifestFromRows(mode, payoutRows, rewardPoolValue);
   }
 
   function buildDistributionSendSheet() {
@@ -23651,461 +23659,239 @@ function AdminTreasuryPanel({
   }
 
 
-  return (
-    <details className="admin-treasury-panel profile-compact-details" open>
-      <summary className="profile-compact-summary admin-treasury-summary">
-        <div>
-          <span>Admin Panel</span>
-          <strong>Treasury foundation</strong>
-          <small>Hidden from normal users. No payout buttons are public.</small>
-        </div>
-        <b>{access.treasuryMatched ? "Ready" : "Private"}</b>
-      </summary>
-      <div className="profile-compact-body admin-treasury-body">
-        <section className="admin-treasury-hero">
-          <div>
-            <span>Private project controls</span>
-            <strong>{access.treasuryMatched ? "Treasury wallet confirmed" : "Admin access confirmed"}</strong>
-            <p>
-              This block is rendered only for configured Telegram admins or verified admin wallets.
-              Public users still see only the normal Profile and Rewards screens.
-            </p>
-          </div>
-          <b>{access.sourceLabel}</b>
-        </section>
+  async function distributeRewardsOneClick() {
+    const key = adminReadKey.trim();
+    const poolValue = Number(rewardPoolAmount.replace(",", "."));
 
-        <div className="admin-treasury-grid">
-          {readinessItems.map((item) => (
-            <article key={item.label}>
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-              <small>{item.detail}</small>
+    if (!key) {
+      setDistributionMessage("Enter the Admin read key first.");
+      return;
+    }
+
+    if (!Number.isFinite(poolValue) || poolValue <= 0) {
+      setDistributionMessage("Enter the amount to distribute first.");
+      return;
+    }
+
+    setDistributionSaving(true);
+    setServerAutoSending(true);
+    setHolderIntelLoading(true);
+    setHolderIntelError("");
+    setDistributionMessage("");
+    setSendQueueMessage("");
+    setBatchSenderProgress("Loading legitimate holders...");
+
+    try {
+      const params = new URLSearchParams({
+        minHold: eligibilityMinHold.trim() || "100000",
+        minStreak: eligibilityMinStreak.trim() || "7",
+      });
+      const holdersResponse = await fetch(`/api/admin/holders?${params.toString()}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${key}` },
+        cache: "no-store",
+      });
+      const holdersData = (await holdersResponse.json()) as AdminHoldersResponse;
+
+      if (!holdersResponse.ok || !holdersData.ok) {
+        throw new Error(holdersData.error || "Could not load legitimate holders.");
+      }
+
+      const candidates = holdersData.eligiblePayoutCandidates || holdersData.topLegitimateHolders || [];
+      const rows = candidates.map((holder) => ({
+        ...holder,
+        rewardAmount: Number(((poolValue * holder.balanceSharePercent) / 100).toFixed(6)),
+      })).filter((row) => row.rewardAmount > 0);
+
+      setHolderIntel(holdersData);
+
+      if (rows.length === 0) {
+        throw new Error("No legitimate recipients for the current rules.");
+      }
+
+      setBatchSenderProgress(`Preparing distribution for ${rows.length} recipient(s)...`);
+      setDistributionMode("real_manual");
+      setRealDistributionConfirm(realDistributionConfirmPhrase);
+      setServerAutoConfirm(serverAutoSendConfirmPhrase);
+
+      const saveResponse = await fetch("/api/admin/distributions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${key}`,
+        },
+        body: JSON.stringify(buildDistributionManifestFromRows("real_manual", rows, poolValue)),
+      });
+      const saveData = (await saveResponse.json()) as AdminDistributionSaveResponse;
+
+      if (!saveResponse.ok || !saveData.ok || !saveData.distribution?.id) {
+        throw new Error(saveData.error || "Could not prepare distribution.");
+      }
+
+      setDistributionRecord(saveData.distribution);
+      setBatchSenderProgress("Sending from dedicated payout wallet...");
+
+      const sendResponse = await fetch("/api/admin/distributions", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          action: "server_auto_send",
+          distributionId: saveData.distribution.id,
+          confirmPhrase: serverAutoSendConfirmPhrase,
+        }),
+      });
+      const sendData = (await sendResponse.json()) as AdminDistributionUpdateResponse;
+
+      if (!sendResponse.ok || !sendData.ok) {
+        throw new Error(sendData.error || "Auto-send failed.");
+      }
+
+      setDistributionRecord((prev) => prev ? { ...prev, status: sendData.status || prev.status } : prev);
+      const signatureRows = (sendData.records || []).map((record) => `${record.rank},${record.txSignature}`);
+      setManualSignatureText(signatureRows.join("\n"));
+      setBatchSenderProgress("");
+      setDistributionMessage(`Done. Sent ${sendData.sentCount || sendData.updated || 0}/${sendData.totalCount || rows.length} payout(s).`);
+      triggerHaptic("success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Distribution failed.";
+      const cleanMessage = message.includes("BROKE_PAYOUT_AUTO_SEND_ENABLED")
+        ? "Auto-send is not enabled in Vercel. Set BROKE_PAYOUT_AUTO_SEND_ENABLED=true and configure the payout wallet."
+        : message.includes("BROKE_PAYOUT_WALLET_SECRET_KEY")
+          ? "Payout wallet is not configured in Vercel. Add BROKE_PAYOUT_WALLET_SECRET_KEY for a separate funded payout wallet."
+          : message;
+      setBatchSenderProgress("");
+      setDistributionMessage(cleanMessage);
+      triggerHaptic("error");
+    } finally {
+      setHolderIntelLoading(false);
+      setDistributionSaving(false);
+      setServerAutoSending(false);
+    }
+  }
+
+
+  return (
+    <section className="admin-clean-panel">
+      <div className="admin-clean-hero">
+        <div>
+          <span>Private admin</span>
+          <strong>Reward distribution</strong>
+          <small>Hidden from normal users. Set rules, enter amount, press one button.</small>
+        </div>
+        <b>{access.sourceLabel}</b>
+      </div>
+
+      <label className="admin-clean-secret">
+        <span>Admin key</span>
+        <input
+          type="password"
+          value={adminReadKey}
+          onChange={(event) => setAdminReadKey(event.target.value)}
+          placeholder="REWARDS_ADMIN_SECRET"
+        />
+      </label>
+
+      <div className="admin-clean-grid">
+        <label>
+          <span>Minimum hold</span>
+          <input
+            inputMode="decimal"
+            value={eligibilityMinHold}
+            onChange={(event) => {
+              setEligibilityMinHold(event.target.value.replace(/[^0-9.,]/g, ""));
+              setHolderIntel(null);
+              setDistributionMessage("");
+            }}
+            placeholder="100000"
+          />
+        </label>
+        <label>
+          <span>Streak days</span>
+          <input
+            inputMode="numeric"
+            value={eligibilityMinStreak}
+            onChange={(event) => {
+              setEligibilityMinStreak(event.target.value.replace(/[^0-9]/g, ""));
+              setHolderIntel(null);
+              setDistributionMessage("");
+            }}
+            placeholder="7"
+          />
+        </label>
+        <label>
+          <span>Token</span>
+          <select value={rewardPoolToken} onChange={(event) => setRewardPoolToken(event.target.value)}>
+            <option value="$BROKE">$BROKE</option>
+            <option value="USDC">USDC</option>
+            <option value="SOL">SOL</option>
+          </select>
+        </label>
+        <label>
+          <span>Amount</span>
+          <input
+            inputMode="decimal"
+            value={rewardPoolAmount}
+            onChange={(event) => setRewardPoolAmount(event.target.value.replace(/[^0-9.,]/g, ""))}
+            placeholder="1000"
+          />
+        </label>
+      </div>
+
+      <button
+        type="button"
+        className="admin-clean-distribute-button"
+        onClick={distributeRewardsOneClick}
+        disabled={distributionSaving || serverAutoSending || holderIntelLoading}
+      >
+        {distributionSaving || serverAutoSending ? "Distributing..." : "Distribute rewards"}
+      </button>
+
+      {(batchSenderProgress || distributionMessage || holderIntelError) && (
+        <div className={distributionMessage && /done|sent/i.test(distributionMessage) ? "admin-clean-status success" : "admin-clean-status"}>
+          {batchSenderProgress || distributionMessage || holderIntelError}
+        </div>
+      )}
+
+      <div className="admin-clean-summary">
+        <article>
+          <span>Eligible</span>
+          <strong>{holderIntel?.summary ? holderIntel.summary.totalEligibleHolders : "—"}</strong>
+        </article>
+        <article>
+          <span>Pool</span>
+          <strong>{rewardPoolValue > 0 ? formatRewardTokenAmount(rewardPoolValue, rewardPoolToken) : "—"}</strong>
+        </article>
+        <article>
+          <span>Status</span>
+          <strong>{distributionRecord?.status || "Ready"}</strong>
+        </article>
+      </div>
+
+      {holderIntel && (
+        <div className="admin-clean-recipients">
+          <div>
+            <span>Recipients</span>
+            <strong>{eligiblePayoutCandidates.length} legitimate holder(s)</strong>
+          </div>
+          {(payoutRows.length > 0 ? payoutRows : eligiblePayoutCandidates.map((holder) => ({ ...holder, rewardAmount: 0 }))).slice(0, 6).map((row) => (
+            <article key={`${row.rank}-${row.telegramId}-${row.walletAddress}`}>
+              <div>
+                <b>#{row.rank} {row.username ? `@${row.username}` : row.displayName || compactWalletAddress(row.walletAddress)}</b>
+                <small>{compactWalletAddress(row.walletAddress)} · {formatHolderPercent(row.balanceSharePercent)}</small>
+              </div>
+              <em>{row.rewardAmount > 0 ? formatRewardTokenAmount(row.rewardAmount, rewardPoolToken) : formatTokenAmount(row.verifiedBalance)}</em>
             </article>
           ))}
         </div>
+      )}
 
-        <section className="admin-treasury-address-card">
-          <div>
-            <span>Expected treasury wallet</span>
-            <strong>{access.treasuryWallet ? compactWalletAddress(access.treasuryWallet) : "Not configured"}</strong>
-            <small>Only the public address belongs in config. Never store a seed phrase or private key.</small>
-          </div>
-          <div>
-            <span>$BROKE contract</span>
-            <strong>{compactWalletAddress(BROKE_TOKEN_MINT_ADDRESS)}</strong>
-            <small>Used by the private holder intelligence endpoint and future reward pool calculations.</small>
-          </div>
-          <div>
-            <span>Snapshot eligibility</span>
-            <strong>{activeProofStatus.currentStreak}d streak logic</strong>
-            <small>Eligibility is controlled below: verified holder + admin hold rule + Daily Routine streak rule.</small>
-          </div>
-        </section>
-
-        <section className="admin-holder-intel-card">
-          <div className="admin-holder-intel-head">
-            <div>
-              <span>Holder intelligence</span>
-              <strong>Legitimate reward candidates only</strong>
-              <small>
-                Private app-data view. Top 10 blockchain holders and live RPC reads were removed from this panel.
-              </small>
-            </div>
-          </div>
-
-          <label className="admin-secret-field">
-            <span>Admin read key</span>
-            <input
-              type="password"
-              value={adminReadKey}
-              onChange={(event) => setAdminReadKey(event.target.value)}
-              placeholder="REWARDS_ADMIN_SECRET, if Telegram admin session is not active"
-            />
-            <small>Leave empty if server can authorize your Telegram admin session. Wallet-only visibility still needs the read key for server data.</small>
-          </label>
-
-          {holderIntelError && <div className="admin-holder-error">{holderIntelError}</div>}
-
-          <section className="admin-eligibility-rules-card">
-            <div className="admin-eligibility-rules-head">
-              <div>
-                <span>Legitimacy rules</span>
-                <strong>Control who enters the reward candidate list</strong>
-                <small>These settings affect the private admin calculation and distribution draft. They do not send rewards.</small>
-              </div>
-              <b>{holderIntel?.summary ? `${holderIntel.summary.totalEligibleHolders} eligible` : "Not loaded"}</b>
-            </div>
-            <div className="admin-eligibility-rule-grid">
-              <label>
-                <span>Minimum hold</span>
-                <input
-                  inputMode="decimal"
-                  value={eligibilityMinHold}
-                  onChange={(event) => {
-                    setEligibilityMinHold(event.target.value.replace(/[^0-9.,]/g, ""));
-                    setHolderIntel(null);
-                    setDistributionMessage("");
-                  }}
-                  placeholder="100000"
-                />
-                <small>$BROKE required for legitimacy.</small>
-              </label>
-              <label>
-                <span>Required streak</span>
-                <input
-                  inputMode="numeric"
-                  value={eligibilityMinStreak}
-                  onChange={(event) => {
-                    setEligibilityMinStreak(event.target.value.replace(/[^0-9]/g, ""));
-                    setHolderIntel(null);
-                    setDistributionMessage("");
-                  }}
-                  placeholder="7"
-                />
-                <small>Daily Routine streak days required.</small>
-              </label>
-              <button type="button" onClick={loadHolderIntel} disabled={holderIntelLoading}>
-                {holderIntelLoading ? "Loading..." : holderIntel ? "Apply + refresh" : "Apply + load"}
-              </button>
-            </div>
-          </section>
-
-          {holderIntel?.summary && (
-            <div className="admin-holder-summary-grid legitimate-only">
-              <article>
-                <span>Eligible holders</span>
-                <strong>{holderIntel.summary.totalEligibleHolders}</strong>
-                <small>Verified wallet + admin rule match.</small>
-              </article>
-              <article>
-                <span>Eligible balance</span>
-                <strong>{formatTokenAmount(holderIntel.summary.totalEligibleBalance)}</strong>
-                <small>Used for balance-share reward math.</small>
-              </article>
-              <article>
-                <span>Minimum hold</span>
-                <strong>{formatTokenAmount(holderIntel.summary.minHold)}</strong>
-                <small>Current admin rule for this calculation.</small>
-              </article>
-              <article>
-                <span>Required streak</span>
-                <strong>{holderIntel.summary.minStreak}d</strong>
-                <small>Daily Routine-only Active Streak.</small>
-              </article>
-              <article>
-                <span>Verified wallets</span>
-                <strong>{holderIntel.summary.totalVerifiedWallets}</strong>
-                <small>Scanned from app wallet records.</small>
-              </article>
-              <article>
-                <span>Users scanned</span>
-                <strong>{holderIntel.summary.totalUsersScanned}</strong>
-                <small>Private app dataset only.</small>
-              </article>
-            </div>
-          )}
-
-          {holderIntel && (
-            <div className="admin-holder-tables">
-              <section>
-                <div className="admin-holder-table-title">
-                  <span>Top 20 legitimate holders</span>
-                  <small>App-data only. Sorted by verified $BROKE balance and current legitimacy rules.</small>
-                </div>
-                <div className="admin-holder-table legitimate">
-                  {(holderIntel.topLegitimateHolders || []).length === 0 ? (
-                    <p>No eligible legitimate holders for the current rules. Lower the hold/streak rule or ask users to verify wallet + complete Daily Routine.</p>
-                  ) : (
-                    (holderIntel.topLegitimateHolders || []).map((holder) => (
-                      <article key={`${holder.rank}-${holder.telegramId}-${holder.walletAddress}`}>
-                        <b>#{holder.rank}</b>
-                        <div>
-                          <strong>{holder.username ? `@${holder.username}` : holder.displayName || `TG ${holder.telegramId}`}</strong>
-                          <small>{compactWalletAddress(holder.walletAddress)} · {holder.activeStreakDays}d streak · {holder.todayProtected ? "today protected" : "today not locked"}</small>
-                        </div>
-                        <em>{formatTokenAmount(holder.verifiedBalance)}</em>
-                        <i>{formatHolderPercent(holder.balanceSharePercent)}</i>
-                      </article>
-                    ))
-                  )}
-                </div>
-              </section>
-            </div>
-          )}
-
-          {holderIntel && (
-            <section className="admin-distribution-draft">
-              <div className="admin-distribution-head">
-                <div>
-                  <span>Reward distribution</span>
-                  <strong>Prepare a real manual payout batch</strong>
-                  <small>App calculates legitimate holder shares. Treasury still sends manually; the server never stores a private key or moves tokens.</small>
-                </div>
-                <b>{eligiblePayoutCandidates.length} eligible</b>
-              </div>
-
-              {eligiblePayoutCandidates.length === 0 && (
-                <div className="admin-distribution-message muted">
-                  No legitimate recipients loaded yet. Rewards need eligible app users under the current hold/streak rules.
-                </div>
-              )}
-
-              <div className="admin-distribution-mode-grid">
-                <button
-                  type="button"
-                  className={distributionMode === "test" ? "active" : ""}
-                  onClick={() => {
-                    setDistributionMode("test");
-                    setDistributionMessage("");
-                  }}
-                >
-                  Test ledger
-                </button>
-                <button
-                  type="button"
-                  className={distributionMode === "real_manual" ? "active danger" : "danger"}
-                  onClick={() => {
-                    setDistributionMode("real_manual");
-                    setDistributionMessage("");
-                  }}
-                >
-                  Real manual distribution
-                </button>
-              </div>
-
-              <div className="admin-distribution-controls">
-                <label>
-                  <span>Pool token</span>
-                  <select value={rewardPoolToken} onChange={(event) => setRewardPoolToken(event.target.value)}>
-                    <option value="USDC">USDC</option>
-                    <option value="SOL">SOL</option>
-                    <option value="$BROKE">$BROKE</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Amount to distribute</span>
-                  <input
-                    inputMode="decimal"
-                    value={rewardPoolAmount}
-                    onChange={(event) => {
-                      setRewardPoolAmount(event.target.value.replace(/[^0-9.,]/g, ""));
-                      setDistributionMessage("");
-                    }}
-                    placeholder="Example: 100"
-                  />
-                </label>
-                <div className="admin-distribution-action-stack">
-                  <button type="button" onClick={prepareDistributionDraft} disabled={!payoutPreviewReady}>
-                    {distributionMode === "real_manual" ? "Copy send sheet" : "Copy test manifest"}
-                  </button>
-                  <button type="button" onClick={() => saveDistributionBatch("test")} disabled={!payoutPreviewReady || distributionSaving}>
-                    {distributionSaving && distributionMode === "test" ? "Saving..." : eligiblePayoutCandidates.length === 0 ? "No eligible recipients" : "Save test batch"}
-                  </button>
-                </div>
-              </div>
-
-              {distributionMode === "real_manual" && (
-                <div className="admin-real-distribution-guard">
-                  <div>
-                    <span>Real distribution guard</span>
-                    <strong>{access.treasuryMatched ? "Treasury wallet verified" : "Treasury wallet not verified"}</strong>
-                    <small>
-                      Real batch preparation requires the configured treasury wallet to be connected and verified. After saving, send manually from treasury and record tx signatures.
-                    </small>
-                  </div>
-                  <label>
-                    <span>Confirm phrase</span>
-                    <input
-                      value={realDistributionConfirm}
-                      onChange={(event) => setRealDistributionConfirm(event.target.value)}
-                      placeholder={realDistributionConfirmPhrase}
-                    />
-                    <small>Type exactly: {realDistributionConfirmPhrase}</small>
-                  </label>
-                  <button type="button" onClick={() => saveDistributionBatch("real_manual")} disabled={!realDistributionReady || distributionSaving}>
-                    {distributionSaving ? "Preparing..." : "Prepare real batch"}
-                  </button>
-                </div>
-              )}
-
-              <div className="admin-distribution-summary">
-                <article>
-                  <span>Pool</span>
-                  <strong>{rewardPoolValue > 0 ? formatRewardTokenAmount(rewardPoolValue, rewardPoolToken) : `0 ${rewardPoolToken}`}</strong>
-                </article>
-                <article>
-                  <span>Calculated</span>
-                  <strong>{formatRewardTokenAmount(payoutTotal, rewardPoolToken)}</strong>
-                </article>
-                <article>
-                  <span>Status</span>
-                  <strong>
-                    {eligiblePayoutCandidates.length === 0
-                      ? "No eligible recipients"
-                      : distributionMode === "real_manual"
-                        ? realDistributionReady
-                          ? "Ready to prepare"
-                          : "Guard locked"
-                        : payoutPreviewReady
-                          ? "Test ready"
-                          : "Need amount"}
-                  </strong>
-                </article>
-              </div>
-
-              {payoutRows.length > 0 && (
-                <div className="admin-distribution-preview">
-                  {payoutRows.slice(0, 8).map((row) => (
-                    <article key={`payout-${row.rank}-${row.walletAddress}`}>
-                      <div>
-                        <strong>{row.username ? `@${row.username}` : row.displayName || compactWalletAddress(row.walletAddress)}</strong>
-                        <small>{compactWalletAddress(row.walletAddress)} · {formatHolderPercent(row.balanceSharePercent)}</small>
-                      </div>
-                      <b>{formatRewardTokenAmount(row.rewardAmount, rewardPoolToken)}</b>
-                    </article>
-                  ))}
-                  {payoutRows.length > 8 && <p>+{payoutRows.length - 8} more recipients in the copied send sheet / manifest.</p>}
-                </div>
-              )}
-
-              {distributionMessage && <div className="admin-distribution-message">{distributionMessage}</div>}
-
-              {distributionRecord && (
-                <div className="admin-distribution-saved-card">
-                  <span>{distributionRecord.mode === "real_manual" ? "Prepared real batch" : "Saved test batch"}</span>
-                  <strong>{distributionRecord.id.slice(0, 8)} · {distributionRecord.status}</strong>
-                  <small>
-                    {distributionRecord.recipientCount} recipients · {formatRewardTokenAmount(distributionRecord.calculatedTotal, distributionRecord.poolToken)} calculated · saved {formatAdminDate(distributionRecord.createdAt)}
-                  </small>
-                </div>
-              )}
-
-              {distributionRecord?.mode === "real_manual" && (
-                <div className="admin-real-send-queue">
-                  <div className="admin-real-send-queue-head">
-                    <div>
-                      <span>Final payout queue</span>
-                      <strong>Send from treasury wallet</strong>
-                      <small>Each Open payment button creates a wallet payment request for that recipient. Confirm inside Phantom/Jupiter/Solflare, then paste the transaction signature below.</small>
-                    </div>
-                    <button type="button" onClick={copyAllPayoutPaymentLinks} disabled={payoutRows.length === 0}>
-                      Copy all links
-                    </button>
-                  </div>
-
-                  <div className="admin-real-send-queue-note">
-                    Use this for the first real distribution. Wallet batch signing is kept as the safest no-private-key option. If Phantom/Jupiter blocks it, use the dedicated payout wallet sender below with a small funded wallet only.
-                  </div>
-
-                  <div className="admin-batch-sender-card">
-                    <div>
-                      <span>Treasury batch sender</span>
-                      <strong>Send all with wallet signature</strong>
-                      <small>
-                        Beta: uses Wallet Standard signing, groups recipients into small transactions, then records tx signatures automatically. If direct send is blocked, the app retries with signTransaction + RPC broadcast before falling back to payment links.
-                      </small>
-                    </div>
-                    <button type="button" onClick={sendAllWithTreasuryWallet} disabled={batchSending || !access.treasuryMatched || payoutRows.length === 0}>
-                      {batchSending ? "Sending batch..." : "Send all with treasury wallet"}
-                    </button>
-                    {adminEmbeddedView && (
-                      <button
-                        type="button"
-                        className="admin-batch-standalone-button"
-                        onClick={() => {
-                          const opened = openStandaloneAppUrl();
-                          setSendQueueMessage(opened ? "Standalone app tab opened. Use the full tab for treasury batch signing." : "Could not open standalone tab from this browser. Copy the direct app link and open it outside the site preview.");
-                        }}
-                      >
-                        Open full app for batch send
-                      </button>
-                    )}
-                    {batchSenderProgress && <em>{batchSenderProgress}</em>}
-                  </div>
-
-                  <div className="admin-server-payout-card">
-                    <div>
-                      <span>Dedicated payout wallet</span>
-                      <strong>Auto-send without wallet popups</strong>
-                      <small>
-                        Use only with a small funded payout wallet configured in Vercel. This bypasses Phantom/Jupiter popup limits, but never use your main treasury seed here.
-                      </small>
-                    </div>
-                    <label>
-                      <span>Confirm server auto-send</span>
-                      <input
-                        value={serverAutoConfirm}
-                        onChange={(event) => setServerAutoConfirm(event.target.value)}
-                        placeholder="Type SERVER AUTO SEND"
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={sendAllWithPayoutWalletServer}
-                      disabled={serverAutoSending || !distributionRecord?.id || !adminReadKey.trim() || serverAutoConfirm.trim() !== "SERVER AUTO SEND"}
-                    >
-                      {serverAutoSending ? "Auto-sending..." : "Auto-send from payout wallet"}
-                    </button>
-                  </div>
-
-                  {sendQueueMessage && <div className="admin-send-queue-message">{sendQueueMessage}</div>}
-
-                  <div className="admin-real-send-queue-list">
-                    {payoutRows.map((row) => (
-                      <article key={`send-${row.rank}-${row.walletAddress}`}>
-                        <div>
-                          <strong>#{row.rank} · {formatRewardTokenAmount(row.rewardAmount, rewardPoolToken)}</strong>
-                          <small>{compactWalletAddress(row.walletAddress)} · {formatHolderPercent(row.balanceSharePercent)}</small>
-                        </div>
-                        <div className="admin-real-send-actions">
-                          <button type="button" onClick={() => openPayoutPayment(row)}>
-                            Open payment
-                          </button>
-                          <button type="button" onClick={() => copySinglePayoutPayment(row)}>
-                            Copy row
-                          </button>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {distributionRecord?.mode === "real_manual" && (
-                <div className="admin-manual-signature-card">
-                  <div>
-                    <span>After treasury sends</span>
-                    <strong>Record transaction signatures</strong>
-                    <small>Paste one row per recipient: rank,txSignature or wallet,txSignature. This marks payout rows as manual_sent in the private ledger.</small>
-                  </div>
-                  <textarea
-                    value={manualSignatureText}
-                    onChange={(event) => setManualSignatureText(event.target.value)}
-                    placeholder={`1,5Nabc...tx
-2,3xDef...tx`}
-                  />
-                  <button type="button" onClick={recordManualSendSignatures} disabled={manualSignatureSaving || !manualSignatureText.trim()}>
-                    {manualSignatureSaving ? "Recording..." : "Record sent txs"}
-                  </button>
-                </div>
-              )}
-            </section>
-          )}
-
-
-          {holderIntel?.generatedAt && (
-            <div className="admin-holder-footnote">
-              Updated {formatAdminDate(holderIntel.generatedAt)}. Reward-share logic remains balance based: holder balance / total eligible balance.
-            </div>
-          )}
-        </section>
-
-        <div className="admin-treasury-warning">
-          <b>No private key stored</b>
-          <span>Wallet-signing mode never stores a private key. Optional server auto-send requires a separate low-balance payout wallet key in Vercel; do not use the main treasury seed.</span>
-        </div>
-      </div>
-    </details>
+      <p className="admin-clean-footnote">
+        Uses the dedicated payout wallet configured in Vercel. Do not use the main treasury seed there; fund a separate payout wallet only with the intended distribution amount.
+      </p>
+    </section>
   );
 }
 

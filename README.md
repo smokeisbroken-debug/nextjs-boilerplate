@@ -1,53 +1,67 @@
-# $BROKE Life Tracker — v59.40.2 Treasury Batch Sender Access Fallback Hotfix
+# $BROKE Life Tracker — v59.42 Clean One-Button Admin Distribution
 
-Patch-only hotfix on top of confirmed v59.40.1.
+Patch-only cleanup on top of v59.41.
 
 ## Scope
 
-v59.40.2 keeps the private Admin **Treasury Batch Sender** and adds a safer fallback for wallets that expose `solana:signAndSendTransaction` but reject it with errors such as `Access forbidden` in mobile wallet browsers.
+v59.42 replaces the overloaded private Admin distribution UI with a simple one-button flow.
+
+The Admin modal now focuses on four inputs and one action:
+
+- Admin read key.
+- Minimum $BROKE hold.
+- Required Daily Routine Active Streak days.
+- Token + amount.
+- `Distribute rewards`.
+
+The button loads legitimate holders, prepares the real distribution batch, sends pending payouts from the dedicated payout wallet, and records tx signatures in the existing ledger.
+
+## Operational model
+
+This version intentionally uses the v59.41 dedicated payout-wallet server sender because mobile wallet browser batch signing was unreliable. The main treasury seed must not be used.
+
+Required Vercel env for one-button distribution:
+
+```env
+REWARDS_ADMIN_SECRET=your_admin_secret
+BROKE_PAYOUT_AUTO_SEND_ENABLED=true
+BROKE_PAYOUT_WALLET_SECRET_KEY=dedicated_low_balance_payout_wallet_secret
+BROKE_PAYOUT_WALLET_ADDRESS=dedicated_payout_wallet_public_address
+SOLANA_RPC_URL=stable_private_rpc_url
+BROKE_TOKEN_MINT=9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray
+NEXT_PUBLIC_BROKE_TOKEN_MINT=9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray
+```
+
+Optional safety caps:
+
+```env
+BROKE_PAYOUT_MAX_RECIPIENTS=30
+BROKE_PAYOUT_MAX_POOL=1000000
+```
 
 ## Changes
 
-- Updated the batch sender transaction flow:
-  - First tries Wallet Standard `signAndSendTransaction`.
-  - If the wallet blocks direct sending and also exposes `signTransaction`, the app now falls back to `signTransaction` plus browser-side RPC broadcast.
-  - This keeps the grouped-transaction flow instead of forcing the admin back to one payment link per recipient.
-- Improved the admin error message for `Access forbidden` so it explains that the wallet blocked batch signing in the current browser.
-- Updated the Treasury Batch Sender UI copy to clarify the new fallback path.
-- Kept the existing manual safety fallbacks:
-  - payment links;
-  - copy rows;
-  - manual tx-signature paste.
-
-## Important operational note
-
-The batch sender is still wallet-dependent. Phantom/Jupiter/Solflare mobile browsers may expose different signing permissions depending on browser state and wallet permissions. If mobile still blocks batch signing, try:
-
-1. Reopen the site inside the wallet browser.
-2. Reconnect and verify the treasury wallet.
-3. Try desktop browser + Phantom/Solflare extension.
-4. Keep payment links/manual tx paste as final fallback.
+- Removed the visible Admin clutter around wallet batch signing, payment links, manual tx paste, queue controls, repeated warnings, and multi-step real/test modes from the main UI.
+- Added `Distribute rewards` as the main Admin action.
+- The one-button flow performs:
+  1. Load legitimate holders using the selected rules.
+  2. Calculate balance-share payouts.
+  3. Save a real distribution batch to the existing ledger.
+  4. Call server auto-send from the dedicated payout wallet.
+  5. Record tx signatures automatically.
+- Cleaned the Admin modal layout for mobile and desktop.
+- Fixed a duplicate local declaration in `app/api/admin/distributions/route.ts`.
+- Relaxed real-batch preparation so a configured dedicated payout wallet can be used without relying on browser treasury-wallet batch signing.
 
 ## Not changed
 
-- No private key storage.
-- No server-side signing.
-- No server-side token transfers.
-- No Supabase schema change.
-- No claims/staking backend.
+- No eligibility formula change.
 - No Daily Routine / Active Streak change.
-- No holder eligibility formula change.
+- No Supabase schema change.
+- No claims or staking backend.
+- No public user UI change.
+- No main treasury private key storage.
 
+## Safety note
 
-## v59.40.3 — Standalone Batch Send Guard
-
-- Treasury Batch Sender now blocks batch signing inside embedded/site preview frames, where Phantom/Jupiter/Solflare can return `Access forbidden` or open only the wallet home screen.
-- Added a clear `Open full app for batch send` button in the private Admin payout queue.
-- Admin must run `Send all with treasury wallet` from the full standalone app tab/desktop extension context, not from the site preview iframe.
-- No private key storage, server-side signing, server-side token transfer, Supabase schema changes, reward formula changes, or Daily Routine changes.
-
-## v59.41 Dedicated Payout Wallet Auto-Send Fallback
-
-Adds an optional admin-only server auto-send path for real reward distributions when Phantom/Jupiter/Solflare block browser batch signing with `Access forbidden`. This path is intentionally separate from the main treasury wallet: use a small, dedicated payout wallet funded only with the exact distribution amount. Required env gates: `BROKE_PAYOUT_AUTO_SEND_ENABLED=true`, `BROKE_PAYOUT_WALLET_SECRET_KEY`, optional `BROKE_PAYOUT_WALLET_ADDRESS`, `BROKE_PAYOUT_MAX_RECIPIENTS`, `BROKE_PAYOUT_MAX_POOL`, and stable `SOLANA_RPC_URL`. Admin must still prepare a real batch and type `SERVER AUTO SEND` in the private Admin modal. The API sends pending payout rows from the dedicated payout wallet, records tx signatures in the existing ledger, and keeps payment links/manual tx paste as fallback.
-
-No main treasury private key should be stored. No eligibility formula, Daily Routine, Active Streak, Supabase schema, claims, staking, or public UI changes.
+Use a separate payout wallet funded only with the intended distribution amount. Do not place the main treasury seed phrase/private key in Vercel.
