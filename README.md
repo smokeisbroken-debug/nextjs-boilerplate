@@ -1,256 +1,65 @@
-# $BROKE Life Tracker — v59.35 Standard / Pro Mode + Leak Reflection Questions
+# $BROKE Life Tracker — v59.38 Real Manual Distribution Prep
 
-Patch-only update on top of confirmed v59.34.2.
+Patch-only update on top of confirmed v59.37.
 
-## What changed
+## Scope
 
-- Added a Home header mode switch beside Guide:
-  - **Standard Mode** = clean/simple experience.
-  - **Pro Mode** = full advanced app.
-- Standard Mode now hides the heavy Home modules and keeps only the core loop:
-  - Wallet Snapshot;
-  - Today’s Focus;
-  - First Leak Mission for new users;
-  - Daily Routine;
-  - Wallet Survival Report;
-  - $BROKE Chart preview;
-  - Recent Expenses;
-  - Account / Sync.
-- Pro Mode keeps the full experience:
-  - Weekly Behavior Report;
-  - Comeback Mode;
-  - Biggest Leak Challenge;
-  - Share Reports;
-  - Smart Insights Lab;
-  - Badges;
-  - Profile Share Card;
-  - Growth;
-  - Rewards;
-  - advanced mechanics.
-- Bottom nav now adapts to the mode:
-  - Standard: Home, Add, Chart, Profile.
-  - Pro: Home, Add, Chart, Growth, Rewards, Profile.
-- If the user switches to Standard while inside a Pro-only tab, the app safely returns to Home.
-- Added a Standard Mode notice card on Home explaining the simplified flow.
-- Added the spending-reflection prompt set to the post-add leak popup. The app now shows one practical question such as convenience tax, optional amount, impulse amount, or disciplined version cost.
-- App mode is local-first and included in the cloud app-state payload so it can sync through the existing app-state flow.
+v59.38 prepares the private Admin Panel for real manual reward distributions without putting treasury private keys or automatic token transfers into the app.
 
-## Important boundary
+## Changes
 
-This does not change reward eligibility, admin distribution logic, wallet verification, Daily Routine proof, or token movement. It is a UX/navigation and reflection-polish patch.
+- Admin Reward Distribution now has two modes:
+  - `Test ledger` for dry-run/test saved batches.
+  - `Real manual distribution` for a prepared live manual payout batch.
+- Real manual batch preparation requires:
+  - loaded legitimate holders,
+  - pool token and amount,
+  - configured treasury wallet matched to the connected verified wallet,
+  - exact confirmation phrase: `PREPARE REAL DISTRIBUTION`.
+- Real batch saves as `prepared` in the existing reward distribution ledger.
+- Added copyable manual send sheet:
+  - `rank,wallet,amount,token,share_percent`.
+- Added tx signature recorder after a real manual batch is prepared:
+  - admin can paste `rank,txSignature` or `wallet,txSignature` rows,
+  - payout rows are marked `manual_sent`,
+  - distribution becomes `manual_sent` when all payout rows have signatures.
+- `/api/admin/distributions` now supports:
+  - `GET` recent/specific private distributions,
+  - `POST` test or real manual prepared batches,
+  - `PATCH` manual send tx signature recording or cancellation.
 
-## What did not change
+## No changes
 
-- No Creator Fee distribution.
-- No live payouts.
-- No claims.
+- No automatic token transfers.
+- No treasury private key storage.
+- No server-side signing.
+- No claim system.
 - No staking.
-- No token transfers.
-- No treasury signing.
-- No private key storage.
 - No WalletConnect/Reown dependency.
-- No Supabase migration.
-- No wallet verification backend changes.
-- No Daily Routine / Active Streak proof logic changes.
+- No Supabase schema change beyond the existing v59.37 ledger tables.
+- No Daily Routine / Active Streak changes.
+- No holder eligibility formula changes.
 
----
+## Required setup
 
-# $BROKE Life Tracker — v59.34.2 Admin Legitimate-Only Controls Hotfix
+Run the v59.37 distribution ledger migration first if not already applied:
 
-Patch-only update on top of confirmed v59.34.1.
+- `supabase/migrations/20260528_v59_37_reward_distribution_test_ledger.sql`
 
-## What changed
+Required env:
 
-- Removed the live blockchain **Top 10 all holders** section from the private Admin Panel.
-- Removed the Admin UI dependency on Solana RPC for holder intelligence.
-- Removed treasury live balance, token supply, RPC mode, and RPC warning cards from the Admin holder view.
-- Admin holder intelligence now focuses only on **Top 20 legitimate holders** from app data.
-- Added editable private Admin eligibility controls:
-  - minimum $BROKE hold;
-  - required Daily Routine Active Streak days.
-- `/api/admin/holders` now accepts admin-only query params:
-  - `minHold`;
-  - `minStreak`.
-- Reward Distribution Draft now uses the currently loaded legitimate-holder rules.
-- The admin modal copy was simplified so the panel is cleaner on mobile.
-
-## Current legitimate-holder rule
-
-The default remains:
-
-```text
-verified wallet + 100,000+ $BROKE + 7+ Daily Routine Active Streak
-```
-
-Inside the private Admin Panel, the admin can temporarily load another rule for preview/distribution draft math. Example:
-
-```text
-minimum hold: 50,000 BROKE
-required streak: 3 days
-```
-
-The split formula remains unchanged:
-
-```text
-user reward = pool amount × user verified eligible BROKE / total verified eligible BROKE
-```
-
-## Important boundary
-
-This still does not send real rewards. It only calculates eligible recipients and creates/copies a draft manifest. Real payout execution still requires a later treasury signing flow.
-
-## What did not change
-
-- No Creator Fee distribution.
-- No live payouts.
-- No claims.
-- No staking.
-- No token transfers.
-- No treasury signing.
-- No private key storage.
-- No WalletConnect/Reown dependency.
-- No Jupiter Wallet Kit dependency.
-- No Supabase migration.
-- No wallet verification backend changes.
-- No Daily Routine / Active Streak proof logic changes.
-
----
-
-# $BROKE Life Tracker — v59.33 Private Admin Holder Intelligence Panel
-
-Patch-only update on top of confirmed v59.32.
-
-## What changed
-
-- Added the provided admin/treasury public wallet as the default admin wallet fallback:
-  - `5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9`
-- Added the provided $BROKE contract/mint as the default token mint fallback:
-  - `9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray`
-- Added a private Admin Panel holder intelligence block inside Profile.
-- Added a new read-only admin route:
-  - `/api/admin/holders`
-- Admin Panel can now show:
-  - **Top 10 all holders** from Solana RPC largest token accounts, grouped by visible owner address;
-  - **Top 20 legitimate holders** from app eligibility logic.
-- Legitimate holder logic stays aligned with Rewards:
-  - verified app wallet;
-  - 100,000+ $BROKE;
-  - 7+ Active Streak;
-  - streak based on completed Daily Routine proof.
-- Admin holder data requires backend authorization through `REWARDS_ADMIN_SECRET` or a configured Telegram admin session.
-- The feature is read-only. It does not send rewards, sign transactions, open claims, or transfer tokens.
-
-## Admin config
-
-The default wallet and mint are now embedded as public fallbacks, but Vercel env values can still override them.
-
-Recommended Vercel env values:
-
-```bash
+```env
+SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
+REWARDS_ADMIN_SECRET=...
 NEXT_PUBLIC_TREASURY_WALLET_ADDRESS=5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9
 NEXT_PUBLIC_BROKE_ADMIN_WALLET_ADDRESSES=5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9
 NEXT_PUBLIC_BROKE_TOKEN_MINT=9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray
 BROKE_TOKEN_MINT=9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray
-REWARDS_ADMIN_SECRET=<long random admin read key>
 ```
 
-Optional:
+## Verification
 
-```bash
-NEXT_PUBLIC_BROKE_ADMIN_TELEGRAM_IDS=<comma-separated Telegram user IDs>
-BROKE_ADMIN_TELEGRAM_IDS=<comma-separated Telegram user IDs>
-SOLANA_RPC_URL=<custom mainnet RPC endpoint>
-```
-
-Notes:
-
-- Public wallet addresses and public token mint addresses are safe to show shortened in the admin UI.
-- Do not store seed phrases or private keys in Vercel, Supabase, code, or client env.
-- `REWARDS_ADMIN_SECRET` is server-side and should not use the `NEXT_PUBLIC_` prefix.
-- If the Admin Panel is unlocked by wallet only, enter the `REWARDS_ADMIN_SECRET` in the panel to load server-side holder data.
-- If the Admin Panel is unlocked by a configured Telegram admin session, the endpoint can load without manually entering the read key.
-
-## What did not change
-
-- No Creator Fee distribution.
-- No payouts.
-- No claims.
-- No staking.
-- No token transfers.
-- No treasury signing.
-- No WalletConnect/Reown integration.
-- No Jupiter Wallet Kit dependency.
-- No wallet verification backend flow changes.
-- No Supabase migration required.
-- No holder threshold changes.
-- No balance formula changes.
-- No avatar backend changes.
-- No Telegram webhook changes.
-- No Daily Routine / Active Streak rule changes.
-
-# v59.34 — Admin Panel Launcher + Distribution Draft Prep
-
-Patch-only update on top of v59.33.
-
-## What changed
-
-- Moved the private Admin Panel out of the Profile page body.
-- Added a compact **Admin** header button beside the Profile guide button.
-- The Admin button is still visible only to configured Telegram admins or verified admin/treasury wallets.
-- Admin content now opens in a private modal instead of occupying the Profile page.
-- Fixed the `RPC HTTP 429` experience: Solana Top 10 all-holder RPC failures no longer break the full admin load.
-  - Legitimate app holders can still load from Supabase/app data.
-  - The UI now shows a warning and recommends setting `SOLANA_RPC_URL` to a private RPC endpoint for stable holder reads.
-- Added a safe **Reward distribution draft** window:
-  - admin enters a reward pool amount;
-  - chooses USDC, SOL, or $BROKE as the draft token label;
-  - the app calculates each legitimate holder's payout using balance-share percentage;
-  - the app prepares/copies a payout manifest.
-
-## Important safety boundary
-
-The distribution draft does **not** send tokens. It does not sign wallet transactions, open claims, stake, transfer, or spend treasury funds.
-
-Current behavior:
-
-```text
-Load legitimate holders → enter pool amount → calculate each % → copy payout manifest
-```
-
-Future real payout behavior should still be:
-
-```text
-Create payout batch → connect verified treasury wallet → manual wallet signing → save tx signatures
-```
-
-## What did not change
-
-- No Creator Fee distribution.
-- No live payouts.
-- No token transfers.
-- No treasury signing.
-- No private key storage.
-- No WalletConnect/Reown dependency.
-- No Jupiter Wallet Kit dependency.
-- No Supabase migration.
-- No reward eligibility formula change.
-- No Daily Routine / Active Streak rule change.
-
-
-## v59.34.1 — Admin RPC Setup + Treasury Balance Clarity Hotfix
-
-- Clarifies the private Admin holder view when Solana public RPC is rate-limited: token supply and Top 10 holder sections now show RPC unavailable instead of misleading `0 BROKE`.
-- Adds a live treasury $BROKE balance read for the configured treasury wallet and BROKE mint when `SOLANA_RPC_URL` is available.
-- Separates treasury balance from eligible reward balance: eligible balance remains only verified app users with 100K+ BROKE and a 7+ Daily Routine Active Streak.
-- Reward Distribution Draft now clearly blocks when there are no eligible recipients, even if the treasury wallet has funds.
-- Documents `SOLANA_RPC_URL` as a server-only private mainnet RPC env var for stable Top 10 holder, token supply, and treasury balance reads.
-- No payouts, claims, staking, token transfers, treasury signing, private key storage, Supabase migration, wallet backend changes, holder threshold changes, balance formula changes, avatar backend, Telegram webhook, reward execution, or Daily Routine/Active Streak rule changes.
-
-## v59.36 Smart Leak Excess + First Distribution Test Prep
-
-- Added partial leak accounting: when a user marks an expense as Maybe or Not needed, they can enter the cheaper/necessary version of the same purchase. Only the excess counts as leak pressure. Example: $5 outside food with a $3 home baseline counts $2 as the actual leak.
-- Added optional expense fields `necessary_amount` and `avoidable_leak_amount` with a Supabase migration and fallback behavior if the migration has not been applied yet.
-- Leak reflection now shows tracked spend, necessary baseline, and leak counted. Wallet HP, Chart pressure, Growth Lab, category leak totals, and reports use the adjusted leak value.
-- Admin distribution draft wording now supports a first test distribution workflow: enter a small pool, calculate legitimate holder shares, and copy a payout manifest for review. It still does not send tokens or request treasury signing.
-- No live payouts, token transfers, claims, staking, treasury signing, private key storage, wallet backend changes, or Daily Routine / Active Streak rule changes.
-
+- `npm run typecheck`
+- `npm run lint:quiet`
+- CSS brace balance

@@ -368,10 +368,6 @@ type Expense = {
   note: string;
   createdAt: string;
   triggerTags?: LeakTriggerId[];
-  /** Optional smarter-cost baseline. If present, only amount - necessaryAmount counts as leak pressure. */
-  necessaryAmount?: number;
-  /** Cached avoidable excess. Kept explicit so older records can stay backward-compatible. */
-  avoidableLeakAmount?: number;
   currency?: Currency;
   originalAmount?: number;
   originalCurrency?: Currency;
@@ -956,8 +952,6 @@ type LeakReflection = {
   needType: NeedType;
   categoryCount: number;
   categoryTotalLabel: string;
-  necessaryAmountLabel?: string;
-  leakAmountLabel: string;
   question: string;
   exampleAnswer: string;
   icon: string;
@@ -1035,6 +1029,39 @@ type AdminHoldersResponse = {
   };
   notes?: string[];
 };
+type AdminDistributionSaveResponse = {
+  ok: boolean;
+  error?: string;
+  distribution?: {
+    id: string;
+    status: string;
+    mode?: "test" | "real_manual";
+    poolToken: string;
+    poolAmount: number;
+    recipientCount: number;
+    calculatedTotal: number;
+    createdAt: string;
+  };
+  safety?: {
+    noTokenTransfers?: boolean;
+    noWalletSigning?: boolean;
+    noPrivateKey: boolean;
+    noServerTokenTransfers?: boolean;
+    walletSigningNotExecutedByServer?: boolean;
+    readyForManualTreasurySend?: boolean;
+  };
+};
+
+type AdminDistributionUpdateResponse = {
+  ok: boolean;
+  error?: string;
+  distributionId?: string;
+  updated?: number;
+  sentCount?: number;
+  totalCount?: number;
+  status?: string;
+};
+
 
 type CloudStatus = "local" | "syncing" | "cloud" | "error";
 
@@ -5682,12 +5709,6 @@ function usdReferenceNoteFromDisplay(
 
 function expenseToDisplayExpense(expense: Expense, settings: Settings, rates: ExchangeRateMap): Expense {
   const display = getDisplayAmount(expense.amount, expense.currency, settings, rates);
-  const necessaryDisplay = Number.isFinite(expense.necessaryAmount)
-    ? getDisplayAmount(Number(expense.necessaryAmount), expense.currency, settings, rates)
-    : null;
-  const avoidableDisplay = Number.isFinite(expense.avoidableLeakAmount)
-    ? getDisplayAmount(Number(expense.avoidableLeakAmount), expense.currency, settings, rates)
-    : null;
   const usdReference = getUsdReferenceAmount(display.originalAmount, display.originalCurrency, settings, rates);
   const shouldAttachUsdReference = Boolean(
     usdReference &&
@@ -5700,8 +5721,6 @@ function expenseToDisplayExpense(expense: Expense, settings: Settings, rates: Ex
   return {
     ...expense,
     amount: display.amount,
-    ...(necessaryDisplay ? { necessaryAmount: necessaryDisplay.amount } : {}),
-    ...(avoidableDisplay ? { avoidableLeakAmount: avoidableDisplay.amount } : {}),
     currency: display.currency,
     originalAmount: display.originalAmount,
     originalCurrency: display.originalCurrency,
@@ -5829,8 +5848,6 @@ function safeNumber(value: string) {
 
 function normalizeExpense(input: Partial<Expense>): Expense {
   const currency = normalizeOptionalCurrency(input.currency);
-  const necessaryAmount = Number(input.necessaryAmount);
-  const avoidableLeakAmount = Number(input.avoidableLeakAmount);
 
   return {
     id: String(input.id || uid()),
@@ -5843,8 +5860,6 @@ function normalizeExpense(input: Partial<Expense>): Expense {
     note: String(input.note || ""),
     createdAt: String(input.createdAt || new Date().toISOString()),
     triggerTags: normalizeLeakTriggerTags(input.triggerTags, String(input.note || "")),
-    ...(Number.isFinite(necessaryAmount) ? { necessaryAmount } : {}),
-    ...(Number.isFinite(avoidableLeakAmount) ? { avoidableLeakAmount } : {}),
     ...(currency ? { currency } : {}),
   };
 }
@@ -5859,10 +5874,8 @@ function expenseSyncKey(expense: Expense) {
   const needKey = String(expense.needType || "Needed").trim().toLocaleLowerCase();
   const noteKey = String(expense.note || "").replace(/\s+/g, " ").trim().slice(0, 160);
   const currencyKey = normalizeOptionalCurrency(expense.currency) || "";
-  const necessaryKey = Number.isFinite(expense.necessaryAmount) ? Number(expense.necessaryAmount).toFixed(2) : "";
-  const avoidableKey = Number.isFinite(expense.avoidableLeakAmount) ? Number(expense.avoidableLeakAmount).toFixed(2) : "";
 
-  return [createdKey, amountKey, categoryKey, needKey, noteKey, currencyKey, necessaryKey, avoidableKey].join("|");
+  return [createdKey, amountKey, categoryKey, needKey, noteKey, currencyKey].join("|");
 }
 
 function mergeExpensesForSync(localExpenses: Expense[], cloudExpenses: Expense[]) {
@@ -6116,30 +6129,6 @@ function getExpenseTrackedValue(expense: Expense) {
   return Math.max(0, Number.isFinite(expense.amount) ? expense.amount : 0);
 }
 
-function getExpenseNecessaryValue(expense: Expense) {
-  const tracked = getExpenseTrackedValue(expense);
-  const necessary = Number(expense.necessaryAmount);
-
-  if (!Number.isFinite(necessary)) return null;
-
-  return clamp(necessary, 0, tracked);
-}
-
-function getExpenseAvoidableLeakValue(expense: Expense) {
-  const tracked = getExpenseTrackedValue(expense);
-  const cachedAvoidable = Number(expense.avoidableLeakAmount);
-
-  if (Number.isFinite(cachedAvoidable)) {
-    return clamp(cachedAvoidable, 0, tracked);
-  }
-
-  const necessary = getExpenseNecessaryValue(expense);
-
-  if (necessary === null) return null;
-
-  return clamp(tracked - necessary, 0, tracked);
-}
-
 function getExpenseLeakMultiplier(expense: Expense) {
   if (expense.needType === "Needed") return 0;
   if (expense.needType === "Maybe") return 0.5;
@@ -6147,12 +6136,6 @@ function getExpenseLeakMultiplier(expense: Expense) {
 }
 
 function getExpenseLeakValue(expense: Expense) {
-  if (expense.needType === "Needed") return 0;
-
-  const avoidableLeak = getExpenseAvoidableLeakValue(expense);
-
-  if (avoidableLeak !== null) return avoidableLeak;
-
   return getExpenseTrackedValue(expense) * getExpenseLeakMultiplier(expense);
 }
 
@@ -6368,10 +6351,6 @@ function buildLeakReflection(
   const categoryCount = categoryExpenses.length;
   const average = categoryCount > 0 ? categoryTotal / categoryCount : expense.amount;
   const amountLabel = money(expense.amount, settings.currency);
-  const necessaryValue = getExpenseNecessaryValue(expense);
-  const avoidableLeakValue = getExpenseLeakValue(expense);
-  const necessaryAmountLabel = necessaryValue !== null ? money(necessaryValue, settings.currency) : undefined;
-  const leakAmountLabel = money(avoidableLeakValue, settings.currency);
   const categoryText = sentenceCase(categoryLabel(expense.category));
   const tenTimes = money(expense.amount * 10, settings.currency);
   const monthlyPace = money(categoryTotal, settings.currency);
@@ -6383,12 +6362,7 @@ function buildLeakReflection(
   let body = "This expense is now part of your wallet history.";
   let insight = "Small actions are only small until they repeat.";
 
-  if (expense.needType !== "Needed" && necessaryValue !== null) {
-    tone = avoidableLeakValue <= 0 ? "needed" : expense.needType === "Maybe" ? "maybe" : "leak";
-    title = avoidableLeakValue <= 0 ? "No excess leak counted" : "Only the excess counted as leak";
-    body = `${amountLabel} tracked. Smarter baseline: ${necessaryAmountLabel}. Leak counted: ${leakAmountLabel}.`;
-    insight = "This is the realistic leak rule: spending can be partly necessary and partly avoidable.";
-  } else if (expense.needType === "Needed") {
+  if (expense.needType === "Needed") {
     tone = "needed";
     title = "Needed expense recorded";
     body = "This is not a leak. This is life cost.";
@@ -6420,7 +6394,7 @@ function buildLeakReflection(
     insight = "The first step is admitting where the wallet is leaking.";
   }
 
-  if (categoryCount >= 5 && expense.needType !== "Needed" && necessaryValue === null) {
+  if (categoryCount >= 5 && expense.needType !== "Needed") {
     tone = "pattern";
     title = `${categoryText} again`;
     body = `${categoryCount} ${categoryText} records this month. Total: ${monthlyPace}.`;
@@ -6437,8 +6411,6 @@ function buildLeakReflection(
     needType: expense.needType,
     categoryCount,
     categoryTotalLabel: monthlyPace,
-    necessaryAmountLabel,
-    leakAmountLabel,
     question: reflectionQuestion.question,
     exampleAnswer: reflectionQuestion.example,
     icon,
@@ -9011,7 +8983,6 @@ export default function Home() {
   const [note, setNote] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Coffee");
   const [expenseType, setExpenseType] = useState<NeedType>("Needed");
-  const [necessaryAmount, setNecessaryAmount] = useState("");
   const [selectedLeakTriggers, setSelectedLeakTriggers] = useState<LeakTriggerId[]>([]);
   const [lastTrackedExpense, setLastTrackedExpense] = useState<Expense | null>(null);
   const [leakReflection, setLeakReflection] = useState<LeakReflection | null>(null);
@@ -9561,13 +9532,6 @@ export default function Home() {
     if (value <= 0) return;
 
     const noteWithTriggers = buildNoteWithLeakTriggers(note, selectedLeakTriggers);
-    const necessaryInput = necessaryAmount.trim();
-    const parsedNecessaryAmount = necessaryInput ? safeNumber(necessaryInput) : NaN;
-    const hasSmartLeakBaseline =
-      expenseType !== "Needed" && necessaryInput !== "" && Number.isFinite(parsedNecessaryAmount);
-    const normalizedNecessaryAmount = hasSmartLeakBaseline ? clamp(parsedNecessaryAmount, 0, value) : null;
-    const normalizedAvoidableLeakAmount =
-      normalizedNecessaryAmount !== null ? clamp(value - normalizedNecessaryAmount, 0, value) : null;
 
     const expense: Expense = {
       id: uid(),
@@ -9577,9 +9541,6 @@ export default function Home() {
       note: noteWithTriggers,
       createdAt: new Date().toISOString(),
       triggerTags: normalizeLeakTriggerTags(selectedLeakTriggers),
-      ...(normalizedNecessaryAmount !== null
-        ? { necessaryAmount: normalizedNecessaryAmount, avoidableLeakAmount: normalizedAvoidableLeakAmount ?? 0 }
-        : {}),
       currency: settings.currency,
     };
 
@@ -9591,7 +9552,6 @@ export default function Home() {
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
     setAmount("");
     setNote("");
-    setNecessaryAmount("");
     setSelectedLeakTriggers([]);
     setExpenseType("Needed");
     setActiveTab("add");
@@ -9604,7 +9564,7 @@ export default function Home() {
 
         if (data.expense) {
           setExpenses((prev) =>
-            prev.map((item) => (item.id === expense.id ? { ...data.expense!, necessaryAmount: expense.necessaryAmount, avoidableLeakAmount: expense.avoidableLeakAmount } : item))
+            prev.map((item) => (item.id === expense.id ? data.expense! : item))
           );
           if (data.streak) setStreak(data.streak);
           if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
@@ -9641,7 +9601,6 @@ export default function Home() {
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
     setAmount("");
     setNote("");
-    setNecessaryAmount("");
     setSelectedLeakTriggers([]);
     setSelectedCategory(category);
     setExpenseType(needType);
@@ -10108,8 +10067,6 @@ export default function Home() {
             setSelectedCategory={setSelectedCategory}
             expenseType={expenseType}
             setExpenseType={setExpenseType}
-            necessaryAmount={necessaryAmount}
-            setNecessaryAmount={setNecessaryAmount}
             selectedLeakTriggers={selectedLeakTriggers}
             setSelectedLeakTriggers={setSelectedLeakTriggers}
             lastTrackedExpense={lastTrackedExpense}
@@ -11159,20 +11116,6 @@ function LeakReflectionPopupView({
         </div>
 
         <div className="leak-reflection-mini-grid">
-          <div>
-            <span>Tracked</span>
-            <strong>{reflection.amountLabel}</strong>
-          </div>
-          <div>
-            <span>Leak counted</span>
-            <strong>{reflection.leakAmountLabel}</strong>
-          </div>
-          {reflection.necessaryAmountLabel && (
-            <div>
-              <span>Necessary</span>
-              <strong>{reflection.necessaryAmountLabel}</strong>
-            </div>
-          )}
           <div>
             <span>This month</span>
             <strong>{reflection.categoryCount}x</strong>
@@ -16485,8 +16428,6 @@ function AddExpenseScreen({
   setSelectedCategory,
   expenseType,
   setExpenseType,
-  necessaryAmount,
-  setNecessaryAmount,
   selectedLeakTriggers,
   setSelectedLeakTriggers,
   lastTrackedExpense,
@@ -16503,8 +16444,6 @@ function AddExpenseScreen({
   setSelectedCategory: (value: string) => void;
   expenseType: NeedType;
   setExpenseType: (value: NeedType) => void;
-  necessaryAmount: string;
-  setNecessaryAmount: (value: string) => void;
   selectedLeakTriggers: LeakTriggerId[];
   setSelectedLeakTriggers: (value: LeakTriggerId[]) => void;
   lastTrackedExpense: Expense | null;
@@ -16518,11 +16457,6 @@ function AddExpenseScreen({
         .map((trigger) => trigger.label)
         .join(" · ")
     : "No trigger selected yet";
-  const trackedAmountPreview = safeNumber(amount);
-  const necessaryAmountPreview = necessaryAmount.trim() ? safeNumber(necessaryAmount) : NaN;
-  const hasSmartLeakPreview = expenseType !== "Needed" && Number.isFinite(necessaryAmountPreview);
-  const normalizedNecessaryPreview = hasSmartLeakPreview ? clamp(necessaryAmountPreview, 0, Math.max(trackedAmountPreview, 0)) : 0;
-  const avoidableLeakPreview = hasSmartLeakPreview ? clamp(trackedAmountPreview - normalizedNecessaryPreview, 0, Math.max(trackedAmountPreview, 0)) : 0;
 
   function toggleLeakTrigger(triggerId: LeakTriggerId) {
     triggerHaptic("light");
@@ -16602,7 +16536,6 @@ function AddExpenseScreen({
               onClick={() => {
                 setSelectedCategory(preset.category);
                 setAmount(String(preset.amount));
-                setNecessaryAmount("");
                 setExpenseType("Not needed");
                 triggerHaptic("light");
               }}
@@ -16643,10 +16576,7 @@ function AddExpenseScreen({
               <button
                 type="button"
                 key={type}
-                onClick={() => {
-                  setExpenseType(type);
-                  if (type === "Needed") setNecessaryAmount("");
-                }}
+                onClick={() => setExpenseType(type)}
                 className={`choice decision-choice ${tone} ${expenseType === type ? "active" : ""}`}
               >
                 <strong>{label.title}</strong>
@@ -16657,46 +16587,6 @@ function AddExpenseScreen({
         </div>
         <p className="tiny-note">{NEED_TYPE_HELP[expenseType]}</p>
       </section>
-
-      {expenseType !== "Needed" && (
-        <section className="smart-leak-panel">
-          <div className="section-title">
-            <span>Real leak amount</span>
-            <small>optional smart baseline</small>
-          </div>
-          <p>Not every purchase is fully bad. Enter what the cheaper or necessary version would have cost, and only the extra part counts as leak pressure.</p>
-          <label className="smart-leak-input">
-            <span>Necessary / smarter cost</span>
-            <div>
-              <b>{currencySymbol(settings.currency)}</b>
-              <input
-                value={necessaryAmount}
-                inputMode="decimal"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Example: 3"
-                onChange={(event) => setNecessaryAmount(event.target.value)}
-              />
-            </div>
-          </label>
-          <div className="smart-leak-preview">
-            <article>
-              <span>Tracked spend</span>
-              <strong>{money(Math.max(trackedAmountPreview, 0), settings.currency)}</strong>
-            </article>
-            <article>
-              <span>Necessary part</span>
-              <strong>{hasSmartLeakPreview ? money(normalizedNecessaryPreview, settings.currency) : "—"}</strong>
-            </article>
-            <article>
-              <span>Leak counted</span>
-              <strong>{hasSmartLeakPreview ? money(avoidableLeakPreview, settings.currency) : "Auto"}</strong>
-            </article>
-          </div>
-          <small className="tiny-note">Example: outside food {money(5, settings.currency)}, home version {money(3, settings.currency)} → leak counted {money(2, settings.currency)}.</small>
-        </section>
-      )}
 
       <section className="trigger-panel">
         <div className="section-title">
@@ -22627,6 +22517,12 @@ function AdminTreasuryPanel({
   const [rewardPoolAmount, setRewardPoolAmount] = useState("");
   const [rewardPoolToken, setRewardPoolToken] = useState("USDC");
   const [distributionMessage, setDistributionMessage] = useState("");
+  const [distributionSaving, setDistributionSaving] = useState(false);
+  const [distributionRecord, setDistributionRecord] = useState<AdminDistributionSaveResponse["distribution"] | null>(null);
+  const [distributionMode, setDistributionMode] = useState<"test" | "real_manual">("test");
+  const [realDistributionConfirm, setRealDistributionConfirm] = useState("");
+  const [manualSignatureText, setManualSignatureText] = useState("");
+  const [manualSignatureSaving, setManualSignatureSaving] = useState(false);
   const [eligibilityMinHold, setEligibilityMinHold] = useState("100000");
   const [eligibilityMinStreak, setEligibilityMinStreak] = useState("7");
 
@@ -22691,24 +22587,33 @@ function AdminTreasuryPanel({
     : [];
   const payoutTotal = payoutRows.reduce((total, row) => total + row.rewardAmount, 0);
   const payoutPreviewReady = payoutRows.length > 0 && rewardPoolValue > 0;
+  const realDistributionConfirmPhrase = "PREPARE REAL DISTRIBUTION";
+  const realDistributionReady = distributionMode === "real_manual" && payoutPreviewReady && access.treasuryMatched && realDistributionConfirm.trim() === realDistributionConfirmPhrase;
 
-  function prepareDistributionDraft() {
-    if (!payoutPreviewReady) {
-      setDistributionMessage("Load legitimate holders and enter a reward pool amount first.");
-      return;
-    }
-
-    const manifest = {
-      type: "BROKE_REWARD_DISTRIBUTION_DRAFT",
+  function buildDistributionManifest(mode: "test" | "real_manual" = distributionMode) {
+    return {
+      type: mode === "real_manual" ? "BROKE_REWARD_DISTRIBUTION_REAL_MANUAL_MANIFEST" : "BROKE_REWARD_DISTRIBUTION_TEST_MANIFEST",
+      mode,
       generatedAt: new Date().toISOString(),
       token: rewardPoolToken,
       poolAmount: rewardPoolValue,
       eligibleHolders: payoutRows.length,
       treasuryWallet: access.treasuryWallet || "not_configured",
-      note: "First distribution test draft only. No token transfer, claim, staking, or wallet signing was executed. Use this manifest to manually review recipients before enabling treasury wallet signing.",
+      connectedWallet: access.connectedWallet || "not_connected",
+      confirmRealDistribution: mode === "real_manual" ? realDistributionConfirm.trim() : "",
+      rules: {
+        minHold: Number(eligibilityMinHold.replace(",", ".")) || 0,
+        minStreak: Number(eligibilityMinStreak) || 0,
+      },
+      note:
+        mode === "real_manual"
+          ? "Real manual distribution batch. Treasury/admin must send manually and record tx signatures after sending."
+          : "Manual test ledger only. No token transfer, claim, staking, wallet signing, or treasury spend was executed.",
       payouts: payoutRows.map((row) => ({
         rank: row.rank,
         telegramId: row.telegramId,
+        username: row.username,
+        displayName: row.displayName,
         walletAddress: row.walletAddress,
         verifiedBalance: row.verifiedBalance,
         balanceSharePercent: row.balanceSharePercent,
@@ -22716,14 +22621,138 @@ function AdminTreasuryPanel({
         token: rewardPoolToken,
       })),
     };
+  }
+
+  function buildDistributionSendSheet() {
+    const header = "rank,wallet,amount,token,share_percent";
+    const rows = payoutRows.map((row) => [
+      row.rank,
+      row.walletAddress,
+      row.rewardAmount,
+      rewardPoolToken,
+      row.balanceSharePercent,
+    ].join(","));
+
+    return [header, ...rows].join("\n");
+  }
+
+  function prepareDistributionDraft() {
+    if (!payoutPreviewReady) {
+      setDistributionMessage("Load legitimate holders and enter a reward pool amount first.");
+      return;
+    }
+
+    const payload = distributionMode === "real_manual" ? buildDistributionSendSheet() : JSON.stringify(buildDistributionManifest("test"), null, 2);
 
     try {
-      void navigator.clipboard?.writeText(JSON.stringify(manifest, null, 2));
-      setDistributionMessage(`Distribution draft copied for ${payoutRows.length} holders. No tokens were sent yet.`);
+      void navigator.clipboard?.writeText(payload);
+      setDistributionMessage(
+        distributionMode === "real_manual"
+          ? `Manual send sheet copied for ${payoutRows.length} holders. Paste it into your payout workflow; no tokens were sent by the app.`
+          : `Distribution test manifest copied for ${payoutRows.length} holders. No tokens were sent.`
+      );
     } catch {
-      setDistributionMessage(`Distribution draft prepared for ${payoutRows.length} holders. No tokens were sent yet.`);
+      setDistributionMessage(
+        distributionMode === "real_manual"
+          ? `Manual send sheet prepared for ${payoutRows.length} holders. No tokens were sent by the app.`
+          : `Distribution test manifest prepared for ${payoutRows.length} holders. No tokens were sent.`
+      );
     }
   }
+
+  async function saveDistributionBatch(mode: "test" | "real_manual") {
+    if (!payoutPreviewReady) {
+      setDistributionMessage("Load legitimate holders and enter a reward pool amount first.");
+      return;
+    }
+
+    if (mode === "real_manual" && !realDistributionReady) {
+      setDistributionMessage(
+        !access.treasuryMatched
+          ? "Connect and verify the configured treasury wallet before preparing a real distribution."
+          : `Type ${realDistributionConfirmPhrase} to unlock real distribution preparation.`
+      );
+      return;
+    }
+
+    setDistributionSaving(true);
+    setDistributionMessage("");
+
+    try {
+      const key = adminReadKey.trim();
+      const response = await fetch("/api/admin/distributions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(key ? { Authorization: `Bearer ${key}` } : {}),
+        },
+        body: JSON.stringify(buildDistributionManifest(mode)),
+      });
+      const data = (await response.json()) as AdminDistributionSaveResponse;
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Could not save distribution batch.");
+      }
+
+      setDistributionRecord(data.distribution || null);
+      setDistributionMessage(
+        mode === "real_manual"
+          ? `Real manual distribution prepared for ${data.distribution?.recipientCount || payoutRows.length} recipients. Send from treasury, then paste tx signatures below.`
+          : `Test batch saved for ${data.distribution?.recipientCount || payoutRows.length} recipients. Manual payouts still need wallet confirmation outside this button.`
+      );
+    } catch (error) {
+      setDistributionRecord(null);
+      setDistributionMessage(error instanceof Error ? error.message : "Could not save distribution batch.");
+    } finally {
+      setDistributionSaving(false);
+    }
+  }
+
+  async function recordManualSendSignatures() {
+    if (!distributionRecord?.id) {
+      setDistributionMessage("Prepare or save a distribution batch first.");
+      return;
+    }
+
+    if (!manualSignatureText.trim()) {
+      setDistributionMessage("Paste rank/signature or wallet/signature rows first.");
+      return;
+    }
+
+    setManualSignatureSaving(true);
+    setDistributionMessage("");
+
+    try {
+      const key = adminReadKey.trim();
+      const response = await fetch("/api/admin/distributions", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(key ? { Authorization: `Bearer ${key}` } : {}),
+        },
+        body: JSON.stringify({
+          action: "record_manual_sends",
+          distributionId: distributionRecord.id,
+          signaturesText: manualSignatureText,
+        }),
+      });
+      const data = (await response.json()) as AdminDistributionUpdateResponse;
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Could not record manual send signatures.");
+      }
+
+      setDistributionRecord((prev) => prev ? { ...prev, status: data.status || prev.status } : prev);
+      setDistributionMessage(
+        `Recorded ${data.updated || 0} tx signature(s). Sent ${data.sentCount || 0}/${data.totalCount || 0}. Status: ${data.status || "prepared"}.`
+      );
+    } catch (error) {
+      setDistributionMessage(error instanceof Error ? error.message : "Could not record manual send signatures.");
+    } finally {
+      setManualSignatureSaving(false);
+    }
+  }
+
 
   return (
     <details className="admin-treasury-panel profile-compact-details" open>
@@ -22911,9 +22940,9 @@ function AdminTreasuryPanel({
             <section className="admin-distribution-draft">
               <div className="admin-distribution-head">
                 <div>
-                  <span>Reward distribution draft</span>
-                  <strong>First distribution test</strong>
-                  <small>Enter a small test pool, review each recipient, then copy the payout manifest. Real token sending still requires manual treasury-wallet signing outside this draft.</small>
+                  <span>Reward distribution</span>
+                  <strong>Prepare a real manual payout batch</strong>
+                  <small>App calculates legitimate holder shares. Treasury still sends manually; the server never stores a private key or moves tokens.</small>
                 </div>
                 <b>{eligiblePayoutCandidates.length} eligible</b>
               </div>
@@ -22923,6 +22952,29 @@ function AdminTreasuryPanel({
                   No legitimate recipients loaded yet. Rewards need eligible app users under the current hold/streak rules.
                 </div>
               )}
+
+              <div className="admin-distribution-mode-grid">
+                <button
+                  type="button"
+                  className={distributionMode === "test" ? "active" : ""}
+                  onClick={() => {
+                    setDistributionMode("test");
+                    setDistributionMessage("");
+                  }}
+                >
+                  Test ledger
+                </button>
+                <button
+                  type="button"
+                  className={distributionMode === "real_manual" ? "active danger" : "danger"}
+                  onClick={() => {
+                    setDistributionMode("real_manual");
+                    setDistributionMessage("");
+                  }}
+                >
+                  Real manual distribution
+                </button>
+              </div>
 
               <div className="admin-distribution-controls">
                 <label>
@@ -22945,10 +22997,39 @@ function AdminTreasuryPanel({
                     placeholder="Example: 100"
                   />
                 </label>
-                <button type="button" onClick={prepareDistributionDraft} disabled={!payoutPreviewReady}>
-                  {eligiblePayoutCandidates.length === 0 ? "No eligible recipients" : "Prepare first distribution"}
-                </button>
+                <div className="admin-distribution-action-stack">
+                  <button type="button" onClick={prepareDistributionDraft} disabled={!payoutPreviewReady}>
+                    {distributionMode === "real_manual" ? "Copy send sheet" : "Copy test manifest"}
+                  </button>
+                  <button type="button" onClick={() => saveDistributionBatch("test")} disabled={!payoutPreviewReady || distributionSaving}>
+                    {distributionSaving && distributionMode === "test" ? "Saving..." : eligiblePayoutCandidates.length === 0 ? "No eligible recipients" : "Save test batch"}
+                  </button>
+                </div>
               </div>
+
+              {distributionMode === "real_manual" && (
+                <div className="admin-real-distribution-guard">
+                  <div>
+                    <span>Real distribution guard</span>
+                    <strong>{access.treasuryMatched ? "Treasury wallet verified" : "Treasury wallet not verified"}</strong>
+                    <small>
+                      Real batch preparation requires the configured treasury wallet to be connected and verified. After saving, send manually from treasury and record tx signatures.
+                    </small>
+                  </div>
+                  <label>
+                    <span>Confirm phrase</span>
+                    <input
+                      value={realDistributionConfirm}
+                      onChange={(event) => setRealDistributionConfirm(event.target.value)}
+                      placeholder={realDistributionConfirmPhrase}
+                    />
+                    <small>Type exactly: {realDistributionConfirmPhrase}</small>
+                  </label>
+                  <button type="button" onClick={() => saveDistributionBatch("real_manual")} disabled={!realDistributionReady || distributionSaving}>
+                    {distributionSaving ? "Preparing..." : "Prepare real batch"}
+                  </button>
+                </div>
+              )}
 
               <div className="admin-distribution-summary">
                 <article>
@@ -22961,7 +23042,17 @@ function AdminTreasuryPanel({
                 </article>
                 <article>
                   <span>Status</span>
-                  <strong>{eligiblePayoutCandidates.length === 0 ? "No eligible recipients" : payoutPreviewReady ? "Draft ready" : "Need amount"}</strong>
+                  <strong>
+                    {eligiblePayoutCandidates.length === 0
+                      ? "No eligible recipients"
+                      : distributionMode === "real_manual"
+                        ? realDistributionReady
+                          ? "Ready to prepare"
+                          : "Guard locked"
+                        : payoutPreviewReady
+                          ? "Test ready"
+                          : "Need amount"}
+                  </strong>
                 </article>
               </div>
 
@@ -22976,13 +23067,43 @@ function AdminTreasuryPanel({
                       <b>{formatRewardTokenAmount(row.rewardAmount, rewardPoolToken)}</b>
                     </article>
                   ))}
-                  {payoutRows.length > 8 && <p>+{payoutRows.length - 8} more recipients in the copied manifest.</p>}
+                  {payoutRows.length > 8 && <p>+{payoutRows.length - 8} more recipients in the copied send sheet / manifest.</p>}
                 </div>
               )}
 
               {distributionMessage && <div className="admin-distribution-message">{distributionMessage}</div>}
+
+              {distributionRecord && (
+                <div className="admin-distribution-saved-card">
+                  <span>{distributionRecord.mode === "real_manual" ? "Prepared real batch" : "Saved test batch"}</span>
+                  <strong>{distributionRecord.id.slice(0, 8)} · {distributionRecord.status}</strong>
+                  <small>
+                    {distributionRecord.recipientCount} recipients · {formatRewardTokenAmount(distributionRecord.calculatedTotal, distributionRecord.poolToken)} calculated · saved {formatAdminDate(distributionRecord.createdAt)}
+                  </small>
+                </div>
+              )}
+
+              {distributionRecord?.mode === "real_manual" && (
+                <div className="admin-manual-signature-card">
+                  <div>
+                    <span>After manual treasury send</span>
+                    <strong>Record transaction signatures</strong>
+                    <small>Paste one row per recipient: rank,txSignature or wallet,txSignature. This marks payout rows as manual_sent in the private ledger.</small>
+                  </div>
+                  <textarea
+                    value={manualSignatureText}
+                    onChange={(event) => setManualSignatureText(event.target.value)}
+                    placeholder={`1,5Nabc...tx
+2,3xDef...tx`}
+                  />
+                  <button type="button" onClick={recordManualSendSignatures} disabled={manualSignatureSaving || !manualSignatureText.trim()}>
+                    {manualSignatureSaving ? "Recording..." : "Record sent txs"}
+                  </button>
+                </div>
+              )}
             </section>
           )}
+
 
           {holderIntel?.generatedAt && (
             <div className="admin-holder-footnote">
@@ -22993,7 +23114,7 @@ function AdminTreasuryPanel({
 
         <div className="admin-treasury-warning">
           <b>No private key stored</b>
-          <span>Future distributions should still require server admin authorization plus manual wallet signing. This panel only prepares the private admin surface.</span>
+          <span>Real distributions are prepared as manual treasury batches only. Server admin authorization is required, but token transfers still happen outside the server with treasury wallet confirmation.</span>
         </div>
       </div>
     </details>

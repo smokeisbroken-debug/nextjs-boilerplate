@@ -1,0 +1,647 @@
+import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
+
+export const runtime = "nodejs";
+
+type WebAuthSession = {
+  user?: {
+    id?: number;
+  };
+  expiresAt?: number;
+};
+
+type PayoutInput = {
+  rank?: number;
+  telegramId?: string;
+  username?: string;
+  displayName?: string;
+  walletAddress?: string;
+  verifiedBalance?: number;
+  balanceSharePercent?: number;
+  rewardAmount?: number;
+  token?: string;
+};
+
+type DistributionMode = "test" | "real_manual";
+
+type DistributionManifestInput = {
+  type?: string;
+  mode?: DistributionMode;
+  generatedAt?: string;
+  token?: string;
+  poolAmount?: number;
+  eligibleHolders?: number;
+  treasuryWallet?: string;
+  connectedWallet?: string;
+  confirmRealDistribution?: string;
+  adminNote?: string;
+  rules?: {
+    minHold?: number;
+    minStreak?: number;
+  };
+  note?: string;
+  payouts?: PayoutInput[];
+};
+
+type ManualSendRecord = {
+  rank?: number;
+  walletAddress?: string;
+  txSignature?: string;
+};
+
+type DistributionPatchInput = {
+  action?: "record_manual_sends" | "cancel_distribution";
+  distributionId?: string;
+  records?: ManualSendRecord[];
+  signaturesText?: string;
+};
+
+type DistributionRow = {
+  id: string;
+  status: string;
+  pool_token: string;
+  pool_amount: number | string;
+  calculated_total: number | string;
+  treasury_wallet?: string | null;
+  min_hold: number | string;
+  min_streak: number;
+  recipient_count: number;
+  created_at: string;
+  updated_at: string;
+  manifest_payload?: unknown;
+};
+
+type PayoutRow = {
+  id: number;
+  distribution_id: string;
+  rank: number;
+  wallet_address: string;
+  reward_amount: number | string;
+  reward_token: string;
+  status: string;
+  tx_signature?: string | null;
+  sent_at?: string | null;
+};
+
+const WEB_AUTH_COOKIE = "broke_tg_session";
+const DEFAULT_TREASURY_WALLET = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
+const REAL_DISTRIBUTION_CONFIRM_PHRASE = "PREPARE REAL DISTRIBUTION";
+
+function json(data: unknown, status = 200) {
+  return NextResponse.json(data, {
+    status,
+    headers: {
+      "Cache-Control": "no-store, max-age=0",
+    },
+  });
+}
+
+function getEnv(name: string) {
+  const value = process.env[name];
+
+  if (!value) {
+    throw new Error(`Missing environment variable: ${name}`);
+  }
+
+  return value;
+}
+
+function getOptionalEnv(name: string) {
+  return process.env[name] || "";
+}
+
+function parseCsv(value: string) {
+  return value
+    .split(/[\s,;]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getAdminTelegramIds() {
+  return parseCsv(
+    [
+      getOptionalEnv("BROKE_ADMIN_TELEGRAM_IDS"),
+      getOptionalEnv("ADMIN_TELEGRAM_IDS"),
+      getOptionalEnv("NEXT_PUBLIC_BROKE_ADMIN_TELEGRAM_IDS"),
+      getOptionalEnv("NEXT_PUBLIC_ADMIN_TELEGRAM_IDS"),
+    ]
+      .filter(Boolean)
+      .join(",")
+  );
+}
+
+function getTreasuryWalletAddress() {
+  return String(
+    getOptionalEnv("TREASURY_WALLET_ADDRESS") ||
+      getOptionalEnv("NEXT_PUBLIC_TREASURY_WALLET_ADDRESS") ||
+      DEFAULT_TREASURY_WALLET
+  ).trim();
+}
+
+function getWebAuthSecret() {
+  return getOptionalEnv("WEB_AUTH_SECRET") || getOptionalEnv("TELEGRAM_BOT_TOKEN");
+}
+
+function getRewardsAdminSecret() {
+  return (
+    getOptionalEnv("REWARDS_ADMIN_SECRET") ||
+    getOptionalEnv("DIAGNOSTICS_SECRET") ||
+    getOptionalEnv("TELEGRAM_SETUP_SECRET")
+  );
+}
+
+function safeCompareString(a: string, b: string) {
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
+
+  if (aBuffer.length !== bBuffer.length) return false;
+
+  return crypto.timingSafeEqual(aBuffer, bBuffer);
+}
+
+function parseWebAuthSession(request: NextRequest): WebAuthSession | null {
+  const secret = getWebAuthSecret();
+  const cookie = request.cookies.get(WEB_AUTH_COOKIE)?.value || "";
+
+  if (!secret || !cookie || !cookie.includes(".")) return null;
+
+  const [payloadBase64, signature] = cookie.split(".");
+  const expected = crypto.createHmac("sha256", secret).update(payloadBase64).digest("base64url");
+
+  if (!safeCompareString(signature || "", expected)) return null;
+
+  try {
+    const session = JSON.parse(Buffer.from(payloadBase64, "base64url").toString("utf8")) as WebAuthSession;
+
+    if (!session.expiresAt || session.expiresAt < Date.now()) return null;
+
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+function isAuthorized(request: NextRequest) {
+  const adminSecret = getRewardsAdminSecret();
+  const key = request.nextUrl.searchParams.get("key") || "";
+  const authHeader = request.headers.get("authorization") || "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+  const secretAuthorized = Boolean(adminSecret && (key === adminSecret || bearer === adminSecret));
+
+  if (secretAuthorized) return true;
+
+  const session = parseWebAuthSession(request);
+  const telegramId = session?.user?.id ? String(session.user.id) : "";
+
+  return Boolean(telegramId && getAdminTelegramIds().includes(telegramId));
+}
+
+function getSupabaseBaseUrl() {
+  return getEnv("SUPABASE_URL")
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/rest\/v1$/, "");
+}
+
+function getSupabaseHeaders(extra?: HeadersInit) {
+  const serviceKey = getEnv("SUPABASE_SERVICE_ROLE_KEY");
+
+  return {
+    apikey: serviceKey,
+    Authorization: `Bearer ${serviceKey}`,
+    "Content-Type": "application/json",
+    ...(extra || {}),
+  };
+}
+
+function supabaseUrl(path: string) {
+  return `${getSupabaseBaseUrl()}/rest/v1/${path}`;
+}
+
+async function supabaseFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(supabaseUrl(path), {
+    ...(init || {}),
+    headers: getSupabaseHeaders(init?.headers),
+    cache: "no-store",
+  });
+
+  const text = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`Supabase ${response.status}: ${text.slice(0, 700)}`);
+  }
+
+  if (!text) return null as T;
+
+  return JSON.parse(text) as T;
+}
+
+function safeNumber(value: unknown, fallback = 0) {
+  const parsed = Number(String(value ?? "").replace(/,/g, "."));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function cleanString(value: unknown, maxLength = 260) {
+  return String(value ?? "").trim().slice(0, maxLength);
+}
+
+function normalizeToken(value: unknown) {
+  const token = cleanString(value || "USDC", 24).toUpperCase();
+  if (["USDC", "SOL", "$BROKE", "BROKE"].includes(token)) return token === "BROKE" ? "$BROKE" : token;
+  return "USDC";
+}
+
+function normalizeMode(value: unknown): DistributionMode {
+  return value === "real_manual" ? "real_manual" : "test";
+}
+
+function normalizePayouts(input: unknown) {
+  const rows = Array.isArray(input) ? input : [];
+
+  return rows
+    .map((row, index) => {
+      const item = row && typeof row === "object" ? (row as PayoutInput) : {};
+      const walletAddress = cleanString(item.walletAddress, 90);
+      const rewardAmount = safeNumber(item.rewardAmount);
+      const balanceSharePercent = safeNumber(item.balanceSharePercent);
+      const verifiedBalance = safeNumber(item.verifiedBalance);
+      const telegramId = cleanString(item.telegramId, 40);
+
+      if (!walletAddress || rewardAmount <= 0 || balanceSharePercent < 0 || !telegramId) return null;
+
+      return {
+        rank: Math.max(1, Math.round(safeNumber(item.rank, index + 1))),
+        telegramId,
+        username: cleanString(item.username, 80),
+        displayName: cleanString(item.displayName, 120),
+        walletAddress,
+        verifiedBalance: Number(verifiedBalance.toFixed(6)),
+        balanceSharePercent: Number(balanceSharePercent.toFixed(8)),
+        rewardAmount: Number(rewardAmount.toFixed(9)),
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => Boolean(row))
+    .slice(0, 500);
+}
+
+function normalizeDistributionId(value: unknown) {
+  const id = cleanString(value, 80);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) ? id : "";
+}
+
+function normalizeTxSignature(value: unknown) {
+  const tx = cleanString(value, 140).replace(/^https?:\/\/[^\s/]+\/tx\//i, "");
+  return /^[1-9A-HJ-NP-Za-km-z]{40,120}$/.test(tx) ? tx : "";
+}
+
+function parseManualSendRecords(input: DistributionPatchInput) {
+  const explicitRecords = Array.isArray(input.records) ? input.records : [];
+  const parsedRecords = explicitRecords.map((record) => ({
+    rank: record.rank && Number.isFinite(Number(record.rank)) ? Math.max(1, Math.round(Number(record.rank))) : undefined,
+    walletAddress: cleanString(record.walletAddress, 90),
+    txSignature: normalizeTxSignature(record.txSignature),
+  }));
+
+  const text = cleanString(input.signaturesText, 10000);
+  const textRecords = text
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const normalized = line.replace(/^#/, "");
+      const parts = normalized.includes(",")
+        ? normalized.split(",")
+        : normalized.includes("=")
+          ? normalized.split("=")
+          : normalized.split(/\s+/);
+      const target = cleanString(parts[0], 100).replace(/^rank:/i, "");
+      const txSignature = normalizeTxSignature(parts.slice(1).join(" ").trim());
+      const rank = /^\d+$/.test(target) ? Number(target) : undefined;
+      const walletAddress = rank ? "" : target;
+
+      return { rank, walletAddress, txSignature };
+    });
+
+  return [...parsedRecords, ...textRecords]
+    .filter((record) => record.txSignature && (record.rank || record.walletAddress))
+    .slice(0, 500);
+}
+
+async function getDistributionRows(limit = 10) {
+  return supabaseFetch<DistributionRow[]>(
+    `broke_reward_distributions?select=*&order=created_at.desc&limit=${Math.max(1, Math.min(30, limit))}`
+  );
+}
+
+async function getPayoutRows(distributionId: string) {
+  return supabaseFetch<PayoutRow[]>(
+    `broke_reward_payouts?select=*&distribution_id=eq.${encodeURIComponent(distributionId)}&order=rank.asc`
+  );
+}
+
+async function updateDistributionStatus(distributionId: string, status: "prepared" | "manual_sent" | "cancelled") {
+  await supabaseFetch(`broke_reward_distributions?id=eq.${encodeURIComponent(distributionId)}`, {
+    method: "PATCH",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify({ status, updated_at: new Date().toISOString() }),
+  });
+}
+
+function formatDistribution(row: DistributionRow) {
+  return {
+    id: row.id,
+    status: row.status,
+    poolToken: row.pool_token,
+    poolAmount: safeNumber(row.pool_amount),
+    calculatedTotal: safeNumber(row.calculated_total),
+    treasuryWallet: row.treasury_wallet || "",
+    minHold: safeNumber(row.min_hold),
+    minStreak: Number(row.min_streak || 0),
+    recipientCount: Number(row.recipient_count || 0),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    manifest: row.manifest_payload || {},
+  };
+}
+
+export async function GET(request: NextRequest) {
+  if (!getRewardsAdminSecret() && getAdminTelegramIds().length === 0) {
+    return json({ ok: false, error: "Missing REWARDS_ADMIN_SECRET or configured admin Telegram IDs." }, 500);
+  }
+
+  if (!isAuthorized(request)) {
+    return json({ ok: false, error: "Unauthorized. Enter REWARDS_ADMIN_SECRET or open as a configured Telegram admin." }, 401);
+  }
+
+  try {
+    const distributionId = normalizeDistributionId(request.nextUrl.searchParams.get("distributionId"));
+    const limit = Math.max(1, Math.min(30, Number(request.nextUrl.searchParams.get("limit") || 8)));
+
+    if (distributionId) {
+      const distributions = await supabaseFetch<DistributionRow[]>(
+        `broke_reward_distributions?select=*&id=eq.${encodeURIComponent(distributionId)}&limit=1`
+      );
+      const payouts = await getPayoutRows(distributionId);
+
+      return json({
+        ok: true,
+        distribution: distributions[0] ? formatDistribution(distributions[0]) : null,
+        payouts,
+      });
+    }
+
+    const distributions = await getDistributionRows(limit);
+
+    return json({
+      ok: true,
+      distributions: distributions.map(formatDistribution),
+    });
+  } catch (error) {
+    return json(
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? `${error.message}. Run the v59.37 reward distribution ledger migration first if the table is missing.`
+            : "Could not load distributions.",
+      },
+      500
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  if (!getRewardsAdminSecret() && getAdminTelegramIds().length === 0) {
+    return json({ ok: false, error: "Missing REWARDS_ADMIN_SECRET or configured admin Telegram IDs." }, 500);
+  }
+
+  if (!isAuthorized(request)) {
+    return json({ ok: false, error: "Unauthorized. Enter REWARDS_ADMIN_SECRET or open as a configured Telegram admin." }, 401);
+  }
+
+  try {
+    const body = (await request.json()) as DistributionManifestInput;
+    const token = normalizeToken(body.token);
+    const mode = normalizeMode(body.mode);
+    const poolAmount = safeNumber(body.poolAmount);
+    const payouts = normalizePayouts(body.payouts);
+    const minHold = Math.max(0, safeNumber(body.rules?.minHold));
+    const minStreak = Math.max(0, Math.round(safeNumber(body.rules?.minStreak)));
+    const treasuryWallet = cleanString(body.treasuryWallet || getTreasuryWalletAddress(), 90);
+    const connectedWallet = cleanString(body.connectedWallet, 90);
+    const treasuryMatched = Boolean(
+      treasuryWallet && connectedWallet && treasuryWallet.toLowerCase() === connectedWallet.toLowerCase()
+    );
+
+    if (poolAmount <= 0) {
+      return json({ ok: false, error: "Pool amount must be greater than zero." }, 400);
+    }
+
+    if (payouts.length === 0) {
+      return json({ ok: false, error: "No payout recipients were provided." }, 400);
+    }
+
+    if (mode === "real_manual") {
+      if (body.confirmRealDistribution !== REAL_DISTRIBUTION_CONFIRM_PHRASE) {
+        return json({ ok: false, error: `Type ${REAL_DISTRIBUTION_CONFIRM_PHRASE} before preparing a real distribution.` }, 400);
+      }
+
+      if (!treasuryMatched) {
+        return json({ ok: false, error: "Connect and verify the configured treasury wallet before preparing a real distribution." }, 400);
+      }
+    }
+
+    const id = crypto.randomUUID();
+    const createdAt = new Date().toISOString();
+    const calculatedTotal = Number(payouts.reduce((sum, row) => sum + row.rewardAmount, 0).toFixed(9));
+    const status = mode === "real_manual" ? "prepared" : "draft";
+    const distributionRow = {
+      id,
+      created_at: createdAt,
+      updated_at: createdAt,
+      status,
+      pool_token: token,
+      pool_amount: poolAmount,
+      calculated_total: calculatedTotal,
+      treasury_wallet: treasuryWallet,
+      min_hold: minHold,
+      min_streak: minStreak,
+      recipient_count: payouts.length,
+      manifest_payload: {
+        type:
+          body.type ||
+          (mode === "real_manual"
+            ? "BROKE_REWARD_DISTRIBUTION_REAL_MANUAL_MANIFEST"
+            : "BROKE_REWARD_DISTRIBUTION_TEST_MANIFEST"),
+        mode,
+        generatedAt: body.generatedAt || createdAt,
+        adminNote: cleanString(body.adminNote, 500),
+        note:
+          body.note ||
+          (mode === "real_manual"
+            ? "Real distribution prepared for manual treasury signing/sending. No token transfer was executed by the server."
+            : "Manual test ledger only. No token transfer was executed."),
+        treasury: {
+          expectedWallet: treasuryWallet,
+          connectedWallet,
+          matched: treasuryMatched,
+        },
+        safety: {
+          noPrivateKey: true,
+          noServerTokenTransfers: true,
+          walletSigningNotExecutedByServer: true,
+          readyForManualTreasurySend: mode === "real_manual",
+        },
+      },
+    };
+
+    await supabaseFetch("broke_reward_distributions", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(distributionRow),
+    });
+
+    const payoutRows = payouts.map((row) => ({
+      distribution_id: id,
+      rank: row.rank,
+      telegram_id: row.telegramId,
+      username: row.username || null,
+      display_name: row.displayName || null,
+      wallet_address: row.walletAddress,
+      verified_balance: row.verifiedBalance,
+      balance_share_percent: row.balanceSharePercent,
+      reward_amount: row.rewardAmount,
+      reward_token: token,
+      status: "pending_manual_send",
+      created_at: createdAt,
+      updated_at: createdAt,
+    }));
+
+    await supabaseFetch("broke_reward_payouts", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(payoutRows),
+    });
+
+    return json({
+      ok: true,
+      distribution: {
+        id,
+        status,
+        mode,
+        poolToken: token,
+        poolAmount,
+        recipientCount: payouts.length,
+        calculatedTotal,
+        createdAt,
+      },
+      safety: {
+        noPrivateKey: true,
+        noServerTokenTransfers: true,
+        walletSigningNotExecutedByServer: true,
+        readyForManualTreasurySend: mode === "real_manual",
+      },
+    });
+  } catch (error) {
+    return json(
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message.includes("broke_reward_distributions") || error.message.includes("broke_reward_payouts")
+              ? `${error.message}. Run the v59.37 reward distribution ledger migration first.`
+              : error.message
+            : "Could not save distribution batch.",
+      },
+      500
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  if (!getRewardsAdminSecret() && getAdminTelegramIds().length === 0) {
+    return json({ ok: false, error: "Missing REWARDS_ADMIN_SECRET or configured admin Telegram IDs." }, 500);
+  }
+
+  if (!isAuthorized(request)) {
+    return json({ ok: false, error: "Unauthorized. Enter REWARDS_ADMIN_SECRET or open as a configured Telegram admin." }, 401);
+  }
+
+  try {
+    const body = (await request.json()) as DistributionPatchInput;
+    const distributionId = normalizeDistributionId(body.distributionId);
+
+    if (!distributionId) {
+      return json({ ok: false, error: "Valid distributionId is required." }, 400);
+    }
+
+    if (body.action === "cancel_distribution") {
+      await updateDistributionStatus(distributionId, "cancelled");
+
+      await supabaseFetch(`broke_reward_payouts?distribution_id=eq.${encodeURIComponent(distributionId)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({ status: "cancelled", updated_at: new Date().toISOString() }),
+      });
+
+      return json({ ok: true, distributionId, status: "cancelled" });
+    }
+
+    if (body.action !== "record_manual_sends") {
+      return json({ ok: false, error: "Unsupported distribution action." }, 400);
+    }
+
+    const records = parseManualSendRecords(body);
+
+    if (records.length === 0) {
+      return json({ ok: false, error: "Paste at least one rank/signature or wallet/signature row." }, 400);
+    }
+
+    const sentAt = new Date().toISOString();
+    let updated = 0;
+
+    for (const record of records) {
+      const filter = record.rank
+        ? `distribution_id=eq.${encodeURIComponent(distributionId)}&rank=eq.${record.rank}`
+        : `distribution_id=eq.${encodeURIComponent(distributionId)}&wallet_address=eq.${encodeURIComponent(record.walletAddress || "")}`;
+
+      if (!record.txSignature) continue;
+
+      await supabaseFetch(`broke_reward_payouts?${filter}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=minimal" },
+        body: JSON.stringify({
+          status: "manual_sent",
+          tx_signature: record.txSignature,
+          sent_at: sentAt,
+          updated_at: sentAt,
+        }),
+      });
+      updated += 1;
+    }
+
+    const payouts = await getPayoutRows(distributionId);
+    const sentCount = payouts.filter((row) => row.status === "manual_sent" && row.tx_signature).length;
+    const totalCount = payouts.length;
+    const nextStatus = totalCount > 0 && sentCount >= totalCount ? "manual_sent" : "prepared";
+
+    await updateDistributionStatus(distributionId, nextStatus);
+
+    return json({
+      ok: true,
+      distributionId,
+      updated,
+      sentCount,
+      totalCount,
+      status: nextStatus,
+    });
+  } catch (error) {
+    return json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "Could not update distribution manual send status.",
+      },
+      500
+    );
+  }
+}
