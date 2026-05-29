@@ -28786,17 +28786,34 @@ html.embedded-app-view .hero h1 {
   outline: none;
 }
 
+.admin-clean-actions {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 10px;
+}
+
+.admin-clean-preview-button,
 .admin-clean-distribute-button {
   min-height: 58px;
   border: 0;
   border-radius: 19px;
-  color: #071006;
-  background: linear-gradient(135deg, rgba(167, 255, 41, 1), rgba(217, 255, 84, 0.92));
-  box-shadow: 0 18px 44px rgba(167, 255, 41, 0.18);
   font-size: 1rem;
   font-weight: 1000;
 }
 
+.admin-clean-preview-button {
+  color: var(--text);
+  border: 1px solid rgba(167, 255, 41, 0.2);
+  background: rgba(167, 255, 41, 0.1);
+}
+
+.admin-clean-distribute-button {
+  color: #071006;
+  background: linear-gradient(135deg, rgba(167, 255, 41, 1), rgba(217, 255, 84, 0.92));
+  box-shadow: 0 18px 44px rgba(167, 255, 41, 0.18);
+}
+
+.admin-clean-preview-button:disabled,
 .admin-clean-distribute-button:disabled {
   opacity: 0.55;
 }
@@ -28845,6 +28862,9 @@ html.embedded-app-view .hero h1 {
   display: grid;
   gap: 8px;
   padding: 12px;
+  max-height: min(58vh, 620px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .admin-clean-recipients > div strong {
@@ -28901,6 +28921,7 @@ html.embedded-app-view .hero h1 {
   .admin-clean-hero,
   .admin-clean-summary,
   .admin-clean-grid,
+  .admin-clean-actions,
   .admin-clean-recipients article {
     grid-template-columns: 1fr;
   }

@@ -23169,11 +23169,22 @@ function AdminTreasuryPanel({
   ];
 
   async function loadHolderIntel() {
+    const key = adminReadKey.trim();
+
+    if (!key) {
+      setHolderIntel(null);
+      setHolderIntelError("Enter the Admin key first.");
+      setDistributionMessage("");
+      return;
+    }
+
     setHolderIntelLoading(true);
     setHolderIntelError("");
+    setDistributionMessage("");
+    setDistributionRecord(null);
+    setManualSignatureText("");
 
     try {
-      const key = adminReadKey.trim();
       const params = new URLSearchParams({
         minHold: eligibilityMinHold.trim() || "100000",
         minStreak: eligibilityMinStreak.trim() || "7",
@@ -23190,6 +23201,8 @@ function AdminTreasuryPanel({
       }
 
       setHolderIntel(data);
+      const loadedCount = data.summary?.totalEligibleHolders ?? (data.eligiblePayoutCandidates || data.topLegitimateHolders || []).length;
+      setDistributionMessage(`Preview loaded: ${loadedCount} eligible holder(s). Nothing has been sent yet.`);
     } catch (error) {
       setHolderIntel(null);
       setHolderIntelError(error instanceof Error ? error.message : "Could not load holder intelligence.");
@@ -23673,43 +23686,26 @@ function AdminTreasuryPanel({
       return;
     }
 
+    if (!holderIntel) {
+      setDistributionMessage("Press Check eligible first, review the recipient list, then distribute.");
+      return;
+    }
+
+    const rows = payoutRows.filter((row) => row.rewardAmount > 0);
+
+    if (rows.length === 0) {
+      setDistributionMessage("No legitimate recipients for the current rules and amount. Press Check eligible again or change the rules.");
+      return;
+    }
+
     setDistributionSaving(true);
     setServerAutoSending(true);
-    setHolderIntelLoading(true);
     setHolderIntelError("");
     setDistributionMessage("");
     setSendQueueMessage("");
-    setBatchSenderProgress("Loading legitimate holders...");
+    setBatchSenderProgress(`Preparing distribution for ${rows.length} recipient(s)...`);
 
     try {
-      const params = new URLSearchParams({
-        minHold: eligibilityMinHold.trim() || "100000",
-        minStreak: eligibilityMinStreak.trim() || "7",
-      });
-      const holdersResponse = await fetch(`/api/admin/holders?${params.toString()}`, {
-        method: "GET",
-        headers: { Authorization: `Bearer ${key}` },
-        cache: "no-store",
-      });
-      const holdersData = (await holdersResponse.json()) as AdminHoldersResponse;
-
-      if (!holdersResponse.ok || !holdersData.ok) {
-        throw new Error(holdersData.error || "Could not load legitimate holders.");
-      }
-
-      const candidates = holdersData.eligiblePayoutCandidates || holdersData.topLegitimateHolders || [];
-      const rows = candidates.map((holder) => ({
-        ...holder,
-        rewardAmount: Number(((poolValue * holder.balanceSharePercent) / 100).toFixed(6)),
-      })).filter((row) => row.rewardAmount > 0);
-
-      setHolderIntel(holdersData);
-
-      if (rows.length === 0) {
-        throw new Error("No legitimate recipients for the current rules.");
-      }
-
-      setBatchSenderProgress(`Preparing distribution for ${rows.length} recipient(s)...`);
       setDistributionMode("real_manual");
       setRealDistributionConfirm(realDistributionConfirmPhrase);
       setServerAutoConfirm("SERVER AUTO SEND");
@@ -23761,7 +23757,9 @@ function AdminTreasuryPanel({
         ? "Auto-send is not enabled in Vercel. Set BROKE_PAYOUT_AUTO_SEND_ENABLED=true and configure the payout wallet."
         : message.includes("BROKE_PAYOUT_WALLET_SECRET_KEY")
           ? "Payout wallet is not configured in Vercel. Add BROKE_PAYOUT_WALLET_SECRET_KEY for a separate funded payout wallet."
-          : message;
+          : /method not found/i.test(message)
+            ? "SOLANA_RPC_URL is not a valid Solana JSON-RPC endpoint. Use a mainnet RPC URL such as https://mainnet.helius-rpc.com/?api-key=YOUR_KEY, then redeploy."
+            : message;
       setBatchSenderProgress("");
       setDistributionMessage(cleanMessage);
       triggerHaptic("error");
@@ -23840,14 +23838,24 @@ function AdminTreasuryPanel({
         </label>
       </div>
 
-      <button
-        type="button"
-        className="admin-clean-distribute-button"
-        onClick={distributeRewardsOneClick}
-        disabled={distributionSaving || serverAutoSending || holderIntelLoading}
-      >
-        {distributionSaving || serverAutoSending ? "Distributing..." : "Distribute rewards"}
-      </button>
+      <div className="admin-clean-actions">
+        <button
+          type="button"
+          className="admin-clean-preview-button"
+          onClick={loadHolderIntel}
+          disabled={holderIntelLoading || distributionSaving || serverAutoSending}
+        >
+          {holderIntelLoading ? "Checking..." : "Check eligible"}
+        </button>
+        <button
+          type="button"
+          className="admin-clean-distribute-button"
+          onClick={distributeRewardsOneClick}
+          disabled={distributionSaving || serverAutoSending || holderIntelLoading}
+        >
+          {distributionSaving || serverAutoSending ? "Distributing..." : "Distribute rewards"}
+        </button>
+      </div>
 
       {(batchSenderProgress || distributionMessage || holderIntelError) && (
         <div className={distributionMessage && /done|sent/i.test(distributionMessage) ? "admin-clean-status success" : "admin-clean-status"}>
@@ -23874,9 +23882,9 @@ function AdminTreasuryPanel({
         <div className="admin-clean-recipients">
           <div>
             <span>Recipients</span>
-            <strong>{eligiblePayoutCandidates.length} legitimate holder(s)</strong>
+            <strong>{eligiblePayoutCandidates.length} legitimate holder(s) shown</strong>
           </div>
-          {(payoutRows.length > 0 ? payoutRows : eligiblePayoutCandidates.map((holder) => ({ ...holder, rewardAmount: 0 }))).slice(0, 6).map((row) => (
+          {(payoutRows.length > 0 ? payoutRows : eligiblePayoutCandidates.map((holder) => ({ ...holder, rewardAmount: 0 }))).map((row) => (
             <article key={`${row.rank}-${row.telegramId}-${row.walletAddress}`}>
               <div>
                 <b>#{row.rank} {row.username ? `@${row.username}` : row.displayName || compactWalletAddress(row.walletAddress)}</b>

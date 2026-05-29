@@ -61,7 +61,7 @@ Live token transfer on mainnet was not executed in the sandbox.
 
 ## v59.42.1 — One-Button Distribution Build Hotfix
 
-- Fixed Vercel/Next.js build failure caused by a stale undefined frontend variable `serverAutoSendConfirmPhrase` left from the older dedicated payout-wallet flow.
+- Fixed Vercel/Next.js build failure caused by a stale undefined frontend variable the stale server auto-send confirm variable left from the older dedicated payout-wallet flow.
 - The clean one-button Admin distribution flow now uses the literal server confirmation phrase `SERVER AUTO SEND` internally when preparing and executing payout-wallet auto-send.
 - No UI complexity was reintroduced: Admin remains a simple form with Admin key, minimum hold, required streak days, token, amount, eligible preview, and one Distribute rewards action.
 - No eligibility formula, Daily Routine/Active Streak, Supabase schema, claims/staking, public UI, or wallet verification backend changes.
@@ -72,5 +72,13 @@ Verification in patch workspace:
 TypeScript transpile diagnostics: app/page.tsx OK
 TypeScript transpile diagnostics: app/api/admin/distributions/route.ts OK
 CSS/TSX/API brace balance OK
-No remaining serverAutoSendConfirmPhrase references
+No remaining stale confirm-variable references in frontend code
 ```
+
+## v59.42.2 — Eligible Preview + RPC Method Hotfix
+
+- Admin distribution now has two clear actions: `Check eligible` first, then `Distribute rewards`.
+- `Distribute rewards` no longer silently reloads and sends in one hidden step; it requires an already loaded eligible preview so the admin can review recipients first.
+- Recipient preview now renders the full eligible list instead of truncating at 6 rows; the list scrolls inside the Admin panel when it is long.
+- Added clearer handling for `Method not found` RPC failures: this usually means `SOLANA_RPC_URL` is not a valid Solana JSON-RPC endpoint. The server now retries public mainnet once when the configured endpoint is wrong, and the UI explains the RPC issue clearly.
+- No eligibility formula, Daily Routine/Active Streak logic, Supabase schema, claims/staking, public UI, or payout-wallet env names changed.

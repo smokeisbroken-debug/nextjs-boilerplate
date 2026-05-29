@@ -585,19 +585,53 @@ function serverBuildTransferCheckedInstruction({
 }
 
 async function serverSolanaRpc<T>(method: string, params: unknown[] = []): Promise<T> {
-  const response = await fetch(serverGetRpcUrl(), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method, params }),
-    cache: "no-store",
-  });
-  const data = (await response.json()) as { result?: T; error?: { message?: string } };
+  const configuredRpcUrl = serverGetRpcUrl();
+  const rpcUrls = Array.from(new Set([configuredRpcUrl, SERVER_SOLANA_MAINNET_RPC].filter(Boolean)));
+  let lastError = "Solana RPC request failed.";
 
-  if (!response.ok || data.error) {
-    throw new Error(data.error?.message || `Solana RPC ${response.status}`);
+  for (const rpcUrl of rpcUrls) {
+    try {
+      const response = await fetch(rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method, params }),
+        cache: "no-store",
+      });
+      const text = await response.text();
+      let data: { result?: T; error?: { message?: string } } = {};
+
+      try {
+        data = text ? JSON.parse(text) as { result?: T; error?: { message?: string } } : {};
+      } catch {
+        lastError = `SOLANA_RPC_URL did not return JSON-RPC. Check the endpoint URL.`;
+        if (rpcUrl !== SERVER_SOLANA_MAINNET_RPC) continue;
+        throw new Error(lastError);
+      }
+
+      if (!response.ok || data.error) {
+        const rpcMessage = data.error?.message || `Solana RPC ${response.status}`;
+        lastError = rpcMessage;
+
+        // If the configured endpoint is an API/REST URL instead of a Solana JSON-RPC URL,
+        // retry public mainnet once so small admin payouts are not blocked by a bad env value.
+        if (/method not found/i.test(rpcMessage) && rpcUrl !== SERVER_SOLANA_MAINNET_RPC) continue;
+
+        throw new Error(rpcMessage);
+      }
+
+      return data.result as T;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : lastError;
+      if (/method not found|did not return JSON-RPC/i.test(lastError) && rpcUrl !== SERVER_SOLANA_MAINNET_RPC) continue;
+      if (rpcUrl !== rpcUrls[rpcUrls.length - 1]) continue;
+    }
   }
 
-  return data.result as T;
+  if (/method not found/i.test(lastError)) {
+    throw new Error("SOLANA_RPC_URL is not a valid Solana JSON-RPC endpoint. Use a mainnet RPC URL such as https://mainnet.helius-rpc.com/?api-key=YOUR_KEY.");
+  }
+
+  throw new Error(lastError);
 }
 
 async function serverGetLatestBlockhash() {
