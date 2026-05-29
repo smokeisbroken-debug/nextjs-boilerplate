@@ -58,3 +58,19 @@ Amount: small test amount
 ## Not tested here
 
 Live token transfer on mainnet was not executed in the sandbox.
+
+## v59.42.1 — One-Button Distribution Build Hotfix
+
+- Fixed Vercel/Next.js build failure caused by a stale undefined frontend variable `serverAutoSendConfirmPhrase` left from the older dedicated payout-wallet flow.
+- The clean one-button Admin distribution flow now uses the literal server confirmation phrase `SERVER AUTO SEND` internally when preparing and executing payout-wallet auto-send.
+- No UI complexity was reintroduced: Admin remains a simple form with Admin key, minimum hold, required streak days, token, amount, eligible preview, and one Distribute rewards action.
+- No eligibility formula, Daily Routine/Active Streak, Supabase schema, claims/staking, public UI, or wallet verification backend changes.
+
+Verification in patch workspace:
+
+```bash
+TypeScript transpile diagnostics: app/page.tsx OK
+TypeScript transpile diagnostics: app/api/admin/distributions/route.ts OK
+CSS/TSX/API brace balance OK
+No remaining serverAutoSendConfirmPhrase references
+```

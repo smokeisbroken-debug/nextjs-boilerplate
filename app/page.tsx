@@ -23712,7 +23712,7 @@ function AdminTreasuryPanel({
       setBatchSenderProgress(`Preparing distribution for ${rows.length} recipient(s)...`);
       setDistributionMode("real_manual");
       setRealDistributionConfirm(realDistributionConfirmPhrase);
-      setServerAutoConfirm(serverAutoSendConfirmPhrase);
+      setServerAutoConfirm("SERVER AUTO SEND");
 
       const saveResponse = await fetch("/api/admin/distributions", {
         method: "POST",
@@ -23740,7 +23740,7 @@ function AdminTreasuryPanel({
         body: JSON.stringify({
           action: "server_auto_send",
           distributionId: saveData.distribution.id,
-          confirmPhrase: serverAutoSendConfirmPhrase,
+          confirmPhrase: "SERVER AUTO SEND",
         }),
       });
       const sendData = (await sendResponse.json()) as AdminDistributionUpdateResponse;
