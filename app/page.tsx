@@ -22762,9 +22762,11 @@ async function adminGetLatestBlockhash() {
 }
 
 async function adminGetMintDecimals(mintAddress: string) {
+  // Raw Solana JSON-RPC uses `getAccountInfo` with jsonParsed encoding.
+  // `getParsedAccountInfo` is a web3.js helper name, not a raw RPC method.
   const result = await adminSolanaRpc<{
     value?: { data?: { parsed?: { info?: { decimals?: number } } } };
-  }>("getParsedAccountInfo", [mintAddress, { commitment: "confirmed" }]);
+  }>("getAccountInfo", [mintAddress, { encoding: "jsonParsed", commitment: "confirmed" }]);
   const decimals = result.value?.data?.parsed?.info?.decimals;
 
   if (typeof decimals !== "number" || decimals < 0) {
@@ -23768,7 +23770,7 @@ function AdminTreasuryPanel({
         <div>
           <span>Private admin</span>
           <strong>Reward distribution</strong>
-          <small>Build v59.42.8 · one server request. Check eligible first, review recipients, then distribute.</small>
+          <small>Build v59.42.9 · JSON-RPC method fix. Check eligible first, review recipients, then distribute.</small>
         </div>
         <b>{access.sourceLabel}</b>
       </div>

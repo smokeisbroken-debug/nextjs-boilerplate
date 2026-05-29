@@ -334,7 +334,7 @@ function parseManualSendRecords(input: DistributionPatchInput) {
     .slice(0, 500);
 }
 
-const ADMIN_DISTRIBUTION_BUILD_VERSION = "v59.42.8";
+const ADMIN_DISTRIBUTION_BUILD_VERSION = "v59.42.9";
 const SERVER_AUTO_SEND_CONFIRM_PHRASE = "SERVER AUTO SEND";
 const DEFAULT_BROKE_MINT = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
 const DEFAULT_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -695,9 +695,13 @@ async function serverGetLatestBlockhash() {
 }
 
 async function serverGetMintDecimals(mintAddress: string) {
+  // Raw Solana JSON-RPC does not expose a `getParsedAccountInfo` method.
+  // `getParsedAccountInfo` is a web3.js helper; the real JSON-RPC method is
+  // `getAccountInfo` with `encoding: "jsonParsed"`. Calling the helper name
+  // directly caused public/private RPC endpoints to return `Method not found`.
   const result = await serverSolanaRpc<{
     value?: { data?: { parsed?: { info?: { decimals?: number } } } };
-  }>("getParsedAccountInfo", [mintAddress, { commitment: "confirmed" }]);
+  }>("getAccountInfo", [mintAddress, { encoding: "jsonParsed", commitment: "confirmed" }]);
   const decimals = result.value?.data?.parsed?.info?.decimals;
 
   if (typeof decimals !== "number" || decimals < 0) {
