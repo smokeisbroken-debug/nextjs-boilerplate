@@ -22592,9 +22592,14 @@ const ADMIN_BASE58_ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopq
 const ADMIN_BASE58_MAP = new Map(ADMIN_BASE58_ALPHABET.split("").map((char, index) => [char, index]));
 
 function adminBase58Decode(value: string) {
-  let bytes = [0];
+  const input = value.trim();
+  if (!input) return new Uint8Array();
 
-  for (const char of value) {
+  let leadingZeroCount = 0;
+  while (leadingZeroCount < input.length && input[leadingZeroCount] === "1") leadingZeroCount += 1;
+
+  let bytes = [0];
+  for (const char of input.slice(leadingZeroCount)) {
     const digit = ADMIN_BASE58_MAP.get(char);
     if (digit === undefined) throw new Error("Invalid base58 value.");
 
@@ -22611,12 +22616,8 @@ function adminBase58Decode(value: string) {
     }
   }
 
-  for (const char of value) {
-    if (char !== "1") break;
-    bytes.push(0);
-  }
-
-  return new Uint8Array(bytes.reverse());
+  const decoded = input.length === leadingZeroCount ? [] : bytes.reverse();
+  return new Uint8Array([...Array(leadingZeroCount).fill(0), ...decoded]);
 }
 
 function adminBase58Encode(bytesInput: Uint8Array) {
@@ -23126,7 +23127,7 @@ function AdminTreasuryPanel({
   const [holderIntelLoading, setHolderIntelLoading] = useState(false);
   const [holderIntelError, setHolderIntelError] = useState("");
   const [rewardPoolAmount, setRewardPoolAmount] = useState("");
-  const [rewardPoolToken, setRewardPoolToken] = useState("USDC");
+  const [rewardPoolToken, setRewardPoolToken] = useState("$BROKE");
   const [distributionMessage, setDistributionMessage] = useState("");
   const [distributionSaving, setDistributionSaving] = useState(false);
   const [distributionRecord, setDistributionRecord] = useState<AdminDistributionSaveResponse["distribution"] | null>(null);
@@ -23777,7 +23778,7 @@ function AdminTreasuryPanel({
         <div>
           <span>Private admin</span>
           <strong>Reward distribution</strong>
-          <small>Hidden from normal users. Set rules, enter amount, press one button.</small>
+          <small>Hidden from normal users. Set rules, enter a $BROKE amount, check eligible, then distribute.</small>
         </div>
         <b>{access.sourceLabel}</b>
       </div>
@@ -23823,8 +23824,6 @@ function AdminTreasuryPanel({
           <span>Token</span>
           <select value={rewardPoolToken} onChange={(event) => setRewardPoolToken(event.target.value)}>
             <option value="$BROKE">$BROKE</option>
-            <option value="USDC">USDC</option>
-            <option value="SOL">SOL</option>
           </select>
         </label>
         <label>

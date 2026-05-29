@@ -354,9 +354,14 @@ function serverGetTokenMint(token: string) {
 }
 
 function serverBase58Decode(value: string) {
-  let bytes = [0];
+  const input = value.trim();
+  if (!input) return new Uint8Array();
 
-  for (const char of value) {
+  let leadingZeroCount = 0;
+  while (leadingZeroCount < input.length && input[leadingZeroCount] === "1") leadingZeroCount += 1;
+
+  let bytes = [0];
+  for (const char of input.slice(leadingZeroCount)) {
     const digit = SERVER_BASE58_MAP.get(char);
     if (digit === undefined) throw new Error("Invalid base58 value.");
 
@@ -373,12 +378,8 @@ function serverBase58Decode(value: string) {
     }
   }
 
-  for (const char of value) {
-    if (char !== "1") break;
-    bytes.push(0);
-  }
-
-  return new Uint8Array(bytes.reverse());
+  const decoded = input.length === leadingZeroCount ? [] : bytes.reverse();
+  return new Uint8Array([...Array(leadingZeroCount).fill(0), ...decoded]);
 }
 
 function serverBase58Encode(bytesInput: Uint8Array | Buffer) {
