@@ -1,6 +1,6 @@
-# PROJECT ORDER — v59.40.1 Treasury Batch Sender BigInt Build Hotfix
+# PROJECT ORDER — v59.40.2 Treasury Batch Sender Access Fallback Hotfix
 
-Base: confirmed v59.40 Treasury Batch Sender Beta.
+Base: confirmed v59.40.1 Treasury Batch Sender BigInt Build Hotfix.
 
 ## Changed files
 
@@ -14,6 +14,10 @@ Base: confirmed v59.40 Treasury Batch Sender Beta.
 - `app/PROJECT_ORDER.md`
 - `app/TESTING.md`
 
+## Summary
+
+v59.40.2 improves the real distribution batch sender when mobile wallet browsers return `Access forbidden` from direct Wallet Standard send. The sender now tries direct `signAndSendTransaction` first, then falls back to `signTransaction` plus browser-side RPC broadcast when available.
+
 ## Not changed
 
 - Supabase schema
@@ -22,7 +26,3 @@ Base: confirmed v59.40 Treasury Batch Sender Beta.
 - wallet verification backend
 - treasury private-key handling
 - claims/staking/payout backend
-
-## Summary
-
-v59.40.1 fixes the Vercel build error from BigInt literal suffixes in the browser-side transaction helper while preserving the v59.40 Treasury Batch Sender flow and existing fallbacks.

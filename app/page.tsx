@@ -23014,41 +23014,69 @@ function adminSignatureFromWalletResult(result: unknown) {
   return "";
 }
 
+function adminReadableError(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string") return error;
+  return "Unknown wallet error";
+}
+
+async function adminSignSerializedTransactionAndSend(signer: AdminWalletStandardSigner, transaction: Uint8Array) {
+  if (!signer.signTransaction) throw new Error("Wallet cannot sign transactions for the fallback sender.");
+
+  const result = await signer.signTransaction({
+    account: signer.account,
+    chain: ADMIN_SOLANA_MAINNET_CHAIN,
+    transaction,
+  });
+  const signed = Array.isArray(result) ? result[0] : result;
+  const signedObject = signed && typeof signed === "object" ? signed as { signedTransaction?: unknown; transaction?: unknown } : {};
+  const signedTransaction = signed instanceof Uint8Array
+    ? signed
+    : signedObject.signedTransaction instanceof Uint8Array
+      ? signedObject.signedTransaction
+      : signedObject.transaction instanceof Uint8Array
+        ? signedObject.transaction
+        : null;
+
+  if (!signedTransaction) throw new Error("Wallet did not return a signed transaction.");
+
+  return adminSolanaRpc<string>("sendTransaction", [
+    adminBytesToBase64(signedTransaction),
+    { encoding: "base64", skipPreflight: false, preflightCommitment: "confirmed" },
+  ]);
+}
+
 async function adminSignAndSendSerializedTransaction(signer: AdminWalletStandardSigner, transaction: Uint8Array) {
   if (signer.signAndSendTransaction) {
-    const result = await signer.signAndSendTransaction({
-      account: signer.account,
-      chain: ADMIN_SOLANA_MAINNET_CHAIN,
-      transaction,
-      options: { skipPreflight: false, preflightCommitment: "confirmed" },
-    });
-    const signature = adminSignatureFromWalletResult(result);
-    if (!signature) throw new Error("Wallet sent transaction but did not return a signature.");
-    return signature;
+    try {
+      const result = await signer.signAndSendTransaction({
+        account: signer.account,
+        chain: ADMIN_SOLANA_MAINNET_CHAIN,
+        transaction,
+        options: { skipPreflight: false, preflightCommitment: "confirmed" },
+      });
+      const signature = adminSignatureFromWalletResult(result);
+      if (!signature) throw new Error("Wallet sent transaction but did not return a signature.");
+      return signature;
+    } catch (error) {
+      if (!signer.signTransaction) {
+        const message = adminReadableError(error);
+        throw new Error(
+          /access forbidden/i.test(message)
+            ? "Wallet blocked direct batch sending. Try opening the app in the desktop extension browser, or use payment links as fallback."
+            : message
+        );
+      }
+      // Some mobile wallets, including Phantom in certain in-app browser states,
+      // expose signAndSendTransaction but reject it with Access forbidden. Fall back
+      // to signTransaction + app-side RPC broadcast so the admin still gets one
+      // wallet approval per grouped transaction instead of one approval per user.
+      return adminSignSerializedTransactionAndSend(signer, transaction);
+    }
   }
 
   if (signer.signTransaction) {
-    const result = await signer.signTransaction({
-      account: signer.account,
-      chain: ADMIN_SOLANA_MAINNET_CHAIN,
-      transaction,
-    });
-    const signed = Array.isArray(result) ? result[0] : result;
-    const signedObject = signed && typeof signed === "object" ? signed as { signedTransaction?: unknown; transaction?: unknown } : {};
-    const signedTransaction = signed instanceof Uint8Array
-      ? signed
-      : signedObject.signedTransaction instanceof Uint8Array
-        ? signedObject.signedTransaction
-        : signedObject.transaction instanceof Uint8Array
-          ? signedObject.transaction
-          : null;
-
-    if (!signedTransaction) throw new Error("Wallet did not return a signed transaction.");
-
-    return adminSolanaRpc<string>("sendTransaction", [
-      adminBytesToBase64(signedTransaction),
-      { encoding: "base64", skipPreflight: false, preflightCommitment: "confirmed" },
-    ]);
+    return adminSignSerializedTransactionAndSend(signer, transaction);
   }
 
   throw new Error("Wallet cannot sign or send transactions.");
@@ -23510,7 +23538,10 @@ function AdminTreasuryPanel({
       triggerHaptic("success");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Treasury batch sender failed.";
-      setSendQueueMessage(`${message} You can still use payment links or paste tx signatures manually as fallback.`);
+      const cleanMessage = /access forbidden/i.test(message)
+        ? "Wallet blocked batch signing in this browser. Try Phantom desktop/extension, Solflare, or reopen the site inside the wallet browser and connect the treasury wallet again."
+        : message;
+      setSendQueueMessage(`${cleanMessage} Payment links and manual tx paste remain as fallback.`);
       setBatchSenderProgress("");
       triggerHaptic("error");
     } finally {
@@ -23870,7 +23901,7 @@ function AdminTreasuryPanel({
                       <span>Treasury batch sender</span>
                       <strong>Send all with wallet signature</strong>
                       <small>
-                        Beta: uses Wallet Standard signing, groups recipients into small transactions, and records tx signatures automatically. If a wallet blocks it, use payment links below as fallback.
+                        Beta: uses Wallet Standard signing, groups recipients into small transactions, then records tx signatures automatically. If direct send is blocked, the app retries with signTransaction + RPC broadcast before falling back to payment links.
                       </small>
                     </div>
                     <button type="button" onClick={sendAllWithTreasuryWallet} disabled={batchSending || !access.treasuryMatched || payoutRows.length === 0}>
