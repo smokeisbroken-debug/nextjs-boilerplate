@@ -22652,11 +22652,11 @@ function adminBigIntToLeBytes(value: bigint, length: number) {
   let remaining = value;
 
   for (let index = 0; index < length; index += 1) {
-    output[index] = Number(remaining & 0xffn);
-    remaining >>= 8n;
+    output[index] = Number(remaining & BigInt(0xff));
+    remaining >>= BigInt(8);
   }
 
-  if (remaining > 0n) throw new Error("Token amount is too large for one transfer instruction.");
+  if (remaining > BigInt(0)) throw new Error("Token amount is too large for one transfer instruction.");
 
   return output;
 }
@@ -22671,7 +22671,7 @@ function adminDecimalToUnits(value: number | string, decimals: number) {
 
   const [whole, fraction = ""] = normalized.split(".");
   const paddedFraction = `${fraction}${"0".repeat(decimals)}`.slice(0, decimals);
-  const base = 10n ** BigInt(decimals);
+  const base = BigInt(10) ** BigInt(decimals);
 
   return BigInt(whole || "0") * base + BigInt(paddedFraction || "0");
 }
@@ -22746,7 +22746,7 @@ async function adminFindTokenAccount(ownerAddress: string, mintAddress: string, 
   ]);
   const accounts = result.value || [];
   const preferred = requirePositiveBalance
-    ? accounts.find((item) => BigInt(item.account?.data?.parsed?.info?.tokenAmount?.amount || "0") > 0n)
+    ? accounts.find((item) => BigInt(item.account?.data?.parsed?.info?.tokenAmount?.amount || "0") > BigInt(0))
     : accounts[0];
   const pubkey = preferred?.pubkey || "";
 
@@ -22827,7 +22827,7 @@ function adminSerializeLegacyTransaction(feePayer: string, recentBlockhash: stri
 
 function adminBuildSolTransferInstruction(fromAddress: string, toAddress: string, amount: number) {
   const lamports = adminDecimalToUnits(amount, 9);
-  if (lamports <= 0n) throw new Error("SOL payout amount must be greater than zero.");
+  if (lamports <= BigInt(0)) throw new Error("SOL payout amount must be greater than zero.");
   const data = adminConcatBytes([adminNumberToLeBytes(2, 4), adminBigIntToLeBytes(lamports, 8)]);
 
   return {
@@ -22856,7 +22856,7 @@ function adminBuildTransferCheckedInstruction({
   decimals: number;
 }) {
   const units = adminDecimalToUnits(amount, decimals);
-  if (units <= 0n) throw new Error("Token payout amount must be greater than zero.");
+  if (units <= BigInt(0)) throw new Error("Token payout amount must be greater than zero.");
   adminUnitsToSafeNumber(units);
   const data = adminConcatBytes([new Uint8Array([12]), adminBigIntToLeBytes(units, 8), new Uint8Array([decimals])]);
 

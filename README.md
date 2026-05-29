@@ -1,14 +1,15 @@
-# $BROKE Life Tracker — v59.40 Treasury Batch Sender Beta
+# $BROKE Life Tracker — v59.40.1 Treasury Batch Sender BigInt Build Hotfix
 
-Patch-only update on top of confirmed v59.39.
+Patch-only hotfix on top of confirmed v59.40.
 
 ## Scope
 
-v59.40 reduces real reward distribution work by adding a private Admin **Treasury Batch Sender**. It keeps the safe architecture: the app prepares grouped payout transactions and the treasury wallet signs them. The server still never stores a treasury private key and does not execute server-side token transfers.
+v59.40.1 keeps the v59.40 private Admin **Treasury Batch Sender** behavior and fixes a Vercel/Next.js build failure caused by BigInt literal syntax while the project targets below ES2020.
 
 ## Changes
 
-- Added `Send all with treasury wallet` inside the private Admin final payout queue.
+- Replaced BigInt literal syntax such as `0xffn`, `8n`, `10n`, and `0n` with `BigInt(...)` calls so the project can build with the current TypeScript target.
+- Kept `Send all with treasury wallet` inside the private Admin final payout queue.
 - Batch sender is shown only after a real manual distribution batch is prepared.
 - Uses Wallet Standard signing when the treasury wallet exposes it.
 - Groups recipients into small transactions:
@@ -68,4 +69,5 @@ BROKE_TOKEN_MINT=9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray
 - TSX transpile diagnostics passed for `app/page.tsx`.
 - API route transpile diagnostics passed for `app/api/admin/distributions/route.ts`.
 - CSS brace balance passed for `app/globals.css`.
+- Targeted scan confirms there are no remaining BigInt literal suffixes in `app/page.tsx`.
 - Full npm typecheck/lint/build were not rerun because this sandbox cannot currently install/restore project dependencies reliably.

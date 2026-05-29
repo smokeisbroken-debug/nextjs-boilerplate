@@ -1,11 +1,12 @@
-# PROJECT ORDER — v59.40 Treasury Batch Sender Beta
+# PROJECT ORDER — v59.40.1 Treasury Batch Sender BigInt Build Hotfix
 
-Base: confirmed v59.39 Final Real Distribution Queue.
+Base: confirmed v59.40 Treasury Batch Sender Beta.
 
 ## Changed files
 
 - `app/page.tsx`
 - `app/globals.css`
+- `app/api/admin/distributions/route.ts`
 - `README.md`
 - `PROJECT_ORDER.md`
 - `TESTING.md`
@@ -24,4 +25,4 @@ Base: confirmed v59.39 Final Real Distribution Queue.
 
 ## Summary
 
-v59.40 adds a private Admin beta batch sender that prepares grouped Solana transactions in the browser and asks the connected treasury wallet to sign/send them. Returned tx signatures are recorded through the existing private distribution ledger API. Existing payment links remain as fallback.
+v59.40.1 fixes the Vercel build error from BigInt literal suffixes in the browser-side transaction helper while preserving the v59.40 Treasury Batch Sender flow and existing fallbacks.
