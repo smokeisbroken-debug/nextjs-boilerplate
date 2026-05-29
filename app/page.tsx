@@ -1060,6 +1060,8 @@ type AdminDistributionUpdateResponse = {
   sentCount?: number;
   totalCount?: number;
   status?: string;
+  payoutWallet?: string;
+  records?: Array<{ rank: number; walletAddress: string; txSignature: string }>;
 };
 
 
@@ -23135,6 +23137,8 @@ function AdminTreasuryPanel({
   const [sendQueueMessage, setSendQueueMessage] = useState("");
   const [batchSending, setBatchSending] = useState(false);
   const [batchSenderProgress, setBatchSenderProgress] = useState("");
+  const [serverAutoSending, setServerAutoSending] = useState(false);
+  const [serverAutoConfirm, setServerAutoConfirm] = useState("");
   const [adminEmbeddedView, setAdminEmbeddedView] = useState(false);
   const [eligibilityMinHold, setEligibilityMinHold] = useState("100000");
   const [eligibilityMinStreak, setEligibilityMinStreak] = useState("7");
@@ -23589,6 +23593,63 @@ function AdminTreasuryPanel({
     }
   }
 
+  async function sendAllWithPayoutWalletServer() {
+    if (!distributionRecord?.id || distributionRecord.mode !== "real_manual") {
+      setSendQueueMessage("Prepare a real distribution batch first.");
+      return;
+    }
+
+    if (!adminReadKey.trim()) {
+      setSendQueueMessage("Enter the Admin read key first. Server auto-send is admin-secret protected.");
+      return;
+    }
+
+    if (serverAutoConfirm.trim() !== "SERVER AUTO SEND") {
+      setSendQueueMessage("Type SERVER AUTO SEND to unlock dedicated payout wallet auto-send.");
+      return;
+    }
+
+    setServerAutoSending(true);
+    setBatchSenderProgress("Server payout wallet is sending prepared rows...");
+    setSendQueueMessage("");
+
+    try {
+      const response = await fetch("/api/admin/distributions", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminReadKey.trim()}`,
+        },
+        body: JSON.stringify({
+          action: "server_auto_send",
+          distributionId: distributionRecord.id,
+          confirmPhrase: "SERVER AUTO SEND",
+        }),
+      });
+      const data = (await response.json()) as AdminDistributionUpdateResponse;
+
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "Server auto-send failed.");
+      }
+
+      setDistributionRecord((prev) => prev ? { ...prev, status: data.status || prev.status } : prev);
+      const signatureRows = (data.records || []).map((record) => `${record.rank},${record.txSignature}`);
+      if (signatureRows.length > 0) setManualSignatureText(signatureRows.join("\n"));
+      setBatchSenderProgress("");
+      setSendQueueMessage(
+        `Server auto-send completed ${data.updated || 0} recipient(s) from ${data.payoutWallet ? compactWalletAddress(data.payoutWallet) : "payout wallet"}. Sent ${data.sentCount || 0}/${data.totalCount || 0}. Status: ${data.status || "prepared"}.`
+      );
+      triggerHaptic("success");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Server auto-send failed.";
+      setBatchSenderProgress("");
+      setSendQueueMessage(`${message} Fund/configure the dedicated payout wallet or use payment links as fallback.`);
+      triggerHaptic("error");
+    } finally {
+      setServerAutoSending(false);
+    }
+  }
+
 
   return (
     <details className="admin-treasury-panel profile-compact-details" open>
@@ -23933,7 +23994,7 @@ function AdminTreasuryPanel({
                   </div>
 
                   <div className="admin-real-send-queue-note">
-                    Use this for the first real distribution. The app prepares the exact receiver/amount rows, and the batch sender can ask your treasury wallet to sign grouped transactions. No private key is stored in the app.
+                    Use this for the first real distribution. Wallet batch signing is kept as the safest no-private-key option. If Phantom/Jupiter blocks it, use the dedicated payout wallet sender below with a small funded wallet only.
                   </div>
 
                   <div className="admin-batch-sender-card">
@@ -23960,6 +24021,31 @@ function AdminTreasuryPanel({
                       </button>
                     )}
                     {batchSenderProgress && <em>{batchSenderProgress}</em>}
+                  </div>
+
+                  <div className="admin-server-payout-card">
+                    <div>
+                      <span>Dedicated payout wallet</span>
+                      <strong>Auto-send without wallet popups</strong>
+                      <small>
+                        Use only with a small funded payout wallet configured in Vercel. This bypasses Phantom/Jupiter popup limits, but never use your main treasury seed here.
+                      </small>
+                    </div>
+                    <label>
+                      <span>Confirm server auto-send</span>
+                      <input
+                        value={serverAutoConfirm}
+                        onChange={(event) => setServerAutoConfirm(event.target.value)}
+                        placeholder="Type SERVER AUTO SEND"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={sendAllWithPayoutWalletServer}
+                      disabled={serverAutoSending || !distributionRecord?.id || !adminReadKey.trim() || serverAutoConfirm.trim() !== "SERVER AUTO SEND"}
+                    >
+                      {serverAutoSending ? "Auto-sending..." : "Auto-send from payout wallet"}
+                    </button>
                   </div>
 
                   {sendQueueMessage && <div className="admin-send-queue-message">{sendQueueMessage}</div>}
@@ -24016,7 +24102,7 @@ function AdminTreasuryPanel({
 
         <div className="admin-treasury-warning">
           <b>No private key stored</b>
-          <span>Real distributions use a private admin queue: the app prepares receiver/amount payment requests, and your treasury wallet confirms each transfer. The server never stores a private key.</span>
+          <span>Wallet-signing mode never stores a private key. Optional server auto-send requires a separate low-balance payout wallet key in Vercel; do not use the main treasury seed.</span>
         </div>
       </div>
     </details>
