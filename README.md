@@ -1,17 +1,29 @@
-# v59.42.8 Admin Deployment Marker + Stale RPC Warning Proof Hotfix
+# $BROKE / Smoke Is Broke — v59.43 Eligibility + Routine + Smart Leak Hotfix
 
-This patch is intentionally small. It adds a visible `Build v59.42.8` marker inside the private Rewards Admin panel and a server-side build constant in `app/api/admin/distributions/route.ts`. The old misleading frontend message `SOLANA_RPC_URL is not a valid Solana JSON-RPC endpoint...` is not present in this build.
+Patch-only update on top of confirmed v59.42.9.
 
-If the live app still shows that old warning after deploying this patch, the live domain is not serving this build, the patch was not applied to the deployed project/branch, or the wallet browser is showing a cached old bundle.
+## Changes
 
-Distribution logic remains the v59.42.7 one-request flow: Check eligible first, review recipients, then Distribute rewards sends through the dedicated payout wallet server path in one POST request. No eligibility formula, payout share math, Supabase schema, Daily Routine, Active Streak, public UI, or wallet verification logic changed.
+- Admin legitimacy is explicitly minimum-streak based: a required streak value of 7 means 7+ days, not exactly 7.
+- Admin form label/help now says minimum streak days and clarifies that 8, 9, 10+ day users remain eligible.
+- Daily Routine task controls were polished so small mobile screens do not make action buttons look crooked.
+- Restored Smart Leak Excess UI in Add / Track Leak for Maybe and Not needed records.
+- Users can enter a cheaper / necessary baseline amount, and only the excess counts as leak pressure.
+- Example: spent 5, necessary baseline 3, leak counted 2.
+- Smart leak fields are preserved locally and through the `app/api/broke` route when the Supabase migration is applied.
 
-Verification: targeted source scan confirms no old `SOLANA_RPC_URL is not a valid Solana JSON-RPC endpoint` frontend warning string exists in `app/page.tsx`.
+## No changes
 
+- No payout formula changes.
+- No distribution/RPC changes.
+- No Supabase reward schema changes.
+- No wallet verification changes.
+- No Daily Routine proof rule changes: Active Streak is still protected only by full 7/7 Daily Routine completion.
 
-## v59.42.9 Admin JSON-RPC Method Fix
+## Migration reminder
 
-- Fixed dedicated payout sender RPC call for SPL token decimals: replaced the invalid raw JSON-RPC method `getParsedAccountInfo` with standard Solana JSON-RPC `getAccountInfo` using `encoding: "jsonParsed"`.
-- This addresses the real `Method not found` failure shown after v59.42.8 when distributing `$BROKE`; the previous build marker proved the latest frontend was loaded, and the remaining failure was a server RPC method bug.
-- Admin build marker now shows `Build v59.42.9 · JSON-RPC method fix`.
-- No payout share formula, eligibility rules, Supabase schema, Daily Routine, Active Streak, public UI, or wallet verification changes.
+Smart Leak Excess persistence uses the existing v59.36 migration:
+
+`supabase/migrations/20260528_v59_36_smart_leak_excess_amount.sql`
+
+If it was already applied, do not re-run it manually unless Supabase reports the columns are missing.
