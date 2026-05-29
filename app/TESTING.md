@@ -82,3 +82,11 @@ No remaining stale confirm-variable references in frontend code
 - Recipient preview now renders the full eligible list instead of truncating at 6 rows; the list scrolls inside the Admin panel when it is long.
 - Added clearer handling for `Method not found` RPC failures: this usually means `SOLANA_RPC_URL` is not a valid Solana JSON-RPC endpoint. The server now retries public mainnet once when the configured endpoint is wrong, and the UI explains the RPC issue clearly.
 - No eligibility formula, Daily Routine/Active Streak logic, Supabase schema, claims/staking, public UI, or payout-wallet env names changed.
+
+
+## v59.42.3 Admin Eligible List Scroll Reach Hotfix
+
+- Fixed private Admin eligible-recipient preview scrolling so the last eligible holder can be reached on mobile.
+- Raised the Admin modal above the bottom navigation and added safe-area/bottom padding to the modal scroll area and recipient list.
+- Kept the v59.42.2 two-step flow: Check eligible first, then Distribute rewards.
+- No payout logic, eligibility formula, Supabase schema, wallet backend, token mint, Daily Routine, or Active Streak changes.

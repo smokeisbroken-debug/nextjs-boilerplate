@@ -27759,7 +27759,7 @@ html.embedded-app-view .hero h1 {
 .admin-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 2147483000;
   display: grid;
   place-items: center;
   padding: 16px;
@@ -27769,7 +27769,7 @@ html.embedded-app-view .hero h1 {
 
 .admin-modal-shell {
   width: min(100%, 520px);
-  max-height: min(88vh, 760px);
+  max-height: min(88dvh, 760px);
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
@@ -27825,6 +27825,8 @@ html.embedded-app-view .hero h1 {
   min-height: 0;
   overflow: auto;
   padding: 12px;
+  padding-bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 138px));
+  scroll-padding-bottom: max(24px, calc(env(safe-area-inset-bottom, 0px) + 138px));
   -webkit-overflow-scrolling: touch;
 }
 
@@ -28197,7 +28199,7 @@ html.embedded-app-view .hero h1 {
   }
 
   .admin-modal-shell {
-    max-height: calc(100vh - 18px);
+    max-height: calc(100dvh - 18px);
     border-radius: 24px;
   }
 
@@ -28862,9 +28864,12 @@ html.embedded-app-view .hero h1 {
   display: grid;
   gap: 8px;
   padding: 12px;
-  max-height: min(58vh, 620px);
+  max-height: min(44dvh, 520px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  padding-bottom: max(16px, calc(env(safe-area-inset-bottom, 0px) + 118px));
+  scroll-padding-bottom: max(16px, calc(env(safe-area-inset-bottom, 0px) + 118px));
+  -webkit-overflow-scrolling: touch;
 }
 
 .admin-clean-recipients > div strong {
@@ -28883,6 +28888,11 @@ html.embedded-app-view .hero h1 {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 15px;
   background: rgba(255, 255, 255, 0.035);
+}
+
+
+.admin-clean-recipients article:last-child {
+  margin-bottom: max(12px, calc(env(safe-area-inset-bottom, 0px) + 86px));
 }
 
 .admin-clean-recipients b {
@@ -28936,5 +28946,30 @@ html.embedded-app-view .hero h1 {
 
   .admin-clean-recipients em {
     white-space: normal;
+  }
+}
+
+
+/* v59.42.3 — admin scroll reach hotfix */
+.admin-modal-backdrop {
+  isolation: isolate;
+}
+
+.admin-modal-shell {
+  min-height: 0;
+}
+
+@media (max-width: 560px) {
+  .admin-modal-scroll {
+    padding-bottom: max(160px, calc(env(safe-area-inset-bottom, 0px) + 150px));
+  }
+
+  .admin-clean-panel {
+    padding-bottom: max(120px, calc(env(safe-area-inset-bottom, 0px) + 108px));
+  }
+
+  .admin-clean-recipients {
+    max-height: 42dvh;
+    padding-bottom: max(120px, calc(env(safe-area-inset-bottom, 0px) + 108px));
   }
 }
