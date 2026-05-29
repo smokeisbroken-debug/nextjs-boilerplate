@@ -28469,6 +28469,68 @@ html.embedded-app-view .hero h1 {
   background: rgba(167, 255, 41, 0.07);
 }
 
+.admin-batch-sender-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid rgba(109, 224, 255, 0.18);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(109, 224, 255, 0.1), transparent 42%),
+    rgba(109, 224, 255, 0.045);
+}
+
+.admin-batch-sender-card span {
+  display: block;
+  color: rgba(161, 231, 255, 0.9);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.admin-batch-sender-card strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.16;
+}
+
+.admin-batch-sender-card small,
+.admin-batch-sender-card em {
+  display: block;
+  margin-top: 3px;
+  color: rgba(245, 255, 235, 0.62);
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 760;
+  line-height: 1.28;
+}
+
+.admin-batch-sender-card em {
+  grid-column: 1 / -1;
+  color: rgba(161, 231, 255, 0.95);
+}
+
+.admin-batch-sender-card button {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 13px;
+  color: #041015;
+  background: linear-gradient(135deg, rgba(109, 224, 255, 0.96), rgba(167, 255, 41, 0.84));
+  font-size: 0.72rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.admin-batch-sender-card button:disabled {
+  opacity: 0.5;
+}
+
 .admin-real-send-queue-list {
   display: grid;
   gap: 8px;
@@ -28523,11 +28585,13 @@ html.embedded-app-view .hero h1 {
 
 @media (max-width: 560px) {
   .admin-real-send-queue-head,
+  .admin-batch-sender-card,
   .admin-real-send-queue-list article {
     grid-template-columns: 1fr;
   }
 
   .admin-real-send-queue-head button,
+  .admin-batch-sender-card button,
   .admin-real-send-actions,
   .admin-real-send-actions button {
     width: 100%;

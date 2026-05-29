@@ -1,33 +1,27 @@
-# PROJECT_ORDER — v59.38 Real Manual Distribution Prep
+# PROJECT ORDER — v59.40 Treasury Batch Sender Beta
 
-## Current checkpoint
+Base: confirmed v59.39 Final Real Distribution Queue.
 
-Use v59.38 as the current patch after confirmed v59.37.
+## Changed files
 
-## Admin distribution flow
+- `app/page.tsx`
+- `app/globals.css`
+- `README.md`
+- `PROJECT_ORDER.md`
+- `TESTING.md`
+- `app/README.md`
+- `app/PROJECT_ORDER.md`
+- `app/TESTING.md`
 
-1. Open hidden Admin modal.
-2. Load legitimate holders using the current min hold / streak rules.
-3. Enter reward token and pool amount.
-4. Choose `Test ledger` or `Real manual distribution`.
-5. For real manual distribution:
-   - connect and verify the configured treasury wallet,
-   - type `PREPARE REAL DISTRIBUTION`,
-   - save the prepared real batch.
-6. Copy the send sheet and send manually from treasury.
-7. Paste tx signatures back into the Admin Panel.
-8. Ledger marks payout rows as `manual_sent`; full batch becomes `manual_sent` when every payout has a tx signature.
+## Not changed
 
-## Safety boundary
+- Supabase schema
+- reward eligibility formula
+- Daily Routine / Active Streak logic
+- wallet verification backend
+- treasury private-key handling
+- claims/staking/payout backend
 
-The app prepares and records distribution batches. It does not send tokens from the server and does not store private keys.
+## Summary
 
-## v59.39 Patch Order
-
-Apply after v59.38.
-
-1. Replace `app/page.tsx`.
-2. Replace `app/globals.css`.
-3. Replace root/app docs if desired.
-4. No Supabase migration required beyond the existing v59.37 distribution ledger migration.
-5. Keep `REWARDS_ADMIN_SECRET`, treasury/admin wallet envs, and `NEXT_PUBLIC_BROKE_TOKEN_MINT` configured.
+v59.40 adds a private Admin beta batch sender that prepares grouped Solana transactions in the browser and asks the connected treasury wallet to sign/send them. Returned tx signatures are recorded through the existing private distribution ledger API. Existing payment links remain as fallback.
