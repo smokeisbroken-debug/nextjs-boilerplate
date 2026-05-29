@@ -22523,6 +22523,7 @@ function AdminTreasuryPanel({
   const [realDistributionConfirm, setRealDistributionConfirm] = useState("");
   const [manualSignatureText, setManualSignatureText] = useState("");
   const [manualSignatureSaving, setManualSignatureSaving] = useState(false);
+  const [sendQueueMessage, setSendQueueMessage] = useState("");
   const [eligibilityMinHold, setEligibilityMinHold] = useState("100000");
   const [eligibilityMinStreak, setEligibilityMinStreak] = useState("7");
 
@@ -22589,6 +22590,83 @@ function AdminTreasuryPanel({
   const payoutPreviewReady = payoutRows.length > 0 && rewardPoolValue > 0;
   const realDistributionConfirmPhrase = "PREPARE REAL DISTRIBUTION";
   const realDistributionReady = distributionMode === "real_manual" && payoutPreviewReady && access.treasuryMatched && realDistributionConfirm.trim() === realDistributionConfirmPhrase;
+  const brokeRewardMint = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
+  const usdcRewardMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+
+  function getRewardTokenMint(token: string) {
+    const normalized = token.toUpperCase();
+    if (normalized === "$BROKE" || normalized === "BROKE") return brokeRewardMint;
+    if (normalized === "USDC") return usdcRewardMint;
+    return "";
+  }
+
+  function buildPayoutPaymentLink(row: { walletAddress: string; rewardAmount: number; rank: number }) {
+    const params = new URLSearchParams();
+    params.set("amount", String(row.rewardAmount));
+    params.set("label", "Smoke Is Broke Rewards");
+    params.set(
+      "message",
+      distributionRecord?.id
+        ? `BROKE reward distribution ${distributionRecord.id.slice(0, 8)}`
+        : "BROKE reward distribution"
+    );
+    params.set("memo", `BROKE reward rank ${row.rank}`);
+
+    const mint = getRewardTokenMint(rewardPoolToken);
+    if (mint) params.set("spl-token", mint);
+
+    return `solana:${row.walletAddress}?${params.toString()}`;
+  }
+
+  async function copyPayoutText(text: string, successMessage: string) {
+    try {
+      await navigator.clipboard?.writeText(text);
+      setSendQueueMessage(successMessage);
+      triggerHaptic("success");
+    } catch {
+      setSendQueueMessage("Copy was blocked by the browser. Long-press the text/link and copy manually.");
+      triggerHaptic("error");
+    }
+  }
+
+  function openPayoutPayment(row: { walletAddress: string; rewardAmount: number; rank: number }) {
+    const paymentLink = buildPayoutPaymentLink(row);
+    setSendQueueMessage(`Opening wallet payment for rank #${row.rank}. Confirm inside your treasury wallet, then paste the tx signature below.`);
+    triggerHaptic("light");
+    openExternalUrl(paymentLink);
+  }
+
+  function copySinglePayoutPayment(row: { walletAddress: string; rewardAmount: number; rank: number; balanceSharePercent: number }) {
+    const paymentLink = buildPayoutPaymentLink(row);
+    const text = [
+      `rank: ${row.rank}`,
+      `wallet: ${row.walletAddress}`,
+      `amount: ${row.rewardAmount} ${rewardPoolToken}`,
+      `share: ${row.balanceSharePercent}%`,
+      `payment: ${paymentLink}`,
+    ].join("\n");
+
+    void copyPayoutText(text, `Payout row #${row.rank} copied.`);
+  }
+
+  function copyAllPayoutPaymentLinks() {
+    if (payoutRows.length === 0) {
+      setSendQueueMessage("No payout rows to copy yet.");
+      return;
+    }
+
+    const header = "rank,wallet,amount,token,share_percent,payment_link";
+    const rows = payoutRows.map((row) => [
+      row.rank,
+      row.walletAddress,
+      row.rewardAmount,
+      rewardPoolToken,
+      row.balanceSharePercent,
+      buildPayoutPaymentLink(row),
+    ].join(","));
+
+    void copyPayoutText([header, ...rows].join("\n"), `Copied ${payoutRows.length} wallet payment link(s).`);
+  }
 
   function buildDistributionManifest(mode: "test" | "real_manual" = distributionMode) {
     return {
@@ -22695,9 +22773,10 @@ function AdminTreasuryPanel({
       }
 
       setDistributionRecord(data.distribution || null);
+      setSendQueueMessage("");
       setDistributionMessage(
         mode === "real_manual"
-          ? `Real manual distribution prepared for ${data.distribution?.recipientCount || payoutRows.length} recipients. Send from treasury, then paste tx signatures below.`
+          ? `Real distribution prepared for ${data.distribution?.recipientCount || payoutRows.length} recipients. Use the payout queue below to open wallet payment links, then paste tx signatures.`
           : `Test batch saved for ${data.distribution?.recipientCount || payoutRows.length} recipients. Manual payouts still need wallet confirmation outside this button.`
       );
     } catch (error) {
@@ -23084,9 +23163,49 @@ function AdminTreasuryPanel({
               )}
 
               {distributionRecord?.mode === "real_manual" && (
+                <div className="admin-real-send-queue">
+                  <div className="admin-real-send-queue-head">
+                    <div>
+                      <span>Final payout queue</span>
+                      <strong>Send from treasury wallet</strong>
+                      <small>Each Open payment button creates a wallet payment request for that recipient. Confirm inside Phantom/Jupiter/Solflare, then paste the transaction signature below.</small>
+                    </div>
+                    <button type="button" onClick={copyAllPayoutPaymentLinks} disabled={payoutRows.length === 0}>
+                      Copy all links
+                    </button>
+                  </div>
+
+                  <div className="admin-real-send-queue-note">
+                    Use this for the first real distribution. The app prepares the exact receiver/amount rows, but your treasury wallet still confirms the transfer. No private key is stored in the app.
+                  </div>
+
+                  {sendQueueMessage && <div className="admin-send-queue-message">{sendQueueMessage}</div>}
+
+                  <div className="admin-real-send-queue-list">
+                    {payoutRows.map((row) => (
+                      <article key={`send-${row.rank}-${row.walletAddress}`}>
+                        <div>
+                          <strong>#{row.rank} · {formatRewardTokenAmount(row.rewardAmount, rewardPoolToken)}</strong>
+                          <small>{compactWalletAddress(row.walletAddress)} · {formatHolderPercent(row.balanceSharePercent)}</small>
+                        </div>
+                        <div className="admin-real-send-actions">
+                          <button type="button" onClick={() => openPayoutPayment(row)}>
+                            Open payment
+                          </button>
+                          <button type="button" onClick={() => copySinglePayoutPayment(row)}>
+                            Copy row
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {distributionRecord?.mode === "real_manual" && (
                 <div className="admin-manual-signature-card">
                   <div>
-                    <span>After manual treasury send</span>
+                    <span>After treasury sends</span>
                     <strong>Record transaction signatures</strong>
                     <small>Paste one row per recipient: rank,txSignature or wallet,txSignature. This marks payout rows as manual_sent in the private ledger.</small>
                   </div>
@@ -23114,7 +23233,7 @@ function AdminTreasuryPanel({
 
         <div className="admin-treasury-warning">
           <b>No private key stored</b>
-          <span>Real distributions are prepared as manual treasury batches only. Server admin authorization is required, but token transfers still happen outside the server with treasury wallet confirmation.</span>
+          <span>Real distributions use a private admin queue: the app prepares receiver/amount payment requests, and your treasury wallet confirms each transfer. The server never stores a private key.</span>
         </div>
       </div>
     </details>

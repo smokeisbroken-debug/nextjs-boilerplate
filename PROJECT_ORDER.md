@@ -21,3 +21,13 @@ Use v59.38 as the current patch after confirmed v59.37.
 ## Safety boundary
 
 The app prepares and records distribution batches. It does not send tokens from the server and does not store private keys.
+
+## v59.39 Patch Order
+
+Apply after v59.38.
+
+1. Replace `app/page.tsx`.
+2. Replace `app/globals.css`.
+3. Replace root/app docs if desired.
+4. No Supabase migration required beyond the existing v59.37 distribution ledger migration.
+5. Keep `REWARDS_ADMIN_SECRET`, treasury/admin wallet envs, and `NEXT_PUBLIC_BROKE_TOKEN_MINT` configured.

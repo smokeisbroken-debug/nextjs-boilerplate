@@ -63,3 +63,16 @@ BROKE_TOKEN_MINT=9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray
 - `npm run typecheck`
 - `npm run lint:quiet`
 - CSS brace balance
+
+## v59.39 Final Real Distribution Queue
+
+- Adds a final private admin payout queue for real manual distributions.
+- After a real batch is prepared, Admin can open wallet payment requests per legitimate recipient.
+- Payment links use Solana payment URLs with exact wallet, amount, token label, and SPL mint when applicable.
+- Supported token labels in the queue: SOL, USDC, and $BROKE.
+- $BROKE mint fallback: `9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray`.
+- USDC mint fallback: `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v`.
+- Admin can copy all payment links, open each recipient payment, then paste tx signatures back into the private ledger.
+- No private key is stored by the app or server.
+- No server-side token transfer is executed.
+- Treasury wallet still confirms each payment inside the wallet app.

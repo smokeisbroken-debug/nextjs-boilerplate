@@ -33,3 +33,21 @@ npm run lint:quiet
 - Do not expect automatic transfers.
 - Do not expect Phantom/Jupiter signing inside this patch.
 - Do not enter private keys anywhere.
+
+## v59.39 Final Distribution Queue Test
+
+1. Open the app as admin.
+2. Open Profile → Admin.
+3. Load legitimate holders with the desired min hold/streak rules.
+4. Enter a small reward pool, such as `1` `$BROKE`.
+5. Select `Real manual distribution`.
+6. Connect/verify the configured treasury wallet.
+7. Type `PREPARE REAL DISTRIBUTION`.
+8. Press `Prepare real batch`.
+9. Confirm the `Final payout queue` appears.
+10. Use `Copy all links` or `Open payment` per recipient.
+11. Confirm each payment inside the treasury wallet.
+12. Paste transaction signatures into `Record transaction signatures`.
+13. Confirm the ledger status moves toward `manual_sent`.
+
+Expected: real payout requests are created from the admin UI, but the treasury wallet still confirms transfers and the server never stores a private key.
