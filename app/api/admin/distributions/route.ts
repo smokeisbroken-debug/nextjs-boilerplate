@@ -360,23 +360,49 @@ function serverLooksLikeSolanaJsonRpcUrl(value: string) {
 }
 
 function serverGetRpcUrls() {
+  // Keep this deliberately strict: payout sending is server-side, so it should use
+  // only the private server env plus the public Solana fallback. Old NEXT_PUBLIC_* or
+  // Enhanced API / REST URLs can remain in Vercel from previous experiments and must
+  // not poison the payout sender.
+  const privateRpc = serverCleanRpcUrl(getOptionalEnv("SOLANA_RPC_URL") || "");
   const candidates = [
-    getOptionalEnv("SOLANA_RPC_URL"),
-    getOptionalEnv("HELIUS_RPC_URL"),
-    getOptionalEnv("NEXT_PUBLIC_SOLANA_RPC_URL"),
-    getOptionalEnv("NEXT_PUBLIC_HELIUS_RPC_URL"),
+    serverLooksLikeSolanaJsonRpcUrl(privateRpc) ? privateRpc : "",
     SERVER_SOLANA_MAINNET_RPC,
-  ]
-    .map((value) => serverCleanRpcUrl(value || ""))
-    .filter((value) => serverLooksLikeSolanaJsonRpcUrl(value));
+  ].filter(Boolean);
 
-  return Array.from(new Set(candidates.length ? candidates : [SERVER_SOLANA_MAINNET_RPC]));
+  return Array.from(new Set(candidates));
+}
+
+function serverIsValidSolanaPublicKey(address: string) {
+  try {
+    return serverBase58Decode(address).length === 32;
+  } catch {
+    return false;
+  }
+}
+
+function serverPickTokenMint(candidates: string[], fallback: string) {
+  const normalizedFallback = fallback.trim();
+
+  for (const candidate of candidates) {
+    const value = cleanString(candidate, 100).trim();
+    if (!value) continue;
+    if (value === SERVER_SOLANA_SYSTEM_PROGRAM_ID) continue;
+    if (!serverIsValidSolanaPublicKey(value)) continue;
+    return value;
+  }
+
+  return normalizedFallback;
 }
 
 function serverGetTokenMint(token: string) {
   const normalized = normalizeToken(token);
-  if (normalized === "$BROKE") return getOptionalEnv("BROKE_TOKEN_MINT") || getOptionalEnv("NEXT_PUBLIC_BROKE_TOKEN_MINT") || DEFAULT_BROKE_MINT;
-  if (normalized === "USDC") return getOptionalEnv("USDC_TOKEN_MINT") || getOptionalEnv("NEXT_PUBLIC_USDC_TOKEN_MINT") || DEFAULT_USDC_MINT;
+  if (normalized === "$BROKE") {
+    return serverPickTokenMint([getOptionalEnv("BROKE_TOKEN_MINT"), getOptionalEnv("NEXT_PUBLIC_BROKE_TOKEN_MINT")], DEFAULT_BROKE_MINT);
+  }
+  if (normalized === "USDC") {
+    return serverPickTokenMint([getOptionalEnv("USDC_TOKEN_MINT"), getOptionalEnv("NEXT_PUBLIC_USDC_TOKEN_MINT")], DEFAULT_USDC_MINT);
+  }
   return "";
 }
 
@@ -615,7 +641,6 @@ function serverBuildTransferCheckedInstruction({
 async function serverSolanaRpc<T>(method: string, params: unknown[] = []): Promise<T> {
   const rpcUrls = serverGetRpcUrls();
   let lastError = "Solana RPC request failed.";
-  let sawMethodNotFound = false;
 
   for (const rpcUrl of rpcUrls) {
     try {
@@ -631,34 +656,24 @@ async function serverSolanaRpc<T>(method: string, params: unknown[] = []): Promi
       try {
         data = text ? JSON.parse(text) as { result?: T; error?: { message?: string } } : {};
       } catch {
-        lastError = `SOLANA_RPC_URL did not return JSON-RPC. Check the endpoint URL.`;
-        if (rpcUrl !== SERVER_SOLANA_MAINNET_RPC) continue;
-        throw new Error(lastError);
+        lastError = `${rpcUrl === SERVER_SOLANA_MAINNET_RPC ? "Public fallback RPC" : "SOLANA_RPC_URL"} did not return JSON-RPC.`;
+        continue;
       }
 
       if (!response.ok || data.error) {
         const rpcMessage = data.error?.message || `Solana RPC ${response.status}`;
-        lastError = rpcMessage;
-        if (/method not found/i.test(rpcMessage)) sawMethodNotFound = true;
-
-        // If a configured endpoint is an API/REST URL instead of a Solana JSON-RPC URL,
-        // keep trying the remaining candidates instead of failing the whole distribution.
+        lastError = `${rpcUrl === SERVER_SOLANA_MAINNET_RPC ? "Public fallback RPC" : "SOLANA_RPC_URL"}: ${rpcMessage}`;
         continue;
       }
 
       return data.result as T;
     } catch (error) {
       lastError = error instanceof Error ? error.message : lastError;
-      if (/method not found/i.test(lastError)) sawMethodNotFound = true;
       continue;
     }
   }
 
-  if (sawMethodNotFound) {
-    throw new Error("RPC endpoint is not Solana JSON-RPC. In Vercel remove old Helius Enhanced API URLs and keep only SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY, then redeploy.");
-  }
-
-  throw new Error(lastError);
+  throw new Error(`Solana RPC failed after private + public fallback attempts: ${lastError}`);
 }
 
 async function serverGetLatestBlockhash() {
