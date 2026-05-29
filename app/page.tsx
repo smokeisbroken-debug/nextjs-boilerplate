@@ -7954,6 +7954,34 @@ function openExternalUrl(url: string) {
   }
 }
 
+function isEmbeddedAppView() {
+  if (typeof window === "undefined") return false;
+
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+}
+
+function getStandaloneAppUrl() {
+  if (typeof window === "undefined") return "";
+
+  try {
+    return window.location.href;
+  } catch {
+    return "";
+  }
+}
+
+function openStandaloneAppUrl() {
+  const url = getStandaloneAppUrl();
+  if (!url) return false;
+
+  openExternalUrl(url);
+  return true;
+}
+
 function openTelegramUrl(url: string) {
   const webApp = getTelegramWebApp();
 
@@ -23107,8 +23135,13 @@ function AdminTreasuryPanel({
   const [sendQueueMessage, setSendQueueMessage] = useState("");
   const [batchSending, setBatchSending] = useState(false);
   const [batchSenderProgress, setBatchSenderProgress] = useState("");
+  const [adminEmbeddedView, setAdminEmbeddedView] = useState(false);
   const [eligibilityMinHold, setEligibilityMinHold] = useState("100000");
   const [eligibilityMinStreak, setEligibilityMinStreak] = useState("7");
+
+  useEffect(() => {
+    setAdminEmbeddedView(isEmbeddedAppView());
+  }, []);
 
   const treasuryStatus = !access.treasuryConfigured
     ? "Treasury address not configured"
@@ -23512,6 +23545,13 @@ function AdminTreasuryPanel({
       return;
     }
 
+    if (isEmbeddedAppView()) {
+      setAdminEmbeddedView(true);
+      setSendQueueMessage("Batch wallet signing is blocked inside the embedded/site preview. Open the app as a full standalone tab, then press Send all with treasury wallet again.");
+      triggerHaptic("error");
+      return;
+    }
+
     setBatchSending(true);
     setBatchSenderProgress("Opening treasury wallet signer...");
     setSendQueueMessage("");
@@ -23539,7 +23579,7 @@ function AdminTreasuryPanel({
     } catch (error) {
       const message = error instanceof Error ? error.message : "Treasury batch sender failed.";
       const cleanMessage = /access forbidden/i.test(message)
-        ? "Wallet blocked batch signing in this browser. Try Phantom desktop/extension, Solflare, or reopen the site inside the wallet browser and connect the treasury wallet again."
+        ? "Wallet blocked batch signing in this browser. Use the full standalone app tab, not the embedded site preview. On desktop, open the app directly in Chrome with Phantom/Solflare extension connected, then try Send all again."
         : message;
       setSendQueueMessage(`${cleanMessage} Payment links and manual tx paste remain as fallback.`);
       setBatchSenderProgress("");
@@ -23907,6 +23947,18 @@ function AdminTreasuryPanel({
                     <button type="button" onClick={sendAllWithTreasuryWallet} disabled={batchSending || !access.treasuryMatched || payoutRows.length === 0}>
                       {batchSending ? "Sending batch..." : "Send all with treasury wallet"}
                     </button>
+                    {adminEmbeddedView && (
+                      <button
+                        type="button"
+                        className="admin-batch-standalone-button"
+                        onClick={() => {
+                          const opened = openStandaloneAppUrl();
+                          setSendQueueMessage(opened ? "Standalone app tab opened. Use the full tab for treasury batch signing." : "Could not open standalone tab from this browser. Copy the direct app link and open it outside the site preview.");
+                        }}
+                      >
+                        Open full app for batch send
+                      </button>
+                    )}
                     {batchSenderProgress && <em>{batchSenderProgress}</em>}
                   </div>
 
