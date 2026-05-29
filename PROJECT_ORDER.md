@@ -36,3 +36,10 @@ Old `NEXT_PUBLIC_SOLANA_RPC_URL`, `HELIUS_RPC_URL`, and `NEXT_PUBLIC_HELIUS_RPC_
 ## Verification
 
 Targeted checks: TS/API/CSS brace balance passed. No BigInt literal suffixes were found in the admin route.
+
+
+## v59.42.7 One-request admin distribution recovery hotfix
+
+Fixes the stuck RPC/error loop in the clean admin distribution flow. The admin `Distribute rewards` action now uses one server POST request that prepares the real distribution batch and immediately runs the dedicated payout-wallet auto-send path. It no longer depends on a second frontend PATCH request, and the frontend no longer rewrites any `Method not found` error into the misleading `SOLANA_RPC_URL is not valid` message. Server-side RPC selection remains isolated to `SOLANA_RPC_URL` plus public mainnet fallback, and `$BROKE` mint fallback remains `9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray`.
+
+No eligibility formula, payout-share math, Supabase schema, Daily Routine/Active Streak, public user UI, or wallet verification logic changed.
