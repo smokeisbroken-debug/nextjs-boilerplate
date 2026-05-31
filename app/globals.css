@@ -28788,6 +28788,111 @@ html.embedded-app-view .hero h1 {
   outline: none;
 }
 
+.admin-safety-panel {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(255, 227, 140, 0.18);
+  border-radius: 20px;
+  background: rgba(255, 227, 140, 0.055);
+}
+
+.admin-safety-panel.passed {
+  border-color: rgba(167, 255, 41, 0.24);
+  background: rgba(167, 255, 41, 0.06);
+}
+
+.admin-safety-panel.failed {
+  border-color: rgba(255, 104, 104, 0.24);
+  background: rgba(255, 104, 104, 0.06);
+}
+
+.admin-safety-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.admin-safety-head span,
+.admin-safety-grid span {
+  display: block;
+  color: var(--neon);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-safety-head strong,
+.admin-safety-grid strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 0.92rem;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.admin-safety-head small,
+.admin-safety-grid small,
+.admin-safety-message,
+.admin-safety-lock {
+  display: block;
+  margin-top: 4px;
+  color: rgba(245, 255, 235, 0.64);
+  font-size: 0.72rem;
+  font-weight: 760;
+  line-height: 1.32;
+}
+
+.admin-safety-head button {
+  min-height: 42px;
+  border: 1px solid rgba(167, 255, 41, 0.24);
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(167, 255, 41, 0.1);
+  padding: 0 14px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.admin-safety-head button:disabled {
+  opacity: 0.55;
+}
+
+.admin-safety-message {
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.16);
+  overflow-wrap: anywhere;
+}
+
+.admin-safety-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-safety-grid article {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.admin-safety-lock {
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid rgba(255, 227, 140, 0.22);
+  border-radius: 14px;
+  color: #ffe38c;
+  background: rgba(255, 227, 140, 0.08);
+}
+
 .admin-clean-actions {
   display: grid;
   grid-template-columns: 0.9fr 1.1fr;
@@ -28932,8 +29037,14 @@ html.embedded-app-view .hero h1 {
   .admin-clean-summary,
   .admin-clean-grid,
   .admin-clean-actions,
-  .admin-clean-recipients article {
+  .admin-clean-recipients article,
+  .admin-safety-head,
+  .admin-safety-grid {
     grid-template-columns: 1fr;
+  }
+
+  .admin-safety-head button {
+    width: 100%;
   }
 
   .admin-clean-hero {
@@ -29112,5 +29223,301 @@ html.embedded-app-view .hero h1 {
 
   .smart-leak-preview {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ===== V59.45.0 LEAK SCORE CONCEPT SCREEN ===== */
+.bottom-nav.pro-mode-nav {
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  width: min(calc(100% - 20px), 454px);
+  padding-inline: 6px;
+}
+
+.bottom-nav.pro-mode-nav button img {
+  width: 27px;
+  height: 27px;
+}
+
+.bottom-nav.pro-mode-nav button span {
+  font-size: 8px;
+}
+
+.leak-score-screen {
+  --leak-card: rgba(255, 255, 255, 0.045);
+}
+
+.leak-score-hero,
+.leak-score-card,
+.leak-score-result,
+.leak-score-roadmap-card,
+.leak-score-disclaimer {
+  border-radius: 24px;
+  border: 1px solid rgba(167, 255, 41, 0.14);
+  background:
+    radial-gradient(circle at 88% 0%, rgba(167, 255, 41, 0.12), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018));
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
+}
+
+.leak-score-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 116px;
+  gap: 14px;
+  align-items: stretch;
+  padding: 18px;
+}
+
+.leak-score-hero span,
+.leak-score-section-head span,
+.leak-score-result > span,
+.leak-score-roadmap-card span,
+.leak-score-disclaimer strong {
+  color: var(--green);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.leak-score-hero h1 {
+  margin: 8px 0 8px;
+  color: var(--text);
+  font-size: 1.42rem;
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+}
+
+.leak-score-hero p,
+.leak-score-disclaimer p,
+.leak-score-roadmap-card p,
+.leak-score-result p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.leak-score-meter {
+  min-height: 132px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 2px;
+  border-radius: 22px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.leak-score-meter small {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.leak-score-meter strong {
+  color: var(--green);
+  font-size: 2.65rem;
+  line-height: 0.9;
+  letter-spacing: -0.08em;
+}
+
+.leak-score-meter b {
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 950;
+}
+
+.leak-score-meter-medium strong,
+.leak-score-result-medium strong {
+  color: #ffd166;
+}
+
+.leak-score-meter-high strong,
+.leak-score-result-high strong {
+  color: #ff9f1c;
+}
+
+.leak-score-meter-extreme strong,
+.leak-score-result-extreme strong {
+  color: #ff5c5c;
+}
+
+.leak-score-disclaimer {
+  margin-top: 12px;
+  padding: 14px;
+}
+
+.leak-score-disclaimer p {
+  margin-top: 6px;
+}
+
+.leak-score-card,
+.leak-score-result,
+.leak-score-roadmap-card {
+  margin-top: 14px;
+  padding: 16px;
+}
+
+.leak-score-section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.leak-score-section-head strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.leak-score-section-head button,
+.leak-score-section-head em {
+  border: 1px solid rgba(167, 255, 41, 0.18);
+  border-radius: 999px;
+  background: rgba(167, 255, 41, 0.08);
+  color: var(--green);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 950;
+  padding: 8px 11px;
+}
+
+.leak-score-input-line {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.leak-score-input-line span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.leak-score-input-line input,
+.leak-score-input-line select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 850;
+  padding: 12px 13px;
+  outline: none;
+}
+
+.leak-score-input-line input:focus,
+.leak-score-input-line select:focus {
+  border-color: rgba(167, 255, 41, 0.42);
+  box-shadow: 0 0 0 3px rgba(167, 255, 41, 0.08);
+}
+
+.leak-score-signal-grid {
+  display: grid;
+  gap: 9px;
+}
+
+.leak-score-signal {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+  padding: 13px 44px 13px 13px;
+}
+
+.leak-score-signal strong {
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.leak-score-signal span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.36;
+}
+
+.leak-score-signal small {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 950;
+}
+
+.leak-score-signal.selected {
+  border-color: rgba(167, 255, 41, 0.42);
+  background: rgba(167, 255, 41, 0.095);
+  box-shadow: inset 0 0 0 1px rgba(167, 255, 41, 0.05);
+}
+
+.leak-score-signal.selected small,
+.leak-score-signal.selected strong {
+  color: var(--green);
+}
+
+.leak-score-result {
+  display: grid;
+  gap: 10px;
+}
+
+.leak-score-result strong {
+  color: var(--green);
+  font-size: 1.35rem;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+}
+
+.leak-score-result-line {
+  display: grid;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.leak-score-result-line small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.leak-score-result-line b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.leak-score-roadmap-card strong {
+  display: block;
+  margin: 6px 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+@media (max-width: 420px) {
+  .leak-score-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .leak-score-meter {
+    min-height: 104px;
   }
 }

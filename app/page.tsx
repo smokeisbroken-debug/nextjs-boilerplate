@@ -22,8 +22,13 @@ import {
   adminSignAndSendSerializedTransaction,
   buildAdminBatchTransactions,
 } from "./lib/brokeAdminWalletTransactions";
+import {
+  LEAK_SCORE_SIGNALS,
+  calculateProjectLeakScore,
+  type LeakScoreSignalId,
+} from "./lib/brokeLeakScore";
 
-type Tab = "home" | "add" | "chart" | "growth" | "whatif" | "settings";
+type Tab = "home" | "add" | "chart" | "growth" | "leakscore" | "whatif" | "settings";
 type AppMode = "standard" | "pro";
 type NeedType = "Needed" | "Not needed" | "Maybe";
 type Language = "en" | "ru";
@@ -1095,6 +1100,20 @@ type AdminDistributionUpdateResponse = {
   payoutWallet?: string;
   records?: Array<{ rank: number; walletAddress: string; txSignature: string }>;
 };
+
+type AdminDistributionSmokeResponse = {
+  ok: boolean;
+  error?: string;
+  buildVersion?: string;
+  smoke?: {
+    ok: boolean;
+    total: number;
+    passed: number;
+    failed: number;
+  };
+};
+
+type AdminDistributionSmokeStatus = "idle" | "checking" | "passed" | "failed";
 
 
 type CloudStatus = "local" | "syncing" | "cloud" | "error";
@@ -4699,6 +4718,7 @@ const navItems: {
   { id: "add", label: "Add", icon: "/nav-add.png" },
   { id: "chart", label: "Chart", icon: "/nav-chart.png" },
   { id: "growth", label: "Growth", icon: "/nav-growth.png", proOnly: true },
+  { id: "leakscore", label: "Leak", icon: "/nav-chart.png", proOnly: true },
   { id: "whatif", label: "Rewards", icon: "/nav-save.png", proOnly: true },
   { id: "settings", label: "Profile", icon: "/nav-settings.png" },
 ];
@@ -10223,6 +10243,10 @@ export default function Home() {
           />
         )}
 
+        {loaded && onboardingCompleted && activeTab === "leakscore" && (
+          <LeakScoreScreen onBack={goHome} onHelp={openHelp} />
+        )}
+
         {loaded && onboardingCompleted && activeTab === "whatif" && (
           <WhatIfScreen
             settings={displaySettings}
@@ -10362,6 +10386,7 @@ function HelpGuideModal({
             "Add opens Track Leak. Press it when money leaves your wallet and you want the app to learn from it.",
             "Chart opens Wallet Pressure Chart and Leak Pattern Lab. Press it when you want to understand why the leak happened.",
             "Growth opens the planning lab. Press it when you want to see what leaked money could cover instead.",
+            "Leak opens BROKE Leak Score, an experimental project risk-signal checklist for DYOR discipline.",
             "Rewards opens Survival Mode, leak cuts, challenges, leaderboard, Debt & Bills Radar, and Active Streak proof.",
             "Profile opens Personal Cabinet: identity, wallet proof, Share Studio, privacy, currency, sync, and data settings.",
           ],
@@ -10866,6 +10891,48 @@ function HelpGuideModal({
       ],
     },
 
+    leakscore: {
+      label: "Leak",
+      eyebrow: "Leak Score Guide",
+      title: "Leak Score: Project Risk Signals",
+      intro:
+        "Leak Score is an experimental DYOR checklist. It does not call projects scams. It helps users notice possible project, wallet, hype, and liquidity leaks before emotional decisions become financial leaks.",
+      icon: "/nav-chart.png",
+      footerTitle: "Leak Score rule",
+      footerBody:
+        "Use it as a pause button before entering a project. A signal is not a verdict; it is a reason to verify more slowly.",
+      sections: [
+        {
+          title: "What this screen is",
+          body: [
+            "It is a manual risk-signal checklist for projects and wallets.",
+            "The first version does not fetch on-chain data and does not publish public accusations.",
+            "The score is educational: it helps users slow down, verify, and avoid FOMO-driven decisions.",
+          ],
+          icon: A.navChart,
+        },
+        {
+          title: "How to use it",
+          body: [
+            "Enter the project or token name if useful.",
+            "Select only the signals you can actually observe.",
+            "Read the risk tier as a discipline warning, not as investment advice.",
+            "If many severe signals are selected, pause before acting.",
+          ],
+          icon: A.help,
+        },
+        {
+          title: "Why it fits $BROKE",
+          body: [
+            "$BROKE is about detecting what quietly drains people.",
+            "Personal leaks drain wallets through habits and emotional spending.",
+            "Project leaks drain wallets through weak structure, fake hype, poor liquidity, and rushed decisions.",
+          ],
+          icon: A.walletHp,
+        },
+      ],
+    },
+
     settings: {
       label: "Profile",
       eyebrow: "Profile Button Guide",
@@ -11000,7 +11067,7 @@ function HelpGuideModal({
     },
   };
 
-  const guideTabs: Tab[] = ["home", "add", "chart", "growth", "whatif", "settings"];
+  const guideTabs: Tab[] = ["home", "add", "chart", "growth", "leakscore", "whatif", "settings"];
   const guide = tabGuides[selectedGuide] ?? tabGuides.home;
 
   return (
@@ -21892,6 +21959,165 @@ function HomeHabitLeaksPanel({
   );
 }
 
+
+function LeakScoreScreen({
+  onBack,
+  onHelp,
+}: {
+  onBack: () => void;
+  onHelp: () => void;
+}) {
+  const [projectName, setProjectName] = useState("");
+  const [chain, setChain] = useState("Solana");
+  const [contractAddress, setContractAddress] = useState("");
+  const [selectedSignals, setSelectedSignals] = useState<LeakScoreSignalId[]>([]);
+
+  const score = useMemo(() => calculateProjectLeakScore(selectedSignals), [selectedSignals]);
+  const selectedSet = useMemo(() => new Set(selectedSignals), [selectedSignals]);
+  const selectedLabels = LEAK_SCORE_SIGNALS
+    .filter((signal) => selectedSet.has(signal.id))
+    .map((signal) => signal.label);
+
+  function toggleSignal(id: LeakScoreSignalId) {
+    triggerHaptic("light");
+    setSelectedSignals((current) => (
+      current.includes(id)
+        ? current.filter((signalId) => signalId !== id)
+        : [...current, id]
+    ));
+  }
+
+  function clearDraft() {
+    triggerHaptic("light");
+    setProjectName("");
+    setChain("Solana");
+    setContractAddress("");
+    setSelectedSignals([]);
+  }
+
+  return (
+    <div className="screen leak-score-screen">
+      <Header title="BROKE Leak Score" showBack onBack={onBack} rightIcon={A.help} onRight={onHelp} />
+
+      <section className="leak-score-hero">
+        <div>
+          <span>Experimental Research Mode</span>
+          <h1>Detect project leaks before they drain the wallet.</h1>
+          <p>
+            A manual DYOR checklist for project, wallet, hype and liquidity signals. It does not call projects scams. It shows leak signals.
+          </p>
+        </div>
+        <div className={`leak-score-meter leak-score-meter-${score.tier.id}`}>
+          <small>Leak Score</small>
+          <strong>{score.score}</strong>
+          <b>{score.tier.shortLabel}</b>
+        </div>
+      </section>
+
+      <section className="leak-score-disclaimer">
+        <strong>Safety rule</strong>
+        <p>
+          This first version is local and educational only. No API calls, no public database, no accusations, no investment advice.
+        </p>
+      </section>
+
+      <section className="leak-score-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Step 1</span>
+            <strong>Project draft</strong>
+          </div>
+          <button type="button" onClick={clearDraft}>Clear</button>
+        </div>
+
+        <label className="leak-score-input-line">
+          <span>Project / token name</span>
+          <input
+            value={projectName}
+            onChange={(event) => setProjectName(event.target.value)}
+            placeholder="Example: Smoke Is BROKE"
+          />
+        </label>
+
+        <label className="leak-score-input-line">
+          <span>Chain</span>
+          <select value={chain} onChange={(event) => setChain(event.target.value)}>
+            <option>Solana</option>
+            <option>Ethereum</option>
+            <option>Base</option>
+            <option>BSC</option>
+            <option>Other</option>
+          </select>
+        </label>
+
+        <label className="leak-score-input-line">
+          <span>Contract / mint address</span>
+          <input
+            value={contractAddress}
+            onChange={(event) => setContractAddress(event.target.value)}
+            placeholder="Optional for v59.45.0"
+          />
+        </label>
+      </section>
+
+      <section className="leak-score-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Step 2</span>
+            <strong>Visible leak signals</strong>
+          </div>
+          <em>{score.selectedCount}/{score.totalSignals}</em>
+        </div>
+
+        <div className="leak-score-signal-grid">
+          {LEAK_SCORE_SIGNALS.map((signal) => {
+            const selected = selectedSet.has(signal.id);
+
+            return (
+              <button
+                key={signal.id}
+                type="button"
+                className={`leak-score-signal ${selected ? "selected" : ""}`}
+                onClick={() => toggleSignal(signal.id)}
+              >
+                <strong>{signal.label}</strong>
+                <span>{signal.helper}</span>
+                <small>+{signal.weight}</small>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className={`leak-score-result leak-score-result-${score.tier.id}`}>
+        <span>Step 3 · Result preview</span>
+        <strong>{score.tier.label}</strong>
+        <p>{score.tier.helper}</p>
+        <div className="leak-score-result-line">
+          <small>Project</small>
+          <b>{projectName.trim() || "Unnamed draft"}</b>
+        </div>
+        <div className="leak-score-result-line">
+          <small>Chain</small>
+          <b>{chain}</b>
+        </div>
+        <div className="leak-score-result-line">
+          <small>Signals</small>
+          <b>{selectedLabels.length ? selectedLabels.slice(0, 3).join(", ") : "No signals selected"}</b>
+        </div>
+      </section>
+
+      <section className="leak-score-roadmap-card">
+        <span>What comes next</span>
+        <strong>Manual first. Automation later.</strong>
+        <p>
+          v59.45.0 keeps this as a safe concept screen. Later versions can add local drafts, shareable cards, then basic Solana signal fetch.
+        </p>
+      </section>
+    </div>
+  );
+}
+
 function WhatIfScreen({
   settings,
   setSettings,
@@ -22712,6 +22938,9 @@ function AdminTreasuryPanel({
   const [adminEmbeddedView, setAdminEmbeddedView] = useState(false);
   const [eligibilityMinHold, setEligibilityMinHold] = useState("100000");
   const [eligibilityMinStreak, setEligibilityMinStreak] = useState("7");
+  const [distributionSmokeStatus, setDistributionSmokeStatus] = useState<AdminDistributionSmokeStatus>("idle");
+  const [distributionSmokeMessage, setDistributionSmokeMessage] = useState("");
+  const [distributionSmokeCheckedAt, setDistributionSmokeCheckedAt] = useState("");
 
   useEffect(() => {
     setAdminEmbeddedView(isEmbeddedAppView());
@@ -22781,11 +23010,88 @@ function AdminTreasuryPanel({
     }
   }
 
+  async function runDistributionSmokeCheck() {
+    const key = adminReadKey.trim();
+
+    if (!key) {
+      setDistributionSmokeStatus("failed");
+      setDistributionSmokeMessage("Enter the Admin key first, then run smoke-check.");
+      return;
+    }
+
+    setDistributionSmokeStatus("checking");
+    setDistributionSmokeMessage("Running Admin distribution smoke-check...");
+    setDistributionSmokeCheckedAt("");
+
+    try {
+      const response = await fetch("/api/admin/distributions?smoke=1", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${key}` },
+        cache: "no-store",
+      });
+      const data = (await response.json()) as AdminDistributionSmokeResponse;
+
+      if (!response.ok || !data.ok || !data.smoke?.ok) {
+        const failed = typeof data.smoke?.failed === "number" ? ` Failed checks: ${data.smoke.failed}.` : "";
+        throw new Error(`${data.error || "Smoke-check failed."}${failed}`);
+      }
+
+      setDistributionSmokeStatus("passed");
+      setDistributionSmokeCheckedAt(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+      setDistributionSmokeMessage(`Smoke-check passed: ${data.smoke.passed}/${data.smoke.total} checks · build ${data.buildVersion || BROKE_APP_BUILD_VERSION}.`);
+      triggerHaptic("success");
+    } catch (error) {
+      setDistributionSmokeStatus("failed");
+      setDistributionSmokeMessage(error instanceof Error ? error.message : "Smoke-check failed.");
+      triggerHaptic("error");
+    }
+  }
+
   const rewardPoolValue = Number(rewardPoolAmount.replace(",", "."));
   const eligiblePayoutCandidates = holderIntel?.eligiblePayoutCandidates || holderIntel?.topLegitimateHolders || [];
   const payoutRows = calculateAdminPayoutRows(eligiblePayoutCandidates, rewardPoolValue);
   const payoutTotal = payoutRows.reduce((total, row) => total + row.rewardAmount, 0);
   const payoutPreviewReady = payoutRows.length > 0 && rewardPoolValue > 0;
+  const distributionSmokePassed = distributionSmokeStatus === "passed";
+  const safetyRecipientCount = payoutRows.length || eligiblePayoutCandidates.length;
+  const safetyBlockedReason = !adminReadKey.trim()
+    ? "Enter Admin key."
+    : !distributionSmokePassed
+      ? "Run smoke-check first."
+      : !holderIntel
+        ? "Press Check eligible first."
+        : !Number.isFinite(rewardPoolValue) || rewardPoolValue <= 0
+          ? "Enter a valid reward amount."
+          : payoutRows.filter((row) => row.rewardAmount > 0).length === 0
+            ? "No payout rows for the current rules and amount."
+            : "";
+  const safetySummaryItems = [
+    {
+      label: "Smoke",
+      value: distributionSmokeStatus === "passed" ? "Passed" : distributionSmokeStatus === "checking" ? "Checking" : distributionSmokeStatus === "failed" ? "Failed" : "Not run",
+      detail: distributionSmokeCheckedAt ? `Last check ${distributionSmokeCheckedAt}` : "Required before Distribute rewards unlocks.",
+    },
+    {
+      label: "Recipients",
+      value: safetyRecipientCount > 0 ? `${safetyRecipientCount}` : "—",
+      detail: holderIntel ? "Loaded from legitimate holder preview." : "Press Check eligible to load recipients.",
+    },
+    {
+      label: "Pool",
+      value: rewardPoolValue > 0 ? formatRewardTokenAmount(rewardPoolValue, rewardPoolToken) : "—",
+      detail: `Calculated payout total: ${payoutTotal > 0 ? formatRewardTokenAmount(payoutTotal, rewardPoolToken) : "—"}.`,
+    },
+    {
+      label: "Rules",
+      value: `${eligibilityMinHold || "0"}+ hold · ${eligibilityMinStreak || "0"}+ streak`,
+      detail: "Current Admin eligibility filters for this preview.",
+    },
+    {
+      label: "Mode",
+      value: "Server payout wallet",
+      detail: "Dedicated payout wallet only. Main treasury seed is not used here.",
+    },
+  ];
   const realDistributionConfirmPhrase = REAL_DISTRIBUTION_CONFIRM_PHRASE;
   const realDistributionReady = distributionMode === "real_manual" && payoutPreviewReady && access.treasuryMatched && realDistributionConfirm.trim() === realDistributionConfirmPhrase;
 
@@ -23146,6 +23452,11 @@ function AdminTreasuryPanel({
       return;
     }
 
+    if (!distributionSmokePassed) {
+      setDistributionMessage("Run the Admin distribution smoke-check first. Real distribution stays locked until smoke-check passes.");
+      return;
+    }
+
     if (!Number.isFinite(poolValue) || poolValue <= 0) {
       setDistributionMessage("Enter the amount to distribute first.");
       return;
@@ -23235,7 +23546,12 @@ function AdminTreasuryPanel({
         <input
           type="password"
           value={adminReadKey}
-          onChange={(event) => setAdminReadKey(event.target.value)}
+          onChange={(event) => {
+            setAdminReadKey(event.target.value);
+            setDistributionSmokeStatus("idle");
+            setDistributionSmokeMessage("");
+            setDistributionSmokeCheckedAt("");
+          }}
           placeholder="REWARDS_ADMIN_SECRET"
         />
       </label>
@@ -23285,6 +23601,41 @@ function AdminTreasuryPanel({
         </label>
       </div>
 
+      <div className={`admin-safety-panel ${distributionSmokeStatus === "passed" ? "passed" : distributionSmokeStatus === "failed" ? "failed" : ""}`}>
+        <div className="admin-safety-head">
+          <div>
+            <span>Safety check</span>
+            <strong>Smoke-check required before distribution</strong>
+            <small>Runs the protected Admin distribution smoke path. It performs no Supabase writes and sends no tokens.</small>
+          </div>
+          <button
+            type="button"
+            onClick={runDistributionSmokeCheck}
+            disabled={distributionSmokeStatus === "checking" || distributionSaving || serverAutoSending}
+          >
+            {distributionSmokeStatus === "checking" ? "Checking..." : distributionSmokePassed ? "Re-check" : "Run smoke-check"}
+          </button>
+        </div>
+
+        {distributionSmokeMessage && <p className="admin-safety-message">{distributionSmokeMessage}</p>}
+
+        <div className="admin-safety-grid">
+          {safetySummaryItems.map((item) => (
+            <article key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </article>
+          ))}
+        </div>
+
+        {safetyBlockedReason && (
+          <div className="admin-safety-lock">
+            Locked: {safetyBlockedReason}
+          </div>
+        )}
+      </div>
+
       <div className="admin-clean-actions">
         <button
           type="button"
@@ -23298,7 +23649,8 @@ function AdminTreasuryPanel({
           type="button"
           className="admin-clean-distribute-button"
           onClick={distributeRewardsOneClick}
-          disabled={distributionSaving || serverAutoSending || holderIntelLoading}
+          disabled={distributionSaving || serverAutoSending || holderIntelLoading || Boolean(safetyBlockedReason)}
+          title={safetyBlockedReason || "Distribute rewards"}
         >
           {distributionSaving || serverAutoSending ? "Distributing..." : "Distribute rewards"}
         </button>
