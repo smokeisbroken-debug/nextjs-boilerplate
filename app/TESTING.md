@@ -1,27 +1,38 @@
-# $BROKE / Smoke Is Broke — v59.43.3 Admin Distribution Helper Extraction
+# Smoke Is Broke — v59.43.4 Admin Wallet Transaction Helper Extraction
 
-Patch-only update on top of confirmed v59.43.2.
+Patch-only release on top of v59.43.3.
 
-## What changed
+## Summary
 
-- Expanded `app/lib/brokeAdminRewards.ts` from constants-only into the first shared Admin distribution helper module.
-- Moved pure payout/manifest helpers out of the private Admin UI path:
-  - `calculateAdminPayoutRows()`
-  - `getAdminRewardTokenMint()`
-  - `buildAdminPayoutPaymentLink()`
-  - `buildAdminPayoutPaymentLinksCsv()`
-  - `buildAdminDistributionManifest()`
-  - `buildAdminDistributionSendSheet()`
-- Reused the shared helper module in `app/page.tsx` for payout row calculation, payment links, CSV copy, manifest building, and manual send sheet generation.
-- Reused `parseAdminCsv()` in `app/api/admin/distributions/route.ts` to remove one duplicated parser.
-- Updated private Admin build marker/API build version to `v59.43.3`.
+v59.43.4 continues the Admin/Rewards extraction work by moving the private Admin browser-wallet transaction helper logic out of `app/page.tsx` into `app/lib/brokeAdminWalletTransactions.ts`.
 
-## Behavior
+The patch is refactor-only. It does not intentionally change payout logic, reward eligibility, Daily Routine, Active Streak, wallet verification, Supabase schema, public UI behavior, server auto-send flow, or distribution API behavior.
 
-No payout logic, reward eligibility formula, Daily Routine, Active Streak, wallet verification, Supabase schema, public UI behavior, server auto-send flow, or distribution API behavior was intentionally changed.
+## Changed
 
-This is still a stabilization/refactor prep patch. It reduces duplicated logic and makes the next Admin extraction step safer without changing what the user sees or how rewards are distributed.
+- Added `app/lib/brokeAdminWalletTransactions.ts`.
+- Moved Admin Wallet Standard signer helpers from `app/page.tsx` into the shared browser-wallet transaction module.
+- Moved Solana base58, RPC, transaction serialization, SOL transfer, SPL transfer-checked, batch chunking, and sign/send fallback helpers into the transaction module.
+- Added `buildAdminBatchTransactions()` to keep batch construction outside the Admin UI component.
+- Updated Admin build marker to `v59.43.4` through the shared `BROKE_APP_BUILD_VERSION` constant.
+- Kept `app/page.tsx` focused on UI flow: get signer, build transactions, sign/send, record tx signatures.
 
-## Do not delete
+## Not changed
 
-Do not remove the v59.43.1 Supabase schema repair migration or older migrations. This patch does not add a new migration.
+- No reward eligibility formula change.
+- No payout share math change.
+- No Daily Routine or Active Streak change.
+- No wallet verification backend change.
+- No Supabase migration.
+- No public user UI behavior change.
+- No server-side payout wallet behavior change.
+- No distribution API behavior change.
+
+## Verification
+
+- `npm ci` passed.
+- `npm run typecheck` passed.
+- `npm run lint:quiet` passed.
+- `NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully and finished TypeScript, then timed out during `Collecting page data using 26 workers` in the sandbox. Full build completion was not confirmed here.
+- Raw brace/paren balance passed for changed TS files.
+- Targeted scan found no BigInt literal suffixes in changed TS files.
