@@ -1,8 +1,8 @@
-# Smoke Is Broke — v59.43.8 Admin Distribution Route Persistence Helper Extraction
+# Smoke Is Broke — v59.43.9 Admin Distribution Route Validation Helper Extraction
 
 ## Patch scope
 
-v59.43.8 continues the Admin/Rewards backend extraction work by moving Admin distribution persistence/store helpers out of `app/api/admin/distributions/route.ts` into `app/lib/brokeAdminDistributionStore.ts`.
+v59.43.9 continues the Admin/Rewards backend extraction work by moving Admin distribution route validation and normalization helpers out of `app/api/admin/distributions/route.ts` into `app/lib/brokeAdminDistributionValidation.ts`.
 
 This is a refactor-only patch. It does not intentionally change reward payout logic, eligibility rules, payout share math, Daily Routine, Active Streak, wallet verification, Supabase schema, public UI behavior, Admin UI behavior, payout-wallet env names, server auto-send behavior, or distribution API behavior.
 
@@ -10,21 +10,19 @@ This is a refactor-only patch. It does not intentionally change reward payout lo
 
 - `app/api/admin/distributions/route.ts`
 - `app/lib/brokeAdminRewards.ts`
-- `app/lib/brokeAdminDistributionStore.ts` — new
+- `app/lib/brokeAdminDistributionValidation.ts` — new
 - Root/app docs
 
 ## What changed
 
-- Added `app/lib/brokeAdminDistributionStore.ts` for Admin reward distribution persistence helpers.
-- Moved distribution/payout row types out of the route into the store helper.
-- Moved distribution formatting into `formatAdminDistribution()`.
-- Moved distribution list/single fetch helpers into `getAdminDistributionRows()` and `getAdminDistributionById()`.
-- Moved payout row fetch helper into `getAdminPayoutRows()`.
-- Moved distribution and payout insert helpers into `insertAdminDistributionRow()` and `insertAdminPayoutRows()`.
-- Moved distribution status update helper into `updateAdminDistributionStatus()`.
-- Moved cancel-payout update helper into `cancelAdminPayoutRows()`.
-- Moved manual-send and server-send payout marking helpers into `markAdminManualSendRecordsSent()` and `markAdminPayoutRanksSent()`.
-- Updated shared Admin build marker to `v59.43.8` through `BROKE_APP_BUILD_VERSION`.
+- Added `app/lib/brokeAdminDistributionValidation.ts` for Admin reward distribution request validation helpers.
+- Moved distribution request input types out of the route into the validation helper.
+- Moved reward token normalization into `normalizeAdminDistributionToken()`.
+- Moved distribution mode normalization into `normalizeAdminDistributionMode()`.
+- Moved payout recipient sanitization into `normalizeAdminDistributionPayouts()`.
+- Moved manual-send signature parsing into `parseAdminManualSendRecords()`.
+- Kept distribution route behavior the same while reducing local validation code in `app/api/admin/distributions/route.ts`.
+- Updated shared Admin build marker to `v59.43.9` through `BROKE_APP_BUILD_VERSION`.
 
 ## Safety notes
 
@@ -53,6 +51,6 @@ Targeted checks:
 
 ## Install
 
-Copy the contents of the `v59.43.8/` folder into the project root and replace files.
+Copy the contents of the `v59.43.9/` folder into the project root and replace files.
 
 Do not delete any files.
