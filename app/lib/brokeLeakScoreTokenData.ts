@@ -132,6 +132,124 @@ export function formatLeakScoreAgeDays(value: number | null | undefined) {
   return `${Math.round(value)} days`;
 }
 
+
+export type LeakScoreTokenDataMetricTone = "ready" | "caution" | "warning" | "pending";
+
+export type LeakScoreTokenDataMetricCard = {
+  id: string;
+  label: string;
+  value: string;
+  helper: string;
+  tone: LeakScoreTokenDataMetricTone;
+};
+
+function getLeakScoreUsdMetricTone(value: number | null | undefined, cautionAt: number, warningBelow: number): LeakScoreTokenDataMetricTone {
+  if (!Number.isFinite(value || 0) || !value) return "pending";
+  if (value < warningBelow) return "warning";
+  if (value < cautionAt) return "caution";
+  return "ready";
+}
+
+export function buildLeakScoreTokenDataMetricCards(data: LeakScoreBasicTokenData | null): LeakScoreTokenDataMetricCard[] {
+  if (!data) return [];
+
+  const liquidity = data.pair?.liquidityUsd ?? null;
+  const volume = data.pair?.volume24hUsd ?? null;
+  const marketCap = data.pair?.marketCapUsd ?? null;
+  const fdv = data.pair?.fdvUsd ?? null;
+  const ageDays = data.pair?.ageDays ?? null;
+  const concentration = data.top10ConcentrationPercent;
+
+  const volumeLiquidityRatio = Number.isFinite(volume || 0) && Number.isFinite(liquidity || 0) && liquidity
+    ? Number(volume || 0) / Number(liquidity || 1)
+    : null;
+
+  const concentrationTone: LeakScoreTokenDataMetricTone = !Number.isFinite(concentration || 0) && concentration !== 0
+    ? "pending"
+    : Number(concentration || 0) >= 50
+      ? "warning"
+      : Number(concentration || 0) >= 30
+        ? "caution"
+        : "ready";
+
+  const ageTone: LeakScoreTokenDataMetricTone = !Number.isFinite(ageDays || 0) && ageDays !== 0
+    ? "pending"
+    : Number(ageDays || 0) < 1
+      ? "warning"
+      : Number(ageDays || 0) < 7
+        ? "caution"
+        : "ready";
+
+  const volumeTone: LeakScoreTokenDataMetricTone = !Number.isFinite(volumeLiquidityRatio || 0) || volumeLiquidityRatio === null
+    ? "pending"
+    : volumeLiquidityRatio > 8
+      ? "warning"
+      : volumeLiquidityRatio > 3
+        ? "caution"
+        : "ready";
+
+  return [
+    {
+      id: "liquidity",
+      label: "Liquidity",
+      value: formatLeakScoreUsd(liquidity),
+      helper: liquidity ? "Visible DEX pair liquidity. Low liquidity can make exits fragile." : "DEX liquidity unavailable from visible pair data.",
+      tone: getLeakScoreUsdMetricTone(liquidity, 20000, 5000),
+    },
+    {
+      id: "volume24h",
+      label: "24h volume",
+      value: formatLeakScoreUsd(volume),
+      helper: volumeLiquidityRatio === null
+        ? "24h volume unavailable or liquidity missing."
+        : `Volume/liquidity ratio: ${volumeLiquidityRatio.toFixed(1)}x. Treat abnormal churn as a manual research prompt.`,
+      tone: volumeTone,
+    },
+    {
+      id: "marketCap",
+      label: "Market cap",
+      value: formatLeakScoreUsd(marketCap),
+      helper: marketCap ? "Visible market cap from DEX pair context." : "Market cap unavailable from visible source data.",
+      tone: marketCap ? "ready" : "pending",
+    },
+    {
+      id: "fdv",
+      label: "FDV",
+      value: formatLeakScoreUsd(fdv),
+      helper: fdv ? "Fully diluted valuation from visible DEX pair context." : "FDV unavailable from visible source data.",
+      tone: fdv ? "ready" : "pending",
+    },
+    {
+      id: "pairAge",
+      label: "Pair age",
+      value: formatLeakScoreAgeDays(ageDays),
+      helper: "Newer pairs require more manual context before emotional buying.",
+      tone: ageTone,
+    },
+    {
+      id: "top10",
+      label: "Top 10 accounts",
+      value: formatLeakScorePercent(concentration),
+      helper: "Top token-account concentration from Solana RPC largest-account data, not a full holder map.",
+      tone: concentrationTone,
+    },
+    {
+      id: "supply",
+      label: "Supply",
+      value: data.tokenSupply ? formatLeakScoreNumber(Number(data.tokenSupply)) : "Unavailable",
+      helper: "Token supply from Solana RPC when available.",
+      tone: data.tokenSupply ? "ready" : "pending",
+    },
+    {
+      id: "holders",
+      label: "Holders",
+      value: "Indexer needed",
+      helper: "Reliable total holders need an indexer. Public RPC alone is not enough.",
+      tone: "pending",
+    },
+  ];
+}
+
 export function summarizeLeakScoreTokenData(data: LeakScoreBasicTokenData | null) {
   if (!data) return "No token data fetched yet.";
 

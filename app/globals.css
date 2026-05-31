@@ -30176,7 +30176,7 @@ html.embedded-app-view .hero h1 {
   }
 }
 
-/* v59.46.0-3 Leak Score basic token data fetch + source safety/cache controls */
+/* v59.46.0-4 Leak Score basic token data fetch + source safety/cache/apply-hint controls */
 .leak-score-token-data-card {
   display: grid;
   gap: 12px;
@@ -30354,6 +30354,29 @@ html.embedded-app-view .hero h1 {
   background: rgba(255, 120, 120, 0.045);
 }
 
+
+.leak-score-token-data-verdict-warning {
+  display: grid;
+  gap: 4px;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 214, 102, 0.15);
+  background: rgba(255, 214, 102, 0.055);
+  padding: 10px 11px;
+}
+
+.leak-score-token-data-verdict-warning strong {
+  color: #ffd66a;
+  font-size: 0.75rem;
+  font-weight: 950;
+}
+
+.leak-score-token-data-verdict-warning small {
+  color: rgba(255, 255, 255, 0.67);
+  font-size: 0.65rem;
+  font-weight: 780;
+  line-height: 1.34;
+}
+
 .leak-score-token-data-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -30385,6 +30408,34 @@ html.embedded-app-view .hero h1 {
   font-size: 0.82rem;
   font-weight: 950;
   overflow-wrap: anywhere;
+}
+
+
+.leak-score-token-data-grid small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.61rem;
+  font-weight: 760;
+  line-height: 1.3;
+}
+
+.leak-score-token-data-grid article.leak-score-token-data-metric-ready {
+  border-color: rgba(167, 255, 41, 0.13);
+}
+
+.leak-score-token-data-grid article.leak-score-token-data-metric-caution {
+  border-color: rgba(255, 214, 102, 0.16);
+  background: rgba(255, 214, 102, 0.045);
+}
+
+.leak-score-token-data-grid article.leak-score-token-data-metric-warning {
+  border-color: rgba(255, 120, 120, 0.16);
+  background: rgba(255, 120, 120, 0.045);
+}
+
+.leak-score-token-data-grid article.leak-score-token-data-metric-pending {
+  opacity: 0.86;
 }
 
 .leak-score-token-data-sources {
@@ -30438,6 +30489,56 @@ html.embedded-app-view .hero h1 {
   padding: 11px;
 }
 
+
+.leak-score-token-data-hints.armed {
+  border-color: rgba(255, 214, 102, 0.22);
+  background: rgba(255, 214, 102, 0.075);
+}
+
+.leak-score-token-data-hint-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.leak-score-token-data-hint-list article {
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 8px 9px;
+}
+
+.leak-score-token-data-hint-list b {
+  display: inline-flex;
+  margin-bottom: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+  font-size: 0.55rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  padding: 4px 7px;
+  text-transform: uppercase;
+}
+
+.leak-score-token-data-hint-list span {
+  display: block;
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.leak-score-token-data-hint-list small {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.leak-score-token-data-empty {
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 10px;
+}
+
 .leak-score-token-data-warnings {
   display: grid;
   gap: 4px;
@@ -30488,7 +30589,35 @@ html.embedded-app-view .hero h1 {
   }
 
   .leak-score-token-data-grid,
-  .leak-score-token-data-sources {
+  
+.leak-score-token-data-grid small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 0.61rem;
+  font-weight: 760;
+  line-height: 1.3;
+}
+
+.leak-score-token-data-grid article.leak-score-token-data-metric-ready {
+  border-color: rgba(167, 255, 41, 0.13);
+}
+
+.leak-score-token-data-grid article.leak-score-token-data-metric-caution {
+  border-color: rgba(255, 214, 102, 0.16);
+  background: rgba(255, 214, 102, 0.045);
+}
+
+.leak-score-token-data-grid article.leak-score-token-data-metric-warning {
+  border-color: rgba(255, 120, 120, 0.16);
+  background: rgba(255, 120, 120, 0.045);
+}
+
+.leak-score-token-data-grid article.leak-score-token-data-metric-pending {
+  opacity: 0.86;
+}
+
+.leak-score-token-data-sources {
     grid-template-columns: 1fr;
   }
 

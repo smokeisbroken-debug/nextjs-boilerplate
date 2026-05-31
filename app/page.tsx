@@ -37,9 +37,8 @@ import {
   LEAK_SCORE_TOKEN_DATA_CACHE_KEY,
   LEAK_SCORE_TOKEN_DATA_CACHE_MAX_ENTRIES,
   LEAK_SCORE_TOKEN_DATA_CACHE_TTL_MS,
-  formatLeakScoreAgeDays,
+  buildLeakScoreTokenDataMetricCards,
   formatLeakScoreFetchedAt,
-  formatLeakScoreNumber,
   formatLeakScorePercent,
   formatLeakScoreTokenDataCacheAge,
   formatLeakScoreUsd,
@@ -10954,7 +10953,7 @@ function HelpGuideModal({
         {
           title: "Basic token data fetch",
           body: [
-            "v59.46.3 adds Force refresh and Clear cache controls while keeping source health, fetched-at status, and read-only Solana token context.",
+            "v59.46.4 polishes token-data readability and makes Apply hints a two-step confirmation so auto data stays a research prompt, not a verdict.",
             "It can show liquidity, 24h volume, market cap, FDV, pair age, token supply, and top-10 token account concentration when available.",
             "Total holder count is marked as indexer-needed because public Solana RPC alone is not a reliable holder-count source.",
             "Data hints are suggested manual checks, not verdicts. Review and edit them before sharing.",
@@ -22217,6 +22216,7 @@ function LeakScoreScreen({
   const [tokenDataCacheMode, setTokenDataCacheMode] = useState<LeakScoreTokenDataCacheMode>("");
   const [tokenDataCacheMessage, setTokenDataCacheMessage] = useState("");
   const [tokenDataCacheCount, setTokenDataCacheCount] = useState(() => readLeakScoreTokenDataCache().length);
+  const [tokenHintsArmed, setTokenHintsArmed] = useState(false);
   const leakScoreCardRef = useRef<HTMLDivElement | null>(null);
 
   const projectName = draft.projectName;
@@ -22233,6 +22233,7 @@ function LeakScoreScreen({
   const researchStatus = useMemo(() => buildProjectLeakScoreResearchStatus(draft), [draft]);
   const shareText = useMemo(() => buildProjectLeakScoreShareText(draft), [draft]);
   const tokenDataSummary = useMemo(() => summarizeLeakScoreTokenData(tokenData), [tokenData]);
+  const tokenDataMetricCards = useMemo(() => buildLeakScoreTokenDataMetricCards(tokenData), [tokenData]);
   const tokenDataFetchedAtLabel = useMemo(() => formatLeakScoreFetchedAt(tokenData?.fetchedAt), [tokenData?.fetchedAt]);
   const tokenDataCacheTtlMinutes = Math.round(LEAK_SCORE_TOKEN_DATA_CACHE_TTL_MS / 60000);
   const tokenDataLimited = isLeakScoreTokenDataLimited(tokenData);
@@ -22241,6 +22242,20 @@ function LeakScoreScreen({
       && tokenData.chain === chain
       && tokenData.tokenAddress.toLowerCase() === contractAddress.trim().toLowerCase()
   );
+  const tokenDataHintPreview = useMemo(() => {
+    if (!tokenData?.suggestedSignals.length) return [];
+
+    return tokenData.suggestedSignals.map((signalId) => {
+      const signal = LEAK_SCORE_SIGNALS.find((item) => item.id === signalId);
+      return {
+        signalId,
+        label: signal?.label || signalId,
+        note: tokenData.suggestedSignalNotes[signalId] || "Review this signal manually before sharing.",
+        alreadySelected: selectedSignals.includes(signalId),
+      };
+    });
+  }, [selectedSignals, tokenData]);
+  const tokenDataNewHintCount = tokenDataHintPreview.filter((hint) => !hint.alreadySelected).length;
 
   useEffect(() => {
     writeLeakScoreDraft(draft);
@@ -22273,6 +22288,7 @@ function LeakScoreScreen({
       setTokenDataError("");
       setTokenData(null);
       setTokenDataCacheMode("");
+      setTokenHintsArmed(false);
     }
     setDraft((current) => normalizeLeakScoreDraft({
       ...current,
@@ -22285,6 +22301,7 @@ function LeakScoreScreen({
     triggerHaptic("light");
     setShareCopied(false);
     setClearArmed(false);
+    setTokenHintsArmed(false);
     setDraft((current) => {
       const removing = current.selectedSignals.includes(id);
       const selected = removing
@@ -22305,6 +22322,7 @@ function LeakScoreScreen({
   function updateSignalNote(id: LeakScoreSignalId, note: string) {
     setShareCopied(false);
     setClearArmed(false);
+    setTokenHintsArmed(false);
     setDraft((current) => normalizeLeakScoreDraft({
       ...current,
       signalNotes: {
@@ -22329,6 +22347,7 @@ function LeakScoreScreen({
     triggerHaptic("light");
     setShareCopied(false);
     setClearArmed(false);
+    setTokenHintsArmed(false);
     setTokenData(null);
     setTokenDataCacheMode("");
     setTokenDataError("");
@@ -22355,6 +22374,7 @@ function LeakScoreScreen({
     }
 
     setClearArmed(false);
+    setTokenHintsArmed(false);
     setTokenData(null);
     setTokenDataCacheMode("");
     setTokenDataError("");
@@ -22378,6 +22398,7 @@ function LeakScoreScreen({
     if (cached && !force) {
       triggerHaptic("light");
       setTokenData(cached.data);
+      setTokenHintsArmed(false);
       setTokenDataCacheMode("cache");
       setTokenDataError("");
       setTokenDataCacheCount(readLeakScoreTokenDataCache().length);
@@ -22419,6 +22440,7 @@ function LeakScoreScreen({
 
       const cachedEntry = upsertLeakScoreTokenDataCache(payload.data);
       setTokenData(payload.data);
+      setTokenHintsArmed(false);
       setTokenDataCacheMode("live");
       setTokenDataCacheCount(readLeakScoreTokenDataCache().length);
       setTokenDataCacheMessage(`${force ? "Force refresh completed" : "Live token data fetched"} and cached locally for ${tokenDataCacheTtlMinutes} minutes · ${formatLeakScoreTokenDataCacheAge(cachedEntry)}.`);
@@ -22427,6 +22449,7 @@ function LeakScoreScreen({
     } catch (error) {
       const message = error instanceof Error ? error.message : "Basic token data fetch failed.";
       setTokenData(null);
+      setTokenHintsArmed(false);
       setTokenDataCacheMode("");
       setTokenDataError(message);
       setShareMessage(message);
@@ -22440,6 +22463,7 @@ function LeakScoreScreen({
     triggerHaptic("light");
     clearLeakScoreTokenDataCache();
     setTokenDataCacheCount(0);
+    setTokenHintsArmed(false);
     setTokenDataCacheMode("cleared");
     setTokenDataCacheMessage("Local token-data cache cleared. Next Fetch data will request live source data again.");
     setTokenDataError("");
@@ -22453,6 +22477,15 @@ function LeakScoreScreen({
     triggerHaptic("light");
     setShareCopied(false);
     setClearArmed(false);
+
+    if (!tokenHintsArmed) {
+      setTokenHintsArmed(true);
+      const newCountText = tokenDataNewHintCount > 0 ? `${tokenDataNewHintCount} new` : "no new";
+      setShareMessage(`Review the suggested manual checks first. Tap Confirm apply to add ${newCountText} leak-signal hints.`);
+      return;
+    }
+
+    setTokenHintsArmed(false);
     setDraft((current) => {
       const selectedSignals = Array.from(new Set([...current.selectedSignals, ...tokenData.suggestedSignals]));
       const nextNotes = { ...current.signalNotes };
@@ -22470,7 +22503,7 @@ function LeakScoreScreen({
         updatedAt: new Date().toISOString(),
       });
     });
-    setShareMessage("Data hints applied as manual checks. Review and edit them before sharing.");
+    setShareMessage("Confirmed. Data hints were applied as manual checks. Review and edit them before sharing.");
   }
 
   async function copyLeakScoreText() {
@@ -22720,39 +22753,19 @@ function LeakScoreScreen({
                 <em>{tokenDataCacheMode === "cache" ? "Using local cache" : tokenDataCacheMode === "live" ? "Live fetch cached" : tokenDataCacheMode === "cleared" ? "Cache cleared locally" : "Source snapshot"} · {tokenDataFetchedAtLabel}</em>
                 <small>{tokenData.sourceHealthHelper}</small>
               </div>
+              <div className="leak-score-token-data-verdict-warning">
+                <strong>Auto data is not a verdict.</strong>
+                <small>Use these values as research context only. They do not label a project, predict price, or replace manual DYOR.</small>
+              </div>
+
               <div className="leak-score-token-data-grid">
-                <article>
-                  <span>Liquidity</span>
-                  <strong>{formatLeakScoreUsd(tokenData.pair?.liquidityUsd)}</strong>
-                </article>
-                <article>
-                  <span>24h volume</span>
-                  <strong>{formatLeakScoreUsd(tokenData.pair?.volume24hUsd)}</strong>
-                </article>
-                <article>
-                  <span>Market cap</span>
-                  <strong>{formatLeakScoreUsd(tokenData.pair?.marketCapUsd)}</strong>
-                </article>
-                <article>
-                  <span>FDV</span>
-                  <strong>{formatLeakScoreUsd(tokenData.pair?.fdvUsd)}</strong>
-                </article>
-                <article>
-                  <span>Pair age</span>
-                  <strong>{formatLeakScoreAgeDays(tokenData.pair?.ageDays)}</strong>
-                </article>
-                <article>
-                  <span>Top 10 accounts</span>
-                  <strong>{formatLeakScorePercent(tokenData.top10ConcentrationPercent)}</strong>
-                </article>
-                <article>
-                  <span>Supply</span>
-                  <strong>{tokenData.tokenSupply ? formatLeakScoreNumber(Number(tokenData.tokenSupply)) : "Unavailable"}</strong>
-                </article>
-                <article>
-                  <span>Holders</span>
-                  <strong>Indexer needed</strong>
-                </article>
+                {tokenDataMetricCards.map((metric) => (
+                  <article key={metric.id} className={`leak-score-token-data-metric-${metric.tone}`}>
+                    <span>{metric.label}</span>
+                    <strong>{metric.value}</strong>
+                    <small>{metric.helper}</small>
+                  </article>
+                ))}
               </div>
 
               <div className="leak-score-token-data-sources">
@@ -22766,15 +22779,26 @@ function LeakScoreScreen({
               </div>
 
               {tokenData.suggestedSignals.length > 0 ? (
-                <div className="leak-score-token-data-hints">
+                <div className={`leak-score-token-data-hints ${tokenHintsArmed ? "armed" : ""}`}>
                   <div>
-                    <strong>Suggested manual checks</strong>
-                    <small>Data hints are not verdicts. Apply only if they match your research.</small>
+                    <strong>{tokenHintsArmed ? "Confirm suggested checks" : "Suggested manual checks"}</strong>
+                    <small>Data hints are not verdicts. Review exactly what will be added before confirming.</small>
+                    <div className="leak-score-token-data-hint-list">
+                      {tokenDataHintPreview.map((hint) => (
+                        <article key={hint.signalId}>
+                          <b>{hint.alreadySelected ? "Already selected" : "Will add"}</b>
+                          <span>{hint.label}</span>
+                          <small>{hint.note}</small>
+                        </article>
+                      ))}
+                    </div>
                   </div>
-                  <button type="button" onClick={applyTokenDataHints} disabled={tokenDataLimited}>Apply hints</button>
+                  <button type="button" onClick={applyTokenDataHints} disabled={tokenDataLimited}>
+                    {tokenHintsArmed ? "Confirm apply" : tokenDataNewHintCount > 0 ? `Review ${tokenDataNewHintCount} hints` : "Review hints"}
+                  </button>
                 </div>
               ) : (
-                <p>No automatic manual-check hints were triggered by the fetched data.</p>
+                <p className="leak-score-token-data-empty">No automatic manual-check hints were triggered by the fetched data. You can still review the token manually.</p>
               )}
 
               {tokenData.warnings.length > 0 && (
@@ -22784,8 +22808,8 @@ function LeakScoreScreen({
               )}
             </div>
           ) : (
-            <p>
-              Paste a Solana mint and fetch basic data. This does not publish anything and does not label projects as scams.
+            <p className="leak-score-token-data-empty">
+              Paste a Solana mint and fetch basic data. This does not publish anything, does not score projects publicly, and does not label projects as scams.
             </p>
           )}
         </div>
@@ -22990,7 +23014,7 @@ function LeakScoreScreen({
         <span>What comes next</span>
         <strong>Manual research + basic auto data now.</strong>
         <p>
-          v59.46.3 keeps same-mint cache reuse, adds live Force refresh, and lets users clear local token-data cache before the next source check. Next step can expand data-source coverage or add wallet behavior checks.
+          v59.46.4 keeps cache controls, improves token-data metric context, and requires confirmation before applying data hints. Next step can expand data-source coverage or add wallet behavior checks.
         </p>
       </section>
     </div>
