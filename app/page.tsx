@@ -22276,6 +22276,15 @@ function clearLeakScoreTokenDataCache() {
 
 
 const WALLET_LEAK_DRAFT_KEY = "broke-wallet-leak-score-local-draft-v1";
+const WALLET_LEAK_SAVED_DRAFTS_KEY = "broke-wallet-leak-score-saved-drafts-v1";
+const WALLET_LEAK_MAX_SAVED_DRAFTS = 5;
+
+type WalletLeakSavedDraft = WalletLeakDraft & {
+  id: string;
+  savedAt: string;
+  score: number;
+  tierLabel: string;
+};
 
 function readWalletLeakDraft(): WalletLeakDraft {
   if (typeof window === "undefined") return normalizeWalletLeakDraft();
@@ -22298,6 +22307,73 @@ function writeWalletLeakDraft(draft: WalletLeakDraft) {
   } catch {
     // Wallet Leak drafts are local-only and optional.
   }
+}
+
+function normalizeWalletLeakSavedDraft(input: unknown): WalletLeakSavedDraft | null {
+  if (!input || typeof input !== "object") return null;
+
+  const record = input as Partial<WalletLeakSavedDraft>;
+  const draft = normalizeWalletLeakDraft(record);
+  const score = calculateWalletLeakScore(draft.selectedSignals);
+  const savedAt = String(record.savedAt || draft.updatedAt || new Date().toISOString());
+  const savedAtTime = new Date(savedAt).getTime();
+
+  return {
+    ...draft,
+    id: String(record.id || `wallet-leak-${savedAtTime || Date.now()}`).slice(0, 80),
+    savedAt: Number.isFinite(savedAtTime) ? new Date(savedAtTime).toISOString() : new Date().toISOString(),
+    score: score.score,
+    tierLabel: score.tier.label,
+  };
+}
+
+function readWalletLeakSavedDrafts(): WalletLeakSavedDraft[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(WALLET_LEAK_SAVED_DRAFTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .map(normalizeWalletLeakSavedDraft)
+      .filter((item): item is WalletLeakSavedDraft => Boolean(item))
+      .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
+      .slice(0, WALLET_LEAK_MAX_SAVED_DRAFTS);
+  } catch {
+    return [];
+  }
+}
+
+function writeWalletLeakSavedDrafts(drafts: WalletLeakSavedDraft[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(WALLET_LEAK_SAVED_DRAFTS_KEY, JSON.stringify(drafts.slice(0, WALLET_LEAK_MAX_SAVED_DRAFTS)));
+  } catch {
+    // Saved Wallet Leak snapshots are local-only and optional.
+  }
+}
+
+function buildWalletLeakSavedDraft(draft: WalletLeakDraft): WalletLeakSavedDraft {
+  const normalized = normalizeWalletLeakDraft({ ...draft, updatedAt: new Date().toISOString() });
+  const score = calculateWalletLeakScore(normalized.selectedSignals);
+  const savedAt = new Date().toISOString();
+
+  return {
+    ...normalized,
+    id: `wallet-leak-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    savedAt,
+    score: score.score,
+    tierLabel: score.tier.label,
+  };
+}
+
+function upsertWalletLeakSavedDraft(draft: WalletLeakDraft, currentDrafts: WalletLeakSavedDraft[]) {
+  const savedDraft = buildWalletLeakSavedDraft(draft);
+  const nextDrafts = [savedDraft, ...currentDrafts].slice(0, WALLET_LEAK_MAX_SAVED_DRAFTS);
+  writeWalletLeakSavedDrafts(nextDrafts);
+  return nextDrafts;
 }
 
 function LeakScoreScreen({
@@ -23198,6 +23274,7 @@ function WalletLeakScoreScreen({
   onHelp: () => void;
 }) {
   const [draft, setDraft] = useState<WalletLeakDraft>(() => readWalletLeakDraft());
+  const [savedDrafts, setSavedDrafts] = useState<WalletLeakSavedDraft[]>(() => readWalletLeakSavedDrafts());
   const [shareCopied, setShareCopied] = useState(false);
   const [shareMessage, setShareMessage] = useState("Wallet review saves on this device only.");
   const [clearArmed, setClearArmed] = useState(false);
@@ -23266,18 +23343,44 @@ function WalletLeakScoreScreen({
     }));
   }
 
+  function saveWalletLeakSnapshot() {
+    triggerHaptic("light");
+    setShareCopied(false);
+    setClearArmed(false);
+    const nextDrafts = upsertWalletLeakSavedDraft(draft, savedDrafts);
+    setSavedDrafts(nextDrafts);
+    setShareMessage(`Saved local wallet snapshot. ${nextDrafts.length}/${WALLET_LEAK_MAX_SAVED_DRAFTS} stored on this device.`);
+    notifyApp("Wallet Leak saved", "Local wallet-behavior snapshot saved on this device only.", "info");
+  }
+
+  function loadWalletLeakSnapshot(item: WalletLeakSavedDraft) {
+    triggerHaptic("light");
+    setShareCopied(false);
+    setClearArmed(false);
+    setDraft(normalizeWalletLeakDraft(item));
+    setShareMessage("Loaded a local Wallet Leak snapshot. Nothing was published or scanned.");
+  }
+
+  function deleteWalletLeakSnapshot(id: string) {
+    triggerHaptic("light");
+    const nextDrafts = savedDrafts.filter((item) => item.id !== id);
+    setSavedDrafts(nextDrafts);
+    writeWalletLeakSavedDrafts(nextDrafts);
+    setShareMessage("Local Wallet Leak snapshot deleted from this device.");
+  }
+
   function clearDraft() {
     triggerHaptic("light");
     setShareCopied(false);
 
     if (!clearArmed) {
       setClearArmed(true);
-      setShareMessage("Tap Confirm clear to erase this local wallet-behavior draft.");
+      setShareMessage("Tap Confirm clear to erase this active local wallet-behavior draft. Saved snapshots stay untouched.");
       return;
     }
 
     setClearArmed(false);
-    setShareMessage("Wallet behavior draft cleared locally.");
+    setShareMessage("Active wallet behavior draft cleared locally. Saved snapshots stayed untouched.");
     setDraft(normalizeWalletLeakDraft({ selectedSignals: [], signalNotes: {} }));
   }
 
@@ -23482,6 +23585,42 @@ function WalletLeakScoreScreen({
           />
           <small className="leak-score-address-helper">Optional only. This foundation version does not fetch or scan wallet transactions.</small>
         </label>
+
+        <div className="leak-score-saved-drafts wallet-leak-saved-drafts">
+          <div className="leak-score-saved-drafts-head">
+            <div>
+              <strong>Saved wallet snapshots</strong>
+              <small>{savedDrafts.length}/{WALLET_LEAK_MAX_SAVED_DRAFTS} stored on this device only</small>
+            </div>
+            <button type="button" onClick={saveWalletLeakSnapshot}>Save snapshot</button>
+          </div>
+
+          {savedDrafts.length > 0 ? (
+            <div className="leak-score-saved-draft-list">
+              {savedDrafts.map((item) => {
+                const savedTime = new Date(item.savedAt).getTime();
+                const savedLabel = Number.isFinite(savedTime)
+                  ? new Date(savedTime).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                  : "Saved locally";
+
+                return (
+                  <article key={item.id}>
+                    <div>
+                      <strong>{item.walletLabel || "Unnamed wallet"}</strong>
+                      <small>{item.score}/100 · {item.tierLabel} · {savedLabel}</small>
+                    </div>
+                    <div>
+                      <button type="button" onClick={() => loadWalletLeakSnapshot(item)}>Load</button>
+                      <button type="button" onClick={() => deleteWalletLeakSnapshot(item.id)}>Delete</button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p>Save a wallet behavior snapshot before testing another wallet or behavior pattern. Snapshots stay local and never scan anything.</p>
+          )}
+        </div>
       </section>
 
       <section className="leak-score-card">
@@ -23610,7 +23749,7 @@ function WalletLeakScoreScreen({
         <span>What comes next</span>
         <strong>Manual wallet behavior first. Data fetch later.</strong>
         <p>
-          v59.47.0 is local and manual by design. A later version can add optional wallet history context with strong privacy and source warnings.
+          v59.47.2 keeps Wallet Leak local and manual while adding saved snapshots and safer reset. A later version can add optional wallet history context with strong privacy and source warnings.
         </p>
       </section>
     </div>
