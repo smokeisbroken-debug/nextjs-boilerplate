@@ -1,30 +1,51 @@
-# Smoke Is Broke — v59.44.0 Admin Distribution Route Final Cleanup / Thin Route Pass
+# Smoke Is Broke — v59.44.1 Admin Distribution Route Smoke-Test Hardening
 
 ## Patch scope
 
-v59.44.0 completes the current Admin distribution route cleanup pass by moving route-level composition helpers out of `app/api/admin/distributions/route.ts` into `app/lib/brokeAdminDistributionRoute.ts`.
+v59.44.1 adds an authorized smoke-test path for the private Admin distribution route after the v59.43.x → v59.44.0 refactor pass.
 
-This is a refactor-only patch. It does not intentionally change reward payout logic, eligibility rules, payout share math, Daily Routine, Active Streak, wallet verification, Supabase schema, public UI behavior, Admin UI behavior, payout-wallet env names, server auto-send behavior, or distribution API behavior.
+This is a test-hardening patch. It does not intentionally change reward payout logic, eligibility rules, payout share math, Daily Routine, Active Streak, wallet verification, Supabase schema, public UI behavior, Admin UI behavior, payout-wallet env names, server auto-send behavior, or normal distribution API behavior.
 
 ## Changed files
 
 - `app/api/admin/distributions/route.ts`
 - `app/lib/brokeAdminRewards.ts`
-- `app/lib/brokeAdminDistributionRoute.ts` — new
+- `app/lib/brokeAdminDistributionSmoke.ts` — new
 - Root/app docs
 
 ## What changed
 
-- Added `app/lib/brokeAdminDistributionRoute.ts` for route-level Admin distribution helpers.
-- Moved repeated Admin access-gate handling into `getAdminDistributionAccessError()`.
-- Moved list-limit normalization into `getAdminDistributionListLimit()`.
-- Moved manifest request normalization into `normalizeAdminDistributionManifestRequest()`.
-- Moved distribution/payout insert-row composition into `buildAdminDistributionInsertBatch()`.
-- Moved distribution response summary shaping into `summarizeAdminDistributionBatch()`.
-- Moved manual-send completion counting into `getAdminManualSendCompletion()`.
-- Moved the route-local server auto-send callback wiring into `autoSendAdminPreparedDistribution()`.
-- Reduced `app/api/admin/distributions/route.ts` from roughly 351 lines to roughly 228 lines.
-- Updated shared Admin build marker to `v59.44.0` through `BROKE_APP_BUILD_VERSION`.
+- Added `app/lib/brokeAdminDistributionSmoke.ts` for pure Admin distribution route smoke checks.
+- Added an authorized `GET /api/admin/distributions?smoke=1` path.
+- The smoke path runs without Supabase reads/writes and without token transfer/signing.
+- Smoke checks cover list-limit clamping, manifest normalization, `$BROKE` token normalization, treasury match detection, payout-row normalization, insert-batch composition, summary shaping, manual-send signature parsing, and partial manual-send completion status.
+- The smoke response is protected by the same Admin access gate as the normal distribution endpoint.
+- Updated shared Admin build marker to `v59.44.1` through `BROKE_APP_BUILD_VERSION`.
+
+## Smoke check
+
+After deployment, call the Admin distribution endpoint with an admin key or authenticated Telegram admin session:
+
+```bash
+curl "https://YOUR_DOMAIN/api/admin/distributions?smoke=1&key=YOUR_REWARDS_ADMIN_SECRET"
+```
+
+Expected high-level response shape:
+
+```json
+{
+  "ok": true,
+  "smoke": {
+    "ok": true,
+    "total": 13,
+    "passed": 13,
+    "failed": 0
+  },
+  "buildVersion": "v59.44.1"
+}
+```
+
+If `smoke.ok` is false, do not run a real distribution until the failed check names are reviewed.
 
 ## Safety notes
 
@@ -34,6 +55,8 @@ This is a refactor-only patch. It does not intentionally change reward payout lo
 - No eligibility formula or payout share calculation was changed.
 - No public user-facing UI was changed.
 - No Admin UI behavior was changed.
+- The smoke endpoint is authorized and does not expose secrets.
+- The smoke endpoint does not read/write Supabase and does not send/sign transactions.
 
 ## Verification
 
@@ -54,6 +77,6 @@ Targeted checks:
 
 ## Install
 
-Copy the contents of the `v59.44.0/` folder into the project root and replace files.
+Copy the contents of the `v59.44.1/` folder into the project root and replace files.
 
 Do not delete any files.

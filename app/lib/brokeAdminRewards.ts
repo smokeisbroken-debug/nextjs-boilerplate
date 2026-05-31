@@ -1,7 +1,7 @@
-export const BROKE_APP_BUILD_VERSION = "v59.44.0";
+export const BROKE_APP_BUILD_VERSION = "v59.44.1";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Admin distribution route final cleanup and thin route pass, no payout or eligibility behavior changes.";
+  "Admin distribution route smoke-test hardening, no payout or eligibility behavior changes.";
 
 export const DEFAULT_TREASURY_WALLET_ADDRESS = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
 export const DEFAULT_BROKE_TOKEN_MINT_ADDRESS = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";

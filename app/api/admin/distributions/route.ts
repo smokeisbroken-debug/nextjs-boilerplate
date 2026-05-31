@@ -36,6 +36,7 @@ import {
   normalizeAdminDistributionManifestRequest,
   summarizeAdminDistributionBatch,
 } from "../../../lib/brokeAdminDistributionRoute";
+import { getAdminDistributionRouteSmokeReport } from "../../../lib/brokeAdminDistributionSmoke";
 
 export const runtime = "nodejs";
 
@@ -44,6 +45,13 @@ export async function GET(request: NextRequest) {
   if (accessError) return json(accessError.payload, accessError.status);
 
   try {
+    if (request.nextUrl.searchParams.get("smoke") === "1") {
+      return json({
+        ok: true,
+        smoke: getAdminDistributionRouteSmokeReport(),
+      });
+    }
+
     const distributionId = normalizeDistributionId(request.nextUrl.searchParams.get("distributionId"));
     const limit = getAdminDistributionListLimit(request.nextUrl.searchParams.get("limit"));
 
