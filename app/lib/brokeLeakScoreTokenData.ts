@@ -363,6 +363,20 @@ export type LeakScoreTokenDataMetricCard = {
   tone: LeakScoreTokenDataMetricTone;
 };
 
+export type LeakScoreTokenDataConfidence = {
+  tone: LeakScoreTokenDataMetricTone;
+  label: string;
+  helper: string;
+};
+
+export type LeakScoreTokenDataSourceDetail = {
+  id: string;
+  status: string;
+  label: string;
+  helper: string;
+  tone: LeakScoreTokenDataMetricTone;
+};
+
 function getLeakScoreUsdMetricTone(value: number | null | undefined, cautionAt: number, warningBelow: number): LeakScoreTokenDataMetricTone {
   if (!Number.isFinite(value || 0) || !value) return "pending";
   if (value < warningBelow) return "warning";
@@ -468,6 +482,89 @@ export function buildLeakScoreTokenDataMetricCards(data: LeakScoreBasicTokenData
       tone: "pending",
     },
   ];
+}
+
+export function getLeakScoreTokenDataConfidence(data: LeakScoreBasicTokenData | null): LeakScoreTokenDataConfidence {
+  if (!data) {
+    return {
+      tone: "pending",
+      label: "No context yet",
+      helper: "Fetch basic token data or continue with manual research only.",
+    };
+  }
+
+  const hasPairContext = Boolean(data.pair);
+  const hasRpcContext = Number.isFinite(data.top10ConcentrationPercent || 0) || Boolean(data.tokenSupply);
+
+  if (data.sourceHealth === "complete" && hasPairContext && hasRpcContext) {
+    return {
+      tone: "ready",
+      label: "Good context",
+      helper: "DEX pair data and Solana RPC context are available. This is still a research snapshot, not a verdict.",
+    };
+  }
+
+  if (data.sourceHealth === "limited") {
+    return {
+      tone: "warning",
+      label: "Limited context",
+      helper: "Automatic sources did not return enough usable context. Continue manually and avoid applying auto hints.",
+    };
+  }
+
+  return {
+    tone: "caution",
+    label: "Partial context",
+    helper: "Some automatic context is available, but one or more source areas are missing or incomplete.",
+  };
+}
+
+export function buildLeakScoreTokenDataSourceDetails(data: LeakScoreBasicTokenData | null): LeakScoreTokenDataSourceDetail[] {
+  if (!data) return [];
+
+  const details: LeakScoreTokenDataSourceDetail[] = data.sources.map((source) => ({
+    id: source.id,
+    status: source.ok ? "Connected" : "Limited",
+    label: source.label,
+    helper: source.helper,
+    tone: source.ok ? "ready" : "caution",
+  }));
+
+  details.push({
+    id: "visible_pair",
+    status: data.pair ? "Pair context" : "No pair found",
+    label: "Visible DEX pair",
+    helper: data.pair
+      ? `${data.pair.dexId || "DEX"} pair selected by visible liquidity. Pair age and liquidity come from this source.`
+      : "No visible Solana DEX pair was returned. This can happen for new, inactive, or unsupported tokens.",
+    tone: data.pair ? "ready" : "caution",
+  });
+
+  details.push({
+    id: "top_accounts",
+    status: Number.isFinite(data.top10ConcentrationPercent || 0) || data.top10ConcentrationPercent === 0 ? "RPC context" : "Unavailable",
+    label: "Top account concentration",
+    helper: Number.isFinite(data.top10ConcentrationPercent || 0) || data.top10ConcentrationPercent === 0
+      ? `Top 10 token accounts: ${formatLeakScorePercent(data.top10ConcentrationPercent)}. This is not a full holder map.`
+      : "Largest-account concentration was not available from RPC for this fetch.",
+    tone: Number.isFinite(data.top10ConcentrationPercent || 0) || data.top10ConcentrationPercent === 0 ? "ready" : "caution",
+  });
+
+  details.push({
+    id: "holders_indexer",
+    status: "Indexer needed",
+    label: "Total holders",
+    helper: "Reliable total holder count needs an indexer. Public Solana RPC alone is intentionally not treated as enough.",
+    tone: "pending",
+  });
+
+  return details;
+}
+
+export function formatLeakScoreTokenDataFreshness(data: LeakScoreBasicTokenData | null, cacheMode?: "live" | "cache" | "cleared" | "") {
+  if (!data) return "No source snapshot";
+  const prefix = cacheMode === "cache" ? "Cached snapshot" : cacheMode === "live" ? "Live snapshot" : "Source snapshot";
+  return `${prefix} · ${formatLeakScoreFetchedAt(data.fetchedAt)}`;
 }
 
 export function summarizeLeakScoreTokenData(data: LeakScoreBasicTokenData | null) {

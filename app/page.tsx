@@ -38,12 +38,15 @@ import {
   LEAK_SCORE_TOKEN_DATA_CACHE_MAX_ENTRIES,
   LEAK_SCORE_TOKEN_DATA_CACHE_TTL_MS,
   buildLeakScoreTokenDataMetricCards,
+  buildLeakScoreTokenDataSourceDetails,
   cleanupLeakScoreTokenAddressInput,
   formatLeakScoreFetchedAt,
+  formatLeakScoreTokenDataFreshness,
   formatLeakScorePercent,
   formatLeakScoreTokenDataCacheAge,
   formatLeakScoreUsd,
   getLeakScoreTokenDataCacheKey,
+  getLeakScoreTokenDataConfidence,
   getLeakScoreTokenDataErrorCopy,
   getLeakScoreTokenDataInputStatus,
   isLeakScoreTokenDataCacheFresh,
@@ -22238,7 +22241,10 @@ function LeakScoreScreen({
   const shareText = useMemo(() => buildProjectLeakScoreShareText(draft), [draft]);
   const tokenDataSummary = useMemo(() => summarizeLeakScoreTokenData(tokenData), [tokenData]);
   const tokenDataMetricCards = useMemo(() => buildLeakScoreTokenDataMetricCards(tokenData), [tokenData]);
+  const tokenDataSourceDetails = useMemo(() => buildLeakScoreTokenDataSourceDetails(tokenData), [tokenData]);
+  const tokenDataConfidence = useMemo(() => getLeakScoreTokenDataConfidence(tokenData), [tokenData]);
   const tokenDataFetchedAtLabel = useMemo(() => formatLeakScoreFetchedAt(tokenData?.fetchedAt), [tokenData?.fetchedAt]);
+  const tokenDataFreshnessLabel = useMemo(() => formatLeakScoreTokenDataFreshness(tokenData, tokenDataCacheMode), [tokenData, tokenDataCacheMode]);
   const tokenDataCacheTtlMinutes = Math.round(LEAK_SCORE_TOKEN_DATA_CACHE_TTL_MS / 60000);
   const tokenDataLimited = isLeakScoreTokenDataLimited(tokenData);
   const tokenDataInputStatus = useMemo(() => getLeakScoreTokenDataInputStatus(chain, contractAddress), [chain, contractAddress]);
@@ -22792,9 +22798,19 @@ function LeakScoreScreen({
                 <span>Auto data summary · {tokenData.sourceHealthLabel}</span>
                 <strong>{tokenData.tokenName || tokenData.tokenSymbol || "Token data fetched"}</strong>
                 <small>{tokenDataSummary}</small>
-                <em>{tokenDataCacheMode === "cache" ? "Using local cache" : tokenDataCacheMode === "live" ? "Live fetch cached" : tokenDataCacheMode === "cleared" ? "Cache cleared locally" : "Source snapshot"} · {tokenDataFetchedAtLabel}</em>
+                <em>{tokenDataFreshnessLabel}</em>
                 <small>{tokenData.sourceHealthHelper}</small>
               </div>
+
+              <div className={`leak-score-token-data-confidence leak-score-token-data-confidence-${tokenDataConfidence.tone}`}>
+                <div>
+                  <span>Confidence</span>
+                  <strong>{tokenDataConfidence.label}</strong>
+                  <small>{tokenDataConfidence.helper}</small>
+                </div>
+                <b>{tokenData.sourceHealthLabel}</b>
+              </div>
+
               <div className="leak-score-token-data-verdict-warning">
                 <strong>Auto data is not a verdict.</strong>
                 <small>Use these values as research context only. They do not label a project, predict price, or replace manual DYOR.</small>
@@ -22810,14 +22826,20 @@ function LeakScoreScreen({
                 ))}
               </div>
 
-              <div className="leak-score-token-data-sources">
-                {tokenData.sources.map((source) => (
-                  <article key={source.id} className={source.ok ? "ready" : "pending"}>
-                    <b>{source.ok ? "OK" : "Limited"}</b>
-                    <strong>{source.label}</strong>
-                    <small>{source.helper}</small>
-                  </article>
-                ))}
+              <div className="leak-score-token-data-source-details">
+                <div className="leak-score-token-data-source-details-head">
+                  <strong>Source details</strong>
+                  <small>{tokenDataFreshnessLabel}</small>
+                </div>
+                <div className="leak-score-token-data-sources">
+                  {tokenDataSourceDetails.map((source) => (
+                    <article key={source.id} className={`leak-score-token-data-source-${source.tone}`}>
+                      <b>{source.status}</b>
+                      <strong>{source.label}</strong>
+                      <small>{source.helper}</small>
+                    </article>
+                  ))}
+                </div>
               </div>
 
               {tokenData.suggestedSignals.length > 0 ? (
@@ -22993,8 +23015,8 @@ function LeakScoreScreen({
 
           {tokenDataMatchesDraft && (
             <div className="leak-score-public-data-row">
-              <span>Auto data</span>
-              <small>{formatLeakScoreUsd(tokenData?.pair?.liquidityUsd)} liquidity · {formatLeakScorePercent(tokenData?.top10ConcentrationPercent)} top 10</small>
+              <span>Auto data · {tokenDataConfidence.label}</span>
+              <small>{formatLeakScoreUsd(tokenData?.pair?.liquidityUsd)} liquidity · {formatLeakScorePercent(tokenData?.top10ConcentrationPercent)} top 10 · {tokenDataCacheMode === "cache" ? "Cached" : "Live/point-in-time"}</small>
             </div>
           )}
 

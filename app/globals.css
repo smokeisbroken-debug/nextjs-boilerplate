@@ -30188,7 +30188,7 @@ html.embedded-app-view .hero h1 {
   }
 }
 
-/* v59.46.0-5 Leak Score basic token data fetch + source safety/cache/apply-hint/error-state controls */
+/* v59.46.0-7 Leak Score basic token data fetch + source safety/cache/apply-hint/error-state/confidence controls */
 .leak-score-token-data-card {
   display: grid;
   gap: 12px;
@@ -30408,6 +30408,84 @@ html.embedded-app-view .hero h1 {
   background: rgba(255, 120, 120, 0.045);
 }
 
+.leak-score-token-data-confidence {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px 11px;
+}
+
+.leak-score-token-data-confidence span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.leak-score-token-data-confidence strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 950;
+}
+
+.leak-score-token-data-confidence small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 780;
+  line-height: 1.34;
+}
+
+.leak-score-token-data-confidence b {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.58rem;
+  font-weight: 950;
+  padding: 6px 8px;
+  text-transform: uppercase;
+}
+
+.leak-score-token-data-confidence-ready {
+  border-color: rgba(167, 255, 41, 0.18);
+  background: rgba(167, 255, 41, 0.05);
+}
+
+.leak-score-token-data-confidence-ready b {
+  background: rgba(167, 255, 41, 0.13);
+  color: var(--green);
+}
+
+.leak-score-token-data-confidence-caution {
+  border-color: rgba(255, 214, 102, 0.17);
+  background: rgba(255, 214, 102, 0.055);
+}
+
+.leak-score-token-data-confidence-caution b {
+  background: rgba(255, 214, 102, 0.13);
+  color: #ffd66a;
+}
+
+.leak-score-token-data-confidence-warning {
+  border-color: rgba(255, 120, 120, 0.17);
+  background: rgba(255, 120, 120, 0.055);
+}
+
+.leak-score-token-data-confidence-warning b {
+  background: rgba(255, 120, 120, 0.13);
+  color: #ffb4a9;
+}
+
 
 .leak-score-token-data-verdict-warning {
   display: grid;
@@ -30492,15 +30570,57 @@ html.embedded-app-view .hero h1 {
   opacity: 0.86;
 }
 
+.leak-score-token-data-source-details {
+  display: grid;
+  gap: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(48, 255, 156, 0.1);
+  background: rgba(48, 255, 156, 0.035);
+  padding: 10px;
+}
+
+.leak-score-token-data-source-details-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.leak-score-token-data-source-details-head strong {
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 950;
+}
+
+.leak-score-token-data-source-details-head small {
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-weight: 850;
+}
+
 .leak-score-token-data-sources {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.leak-score-token-data-sources article.ready {
+.leak-score-token-data-sources article.leak-score-token-data-source-ready {
   border-color: rgba(167, 255, 41, 0.18);
   background: rgba(167, 255, 41, 0.06);
+}
+
+.leak-score-token-data-sources article.leak-score-token-data-source-caution {
+  border-color: rgba(255, 214, 102, 0.16);
+  background: rgba(255, 214, 102, 0.045);
+}
+
+.leak-score-token-data-sources article.leak-score-token-data-source-warning {
+  border-color: rgba(255, 120, 120, 0.16);
+  background: rgba(255, 120, 120, 0.045);
+}
+
+.leak-score-token-data-sources article.leak-score-token-data-source-pending {
+  opacity: 0.88;
 }
 
 .leak-score-token-data-sources b {
@@ -30515,7 +30635,7 @@ html.embedded-app-view .hero h1 {
   text-transform: uppercase;
 }
 
-.leak-score-token-data-sources article.ready b {
+.leak-score-token-data-sources article.leak-score-token-data-source-ready b {
   background: rgba(167, 255, 41, 0.13);
   color: var(--green);
 }
@@ -30656,7 +30776,9 @@ html.embedded-app-view .hero h1 {
 
 @media (max-width: 420px) {
   .leak-score-token-data-head,
-  .leak-score-token-data-hints {
+  .leak-score-token-data-hints,
+  .leak-score-token-data-confidence,
+  .leak-score-token-data-source-details-head {
     align-items: stretch;
     flex-direction: column;
   }

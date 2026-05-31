@@ -333,8 +333,14 @@ export async function POST(request: NextRequest) {
 
     const sourceHealth = getLeakScoreTokenDataSourceHealth(sources);
 
-    warnings.push("Holder count is not shown in v59.46.6 because reliable total holders require an indexer, not public Solana RPC alone.");
+    warnings.push("Holder count is not shown in v59.46.7 because reliable total holders require an indexer, not public Solana RPC alone.");
     warnings.push("Fetched data is a point-in-time research snapshot. Liquidity, volume, and account concentration can change quickly.");
+    if (rpcData.top10ConcentrationPercent === null) {
+      warnings.push("Top-10 token-account concentration is unavailable from this RPC fetch.");
+    }
+    if (!dexData?.pair) {
+      warnings.push("No visible DEX pair context was attached. Liquidity, volume, market cap, and pair age may be unavailable.");
+    }
     if (sourceHealth.sourceHealth === "partial") {
       warnings.push("Source status is partial. Treat automatic hints only as manual research prompts.");
     }
