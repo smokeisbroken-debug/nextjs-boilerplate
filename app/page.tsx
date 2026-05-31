@@ -32,6 +32,16 @@ import {
   type LeakScoreProjectDraft,
   type LeakScoreSignalId,
 } from "./lib/brokeLeakScore";
+
+import {
+  WALLET_LEAK_SIGNALS,
+  buildWalletLeakResearchStatus,
+  buildWalletLeakShareText,
+  calculateWalletLeakScore,
+  normalizeWalletLeakDraft,
+  type WalletLeakDraft,
+  type WalletLeakSignalId,
+} from "./lib/brokeWalletLeakScore";
 import {
   LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE,
   LEAK_SCORE_TOKEN_DATA_CACHE_KEY,
@@ -57,7 +67,7 @@ import {
   type LeakScoreTokenDataResponse,
 } from "./lib/brokeLeakScoreTokenData";
 
-type Tab = "home" | "add" | "chart" | "growth" | "leakscore" | "whatif" | "settings";
+type Tab = "home" | "add" | "chart" | "growth" | "leakscore" | "walletleak" | "whatif" | "settings";
 type AppMode = "standard" | "pro";
 type NeedType = "Needed" | "Not needed" | "Maybe";
 type Language = "en" | "ru";
@@ -4747,7 +4757,8 @@ const navItems: {
   { id: "add", label: "Add", icon: "/nav-add.png" },
   { id: "chart", label: "Chart", icon: "/nav-chart.png" },
   { id: "growth", label: "Growth", icon: "/nav-growth.png", proOnly: true },
-  { id: "leakscore", label: "Leak", icon: "/nav-chart.png", proOnly: true },
+  { id: "leakscore", label: "Project", icon: "/nav-chart.png", proOnly: true },
+  { id: "walletleak", label: "Wallet", icon: "/nav-save.png", proOnly: true },
   { id: "whatif", label: "Rewards", icon: "/nav-save.png", proOnly: true },
   { id: "settings", label: "Profile", icon: "/nav-settings.png" },
 ];
@@ -10280,6 +10291,13 @@ export default function Home() {
           />
         )}
 
+        {loaded && onboardingCompleted && activeTab === "walletleak" && (
+          <WalletLeakScoreScreen
+            onBack={goHome}
+            onHelp={openHelp}
+          />
+        )}
+
         {loaded && onboardingCompleted && activeTab === "whatif" && (
           <WhatIfScreen
             settings={displaySettings}
@@ -10419,7 +10437,8 @@ function HelpGuideModal({
             "Add opens Track Leak. Press it when money leaves your wallet and you want the app to learn from it.",
             "Chart opens Wallet Pressure Chart and Leak Pattern Lab. Press it when you want to understand why the leak happened.",
             "Growth opens the planning lab. Press it when you want to see what leaked money could cover instead.",
-            "Leak opens BROKE Leak Score, an experimental project risk-signal checklist for DYOR discipline.",
+            "Project opens BROKE Project Leak Research, an experimental project risk-signal checklist for DYOR discipline.",
+            "Wallet opens Wallet Leak Score, a manual wallet-behavior self-check for FOMO, panic, and bad-entry leaks.",
             "Rewards opens Survival Mode, leak cuts, challenges, leaderboard, Debt & Bills Radar, and Active Streak proof.",
             "Profile opens Personal Cabinet: identity, wallet proof, Share Studio, privacy, currency, sync, and data settings.",
           ],
@@ -10985,6 +11004,59 @@ function HelpGuideModal({
             "Project leaks drain wallets through weak structure, fake hype, poor liquidity, and rushed decisions.",
           ],
           icon: A.walletHp,
+        },
+      ],
+    },
+
+    walletleak: {
+      label: "Wallet",
+      eyebrow: "Wallet Leak Guide",
+      title: "Wallet Leak Score: Check Your Behavior First",
+      intro:
+        "This is a manual wallet-behavior self-check. It does not scan transactions, does not judge a wallet, and does not make financial decisions. It helps users notice FOMO, panic, and bad-entry leaks before they repeat them.",
+      icon: "/nav-save.png",
+      footerTitle: "Wallet rule",
+      footerBody:
+        "Before you blame the market, check your wallet behavior. The first version is local, manual, and educational.",
+      sections: [
+        {
+          title: "What this screen is",
+          body: [
+            "Wallet Leak Score is a manual self-check for wallet behavior leaks.",
+            "It focuses on repeated FOMO entries, buying after big green candles, influencer chasing, panic selling, dead-bag holding, and missing exit rules.",
+            "The foundation version stores only a local draft on the device and does not fetch wallet history.",
+            "Use it to slow down before the next emotional buy, not to judge another user's wallet.",
+          ],
+          icon: A.walletHp,
+        },
+        {
+          title: "How to use it",
+          body: [
+            "Add a wallet label or optional public address. Never paste a seed phrase or private key.",
+            "Select only the behavior patterns you honestly recognize.",
+            "Add short local notes to explain what happened and what rule should change next time.",
+            "Read the score as wallet-leak pressure, not as trading advice.",
+          ],
+          icon: A.help,
+        },
+        {
+          title: "What it does not do yet",
+          body: [
+            "It does not scan on-chain wallet history.",
+            "It does not count meme buys, tops, dead projects, or holding time automatically yet.",
+            "It does not publish wallet reports or create a public database.",
+            "A later version can add optional wallet data fetch only with clear privacy and source warnings.",
+          ],
+          icon: A.navChart,
+        },
+        {
+          title: "Why it fits $BROKE",
+          body: [
+            "$BROKE is not only about spending leaks. It is about decisions that quietly drain the wallet.",
+            "The market does not drain most wallets alone. Bad entries, panic exits, and repeated FOMO do real damage.",
+            "Wallet Leak Score turns that narrative into a crypto-native self-check.",
+          ],
+          icon: A.walletMascot,
         },
       ],
     },
@@ -22200,6 +22272,32 @@ function clearLeakScoreTokenDataCache() {
 }
 
 
+
+const WALLET_LEAK_DRAFT_KEY = "broke-wallet-leak-score-local-draft-v1";
+
+function readWalletLeakDraft(): WalletLeakDraft {
+  if (typeof window === "undefined") return normalizeWalletLeakDraft();
+
+  try {
+    const raw = window.localStorage.getItem(WALLET_LEAK_DRAFT_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Partial<WalletLeakDraft>) : null;
+
+    return normalizeWalletLeakDraft(parsed);
+  } catch {
+    return normalizeWalletLeakDraft();
+  }
+}
+
+function writeWalletLeakDraft(draft: WalletLeakDraft) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(WALLET_LEAK_DRAFT_KEY, JSON.stringify(normalizeWalletLeakDraft(draft)));
+  } catch {
+    // Wallet Leak drafts are local-only and optional.
+  }
+}
+
 function LeakScoreScreen({
   shareInitData,
   onBack,
@@ -23081,6 +23179,302 @@ function LeakScoreScreen({
         <strong>Manual research + basic auto data now.</strong>
         <p>
           v59.46.6 keeps cache controls and safer hint confirmation, while improving empty mint, invalid mint, unsupported chain, and retry/error states. Next step can expand data-source coverage or add wallet behavior checks.
+        </p>
+      </section>
+    </div>
+  );
+}
+
+
+function WalletLeakScoreScreen({
+  onBack,
+  onHelp,
+}: {
+  onBack: () => void;
+  onHelp: () => void;
+}) {
+  const [draft, setDraft] = useState<WalletLeakDraft>(() => readWalletLeakDraft());
+  const [shareCopied, setShareCopied] = useState(false);
+  const [shareMessage, setShareMessage] = useState("Wallet review saves on this device only.");
+  const [clearArmed, setClearArmed] = useState(false);
+
+  const walletLabel = draft.walletLabel;
+  const walletAddress = draft.walletAddress;
+  const selectedSignals = draft.selectedSignals;
+  const signalNotes = draft.signalNotes;
+  const score = useMemo(() => calculateWalletLeakScore(selectedSignals), [selectedSignals]);
+  const selectedSet = useMemo(() => new Set(selectedSignals), [selectedSignals]);
+  const selectedLabels = WALLET_LEAK_SIGNALS
+    .filter((signal) => selectedSet.has(signal.id))
+    .map((signal) => signal.label);
+  const signalNoteCount = WALLET_LEAK_SIGNALS.filter((signal) => selectedSet.has(signal.id) && signalNotes[signal.id]).length;
+  const researchStatus = useMemo(() => buildWalletLeakResearchStatus(draft), [draft]);
+  const shareText = useMemo(() => buildWalletLeakShareText(draft), [draft]);
+
+  useEffect(() => {
+    writeWalletLeakDraft(draft);
+  }, [draft]);
+
+  function updateDraft(patch: Partial<WalletLeakDraft>) {
+    setShareCopied(false);
+    setClearArmed(false);
+    setDraft((current) => normalizeWalletLeakDraft({
+      ...current,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    }));
+  }
+
+  function toggleSignal(id: WalletLeakSignalId) {
+    triggerHaptic("light");
+    setShareCopied(false);
+    setClearArmed(false);
+    setDraft((current) => {
+      const removing = current.selectedSignals.includes(id);
+      const selected = removing
+        ? current.selectedSignals.filter((signalId) => signalId !== id)
+        : [...current.selectedSignals, id];
+      const nextNotes = { ...current.signalNotes };
+      if (removing) delete nextNotes[id];
+
+      return normalizeWalletLeakDraft({
+        ...current,
+        selectedSignals: selected,
+        signalNotes: nextNotes,
+        updatedAt: new Date().toISOString(),
+      });
+    });
+  }
+
+  function updateSignalNote(id: WalletLeakSignalId, note: string) {
+    setShareCopied(false);
+    setClearArmed(false);
+    setDraft((current) => normalizeWalletLeakDraft({
+      ...current,
+      signalNotes: {
+        ...current.signalNotes,
+        [id]: note,
+      },
+      updatedAt: new Date().toISOString(),
+    }));
+  }
+
+  function clearDraft() {
+    triggerHaptic("light");
+    setShareCopied(false);
+
+    if (!clearArmed) {
+      setClearArmed(true);
+      setShareMessage("Tap Confirm clear to erase this local wallet-behavior draft.");
+      return;
+    }
+
+    setClearArmed(false);
+    setShareMessage("Wallet behavior draft cleared locally.");
+    setDraft(normalizeWalletLeakDraft({ selectedSignals: [], signalNotes: {} }));
+  }
+
+  async function copyWalletLeakText() {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        setShareCopied(true);
+        setShareMessage("Wallet Leak text copied. Keep it framed as a manual self-check.");
+        notifyApp("Wallet Leak copied", "Manual wallet-behavior text copied locally.", "info");
+      } else {
+        setShareMessage("Clipboard is blocked here. Select the preview text and copy manually.");
+        notifyApp("Copy blocked", "Select the preview text and copy manually.", "info");
+      }
+    } catch {
+      setShareMessage("Clipboard is blocked here. Select the preview text and copy manually.");
+      notifyApp("Copy blocked", "Select the preview text and copy manually.", "info");
+    }
+  }
+
+  async function shareWalletLeakText() {
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "BROKE Wallet Leak Score draft",
+          text: shareText,
+        });
+        setShareMessage("Share sheet opened. Keep this as a self-check, not advice.");
+        return;
+      }
+
+      await copyWalletLeakText();
+    } catch {
+      setShareMessage("Sharing was cancelled or blocked. You can still copy the preview text manually.");
+    }
+  }
+
+  const updatedAtLabel = useMemo(() => {
+    const timestamp = new Date(draft.updatedAt).getTime();
+    if (!Number.isFinite(timestamp)) return "Saved locally";
+
+    return `Saved locally · ${new Date(timestamp).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  }, [draft.updatedAt]);
+
+  return (
+    <div className="screen leak-score-screen wallet-leak-screen">
+      <Header title="Wallet Leak Score" showBack onBack={onBack} rightIcon={A.help} onRight={onHelp} />
+
+      <section className="leak-score-hero wallet-leak-hero">
+        <div>
+          <span>Manual Wallet Behavior Check</span>
+          <h1>Before you blame the market, check your wallet behavior.</h1>
+          <p>
+            A local self-check for FOMO, panic sells, bad entries, hype chasing, and dead-bag habits. No wallet API is used in this foundation version.
+          </p>
+        </div>
+        <div className={`leak-score-meter wallet-leak-meter wallet-leak-meter-${score.tier.id}`}>
+          <small>Wallet leaks</small>
+          <strong>{score.score}</strong>
+          <b>{score.tier.shortLabel}</b>
+        </div>
+      </section>
+
+      <section className="leak-score-disclaimer wallet-leak-disclaimer">
+        <strong>Positioning rule</strong>
+        <p>
+          Manual self-check · Educational · Wallet behavior leaks · Not wallet surveillance · Not financial advice. This version does not scan transactions or publish any wallet database.
+        </p>
+      </section>
+
+      <section className="leak-score-card leak-score-review-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Auto review</span>
+            <strong>{researchStatus.headline}</strong>
+            <small>{researchStatus.helper}</small>
+          </div>
+          <em>{researchStatus.readyCount}/{researchStatus.total}</em>
+        </div>
+        <div className="leak-score-review-meter">
+          <span style={{ width: `${researchStatus.completionPercent}%` }} />
+        </div>
+        <div className="leak-score-review-grid">
+          {researchStatus.checks.map((check) => (
+            <article key={check.id} className={check.ready ? "ready" : "pending"}>
+              <b>{check.ready ? "Ready" : "Pending"}</b>
+              <strong>{check.label}</strong>
+              <small>{check.helper}</small>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="leak-score-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Step 1</span>
+            <strong>Wallet context</strong>
+            <small>{updatedAtLabel}</small>
+          </div>
+          <button type="button" onClick={clearDraft}>{clearArmed ? "Confirm clear" : "Clear"}</button>
+        </div>
+
+        <label className="leak-score-input-line">
+          <span>Wallet label</span>
+          <input
+            value={walletLabel}
+            onChange={(event) => updateDraft({ walletLabel: event.target.value })}
+            placeholder="Example: My meme wallet"
+          />
+        </label>
+
+        <label className="leak-score-input-line">
+          <span>Public wallet address optional</span>
+          <input
+            value={walletAddress}
+            onChange={(event) => updateDraft({ walletAddress: event.target.value })}
+            placeholder="Optional public address. No private key."
+          />
+          <small className="leak-score-address-helper">Optional only. This foundation version does not fetch or scan wallet transactions.</small>
+        </label>
+      </section>
+
+      <section className="leak-score-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Step 2</span>
+            <strong>Manual wallet behavior leaks</strong>
+            <small>Select only patterns you honestly recognize.</small>
+          </div>
+          <em>{score.selectedCount}/{score.totalSignals}</em>
+        </div>
+        <div className="leak-score-signal-grid">
+          {WALLET_LEAK_SIGNALS.map((signal) => {
+            const selected = selectedSet.has(signal.id);
+
+            return (
+              <article key={signal.id} className={selected ? "selected" : ""}>
+                <button type="button" onClick={() => toggleSignal(signal.id)}>
+                  <span>{selected ? "Selected" : "Check"}</span>
+                  <strong>{signal.label}</strong>
+                  <small>{signal.helper}</small>
+                </button>
+                {selected && (
+                  <label className="leak-score-signal-note">
+                    <span>Local note</span>
+                    <input
+                      value={signalNotes[signal.id] || ""}
+                      onChange={(event) => updateSignalNote(signal.id, event.target.value)}
+                      placeholder="Example: I bought after the move again."
+                      maxLength={180}
+                    />
+                  </label>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className={`leak-score-result wallet-leak-result leak-score-result-${score.tier.id}`}>
+        <span>Manual wallet behavior score</span>
+        <strong>{score.score}/100</strong>
+        <b>{score.tier.label}</b>
+        <p>{score.tier.helper}</p>
+        <div className="leak-score-result-line">
+          <small>Behavior leaks</small>
+          <b>{selectedLabels.length ? selectedLabels.slice(0, 3).join(", ") : "No behavior leaks selected"}</b>
+        </div>
+        <div className="leak-score-result-line">
+          <small>Notes</small>
+          <b>{signalNoteCount}/{score.selectedCount} selected signals have local notes</b>
+        </div>
+      </section>
+
+      <section className="leak-score-card leak-score-share-card wallet-leak-share-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Step 3</span>
+            <strong>Share text</strong>
+          </div>
+          <em>{shareCopied ? "Copied" : "Local"}</em>
+        </div>
+        <p>
+          Copy a self-check note. It says wallet behavior leaks, not financial advice and not on-chain surveillance.
+        </p>
+        <textarea readOnly value={shareText} aria-label="Wallet Leak Score share text preview" />
+        <div className="leak-score-share-actions">
+          <button type="button" onClick={() => void copyWalletLeakText()}>{shareCopied ? "Copied" : "Copy text"}</button>
+          <button type="button" onClick={() => void shareWalletLeakText()}>Share text</button>
+        </div>
+        <small>{shareMessage}</small>
+      </section>
+
+      <section className="leak-score-roadmap-card wallet-leak-roadmap-card">
+        <span>What comes next</span>
+        <strong>Manual wallet behavior first. Data fetch later.</strong>
+        <p>
+          v59.47.0 is local and manual by design. A later version can add optional wallet history context with strong privacy and source warnings.
         </p>
       </section>
     </div>

@@ -30851,3 +30851,87 @@ html.embedded-app-view .hero h1 {
     padding-inline: 8px;
   }
 }
+
+/* ===== V59.47.0 WALLET LEAK SCORE FOUNDATION ===== */
+.bottom-nav.pro-mode-nav {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  width: min(calc(100% - 18px), 486px);
+  padding-inline: 5px;
+}
+
+.bottom-nav.pro-mode-nav button img {
+  width: 25px;
+  height: 25px;
+}
+
+.bottom-nav.pro-mode-nav button span {
+  font-size: 7.5px;
+  letter-spacing: -0.02em;
+}
+
+.wallet-leak-screen .leak-score-hero,
+.wallet-leak-screen .leak-score-card,
+.wallet-leak-screen .leak-score-result,
+.wallet-leak-screen .leak-score-roadmap-card,
+.wallet-leak-screen .leak-score-disclaimer {
+  border-color: rgba(82, 255, 191, 0.16);
+  background:
+    radial-gradient(circle at 90% 0%, rgba(82, 255, 191, 0.12), transparent 35%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018));
+}
+
+.wallet-leak-hero h1 {
+  max-width: 11.5em;
+}
+
+.wallet-leak-meter-controlled {
+  border-color: rgba(167, 255, 41, 0.22);
+}
+
+.wallet-leak-meter-leaky {
+  border-color: rgba(255, 214, 102, 0.24);
+}
+
+.wallet-leak-meter-danger,
+.wallet-leak-meter-drained {
+  border-color: rgba(255, 91, 122, 0.28);
+}
+
+.wallet-leak-result {
+  overflow: hidden;
+}
+
+.wallet-leak-share-card textarea {
+  min-height: 260px;
+}
+
+.wallet-leak-roadmap-card {
+  margin-bottom: 16px;
+}
+
+@media (max-width: 430px) {
+  .bottom-nav.pro-mode-nav {
+    width: min(calc(100% - 10px), 396px);
+    height: 66px;
+    border-radius: 22px;
+    padding-inline: 4px;
+  }
+
+  .bottom-nav.pro-mode-nav button {
+    border-radius: 16px;
+    gap: 0;
+  }
+
+  .bottom-nav.pro-mode-nav button img {
+    width: 22px;
+    height: 22px;
+  }
+
+  .bottom-nav.pro-mode-nav button span {
+    font-size: 7px;
+  }
+
+  .wallet-leak-hero h1 {
+    max-width: 100%;
+  }
+}
