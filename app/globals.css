@@ -30175,3 +30175,266 @@ html.embedded-app-view .hero h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.46.0 Leak Score basic token data fetch */
+.leak-score-token-data-card {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 0;
+  border-radius: 20px;
+  border: 1px solid rgba(48, 255, 156, 0.14);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(48, 255, 156, 0.11), transparent 32%),
+    rgba(0, 0, 0, 0.18);
+  padding: 13px;
+}
+
+.leak-score-token-data-head,
+.leak-score-token-data-hints {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.leak-score-token-data-head strong,
+.leak-score-token-data-hints strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 950;
+}
+
+.leak-score-token-data-head small,
+.leak-score-token-data-hints small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.leak-score-token-data-head button,
+.leak-score-token-data-hints button {
+  flex: 0 0 auto;
+  border: 1px solid rgba(167, 255, 41, 0.18);
+  border-radius: 999px;
+  background: rgba(167, 255, 41, 0.1);
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 950;
+  padding: 9px 11px;
+}
+
+.leak-score-token-data-head button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.leak-score-token-data-card > p,
+.leak-score-token-data-error {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.42;
+}
+
+.leak-score-token-data-error {
+  color: #ffb4a9;
+  font-weight: 850;
+}
+
+.leak-score-token-data-body {
+  display: grid;
+  gap: 12px;
+}
+
+.leak-score-token-data-summary {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 11px;
+}
+
+.leak-score-token-data-summary span {
+  color: var(--green);
+  font-size: 0.62rem;
+  font-weight: 950;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.leak-score-token-data-summary strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 950;
+}
+
+.leak-score-token-data-summary small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 780;
+  line-height: 1.35;
+}
+
+.leak-score-token-data-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.leak-score-token-data-grid article,
+.leak-score-token-data-sources article {
+  min-width: 0;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(0, 0, 0, 0.2);
+  padding: 10px;
+}
+
+.leak-score-token-data-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.61rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.leak-score-token-data-grid strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.leak-score-token-data-sources {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.leak-score-token-data-sources article.ready {
+  border-color: rgba(167, 255, 41, 0.18);
+  background: rgba(167, 255, 41, 0.06);
+}
+
+.leak-score-token-data-sources b {
+  display: inline-flex;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 950;
+  padding: 4px 7px;
+  text-transform: uppercase;
+}
+
+.leak-score-token-data-sources article.ready b {
+  background: rgba(167, 255, 41, 0.13);
+  color: var(--green);
+}
+
+.leak-score-token-data-sources strong {
+  display: block;
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 950;
+}
+
+.leak-score-token-data-sources small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 760;
+  line-height: 1.34;
+}
+
+.leak-score-token-data-hints {
+  border-radius: 16px;
+  border: 1px solid rgba(167, 255, 41, 0.14);
+  background: rgba(167, 255, 41, 0.055);
+  padding: 11px;
+}
+
+.leak-score-token-data-warnings {
+  display: grid;
+  gap: 4px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.035);
+  padding: 9px;
+}
+
+.leak-score-token-data-warnings small {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.64rem;
+  font-weight: 780;
+  line-height: 1.35;
+}
+
+.leak-score-public-data-row {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  border-radius: 18px;
+  border: 1px solid rgba(48, 255, 156, 0.12);
+  background: rgba(48, 255, 156, 0.055);
+  padding: 10px 12px;
+}
+
+.leak-score-public-data-row span {
+  color: var(--green);
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.leak-score-public-data-row small {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 0.66rem;
+  font-weight: 850;
+  line-height: 1.3;
+}
+
+@media (max-width: 420px) {
+  .leak-score-token-data-head,
+  .leak-score-token-data-hints {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .leak-score-token-data-grid,
+  .leak-score-token-data-sources {
+    grid-template-columns: 1fr;
+  }
+
+  .leak-score-token-data-head button,
+  .leak-score-token-data-hints button {
+    width: 100%;
+  }
+
+  .leak-score-public-data-row {
+    margin-top: 8px;
+    padding: 8px 10px;
+  }
+
+  .leak-score-public-data-row span {
+    font-size: 0.54rem;
+  }
+
+  .leak-score-public-data-row small {
+    font-size: 0.58rem;
+  }
+}

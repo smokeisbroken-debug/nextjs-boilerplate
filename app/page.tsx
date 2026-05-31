@@ -32,6 +32,16 @@ import {
   type LeakScoreProjectDraft,
   type LeakScoreSignalId,
 } from "./lib/brokeLeakScore";
+import {
+  LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE,
+  formatLeakScoreAgeDays,
+  formatLeakScoreNumber,
+  formatLeakScorePercent,
+  formatLeakScoreUsd,
+  summarizeLeakScoreTokenData,
+  type LeakScoreBasicTokenData,
+  type LeakScoreTokenDataResponse,
+} from "./lib/brokeLeakScoreTokenData";
 
 type Tab = "home" | "add" | "chart" | "growth" | "leakscore" | "whatif" | "settings";
 type AppMode = "standard" | "pro";
@@ -10905,7 +10915,7 @@ function HelpGuideModal({
       eyebrow: "Leak Research Guide",
       title: "Manual Leak Research: Check Before You Buy",
       intro:
-        "This is a manual DYOR research tool for crypto wallet-leak prevention. It does not call projects scams, does not publish accusations, and does not scan contracts in this version.",
+        "This is a DYOR research tool for crypto wallet-leak prevention. It can fetch basic read-only token context, but it does not call projects scams, does not publish accusations, and does not make investment decisions.",
       icon: "/nav-chart.png",
       footerTitle: "Research rule",
       footerBody:
@@ -10916,7 +10926,7 @@ function HelpGuideModal({
           body: [
             "It is a manual leak-signal research checklist for projects and wallets.",
             "The screen automatically reviews whether your local draft is ready to share: project name, chain, selected signals, notes, text, and card.",
-            "This version saves one active local draft and optional local snapshots on this device only; it does not fetch on-chain data and does not publish public accusations.",
+            "This version saves one active local draft and optional local snapshots on this device only. It can fetch basic read-only Solana token context, but it does not publish public accusations.",
             "The signal score is educational: it helps users slow down, verify, and avoid FOMO-driven wallet leaks.",
           ],
           icon: A.navChart,
@@ -10924,13 +10934,23 @@ function HelpGuideModal({
         {
           title: "How to use it",
           body: [
-            "Enter the project or token name, chain, and optional contract/mint address if useful.",
-            "Select only the signals you can actually observe.",
+            "Enter the project or token name, chain, and Solana mint address when you want basic token data.",
+            "Fetch basic data when available, then select only the signals you can actually verify.",
             "Add a short local note when a selected signal needs context, such as what you saw and why it matters.",
             "Read the risk tier as a discipline warning, not as investment advice.",
             "If many severe signals are selected, pause before acting.",
           ],
           icon: A.help,
+        },
+        {
+          title: "Basic token data fetch",
+          body: [
+            "v59.46.0 can fetch read-only Solana token context from DEX pair data and Solana RPC.",
+            "It can show liquidity, 24h volume, market cap, FDV, pair age, token supply, and top-10 token account concentration when available.",
+            "Total holder count is marked as indexer-needed because public Solana RPC alone is not a reliable holder-count source.",
+            "Data hints are suggested manual checks, not verdicts. Review and edit them before sharing.",
+          ],
+          icon: A.navChart,
         },
         {
           title: "Local drafts and share text",
@@ -22099,6 +22119,9 @@ function LeakScoreScreen({
   const [shareMessage, setShareMessage] = useState("Draft saves on this device only.");
   const [clearArmed, setClearArmed] = useState(false);
   const [cardSharing, setCardSharing] = useState(false);
+  const [tokenDataLoading, setTokenDataLoading] = useState(false);
+  const [tokenData, setTokenData] = useState<LeakScoreBasicTokenData | null>(null);
+  const [tokenDataError, setTokenDataError] = useState("");
   const leakScoreCardRef = useRef<HTMLDivElement | null>(null);
 
   const projectName = draft.projectName;
@@ -22114,6 +22137,12 @@ function LeakScoreScreen({
   const signalNoteCount = LEAK_SCORE_SIGNALS.filter((signal) => selectedSet.has(signal.id) && signalNotes[signal.id]).length;
   const researchStatus = useMemo(() => buildProjectLeakScoreResearchStatus(draft), [draft]);
   const shareText = useMemo(() => buildProjectLeakScoreShareText(draft), [draft]);
+  const tokenDataSummary = useMemo(() => summarizeLeakScoreTokenData(tokenData), [tokenData]);
+  const tokenDataMatchesDraft = Boolean(
+    tokenData
+      && tokenData.chain === chain
+      && tokenData.tokenAddress.toLowerCase() === contractAddress.trim().toLowerCase()
+  );
 
   useEffect(() => {
     writeLeakScoreDraft(draft);
@@ -22122,6 +22151,10 @@ function LeakScoreScreen({
   function updateDraft(patch: Partial<LeakScoreProjectDraft>) {
     setShareCopied(false);
     setClearArmed(false);
+    if (patch.chain !== undefined || patch.contractAddress !== undefined) {
+      setTokenDataError("");
+      setTokenData(null);
+    }
     setDraft((current) => normalizeLeakScoreDraft({
       ...current,
       ...patch,
@@ -22202,6 +22235,73 @@ function LeakScoreScreen({
     setClearArmed(false);
     setShareMessage("Active draft cleared locally. Saved snapshots were not deleted.");
     setDraft(normalizeLeakScoreDraft({ chain: "Solana", selectedSignals: [], signalNotes: {} }));
+  }
+
+  async function fetchBasicTokenData() {
+    if (tokenDataLoading) return;
+
+    const mint = contractAddress.trim();
+    if (!mint) {
+      setTokenDataError("Enter a Solana mint address first.");
+      setShareMessage("Add a contract / mint address before fetching basic token data.");
+      return;
+    }
+
+    try {
+      triggerHaptic("light");
+      setTokenDataLoading(true);
+      setTokenDataError("");
+      const response = await fetch(LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ chain, contractAddress: mint }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as LeakScoreTokenDataResponse;
+
+      if (!response.ok || !payload.ok || !payload.data) {
+        throw new Error(payload.error || "Basic token data fetch failed.");
+      }
+
+      setTokenData(payload.data);
+      setShareMessage("Basic token data fetched. Review the data manually before applying any suggested checks.");
+      notifyApp("Token data fetched", "Basic read-only data added to the Leak Research draft.", "info");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Basic token data fetch failed.";
+      setTokenData(null);
+      setTokenDataError(message);
+      setShareMessage(message);
+      notifyApp("Token data unavailable", message, "info");
+    } finally {
+      setTokenDataLoading(false);
+    }
+  }
+
+  function applyTokenDataHints() {
+    if (!tokenData?.suggestedSignals.length) return;
+
+    triggerHaptic("light");
+    setShareCopied(false);
+    setClearArmed(false);
+    setDraft((current) => {
+      const selectedSignals = Array.from(new Set([...current.selectedSignals, ...tokenData.suggestedSignals]));
+      const nextNotes = { ...current.signalNotes };
+
+      tokenData.suggestedSignals.forEach((signalId) => {
+        if (!nextNotes[signalId] && tokenData.suggestedSignalNotes[signalId]) {
+          nextNotes[signalId] = tokenData.suggestedSignalNotes[signalId];
+        }
+      });
+
+      return normalizeLeakScoreDraft({
+        ...current,
+        selectedSignals,
+        signalNotes: nextNotes,
+        updatedAt: new Date().toISOString(),
+      });
+    });
+    setShareMessage("Data hints applied as manual checks. Review and edit them before sharing.");
   }
 
   async function copyLeakScoreText() {
@@ -22337,7 +22437,7 @@ function LeakScoreScreen({
           <span>Manual Research · DYOR Tool</span>
           <h1>Before you buy a project, check for leaks.</h1>
           <p>
-            A crypto-native wallet leak prevention tool. It automatically reviews your local draft readiness, but it does not scan contracts or judge projects in this version.
+            A crypto-native wallet leak prevention tool. It can fetch basic read-only token data, but it does not judge projects or make investment calls.
           </p>
         </div>
         <div className={`leak-score-meter leak-score-meter-${score.tier.id}`}>
@@ -22350,7 +22450,7 @@ function LeakScoreScreen({
       <section className="leak-score-disclaimer">
         <strong>Positioning rule</strong>
         <p>
-          Manual Research · DYOR Tool · Educational · Leak Signals · Not Scam Detection. Drafts stay on this device. No API scan, no public database, no accusations, no investment advice.
+          Manual Research · DYOR Tool · Educational · Leak Signals · Not Scam Detection. Drafts stay on this device. Basic fetch is read-only: no public database, no accusations, no investment advice.
         </p>
       </section>
 
@@ -22412,9 +22512,99 @@ function LeakScoreScreen({
           <input
             value={contractAddress}
             onChange={(event) => updateDraft({ contractAddress: event.target.value })}
-            placeholder="Optional local note"
+            placeholder="Solana mint address for basic auto data"
           />
         </label>
+
+        <div className="leak-score-token-data-card">
+          <div className="leak-score-token-data-head">
+            <div>
+              <strong>Basic token data</strong>
+              <small>Read-only fetch · DEX pair data + Solana RPC supply checks</small>
+            </div>
+            <button type="button" onClick={() => void fetchBasicTokenData()} disabled={tokenDataLoading || !contractAddress.trim()}>
+              {tokenDataLoading ? "Fetching..." : tokenData ? "Re-fetch" : "Fetch data"}
+            </button>
+          </div>
+
+          {tokenDataError && <p className="leak-score-token-data-error">{tokenDataError}</p>}
+
+          {tokenData && tokenDataMatchesDraft ? (
+            <div className="leak-score-token-data-body">
+              <div className="leak-score-token-data-summary">
+                <span>Auto data summary</span>
+                <strong>{tokenData.tokenName || tokenData.tokenSymbol || "Token data fetched"}</strong>
+                <small>{tokenDataSummary}</small>
+              </div>
+              <div className="leak-score-token-data-grid">
+                <article>
+                  <span>Liquidity</span>
+                  <strong>{formatLeakScoreUsd(tokenData.pair?.liquidityUsd)}</strong>
+                </article>
+                <article>
+                  <span>24h volume</span>
+                  <strong>{formatLeakScoreUsd(tokenData.pair?.volume24hUsd)}</strong>
+                </article>
+                <article>
+                  <span>Market cap</span>
+                  <strong>{formatLeakScoreUsd(tokenData.pair?.marketCapUsd)}</strong>
+                </article>
+                <article>
+                  <span>FDV</span>
+                  <strong>{formatLeakScoreUsd(tokenData.pair?.fdvUsd)}</strong>
+                </article>
+                <article>
+                  <span>Pair age</span>
+                  <strong>{formatLeakScoreAgeDays(tokenData.pair?.ageDays)}</strong>
+                </article>
+                <article>
+                  <span>Top 10 accounts</span>
+                  <strong>{formatLeakScorePercent(tokenData.top10ConcentrationPercent)}</strong>
+                </article>
+                <article>
+                  <span>Supply</span>
+                  <strong>{tokenData.tokenSupply ? formatLeakScoreNumber(Number(tokenData.tokenSupply)) : "Unavailable"}</strong>
+                </article>
+                <article>
+                  <span>Holders</span>
+                  <strong>Indexer needed</strong>
+                </article>
+              </div>
+
+              <div className="leak-score-token-data-sources">
+                {tokenData.sources.map((source) => (
+                  <article key={source.id} className={source.ok ? "ready" : "pending"}>
+                    <b>{source.ok ? "OK" : "Limited"}</b>
+                    <strong>{source.label}</strong>
+                    <small>{source.helper}</small>
+                  </article>
+                ))}
+              </div>
+
+              {tokenData.suggestedSignals.length > 0 ? (
+                <div className="leak-score-token-data-hints">
+                  <div>
+                    <strong>Suggested manual checks</strong>
+                    <small>Data hints are not verdicts. Apply only if they match your research.</small>
+                  </div>
+                  <button type="button" onClick={applyTokenDataHints}>Apply hints</button>
+                </div>
+              ) : (
+                <p>No automatic manual-check hints were triggered by the fetched data.</p>
+              )}
+
+              {tokenData.warnings.length > 0 && (
+                <div className="leak-score-token-data-warnings">
+                  {tokenData.warnings.map((warning) => <small key={warning}>• {warning}</small>)}
+                </div>
+              )}
+            </div>
+          ) : (
+            <p>
+              Paste a Solana mint and fetch basic data. This does not publish anything and does not label projects as scams.
+            </p>
+          )}
+        </div>
 
         <div className="leak-score-saved-drafts">
           <div className="leak-score-saved-drafts-head">
@@ -22512,6 +22702,10 @@ function LeakScoreScreen({
           <small>Notes</small>
           <b>{signalNoteCount}/{score.selectedCount} selected signals have local notes</b>
         </div>
+        <div className="leak-score-result-line">
+          <small>Auto data</small>
+          <b>{tokenDataMatchesDraft ? "Basic token data attached" : "Not fetched yet"}</b>
+        </div>
       </section>
 
       <section className="leak-score-card leak-score-visual-share-section">
@@ -22544,6 +22738,13 @@ function LeakScoreScreen({
               <strong>{score.tier.shortLabel}</strong>
             </div>
           </div>
+
+          {tokenDataMatchesDraft && (
+            <div className="leak-score-public-data-row">
+              <span>Auto data</span>
+              <small>{formatLeakScoreUsd(tokenData?.pair?.liquidityUsd)} liquidity · {formatLeakScorePercent(tokenData?.top10ConcentrationPercent)} top 10</small>
+            </div>
+          )}
 
           <div className="leak-score-public-signals">
             <span>Visible leak signals</span>
@@ -22603,9 +22804,9 @@ function LeakScoreScreen({
 
       <section className="leak-score-roadmap-card">
         <span>What comes next</span>
-        <strong>Manual research now. Auto data later.</strong>
+        <strong>Manual research + basic auto data now.</strong>
         <p>
-          v59.45.6 adds automatic review readiness and safer crypto-native positioning. v59.46 can add basic token data fetch after data-source safety is isolated.
+          v59.46.0 adds read-only basic token data fetch. Next step can improve data-source coverage or add wallet behavior checks.
         </p>
       </section>
     </div>

@@ -1,38 +1,30 @@
-# Smoke Is Broke — v59.45.6 Leak Score Research Mode + Positioning Polish
+# Smoke Is Broke — v59.46.0 Basic Token Data Fetch
 
-v59.45.6 repositions Leak Score as a crypto-native manual research / wallet leak prevention tool instead of a project-rating or scam-detection feature. The screen now automatically reviews whether the local research draft is ready to share while keeping all data local and educational.
+v59.46.0 adds the first read-only automatic data layer to BROKE Leak Research. A user can paste a Solana mint address and fetch basic project context without creating a public project database or labeling anything as a scam.
 
-## Patch scope
+## What changed
 
-- Updated Leak Score copy to emphasize `Manual Research`, `DYOR Tool`, `Educational`, `Leak Signals`, and `Not Scam Detection`.
-- Added automatic local Research Review readiness checks for project name, chain, contract context, selected signals, signal notes, share text, and share card.
-- Added a completion meter and ready/pending checklist inside the Leak screen.
-- Shifted user-facing wording from “risk verdict” toward “wallet leak prevention” and “visible leak signals”.
-- Updated share text with the stronger crypto-native framing: “Before you buy a project, check for leaks.”
-- Updated the share card header from `$BROKE LEAK SCORE` to `$BROKE LEAK SIGNALS`.
-- Updated tier labels from “Leak Risk” to “Leak Signal Pressure”.
-- Updated guide and roadmap copy for the v1 manual research → v2 auto token data direction.
-- Updated shared build marker to `v59.45.6`.
+- Added `app/api/leak-score/token-data/route.ts` as a no-store read-only token data endpoint.
+- Added `app/lib/brokeLeakScoreTokenData.ts` for shared token data types, formatting helpers, and route constants.
+- Leak Research now has a `Basic token data` panel under the contract / mint field.
+- The panel fetches DEX Screener pair context: liquidity, 24h volume, market cap, FDV, pair age, DEX, and token name/symbol when available.
+- The panel fetches Solana RPC token supply and largest-token-account data, then estimates top-10 account concentration.
+- Holder count is intentionally shown as `Indexer needed` because reliable total holders are not available from public Solana RPC alone.
+- Added safe data hints that can be applied manually to selected leak signals. They are not automatic verdicts.
+- Share card can show attached auto-data summary for liquidity and top-10 account concentration.
+- Updated shared build marker to `v59.46.0`.
 
-## Safety notes
+## Safety / non-goals
 
-- No API calls were added.
-- No Supabase persistence was added.
-- No public project database was added.
-- No automated on-chain scanning was added.
-- No scam labels, project accusations, or investment advice were added.
-- No payout logic, reward eligibility formula, Daily Routine, Active Streak, wallet verification, Admin distribution API behavior, payout-wallet env names, or server auto-send behavior changed.
+- No Supabase persistence.
+- No public project database.
+- No automated scam detection.
+- No project accusation labels.
+- No investment advice.
+- No payout logic, reward eligibility, Daily Routine, Active Streak, wallet verification, Admin distribution API, payout wallet, or server auto-send changes.
 
-## Local storage keys
+## Data sources
 
-- Active draft: `broke-leak-score-local-draft-v1`
-- Saved snapshots: `broke-leak-score-saved-drafts-v1`
-
-## Verification
-
-- `npm run typecheck` passed.
-- `npm run lint:quiet` passed.
-- Targeted brace/paren balance passed for changed files.
-- Targeted BigInt literal suffix scan passed.
-- Zip integrity passed.
-- `NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully and finished TypeScript, then timed out during `Collecting page data using 26 workers`, consistent with the existing large monolithic `page.tsx` build-time issue.
+- DEX Screener public token-pairs endpoint for visible DEX pair data.
+- Solana JSON-RPC for token supply and largest token accounts.
+- Optional env override: `LEAK_SCORE_SOLANA_RPC_URL`; fallback: `SOLANA_RPC_URL`; final fallback: public Solana mainnet RPC.
