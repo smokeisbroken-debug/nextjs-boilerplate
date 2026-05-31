@@ -105,7 +105,17 @@ import {
   type LeakScoreTokenDataResponse,
 } from "./lib/brokeLeakScoreTokenData";
 
-type Tab = "home" | "add" | "chart" | "growth" | "leakscore" | "walletleak" | "compare" | "whatif" | "settings";
+import {
+  buildUniversalLeakCheckShareText,
+  buildUniversalTokenLeakCheckResult,
+  buildUniversalWalletLeakCheckResult,
+  chooseUniversalLeakCheckResult,
+  getUniversalLeakCheckInputStatus,
+  normalizeUniversalLeakCheckInput,
+  type UniversalLeakCheckResult,
+} from "./lib/brokeUniversalLeakCheck";
+
+type Tab = "home" | "check" | "add" | "chart" | "growth" | "leakscore" | "walletleak" | "compare" | "whatif" | "settings";
 type AppMode = "standard" | "pro";
 type NeedType = "Needed" | "Not needed" | "Maybe";
 type Language = "en" | "ru";
@@ -4792,6 +4802,7 @@ const navItems: {
   proOnly?: boolean;
 }[] = [
   { id: "home", label: "Home", icon: "/nav-home.png" },
+  { id: "check", label: "Check", icon: "/nav-chart.png" },
   { id: "add", label: "Add", icon: "/nav-add.png" },
   { id: "chart", label: "Chart", icon: "/nav-chart.png" },
   { id: "growth", label: "Growth", icon: "/nav-growth.png", proOnly: true },
@@ -10322,6 +10333,16 @@ export default function Home() {
           />
         )}
 
+        {loaded && onboardingCompleted && activeTab === "check" && (
+          <UniversalLeakCheckScreen
+            onBack={goHome}
+            onHelp={openHelp}
+            onOpenTokenResearch={() => setActiveTab("leakscore")}
+            onOpenWalletReview={() => setActiveTab("walletleak")}
+            onOpenCompare={() => setActiveTab("compare")}
+          />
+        )}
+
         {loaded && onboardingCompleted && activeTab === "leakscore" && (
           <LeakScoreScreen
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
@@ -10565,6 +10586,56 @@ function HelpGuideModal({
             "Future reward readiness uses this Daily Routine streak, not separate Rewards button taps.",
           ],
           icon: A.dailyCheck,
+        },
+      ],
+    },
+    check: {
+      label: "Check",
+      eyebrow: "Check Button Guide",
+      title: "Check: Universal Leak Check",
+      intro:
+        "Check is the fastest product path: paste a token mint, public wallet address, or supported URL and get a safe automatic leak-context result.",
+      icon: "/nav-chart.png",
+      footerTitle: "Check rule",
+      footerBody:
+        "Use Check first. Open Project, Wallet, or Vs only when you want deeper manual notes after the automatic result.",
+      sections: [
+        {
+          title: "One input",
+          body: [
+            "Paste a Solana token mint, public wallet address, Solscan URL, DEX token URL, or text that contains a Solana address.",
+            "The app cleans the input locally and detects whether it looks like a token or wallet.",
+            "Raw Solana addresses can be ambiguous, so the app can test both paths and keep the stronger evidence result.",
+          ],
+          icon: A.navChart,
+        },
+        {
+          title: "Token result",
+          body: [
+            "Token checks use existing token data sources: visible DEX pair context, liquidity, 24h volume, pair age, supply, and top-account concentration.",
+            "The Token Auto Signal Engine turns that source data into leak-signal pressure, evidence, and safe next actions.",
+            "It is not a scam detector and not financial advice.",
+          ],
+          icon: A.navChart,
+        },
+        {
+          title: "Wallet result",
+          body: [
+            "Wallet checks use read-only public wallet context only: SOL balance, SPL token-account count, non-zero token count, and configured $BROKE visibility.",
+            "The app does not read private keys, does not sign anything, and does not claim PnL or trade quality.",
+            "For behavior analysis, a later indexer layer is needed instead of guessing from basic RPC context.",
+          ],
+          icon: A.walletHp,
+        },
+        {
+          title: "Next actions",
+          body: [
+            "Copy result to discuss the context safely.",
+            "Open Project Research if you want manual token notes.",
+            "Open Wallet Review if you want manual behavior notes.",
+            "Open Vs only when comparing two projects after the automatic result.",
+          ],
+          icon: A.progressFlame,
         },
       ],
     },
@@ -22519,6 +22590,269 @@ function upsertWalletLeakSavedDraft(draft: WalletLeakDraft, currentDrafts: Walle
   writeWalletLeakSavedDrafts(nextDrafts);
   return nextDrafts;
 }
+
+
+function UniversalLeakCheckScreen({
+  onBack,
+  onHelp,
+  onOpenTokenResearch,
+  onOpenWalletReview,
+  onOpenCompare,
+}: {
+  onBack: () => void;
+  onHelp: () => void;
+  onOpenTokenResearch: () => void;
+  onOpenWalletReview: () => void;
+  onOpenCompare: () => void;
+}) {
+  const [rawInput, setRawInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<UniversalLeakCheckResult | null>(null);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("Paste token, wallet, or URL. The app chooses the correct check path.");
+  const [copied, setCopied] = useState(false);
+
+  const normalizedInput = useMemo(() => normalizeUniversalLeakCheckInput(rawInput), [rawInput]);
+  const inputStatus = useMemo(() => getUniversalLeakCheckInputStatus(normalizedInput), [normalizedInput]);
+  const shareText = useMemo(() => result ? buildUniversalLeakCheckShareText(result) : "", [result]);
+
+  function updateInput(value: string) {
+    setRawInput(value);
+    setError("");
+    setCopied(false);
+  }
+
+  async function fetchTokenResult(address: string) {
+    const response = await fetch(LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chain: "Solana", contractAddress: address }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as LeakScoreTokenDataResponse;
+    if (!response.ok || !payload.ok || !payload.data) {
+      throw new Error(getLeakScoreTokenDataErrorCopy(payload.code, payload.error));
+    }
+    return buildUniversalTokenLeakCheckResult(payload.data);
+  }
+
+  async function fetchWalletResult(address: string) {
+    const response = await fetch(WALLET_LEAK_BASIC_DATA_ROUTE, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ walletAddress: address }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as WalletLeakBasicDataResponse;
+    if (!response.ok || !payload.ok || !payload.data) {
+      throw new Error(getWalletLeakDataErrorCopy(payload.code, payload.error));
+    }
+    return buildUniversalWalletLeakCheckResult(payload.data);
+  }
+
+  async function runUniversalCheck() {
+    if (loading) return;
+
+    if (!inputStatus.canCheck) {
+      setResult(null);
+      setError(inputStatus.helper);
+      setMessage(inputStatus.helper);
+      return;
+    }
+
+    const address = normalizedInput.cleanedAddress;
+
+    try {
+      triggerHaptic("light");
+      setLoading(true);
+      setError("");
+      setCopied(false);
+      setMessage(normalizedInput.kind === "unknown" ? "Checking token and wallet paths..." : `Checking ${normalizedInput.kind} path...`);
+
+      let tokenResult: UniversalLeakCheckResult | null = null;
+      let walletResult: UniversalLeakCheckResult | null = null;
+      const errors: string[] = [];
+
+      if (normalizedInput.kind === "token") {
+        tokenResult = await fetchTokenResult(address);
+      } else if (normalizedInput.kind === "wallet") {
+        walletResult = await fetchWalletResult(address);
+      } else {
+        const [tokenSettled, walletSettled] = await Promise.allSettled([
+          fetchTokenResult(address),
+          fetchWalletResult(address),
+        ]);
+
+        if (tokenSettled.status === "fulfilled") tokenResult = tokenSettled.value;
+        else errors.push(tokenSettled.reason instanceof Error ? tokenSettled.reason.message : "Token path failed.");
+
+        if (walletSettled.status === "fulfilled") walletResult = walletSettled.value;
+        else errors.push(walletSettled.reason instanceof Error ? walletSettled.reason.message : "Wallet path failed.");
+      }
+
+      const chosen = chooseUniversalLeakCheckResult({
+        tokenResult: tokenResult?.kind === "token" ? tokenResult : null,
+        walletResult: walletResult?.kind === "wallet" ? walletResult : null,
+        preferredKind: normalizedInput.kind,
+      });
+
+      if (!chosen) {
+        throw new Error(errors[0] || "No usable token or wallet context returned for this input.");
+      }
+
+      setResult(chosen);
+      setMessage(`${chosen.confidenceLabel}. ${chosen.summary}`);
+      notifyApp("Leak check complete", `${chosen.pressure}/100 · ${chosen.pressureLabel}`, "info");
+    } catch (checkError) {
+      const nextError = checkError instanceof Error ? checkError.message : "Universal leak check failed.";
+      setResult(null);
+      setError(nextError);
+      setMessage(nextError);
+      notifyApp("Leak check unavailable", nextError, "info");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function copyResult() {
+    if (!shareText) return;
+
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        setCopied(true);
+        setMessage("Result copied. Keep it framed as leak-signal research, not a verdict.");
+        notifyApp("Result copied", "Universal Leak Check text copied.", "info");
+      } else {
+        setMessage("Clipboard is blocked here. Select the result text and copy manually.");
+      }
+    } catch {
+      setMessage("Clipboard is blocked here. Select the result text and copy manually.");
+    }
+  }
+
+  const resultTone = result?.pressure && result.pressure >= 70
+    ? "danger"
+    : result?.pressure && result.pressure >= 40
+      ? "warning"
+      : "ready";
+
+  return (
+    <section className="universal-check-screen">
+      <Header title="Check for Leaks" showBack onBack={onBack} rightIcon={A.help} onRight={onHelp} />
+
+      <div className="universal-check-hero">
+        <span>Universal Leak Check</span>
+        <h2>Paste token, wallet, or URL. Get a result.</h2>
+        <p>
+          One entry point for automatic leak context. Token checks use liquidity, pair, supply, concentration, and volume signals. Wallet checks stay read-only and public-context only.
+        </p>
+      </div>
+
+      <div className="universal-check-input-card">
+        <label htmlFor="universal-leak-input">Token / wallet / URL</label>
+        <textarea
+          id="universal-leak-input"
+          value={rawInput}
+          onChange={(event) => updateInput(event.target.value)}
+          placeholder="Paste Solana token mint, public wallet, Solscan URL, DEX token URL, or text with an address"
+          rows={4}
+        />
+        <div className={`universal-check-status ${inputStatus.canCheck ? "ready" : "pending"}`}>
+          <strong>{inputStatus.label}</strong>
+          <small>{inputStatus.helper}</small>
+        </div>
+        {normalizedInput.cleanedAddress && (
+          <div className="universal-check-detected">
+            <span>{normalizedInput.sourceLabel}</span>
+            <code>{normalizedInput.cleanedAddress}</code>
+          </div>
+        )}
+        <button className="primary wide" onClick={runUniversalCheck} disabled={loading || !inputStatus.canCheck}>
+          {loading ? "Checking..." : "Check for leaks"}
+        </button>
+      </div>
+
+      {(message || error) && (
+        <div className={`universal-check-message ${error ? "error" : ""}`}>
+          {message || error}
+        </div>
+      )}
+
+      {result && (
+        <div className="universal-check-result-stack">
+          <div className={`universal-result-card ${resultTone}`}>
+            <div>
+              <span>{result.kind === "token" ? "Token result" : "Wallet result"}</span>
+              <h3>{result.title}</h3>
+              <p>{result.summary}</p>
+            </div>
+            <strong>{result.pressure}/100</strong>
+          </div>
+
+          <div className="universal-result-grid">
+            {result.metrics.map((metric) => (
+              <div className="universal-result-metric" key={metric.id}>
+                <span>{metric.label}</span>
+                <strong>{metric.value}</strong>
+                <small>{metric.helper}</small>
+              </div>
+            ))}
+          </div>
+
+          <div className="universal-result-section">
+            <div className="section-title-row">
+              <div>
+                <span>Auto Signal Engine</span>
+                <h3>{result.signals.length ? `${result.signals.length} signals found` : "No major signal found"}</h3>
+              </div>
+              <em>{result.confidenceLabel}</em>
+            </div>
+            <div className="universal-signal-list">
+              {result.signals.length ? result.signals.map((signal) => (
+                <div className={`universal-signal-item ${signal.severity}`} key={signal.id}>
+                  <span>{signal.severity}</span>
+                  <strong>{signal.label}</strong>
+                  <p>{signal.evidence}</p>
+                  <small>{signal.action}</small>
+                </div>
+              )) : (
+                <div className="universal-signal-item low">
+                  <span>clear</span>
+                  <strong>No major automatic leak signal</strong>
+                  <p>The available source snapshot did not expose a strong token/wallet leak signal.</p>
+                  <small>Still verify official links and context manually before acting.</small>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="universal-result-section">
+            <div className="section-title-row">
+              <div>
+                <span>Next actions</span>
+                <h3>Do not stop at the number</h3>
+              </div>
+            </div>
+            <div className="universal-action-list">
+              {result.actions.map((action) => <p key={action}>{action}</p>)}
+            </div>
+            <div className="universal-check-actions">
+              <button className="ghost" onClick={copyResult}>{copied ? "Copied" : "Copy result"}</button>
+              {result.kind === "token" ? (
+                <button className="ghost" onClick={onOpenTokenResearch}>Open Project Research</button>
+              ) : (
+                <button className="ghost" onClick={onOpenWalletReview}>Open Wallet Review</button>
+              )}
+              <button className="ghost" onClick={onOpenCompare}>Compare</button>
+            </div>
+          </div>
+
+          <textarea className="universal-share-preview" readOnly value={shareText} aria-label="Universal Leak Check share text preview" />
+        </div>
+      )}
+    </section>
+  );
+}
+
 
 function LeakScoreScreen({
   shareInitData,
