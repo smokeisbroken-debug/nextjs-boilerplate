@@ -31149,3 +31149,206 @@ html.embedded-app-view .hero h1 {
     flex-direction: column;
   }
 }
+
+.wallet-leak-data-card {
+  border-color: rgba(43, 245, 162, 0.2);
+}
+
+.wallet-leak-data-head em {
+  border: 1px solid rgba(43, 245, 162, 0.22);
+  background: rgba(43, 245, 162, 0.08);
+  color: #c7ffe4;
+}
+
+.wallet-leak-data-warning,
+.wallet-leak-data-input-state,
+.wallet-leak-data-summary-row,
+.wallet-leak-source-health,
+.wallet-leak-visible-token-list,
+.wallet-leak-data-error {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(3, 12, 10, 0.66);
+  padding: 12px;
+  color: rgba(238, 255, 248, 0.82);
+}
+
+.wallet-leak-data-input-state {
+  display: grid;
+  gap: 4px;
+}
+
+.wallet-leak-data-input-state strong,
+.wallet-leak-source-health strong,
+.wallet-leak-visible-token-list strong,
+.wallet-leak-data-error strong {
+  color: #f6fffb;
+  font-size: 0.9rem;
+}
+
+.wallet-leak-data-input-state span,
+.wallet-leak-data-error span,
+.wallet-leak-source-health span {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: rgba(229, 255, 245, 0.72);
+}
+
+.wallet-leak-data-input-state-ready,
+.wallet-leak-source-health-complete {
+  border-color: rgba(43, 245, 162, 0.26);
+  background: rgba(43, 245, 162, 0.07);
+}
+
+.wallet-leak-data-input-state-invalid_wallet,
+.wallet-leak-data-error,
+.wallet-leak-source-health-limited {
+  border-color: rgba(255, 118, 118, 0.24);
+  background: rgba(255, 118, 118, 0.07);
+}
+
+.wallet-leak-source-health-partial {
+  border-color: rgba(255, 217, 97, 0.28);
+  background: rgba(255, 217, 97, 0.07);
+}
+
+.wallet-leak-data-actions,
+.wallet-leak-source-list,
+.wallet-leak-data-metric-grid {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.wallet-leak-data-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wallet-leak-data-actions button {
+  min-height: 42px;
+  border: 1px solid rgba(43, 245, 162, 0.24);
+  border-radius: 14px;
+  background: rgba(43, 245, 162, 0.1);
+  color: #eafff5;
+  font-weight: 800;
+}
+
+.wallet-leak-data-actions button:disabled {
+  opacity: 0.46;
+  cursor: not-allowed;
+}
+
+.wallet-leak-data-summary-row {
+  display: grid;
+  gap: 5px;
+}
+
+.wallet-leak-data-summary-row span {
+  color: rgba(210, 255, 235, 0.68);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.wallet-leak-data-summary-row b {
+  color: #f5fffb;
+  font-size: 0.86rem;
+  line-height: 1.35;
+}
+
+.wallet-leak-data-metric-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wallet-leak-data-metric,
+.wallet-leak-source-list article {
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.045);
+  padding: 11px;
+}
+
+.wallet-leak-data-metric span,
+.wallet-leak-source-list em {
+  color: rgba(210, 255, 235, 0.7);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wallet-leak-data-metric strong,
+.wallet-leak-source-list strong {
+  color: #f8fffc;
+  font-size: 1rem;
+}
+
+.wallet-leak-data-metric small,
+.wallet-leak-source-list small {
+  color: rgba(235, 255, 247, 0.66);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.wallet-leak-data-metric-caution {
+  border-color: rgba(255, 217, 97, 0.22);
+}
+
+.wallet-leak-data-metric-pending {
+  opacity: 0.78;
+}
+
+.wallet-leak-source-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wallet-leak-visible-token-list div,
+.wallet-leak-data-warnings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.wallet-leak-visible-token-list span,
+.wallet-leak-data-warnings span {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.055);
+  color: rgba(246, 255, 251, 0.82);
+  font-size: 0.72rem;
+  padding: 6px 9px;
+}
+
+.wallet-leak-data-warnings span {
+  border-color: rgba(255, 217, 97, 0.22);
+  background: rgba(255, 217, 97, 0.07);
+}
+
+.wallet-leak-card-data-row {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 8px;
+  border: 1px solid rgba(43, 245, 162, 0.2);
+  border-radius: 14px;
+  background: rgba(43, 245, 162, 0.08);
+  padding: 8px;
+}
+
+.wallet-leak-card-data-row span,
+.wallet-leak-card-data-row b {
+  color: rgba(238, 255, 247, 0.84);
+  font-size: 0.7rem;
+}
+
+@media (max-width: 520px) {
+  .wallet-leak-data-actions,
+  .wallet-leak-data-metric-grid,
+  .wallet-leak-source-list,
+  .wallet-leak-card-data-row {
+    grid-template-columns: 1fr;
+  }
+}

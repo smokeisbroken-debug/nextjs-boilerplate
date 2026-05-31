@@ -43,6 +43,20 @@ import {
   type WalletLeakDraft,
   type WalletLeakSignalId,
 } from "./lib/brokeWalletLeakScore";
+
+import {
+  WALLET_LEAK_BASIC_DATA_ROUTE,
+  buildWalletLeakDataMetricCards,
+  cleanupWalletLeakAddressInput,
+  formatWalletLeakFetchedAt,
+  getWalletLeakAddressPasteHelper,
+  getWalletLeakDataErrorCopy,
+  getWalletLeakDataInputStatus,
+  summarizeWalletLeakData,
+  type WalletLeakBasicData,
+  type WalletLeakBasicDataResponse,
+} from "./lib/brokeWalletLeakData";
+
 import {
   LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE,
   LEAK_SCORE_TOKEN_DATA_CACHE_KEY,
@@ -11026,7 +11040,7 @@ function HelpGuideModal({
           body: [
             "Wallet Leak Score is a manual self-check for wallet behavior leaks.",
             "It focuses on repeated FOMO entries, buying after big green candles, influencer chasing, panic selling, dead-bag holding, and missing exit rules.",
-            "The foundation version stores only a local draft on the device and does not fetch wallet history.",
+            "v59.48.0 can fetch basic public Solana wallet context, but it still does not scan trade history or calculate PnL.",
             "Use it to slow down before the next emotional buy, not to judge another user's wallet.",
           ],
           icon: A.walletHp,
@@ -11044,10 +11058,10 @@ function HelpGuideModal({
         {
           title: "What it does not do yet",
           body: [
-            "It does not scan on-chain wallet history.",
-            "It does not count meme buys, tops, dead projects, or holding time automatically yet.",
+            "It does not scan full on-chain wallet history or transaction timing.",
+            "It does not count meme buys, tops, dead projects, holding time, or realized PnL automatically yet.",
             "It does not publish wallet reports or create a public database.",
-            "A later version can add optional wallet data fetch only with clear privacy and source warnings.",
+            "This version adds optional basic wallet data fetch with clear privacy and source warnings.",
           ],
           icon: A.navChart,
         },
@@ -23279,6 +23293,11 @@ function WalletLeakScoreScreen({
   const [shareMessage, setShareMessage] = useState("Wallet review saves on this device only.");
   const [clearArmed, setClearArmed] = useState(false);
   const [cardSharing, setCardSharing] = useState(false);
+  const [walletDataLoading, setWalletDataLoading] = useState(false);
+  const [walletData, setWalletData] = useState<WalletLeakBasicData | null>(null);
+  const [walletDataError, setWalletDataError] = useState("");
+  const [walletDataLastFetchAt, setWalletDataLastFetchAt] = useState(0);
+  const [walletAddressHelperMessage, setWalletAddressHelperMessage] = useState("Paste a public Solana wallet address or explorer URL. The app will clean it locally.");
   const walletLeakCardRef = useRef<HTMLDivElement | null>(null);
 
   const walletLabel = draft.walletLabel;
@@ -23294,6 +23313,15 @@ function WalletLeakScoreScreen({
   const signalNoteCount = WALLET_LEAK_SIGNALS.filter((signal) => selectedSet.has(signal.id) && signalNotes[signal.id]).length;
   const researchStatus = useMemo(() => buildWalletLeakResearchStatus(draft), [draft]);
   const shareText = useMemo(() => buildWalletLeakShareText(draft), [draft]);
+  const walletDataInputStatus = useMemo(() => getWalletLeakDataInputStatus(walletAddress), [walletAddress]);
+  const walletDataMetricCards = useMemo(() => buildWalletLeakDataMetricCards(walletData), [walletData]);
+  const walletDataSummary = useMemo(() => summarizeWalletLeakData(walletData), [walletData]);
+  const walletDataFetchedAtLabel = useMemo(() => formatWalletLeakFetchedAt(walletData?.fetchedAt), [walletData?.fetchedAt]);
+  const walletDataMatchesDraft = Boolean(
+    walletData
+      && walletData.walletAddress.toLowerCase() === walletAddress.trim().toLowerCase()
+  );
+  const walletDataCooldownMs = 12000;
 
   useEffect(() => {
     writeWalletLeakDraft(draft);
@@ -23341,6 +23369,63 @@ function WalletLeakScoreScreen({
       },
       updatedAt: new Date().toISOString(),
     }));
+  }
+
+  function updateWalletAddressInput(value: string) {
+    const cleanup = cleanupWalletLeakAddressInput(value);
+    setWalletAddressHelperMessage(getWalletLeakAddressPasteHelper(value));
+    setWalletDataError("");
+    setWalletData((current) => {
+      if (!current) return current;
+      return current.walletAddress.toLowerCase() === cleanup.cleanedAddress.toLowerCase() ? current : null;
+    });
+    updateDraft({ walletAddress: cleanup.cleanedAddress || value });
+  }
+
+  async function fetchWalletData() {
+    if (walletDataLoading || !walletDataInputStatus.canFetch) return;
+
+    const now = Date.now();
+    const elapsed = now - walletDataLastFetchAt;
+    if (elapsed > 0 && elapsed < walletDataCooldownMs) {
+      const waitSeconds = Math.ceil((walletDataCooldownMs - elapsed) / 1000);
+      setWalletDataError(`Wait ${waitSeconds}s before re-fetching. Public RPC sources can rate-limit fast repeats.`);
+      return;
+    }
+
+    try {
+      triggerHaptic("light");
+      setWalletDataLoading(true);
+      setWalletDataError("");
+      setWalletDataLastFetchAt(now);
+
+      const response = await fetch(WALLET_LEAK_BASIC_DATA_ROUTE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ walletAddress }),
+      });
+      const payload = (await response.json().catch(() => null)) as WalletLeakBasicDataResponse | null;
+
+      if (!response.ok || !payload?.ok || !payload.data) {
+        throw new Error(getWalletLeakDataErrorCopy(payload?.code, payload?.error));
+      }
+
+      setWalletData(payload.data);
+      setShareMessage("Basic public wallet context loaded. This is not trade history, surveillance, or financial advice.");
+      notifyApp("Wallet context loaded", "Read-only public wallet context snapshot fetched.", "info");
+    } catch (error) {
+      setWalletData(null);
+      setWalletDataError(error instanceof Error ? error.message : "Basic wallet data is unavailable right now.");
+    } finally {
+      setWalletDataLoading(false);
+    }
+  }
+
+  function clearWalletData() {
+    triggerHaptic("light");
+    setWalletData(null);
+    setWalletDataError("");
+    setShareMessage("Basic wallet context cleared locally. Manual behavior checklist stayed untouched.");
   }
 
   function saveWalletLeakSnapshot() {
@@ -23517,7 +23602,7 @@ function WalletLeakScoreScreen({
           <span>Manual Wallet Behavior Check</span>
           <h1>Before you blame the market, check your wallet behavior.</h1>
           <p>
-            A local self-check for FOMO, panic sells, bad entries, hype chasing, and dead-bag habits. No wallet API is used in this foundation version.
+            A local self-check for FOMO, panic sells, bad entries, hype chasing, and dead-bag habits. Optional basic wallet data adds read-only public Solana context only.
           </p>
         </div>
         <div className={`leak-score-meter wallet-leak-meter wallet-leak-meter-${score.tier.id}`}>
@@ -23530,7 +23615,7 @@ function WalletLeakScoreScreen({
       <section className="leak-score-disclaimer wallet-leak-disclaimer">
         <strong>Positioning rule</strong>
         <p>
-          Manual self-check · Educational · Wallet behavior leaks · Not wallet surveillance · Not financial advice. This version does not scan transactions or publish any wallet database.
+          Manual self-check · Educational · Wallet behavior leaks · Not wallet surveillance · Not financial advice. Basic wallet data is read-only public RPC context, not transaction history or a public wallet database.
         </p>
       </section>
 
@@ -23580,11 +23665,16 @@ function WalletLeakScoreScreen({
           <span>Public wallet address optional</span>
           <input
             value={walletAddress}
-            onChange={(event) => updateDraft({ walletAddress: event.target.value })}
-            placeholder="Optional public address. No private key."
+            onChange={(event) => updateWalletAddressInput(event.target.value)}
+            placeholder="Optional public Solana wallet. No private key."
           />
-          <small className="leak-score-address-helper">Optional only. This foundation version does not fetch or scan wallet transactions.</small>
+          <small className="leak-score-address-helper">{walletAddressHelperMessage}</small>
         </label>
+
+        <div className={`wallet-leak-data-input-state wallet-leak-data-input-state-${walletDataInputStatus.status}`}>
+          <strong>{walletDataInputStatus.label}</strong>
+          <span>{walletDataInputStatus.helper}</span>
+        </div>
 
         <div className="leak-score-saved-drafts wallet-leak-saved-drafts">
           <div className="leak-score-saved-drafts-head">
@@ -23621,6 +23711,92 @@ function WalletLeakScoreScreen({
             <p>Save a wallet behavior snapshot before testing another wallet or behavior pattern. Snapshots stay local and never scan anything.</p>
           )}
         </div>
+      </section>
+
+      <section className="leak-score-card wallet-leak-data-card">
+        <div className="leak-score-section-head wallet-leak-data-head">
+          <div>
+            <span>Optional auto context</span>
+            <strong>Basic public wallet data</strong>
+            <small>Read-only Solana RPC snapshot · not trade history · not PnL</small>
+          </div>
+          <em>{walletDataLoading ? "Loading" : walletData?.sourceHealthLabel || "Not loaded"}</em>
+        </div>
+
+        <p className="wallet-leak-data-warning">
+          Basic wallet data only shows public context such as SOL balance, token-account count, and visible $BROKE balance. It does not analyze buys, sells, timing, profit, losses, or private activity.
+        </p>
+
+        <div className="wallet-leak-data-actions">
+          <button type="button" onClick={() => void fetchWalletData()} disabled={walletDataLoading || !walletDataInputStatus.canFetch}>
+            {walletDataLoading ? "Fetching..." : "Fetch wallet data"}
+          </button>
+          <button type="button" onClick={clearWalletData} disabled={walletDataLoading || !walletData}>Clear data</button>
+        </div>
+
+        {walletDataError && (
+          <div className="wallet-leak-data-error">
+            <strong>Wallet data not loaded</strong>
+            <span>{walletDataError}</span>
+          </div>
+        )}
+
+        <div className="wallet-leak-data-summary-row">
+          <span>{walletData ? walletDataFetchedAtLabel : walletDataInputStatus.label}</span>
+          <b>{walletData ? walletDataSummary : walletDataInputStatus.helper}</b>
+        </div>
+
+        <div className="wallet-leak-data-metric-grid">
+          {walletDataMetricCards.map((card) => (
+            <article key={card.id} className={`wallet-leak-data-metric wallet-leak-data-metric-${card.tone}`}>
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.helper}</small>
+            </article>
+          ))}
+        </div>
+
+        {walletData && (
+          <>
+            <div className={`wallet-leak-source-health wallet-leak-source-health-${walletData.sourceHealth}`}>
+              <strong>{walletData.sourceHealthLabel}</strong>
+              <span>{walletData.sourceHealthHelper}</span>
+            </div>
+
+            <div className="wallet-leak-source-list">
+              {walletData.sources.map((source) => (
+                <article key={source.id}>
+                  <strong>{source.label}</strong>
+                  <em>{source.ok ? "Connected" : "Limited"}</em>
+                  <small>{source.helper}</small>
+                </article>
+              ))}
+            </div>
+
+            <div className="wallet-leak-visible-token-list">
+              <strong>Visible token accounts</strong>
+              {walletData.visibleTokenAccounts.length > 0 ? (
+                <div>
+                  {walletData.visibleTokenAccounts.slice(0, 5).map((account) => (
+                    <span key={`${account.accountAddress}-${account.mint}`}>
+                      {account.isBroke ? "$BROKE" : `${account.mint.slice(0, 4)}…${account.mint.slice(-4)}`} · {account.amount}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <small>No non-zero SPL token accounts were returned in this point-in-time snapshot.</small>
+              )}
+            </div>
+
+            {walletData.warnings.length > 0 && (
+              <div className="wallet-leak-data-warnings">
+                {walletData.warnings.map((warning) => (
+                  <span key={warning}>{warning}</span>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </section>
 
       <section className="leak-score-card">
@@ -23732,6 +23908,12 @@ function WalletLeakScoreScreen({
             <span>{signalNoteCount}/{score.selectedCount} local notes</span>
             <span>{researchStatus.readyCount}/{researchStatus.total} review checks ready</span>
           </div>
+          {walletDataMatchesDraft && walletData && (
+            <div className="wallet-leak-card-data-row">
+              <span>{walletData.sourceHealthLabel}</span>
+              <b>{walletData.nonZeroTokenAccountsCount ?? "?"} tokens · {walletData.brokeTokenAccountFound ? "$BROKE visible" : "$BROKE not found"}</b>
+            </div>
+          )}
           <footer>
             Manual wallet behavior check · Not wallet surveillance · Not financial advice
           </footer>
@@ -23749,7 +23931,7 @@ function WalletLeakScoreScreen({
         <span>What comes next</span>
         <strong>Manual wallet behavior first. Data fetch later.</strong>
         <p>
-          v59.47.2 keeps Wallet Leak local and manual while adding saved snapshots and safer reset. A later version can add optional wallet history context with strong privacy and source warnings.
+          v59.48.0 adds basic read-only public wallet context: SOL balance, token-account count, and visible $BROKE balance. Transaction history, PnL, and wallet accusations are still out of scope.
         </p>
       </section>
     </div>

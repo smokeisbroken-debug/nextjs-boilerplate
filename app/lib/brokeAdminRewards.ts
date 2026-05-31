@@ -1,7 +1,7 @@
-export const BROKE_APP_BUILD_VERSION = "v59.47.2";
+export const BROKE_APP_BUILD_VERSION = "v59.48.0";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Wallet Leak saved snapshots and reset safety";
+  "Basic Wallet Data Fetch";
 
 export const DEFAULT_TREASURY_WALLET_ADDRESS = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
 export const DEFAULT_BROKE_TOKEN_MINT_ADDRESS = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
