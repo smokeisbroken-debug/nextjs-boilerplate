@@ -25,6 +25,7 @@ import {
 import {
   LEAK_SCORE_SHARE_CARD_FILE_NAME,
   LEAK_SCORE_SIGNALS,
+  buildProjectLeakScoreResearchStatus,
   buildProjectLeakScoreShareText,
   calculateProjectLeakScore,
   normalizeLeakScoreDraft,
@@ -10901,21 +10902,22 @@ function HelpGuideModal({
 
     leakscore: {
       label: "Leak",
-      eyebrow: "Leak Score Guide",
-      title: "Leak Score: Project Risk Signals",
+      eyebrow: "Leak Research Guide",
+      title: "Manual Leak Research: Check Before You Buy",
       intro:
-        "Leak Score is an experimental DYOR checklist. It does not call projects scams. It helps users notice possible project, wallet, hype, and liquidity leaks before emotional decisions become financial leaks.",
+        "This is a manual DYOR research tool for crypto wallet-leak prevention. It does not call projects scams, does not publish accusations, and does not scan contracts in this version.",
       icon: "/nav-chart.png",
-      footerTitle: "Leak Score rule",
+      footerTitle: "Research rule",
       footerBody:
-        "Use it as a pause button before entering a project. A signal is not a verdict; it is a reason to verify more slowly.",
+        "Before you buy a project, check for leaks. A signal is not a verdict; it is a reason to verify more slowly.",
       sections: [
         {
           title: "What this screen is",
           body: [
-            "It is a manual risk-signal checklist for projects and wallets.",
+            "It is a manual leak-signal research checklist for projects and wallets.",
+            "The screen automatically reviews whether your local draft is ready to share: project name, chain, selected signals, notes, text, and card.",
             "This version saves one active local draft and optional local snapshots on this device only; it does not fetch on-chain data and does not publish public accusations.",
-            "The score is educational: it helps users slow down, verify, and avoid FOMO-driven decisions.",
+            "The signal score is educational: it helps users slow down, verify, and avoid FOMO-driven wallet leaks.",
           ],
           icon: A.navChart,
         },
@@ -22110,6 +22112,7 @@ function LeakScoreScreen({
     .filter((signal) => selectedSet.has(signal.id))
     .map((signal) => signal.label);
   const signalNoteCount = LEAK_SCORE_SIGNALS.filter((signal) => selectedSet.has(signal.id) && signalNotes[signal.id]).length;
+  const researchStatus = useMemo(() => buildProjectLeakScoreResearchStatus(draft), [draft]);
   const shareText = useMemo(() => buildProjectLeakScoreShareText(draft), [draft]);
 
   useEffect(() => {
@@ -22327,28 +22330,51 @@ function LeakScoreScreen({
 
   return (
     <div className="screen leak-score-screen">
-      <Header title="BROKE Leak Score" showBack onBack={onBack} rightIcon={A.help} onRight={onHelp} />
+      <Header title="BROKE Leak Research" showBack onBack={onBack} rightIcon={A.help} onRight={onHelp} />
 
       <section className="leak-score-hero">
         <div>
-          <span>Experimental Research Mode</span>
-          <h1>Detect project leaks before they drain the wallet.</h1>
+          <span>Manual Research · DYOR Tool</span>
+          <h1>Before you buy a project, check for leaks.</h1>
           <p>
-            A manual DYOR checklist for project, wallet, hype and liquidity signals. It does not call projects scams. It shows leak signals.
+            A crypto-native wallet leak prevention tool. It automatically reviews your local draft readiness, but it does not scan contracts or judge projects in this version.
           </p>
         </div>
         <div className={`leak-score-meter leak-score-meter-${score.tier.id}`}>
-          <small>Leak Score</small>
+          <small>Leak signals</small>
           <strong>{score.score}</strong>
           <b>{score.tier.shortLabel}</b>
         </div>
       </section>
 
       <section className="leak-score-disclaimer">
-        <strong>Safety rule</strong>
+        <strong>Positioning rule</strong>
         <p>
-          This version is local and educational only. Drafts stay on this device. No API calls, no public database, no accusations, no investment advice.
+          Manual Research · DYOR Tool · Educational · Leak Signals · Not Scam Detection. Drafts stay on this device. No API scan, no public database, no accusations, no investment advice.
         </p>
+      </section>
+
+      <section className="leak-score-card leak-score-review-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Auto review</span>
+            <strong>{researchStatus.headline}</strong>
+            <small>{researchStatus.helper}</small>
+          </div>
+          <em>{researchStatus.readyCount}/{researchStatus.total}</em>
+        </div>
+        <div className="leak-score-review-meter">
+          <span style={{ width: `${researchStatus.completionPercent}%` }} />
+        </div>
+        <div className="leak-score-review-grid">
+          {researchStatus.checks.map((check) => (
+            <article key={check.id} className={check.ready ? "ready" : "pending"}>
+              <b>{check.ready ? "Ready" : "Pending"}</b>
+              <strong>{check.label}</strong>
+              <small>{check.helper}</small>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="leak-score-card">
@@ -22501,7 +22527,7 @@ function LeakScoreScreen({
           <img className="premium-share-card-art" src={SHARE_CARD_PUBLIC_ASSETS.background} alt="" />
           <div className="leak-score-public-card-top">
             <div>
-              <span>$BROKE LEAK SCORE</span>
+              <span>$BROKE LEAK SIGNALS</span>
               <strong>{projectName.trim() || "Unnamed draft"}</strong>
               <small>{chain}{contractAddress ? ` · ${contractAddress.slice(0, 6)}...${contractAddress.slice(-4)}` : ""}</small>
             </div>
@@ -22510,11 +22536,11 @@ function LeakScoreScreen({
 
           <div className="leak-score-public-score-row">
             <div>
-              <span>Manual score</span>
+              <span>Manual signal score</span>
               <strong>{score.score}<small>/100</small></strong>
             </div>
             <div>
-              <span>Visible tier</span>
+              <span>Signal pressure</span>
               <strong>{score.tier.shortLabel}</strong>
             </div>
           </div>
@@ -22535,13 +22561,13 @@ function LeakScoreScreen({
           </div>
 
           <footer className="leak-score-public-footer">
-            <span>Manual checklist · not an accusation · not financial advice</span>
+            <span>Manual research · not scam detection · not financial advice</span>
             <b>SmokeIsBroke</b>
           </footer>
         </div>
 
         <p>
-          Export a clean visual card. The card is generated locally from this screen and keeps the same neutral DYOR framing.
+          Export a clean visual card. The card is generated locally and keeps the framing as leak-signal research, not a verdict.
         </p>
         <div className="leak-score-share-actions leak-score-card-actions">
           <button type="button" onClick={() => void sendLeakScoreCardToBot()} disabled={cardSharing}>
@@ -22565,7 +22591,7 @@ function LeakScoreScreen({
           <em>{shareCopied ? "Copied" : "Local"}</em>
         </div>
         <p>
-          Copy a neutral DYOR note. It says “leak signals”, not “scam”, and it keeps the result framed as a manual checklist.
+          Copy a neutral DYOR note. It says “leak signals”, not “scam”, and it keeps the result framed as manual research.
         </p>
         <textarea readOnly value={shareText} aria-label="Leak Score share text preview" />
         <div className="leak-score-share-actions">
@@ -22577,9 +22603,9 @@ function LeakScoreScreen({
 
       <section className="leak-score-roadmap-card">
         <span>What comes next</span>
-        <strong>Share card now. Signal fetch later.</strong>
+        <strong>Manual research now. Auto data later.</strong>
         <p>
-          v59.45.5 adds local notes for selected signals. Later versions can add basic Solana signal fetch while staying neutral and educational.
+          v59.45.6 adds automatic review readiness and safer crypto-native positioning. v59.46 can add basic token data fetch after data-source safety is isolated.
         </p>
       </section>
     </div>

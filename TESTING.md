@@ -1,18 +1,18 @@
-# Smoke Is Broke — v59.45.5 Leak Score Signal Notes
+# Smoke Is Broke — v59.45.6 Leak Score Research Mode + Positioning Polish
 
-v59.45.5 adds local-only notes to the BROKE Leak Score checklist. When a user selects a visible leak signal, they can now write a short reason/context note for that signal. Notes stay in the local draft and saved snapshots, and are included only when the user intentionally copies/shares the generated Leak Score text or card.
+v59.45.6 repositions Leak Score as a crypto-native manual research / wallet leak prevention tool instead of a project-rating or scam-detection feature. The screen now automatically reviews whether the local research draft is ready to share while keeping all data local and educational.
 
 ## Patch scope
 
-- Added `signalNotes` to the local Leak Score draft model.
-- Added a local note textarea under each selected Leak Score signal.
-- Notes are limited to 180 characters per signal and sanitized through the existing Leak Score text cleaner.
-- Unselecting a signal removes its note from the active draft.
-- Saved local snapshots preserve signal notes.
-- Share text now includes signal notes beside selected signals and a `Signal notes: X/Y` summary.
-- Share card now shows whether local signal notes were added, without printing long notes onto the PNG.
-- Updated Leak Score guide and roadmap copy.
-- Updated shared build marker to `v59.45.5`.
+- Updated Leak Score copy to emphasize `Manual Research`, `DYOR Tool`, `Educational`, `Leak Signals`, and `Not Scam Detection`.
+- Added automatic local Research Review readiness checks for project name, chain, contract context, selected signals, signal notes, share text, and share card.
+- Added a completion meter and ready/pending checklist inside the Leak screen.
+- Shifted user-facing wording from “risk verdict” toward “wallet leak prevention” and “visible leak signals”.
+- Updated share text with the stronger crypto-native framing: “Before you buy a project, check for leaks.”
+- Updated the share card header from `$BROKE LEAK SCORE` to `$BROKE LEAK SIGNALS`.
+- Updated tier labels from “Leak Risk” to “Leak Signal Pressure”.
+- Updated guide and roadmap copy for the v1 manual research → v2 auto token data direction.
+- Updated shared build marker to `v59.45.6`.
 
 ## Safety notes
 
@@ -35,4 +35,4 @@ v59.45.5 adds local-only notes to the BROKE Leak Score checklist. When a user se
 - Targeted brace/paren balance passed for changed files.
 - Targeted BigInt literal suffix scan passed.
 - Zip integrity passed.
-- `NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully but timed out during Next.js “Running TypeScript ...” in the sandbox while standalone typecheck passed, consistent with the existing large monolithic `page.tsx` build-time issue.
+- `NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully and finished TypeScript, then timed out during `Collecting page data using 26 workers`, consistent with the existing large monolithic `page.tsx` build-time issue.

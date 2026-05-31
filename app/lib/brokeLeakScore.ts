@@ -28,6 +28,34 @@ export type LeakScoreTier = {
   helper: string;
 };
 
+export type LeakScoreResearchCheckId =
+  | "project_name"
+  | "chain"
+  | "contract_context"
+  | "signals"
+  | "signal_notes"
+  | "share_text"
+  | "share_card";
+
+export type LeakScoreResearchCheck = {
+  id: LeakScoreResearchCheckId;
+  label: string;
+  ready: boolean;
+  helper: string;
+};
+
+export type LeakScoreResearchStatus = {
+  checks: LeakScoreResearchCheck[];
+  readyCount: number;
+  total: number;
+  completionPercent: number;
+  shareReady: boolean;
+  cardReady: boolean;
+  noteCount: number;
+  headline: string;
+  helper: string;
+};
+
 export type LeakScoreSignalNotes = Partial<Record<LeakScoreSignalId, string>>;
 
 export type LeakScoreProjectDraft = {
@@ -105,25 +133,25 @@ export const LEAK_SCORE_SIGNALS: LeakScoreSignal[] = [
 export const LEAK_SCORE_TIERS: Record<LeakScoreTierId, LeakScoreTier> = {
   low: {
     id: "low",
-    label: "Low Leak Risk",
+    label: "Low Leak Signal Pressure",
     shortLabel: "Low",
     helper: "Few visible leak signals. Still do normal research before acting.",
   },
   medium: {
     id: "medium",
-    label: "Medium Leak Risk",
+    label: "Medium Leak Signal Pressure",
     shortLabel: "Medium",
     helper: "Some leak signals are visible. Slow down and verify the weak points.",
   },
   high: {
     id: "high",
-    label: "High Leak Risk",
+    label: "High Leak Signal Pressure",
     shortLabel: "High",
     helper: "Several leak signals are visible. Treat the project as high-pressure until proven otherwise.",
   },
   extreme: {
     id: "extreme",
-    label: "Extreme Leak Risk",
+    label: "Extreme Leak Signal Pressure",
     shortLabel: "Extreme",
     helper: "Many severe leak signals are visible. Do not act from emotion or FOMO.",
   },
@@ -204,6 +232,80 @@ export function normalizeLeakScoreDraft(input?: Partial<LeakScoreProjectDraft> |
   };
 }
 
+export function buildProjectLeakScoreResearchStatus(draft: LeakScoreProjectDraft): LeakScoreResearchStatus {
+  const normalizedDraft = normalizeLeakScoreDraft(draft);
+  const result = calculateProjectLeakScore(normalizedDraft.selectedSignals);
+  const hasProjectName = Boolean(normalizedDraft.projectName.trim());
+  const hasChain = Boolean(normalizedDraft.chain.trim());
+  const hasContractContext = Boolean(normalizedDraft.contractAddress.trim());
+  const hasSignals = normalizedDraft.selectedSignals.length > 0;
+  const noteCount = normalizedDraft.selectedSignals.filter((signalId) => Boolean(normalizedDraft.signalNotes[signalId])).length;
+  const hasSignalNotes = noteCount > 0;
+  const shareReady = hasProjectName && hasChain && hasSignals;
+
+  const checks: LeakScoreResearchCheck[] = [
+    {
+      id: "project_name",
+      label: "Project name",
+      ready: hasProjectName,
+      helper: hasProjectName ? "Name is set for the research draft." : "Add a project or token name before sharing.",
+    },
+    {
+      id: "chain",
+      label: "Chain selected",
+      ready: hasChain,
+      helper: hasChain ? `Chain context: ${normalizedDraft.chain}.` : "Select the chain you are researching.",
+    },
+    {
+      id: "contract_context",
+      label: "Contract context",
+      ready: hasContractContext,
+      helper: hasContractContext ? "Contract / mint context is attached." : "Optional, but useful before deeper research.",
+    },
+    {
+      id: "signals",
+      label: "Leak signals selected",
+      ready: hasSignals,
+      helper: hasSignals ? `${result.selectedCount}/${result.totalSignals} visible signals selected.` : "Select the leak signals you can actually see.",
+    },
+    {
+      id: "signal_notes",
+      label: "Research notes",
+      ready: hasSignalNotes,
+      helper: hasSignalNotes ? `${noteCount}/${result.selectedCount} selected signals include local notes.` : "Optional: add notes explaining why a signal was selected.",
+    },
+    {
+      id: "share_text",
+      label: "Share text",
+      ready: shareReady,
+      helper: shareReady ? "Text is ready with DYOR / not scam detection framing." : "Needs project name, chain, and at least one signal.",
+    },
+    {
+      id: "share_card",
+      label: "Share card",
+      ready: shareReady,
+      helper: shareReady ? "Card is ready with leak-signal framing." : "Needs project name, chain, and at least one signal.",
+    },
+  ];
+
+  const readyCount = checks.filter((check) => check.ready).length;
+  const total = checks.length;
+
+  return {
+    checks,
+    readyCount,
+    total,
+    completionPercent: Math.round((readyCount / total) * 100),
+    shareReady,
+    cardReady: shareReady,
+    noteCount,
+    headline: shareReady ? "Research draft ready" : "Research draft incomplete",
+    helper: shareReady
+      ? "This is ready to share as manual DYOR leak-signal research, not as a project verdict."
+      : "The app automatically checks what is missing before you share.",
+  };
+}
+
 export function buildProjectLeakScoreShareText(draft: LeakScoreProjectDraft) {
   const normalizedDraft = normalizeLeakScoreDraft(draft);
   const result = calculateProjectLeakScore(normalizedDraft.selectedSignals);
@@ -224,15 +326,17 @@ export function buildProjectLeakScoreShareText(draft: LeakScoreProjectDraft) {
     : "";
 
   return [
-    "BROKE Leak Score draft",
+    "BROKE Leak Signals research draft",
+    "Before you buy a project, check for leaks.",
     `Project: ${projectName}`,
     `Chain: ${normalizedDraft.chain}${addressLine}`,
-    `Score: ${result.score}/100 — ${result.tier.label}`,
+    `Manual signal score: ${result.score}/100 — ${result.tier.label}`,
     `Signal notes: ${noteCount}/${result.selectedCount}`,
-    "Visible signals:",
+    "Visible leak signals:",
     signalText,
     "",
-    "Note: signal notes are local personal context for DYOR. This is not an accusation, not a scam label, and not financial advice.",
-    "$BROKE helps people notice leaks before they become damage.",
+    "Positioning: Manual Research / DYOR Tool / Educational / Leak Signals / Not Scam Detection.",
+    "Note: signal notes are local personal context. This is not an accusation, not a scam label, and not financial advice.",
+    "Stop wallet leaks. The market does not drain most wallets. Bad decisions do.",
   ].join("\n");
 }
