@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
+import {
+  BROKE_APP_BUILD_VERSION,
+  DEFAULT_BROKE_TOKEN_MINT_ADDRESS,
+  DEFAULT_TREASURY_WALLET_ADDRESS,
+  DEFAULT_USDC_TOKEN_MINT_ADDRESS,
+  REAL_DISTRIBUTION_CONFIRM_PHRASE,
+  SERVER_AUTO_SEND_CONFIRM_PHRASE,
+} from "../../../lib/brokeAdminRewards";
 
 export const runtime = "nodejs";
 
@@ -87,8 +95,7 @@ type PayoutRow = {
 };
 
 const WEB_AUTH_COOKIE = "broke_tg_session";
-const DEFAULT_TREASURY_WALLET = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
-const REAL_DISTRIBUTION_CONFIRM_PHRASE = "PREPARE REAL DISTRIBUTION";
+const DEFAULT_TREASURY_WALLET = DEFAULT_TREASURY_WALLET_ADDRESS;
 
 function json(data: unknown, status = 200) {
   const payload = data && typeof data === "object" && !Array.isArray(data)
@@ -334,10 +341,9 @@ function parseManualSendRecords(input: DistributionPatchInput) {
     .slice(0, 500);
 }
 
-const ADMIN_DISTRIBUTION_BUILD_VERSION = "v59.43.1";
-const SERVER_AUTO_SEND_CONFIRM_PHRASE = "SERVER AUTO SEND";
-const DEFAULT_BROKE_MINT = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
-const DEFAULT_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const ADMIN_DISTRIBUTION_BUILD_VERSION = BROKE_APP_BUILD_VERSION;
+const DEFAULT_BROKE_MINT = DEFAULT_BROKE_TOKEN_MINT_ADDRESS;
+const DEFAULT_USDC_MINT = DEFAULT_USDC_TOKEN_MINT_ADDRESS;
 const SERVER_SOLANA_MAINNET_RPC = "https://api.mainnet-beta.solana.com";
 const SERVER_SOLANA_SYSTEM_PROGRAM_ID = "11111111111111111111111111111111";
 const SERVER_SOLANA_TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";

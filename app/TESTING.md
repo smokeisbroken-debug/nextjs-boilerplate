@@ -1,29 +1,21 @@
-# $BROKE / Smoke Is Broke — v59.43.1 P0 Stabilization Patch
+# $BROKE / Smoke Is Broke — v59.43.2 Admin / Rewards Extraction Prep
 
-Patch-only update on top of confirmed v59.43.
+Patch-only update on top of confirmed v59.43.1.
 
 ## What changed
 
-- Fixed current ESLint `prefer-const` failures in `app/page.tsx` and `app/api/admin/distributions/route.ts`.
-- Synced the private Admin distribution API build marker to `v59.43.1`.
-- Updated private Admin payout readiness wording so it no longer says payouts are off while the beta payout-wallet path exists.
-- Added `supabase/migrations/20260529_v59_43_1_schema_repair_pack.sql`.
-- Added `supabase/review/20260529_v59_43_1_schema_repair_pack_audit.sql`.
+- Added `app/lib/brokeAdminRewards.ts` as the first shared Admin/Rewards extraction point.
+- Moved shared build/version constants into that module.
+- Moved shared default treasury wallet, `$BROKE` mint, USDC mint, and reward-confirm phrases into that module.
+- Reused the shared constants in `app/page.tsx` and `app/api/admin/distributions/route.ts`.
+- Updated private Admin build marker/API build version to `v59.43.2`.
 
-## Migration purpose
+## Behavior
 
-The schema repair pack restores/creates the Supabase objects currently used by the app:
+No payout logic, reward eligibility formula, Daily Routine, Active Streak, wallet verification, Supabase schema, or public user UI behavior was intentionally changed.
 
-- core app tables;
-- settings/app-state payload columns;
-- expense Smart Leak Excess columns;
-- pattern history table/columns;
-- web link codes;
-- wallet verification/link tables;
-- reward distribution/payout ledger tables.
-
-The SQL is idempotent. It does not create token transfers, claims, staking, or payout automation.
+This is a prep patch for future refactoring: it creates a small shared module before larger Admin/Rewards code is extracted from the monolithic `app/page.tsx`.
 
 ## Do not delete
 
-Do not remove existing Supabase data or old migrations. Run this migration in addition to the existing project schema.
+Do not remove the v59.43.1 Supabase schema repair migration or older migrations. This patch does not add a new migration.

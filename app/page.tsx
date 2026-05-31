@@ -2,6 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Dispatch, ReactNode, SetStateAction } from "react";
+import {
+  BROKE_APP_BUILD_NOTE,
+  BROKE_APP_BUILD_VERSION,
+  DEFAULT_BROKE_TOKEN_MINT_ADDRESS,
+  DEFAULT_TREASURY_WALLET_ADDRESS,
+  DEFAULT_USDC_TOKEN_MINT_ADDRESS,
+  REAL_DISTRIBUTION_CONFIRM_PHRASE,
+  SERVER_AUTO_SEND_CONFIRM_PHRASE,
+  parseAdminCsv,
+  walletAddressEquals,
+} from "./lib/brokeAdminRewards";
 
 type Tab = "home" | "add" | "chart" | "growth" | "whatif" | "settings";
 type AppMode = "standard" | "pro";
@@ -1142,8 +1153,6 @@ const TELEGRAM_WEB_APP_SCRIPT = "https://telegram.org/js/telegram-web-app.js";
 const TELEGRAM_LOGIN_SCRIPT = "https://telegram.org/js/telegram-widget.js?22";
 const TELEGRAM_BOT_USERNAME =
   process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "BrokeLifeTrackerBot";
-const DEFAULT_TREASURY_WALLET_ADDRESS = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
-const DEFAULT_BROKE_TOKEN_MINT_ADDRESS = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
 const BROKE_TOKEN_MINT_ADDRESS = (process.env.NEXT_PUBLIC_BROKE_TOKEN_MINT || DEFAULT_BROKE_TOKEN_MINT_ADDRESS).trim();
 const TREASURY_WALLET_ADDRESS = (process.env.NEXT_PUBLIC_TREASURY_WALLET_ADDRESS || DEFAULT_TREASURY_WALLET_ADDRESS).trim();
 const ADMIN_TELEGRAM_IDS = parseAdminCsv(
@@ -3683,17 +3692,6 @@ function compactWalletAddress(value: string) {
   const trimmed = value.trim();
   if (trimmed.length <= 12) return trimmed || "Not linked";
   return `${trimmed.slice(0, 4)}…${trimmed.slice(-4)}`;
-}
-
-function parseAdminCsv(value: string) {
-  return value
-    .split(/[\s,;]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function walletAddressEquals(a: string, b: string) {
-  return a.trim() !== "" && b.trim() !== "" && a.trim() === b.trim();
 }
 
 function getAdminAccessState(telegram: TelegramState, webAuth: WebAuthState, settings: Settings): AdminAccessState {
@@ -23367,10 +23365,10 @@ function AdminTreasuryPanel({
     : [];
   const payoutTotal = payoutRows.reduce((total, row) => total + row.rewardAmount, 0);
   const payoutPreviewReady = payoutRows.length > 0 && rewardPoolValue > 0;
-  const realDistributionConfirmPhrase = "PREPARE REAL DISTRIBUTION";
+  const realDistributionConfirmPhrase = REAL_DISTRIBUTION_CONFIRM_PHRASE;
   const realDistributionReady = distributionMode === "real_manual" && payoutPreviewReady && access.treasuryMatched && realDistributionConfirm.trim() === realDistributionConfirmPhrase;
-  const brokeRewardMint = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
-  const usdcRewardMint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+  const brokeRewardMint = DEFAULT_BROKE_TOKEN_MINT_ADDRESS;
+  const usdcRewardMint = DEFAULT_USDC_TOKEN_MINT_ADDRESS;
 
   function getRewardTokenMint(token: string) {
     const normalized = token.toUpperCase();
@@ -23771,8 +23769,8 @@ function AdminTreasuryPanel({
       return;
     }
 
-    if (serverAutoConfirm.trim() !== "SERVER AUTO SEND") {
-      setSendQueueMessage("Type SERVER AUTO SEND to unlock dedicated payout wallet auto-send.");
+    if (serverAutoConfirm.trim() !== SERVER_AUTO_SEND_CONFIRM_PHRASE) {
+      setSendQueueMessage(`Type ${SERVER_AUTO_SEND_CONFIRM_PHRASE} to unlock dedicated payout wallet auto-send.`);
       return;
     }
 
@@ -23790,7 +23788,7 @@ function AdminTreasuryPanel({
         body: JSON.stringify({
           action: "server_auto_send",
           distributionId: distributionRecord.id,
-          confirmPhrase: "SERVER AUTO SEND",
+          confirmPhrase: SERVER_AUTO_SEND_CONFIRM_PHRASE,
         }),
       });
       const data = (await response.json()) as AdminDistributionUpdateResponse;
@@ -23854,12 +23852,12 @@ function AdminTreasuryPanel({
     try {
       setDistributionMode("real_manual");
       setRealDistributionConfirm(realDistributionConfirmPhrase);
-      setServerAutoConfirm("SERVER AUTO SEND");
+      setServerAutoConfirm(SERVER_AUTO_SEND_CONFIRM_PHRASE);
 
       const manifest = {
         ...buildDistributionManifestFromRows("real_manual", rows, poolValue),
         serverAutoSend: true,
-        serverAutoConfirm: "SERVER AUTO SEND",
+        serverAutoConfirm: SERVER_AUTO_SEND_CONFIRM_PHRASE,
       };
 
       const saveResponse = await fetch("/api/admin/distributions", {
@@ -23906,7 +23904,7 @@ function AdminTreasuryPanel({
         <div>
           <span>Private admin</span>
           <strong>Reward distribution</strong>
-          <small>Build v59.43.1 · schema repair pack, clean admin payout wording, version sync. Check eligible first, review recipients, then distribute.</small>
+          <small>Build {BROKE_APP_BUILD_VERSION} · {BROKE_APP_BUILD_NOTE} Check eligible first, review recipients, then distribute.</small>
         </div>
         <b>{access.sourceLabel}</b>
       </div>
