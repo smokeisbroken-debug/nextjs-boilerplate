@@ -29388,6 +29388,67 @@ html.embedded-app-view .hero h1 {
   padding: 8px 11px;
 }
 
+
+.leak-score-section-head small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.leak-score-share-card p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.42;
+}
+
+.leak-score-share-card textarea {
+  width: 100%;
+  min-height: 178px;
+  resize: vertical;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.32);
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 750;
+  line-height: 1.42;
+  padding: 12px;
+  outline: none;
+}
+
+.leak-score-share-card textarea:focus {
+  border-color: rgba(167, 255, 41, 0.42);
+  box-shadow: 0 0 0 3px rgba(167, 255, 41, 0.08);
+}
+
+.leak-score-share-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 10px;
+}
+
+.leak-score-share-actions button {
+  border: 1px solid rgba(167, 255, 41, 0.2);
+  border-radius: 16px;
+  background: rgba(167, 255, 41, 0.1);
+  color: var(--green);
+  font-size: 0.78rem;
+  font-weight: 950;
+  padding: 12px;
+}
+
+.leak-score-share-card > small {
+  display: block;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
 .leak-score-input-line {
   display: grid;
   gap: 7px;
@@ -29519,5 +29580,9 @@ html.embedded-app-view .hero h1 {
 
   .leak-score-meter {
     min-height: 104px;
+  }
+
+  .leak-score-share-actions {
+    grid-template-columns: 1fr;
   }
 }

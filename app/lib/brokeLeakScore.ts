@@ -26,6 +26,14 @@ export type LeakScoreTier = {
   helper: string;
 };
 
+export type LeakScoreProjectDraft = {
+  projectName: string;
+  chain: string;
+  contractAddress: string;
+  selectedSignals: LeakScoreSignalId[];
+  updatedAt: string;
+};
+
 export const LEAK_SCORE_SIGNALS: LeakScoreSignal[] = [
   {
     id: "wallet_concentration",
@@ -116,6 +124,8 @@ export const LEAK_SCORE_TIERS: Record<LeakScoreTierId, LeakScoreTier> = {
   },
 };
 
+const LEAK_SCORE_SIGNAL_IDS = new Set<LeakScoreSignalId>(LEAK_SCORE_SIGNALS.map((signal) => signal.id));
+
 export function calculateProjectLeakScore(selectedSignals: LeakScoreSignalId[]) {
   const selected = new Set(selectedSignals);
   const score = LEAK_SCORE_SIGNALS.reduce(
@@ -137,4 +147,62 @@ export function calculateProjectLeakScore(selectedSignals: LeakScoreSignalId[]) 
     selectedCount: selectedSignals.length,
     totalSignals: LEAK_SCORE_SIGNALS.length,
   };
+}
+
+export function cleanLeakScoreText(input: unknown, maxLength = 80) {
+  return String(input || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+export function normalizeLeakScoreSignalIds(input: unknown): LeakScoreSignalId[] {
+  if (!Array.isArray(input)) return [];
+
+  const unique: LeakScoreSignalId[] = [];
+
+  input.forEach((value) => {
+    const id = String(value || "") as LeakScoreSignalId;
+    if (LEAK_SCORE_SIGNAL_IDS.has(id) && !unique.includes(id)) unique.push(id);
+  });
+
+  return unique.slice(0, LEAK_SCORE_SIGNALS.length);
+}
+
+export function normalizeLeakScoreDraft(input?: Partial<LeakScoreProjectDraft> | null): LeakScoreProjectDraft {
+  return {
+    projectName: cleanLeakScoreText(input?.projectName, 64),
+    chain: cleanLeakScoreText(input?.chain, 24) || "Solana",
+    contractAddress: cleanLeakScoreText(input?.contractAddress, 120),
+    selectedSignals: normalizeLeakScoreSignalIds(input?.selectedSignals),
+    updatedAt: cleanLeakScoreText(input?.updatedAt, 40) || new Date().toISOString(),
+  };
+}
+
+export function buildProjectLeakScoreShareText(draft: LeakScoreProjectDraft) {
+  const normalizedDraft = normalizeLeakScoreDraft(draft);
+  const result = calculateProjectLeakScore(normalizedDraft.selectedSignals);
+  const selected = new Set(normalizedDraft.selectedSignals);
+  const selectedLabels = LEAK_SCORE_SIGNALS
+    .filter((signal) => selected.has(signal.id))
+    .map((signal) => signal.label);
+  const projectName = normalizedDraft.projectName || "Unnamed project draft";
+  const signalText = selectedLabels.length
+    ? selectedLabels.map((label) => `• ${label}`).join("\n")
+    : "• No visible leak signals selected yet";
+  const addressLine = normalizedDraft.contractAddress
+    ? `\nContract / mint: ${normalizedDraft.contractAddress}`
+    : "";
+
+  return [
+    "BROKE Leak Score draft",
+    `Project: ${projectName}`,
+    `Chain: ${normalizedDraft.chain}${addressLine}`,
+    `Score: ${result.score}/100 — ${result.tier.label}`,
+    "Visible signals:",
+    signalText,
+    "",
+    "Note: this is a manual DYOR checklist, not an accusation, not a scam label, and not financial advice.",
+    "$BROKE helps people notice leaks before they become damage.",
+  ].join("\n");
 }

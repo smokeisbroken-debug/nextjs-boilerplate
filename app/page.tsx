@@ -24,7 +24,10 @@ import {
 } from "./lib/brokeAdminWalletTransactions";
 import {
   LEAK_SCORE_SIGNALS,
+  buildProjectLeakScoreShareText,
   calculateProjectLeakScore,
+  normalizeLeakScoreDraft,
+  type LeakScoreProjectDraft,
   type LeakScoreSignalId,
 } from "./lib/brokeLeakScore";
 
@@ -10906,7 +10909,7 @@ function HelpGuideModal({
           title: "What this screen is",
           body: [
             "It is a manual risk-signal checklist for projects and wallets.",
-            "The first version does not fetch on-chain data and does not publish public accusations.",
+            "This version saves one local draft on this device only; it does not fetch on-chain data and does not publish public accusations.",
             "The score is educational: it helps users slow down, verify, and avoid FOMO-driven decisions.",
           ],
           icon: A.navChart,
@@ -10914,12 +10917,21 @@ function HelpGuideModal({
         {
           title: "How to use it",
           body: [
-            "Enter the project or token name if useful.",
+            "Enter the project or token name, chain, and optional contract/mint address if useful.",
             "Select only the signals you can actually observe.",
             "Read the risk tier as a discipline warning, not as investment advice.",
             "If many severe signals are selected, pause before acting.",
           ],
           icon: A.help,
+        },
+        {
+          title: "Local draft and share text",
+          body: [
+            "The screen saves one local draft on this device, so the checklist survives reloads.",
+            "Copy text creates a neutral DYOR note with project, chain, score, selected signals, and safety disclaimer.",
+            "The share text says leak signals, not scam labels. Keep it factual and non-accusatory.",
+          ],
+          icon: A.export,
         },
         {
           title: "Why it fits $BROKE",
@@ -21960,6 +21972,32 @@ function HomeHabitLeaksPanel({
 }
 
 
+const LEAK_SCORE_DRAFT_KEY = "broke-leak-score-local-draft-v1";
+
+function readLeakScoreDraft(): LeakScoreProjectDraft {
+  if (typeof window === "undefined") return normalizeLeakScoreDraft();
+
+  try {
+    const raw = window.localStorage.getItem(LEAK_SCORE_DRAFT_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Partial<LeakScoreProjectDraft>) : null;
+
+    return normalizeLeakScoreDraft(parsed);
+  } catch {
+    return normalizeLeakScoreDraft();
+  }
+}
+
+function writeLeakScoreDraft(draft: LeakScoreProjectDraft) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(LEAK_SCORE_DRAFT_KEY, JSON.stringify(normalizeLeakScoreDraft(draft)));
+  } catch {
+    // Leak Score drafts are local-only and optional.
+  }
+}
+
+
 function LeakScoreScreen({
   onBack,
   onHelp,
@@ -21967,33 +22005,102 @@ function LeakScoreScreen({
   onBack: () => void;
   onHelp: () => void;
 }) {
-  const [projectName, setProjectName] = useState("");
-  const [chain, setChain] = useState("Solana");
-  const [contractAddress, setContractAddress] = useState("");
-  const [selectedSignals, setSelectedSignals] = useState<LeakScoreSignalId[]>([]);
+  const [draft, setDraft] = useState<LeakScoreProjectDraft>(() => readLeakScoreDraft());
+  const [shareCopied, setShareCopied] = useState(false);
+  const [shareMessage, setShareMessage] = useState("Draft saves on this device only.");
 
+  const projectName = draft.projectName;
+  const chain = draft.chain;
+  const contractAddress = draft.contractAddress;
+  const selectedSignals = draft.selectedSignals;
   const score = useMemo(() => calculateProjectLeakScore(selectedSignals), [selectedSignals]);
   const selectedSet = useMemo(() => new Set(selectedSignals), [selectedSignals]);
   const selectedLabels = LEAK_SCORE_SIGNALS
     .filter((signal) => selectedSet.has(signal.id))
     .map((signal) => signal.label);
+  const shareText = useMemo(() => buildProjectLeakScoreShareText(draft), [draft]);
+
+  useEffect(() => {
+    writeLeakScoreDraft(draft);
+  }, [draft]);
+
+  function updateDraft(patch: Partial<LeakScoreProjectDraft>) {
+    setShareCopied(false);
+    setDraft((current) => normalizeLeakScoreDraft({
+      ...current,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    }));
+  }
 
   function toggleSignal(id: LeakScoreSignalId) {
     triggerHaptic("light");
-    setSelectedSignals((current) => (
-      current.includes(id)
-        ? current.filter((signalId) => signalId !== id)
-        : [...current, id]
-    ));
+    setShareCopied(false);
+    setDraft((current) => {
+      const selected = current.selectedSignals.includes(id)
+        ? current.selectedSignals.filter((signalId) => signalId !== id)
+        : [...current.selectedSignals, id];
+
+      return normalizeLeakScoreDraft({
+        ...current,
+        selectedSignals: selected,
+        updatedAt: new Date().toISOString(),
+      });
+    });
   }
 
   function clearDraft() {
     triggerHaptic("light");
-    setProjectName("");
-    setChain("Solana");
-    setContractAddress("");
-    setSelectedSignals([]);
+    setShareCopied(false);
+    setShareMessage("Draft cleared locally.");
+    setDraft(normalizeLeakScoreDraft({ chain: "Solana", selectedSignals: [] }));
   }
+
+  async function copyLeakScoreText() {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        setShareCopied(true);
+        setShareMessage("Share text copied. Paste it anywhere you want to discuss the risk signals.");
+        notifyApp("Leak Score copied", "Manual DYOR text copied without public posting.", "info");
+      } else {
+        setShareMessage("Clipboard is blocked here. Select the preview text and copy manually.");
+        notifyApp("Copy blocked", "Select the preview text and copy manually.", "info");
+      }
+    } catch {
+      setShareMessage("Clipboard is blocked here. Select the preview text and copy manually.");
+      notifyApp("Copy blocked", "Select the preview text and copy manually.", "info");
+    }
+  }
+
+  async function shareLeakScoreText() {
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "BROKE Leak Score draft",
+          text: shareText,
+        });
+        setShareMessage("Share sheet opened. Keep the note as DYOR, not an accusation.");
+        return;
+      }
+
+      await copyLeakScoreText();
+    } catch {
+      setShareMessage("Sharing was cancelled or blocked. You can still copy the preview text manually.");
+    }
+  }
+
+  const updatedAtLabel = useMemo(() => {
+    const timestamp = new Date(draft.updatedAt).getTime();
+    if (!Number.isFinite(timestamp)) return "Saved locally";
+
+    return `Saved locally · ${new Date(timestamp).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  }, [draft.updatedAt]);
 
   return (
     <div className="screen leak-score-screen">
@@ -22017,7 +22124,7 @@ function LeakScoreScreen({
       <section className="leak-score-disclaimer">
         <strong>Safety rule</strong>
         <p>
-          This first version is local and educational only. No API calls, no public database, no accusations, no investment advice.
+          This version is local and educational only. Drafts stay on this device. No API calls, no public database, no accusations, no investment advice.
         </p>
       </section>
 
@@ -22026,6 +22133,7 @@ function LeakScoreScreen({
           <div>
             <span>Step 1</span>
             <strong>Project draft</strong>
+            <small>{updatedAtLabel}</small>
           </div>
           <button type="button" onClick={clearDraft}>Clear</button>
         </div>
@@ -22034,14 +22142,14 @@ function LeakScoreScreen({
           <span>Project / token name</span>
           <input
             value={projectName}
-            onChange={(event) => setProjectName(event.target.value)}
+            onChange={(event) => updateDraft({ projectName: event.target.value })}
             placeholder="Example: Smoke Is BROKE"
           />
         </label>
 
         <label className="leak-score-input-line">
           <span>Chain</span>
-          <select value={chain} onChange={(event) => setChain(event.target.value)}>
+          <select value={chain} onChange={(event) => updateDraft({ chain: event.target.value })}>
             <option>Solana</option>
             <option>Ethereum</option>
             <option>Base</option>
@@ -22054,8 +22162,8 @@ function LeakScoreScreen({
           <span>Contract / mint address</span>
           <input
             value={contractAddress}
-            onChange={(event) => setContractAddress(event.target.value)}
-            placeholder="Optional for v59.45.0"
+            onChange={(event) => updateDraft({ contractAddress: event.target.value })}
+            placeholder="Optional local note"
           />
         </label>
       </section>
@@ -22107,11 +22215,30 @@ function LeakScoreScreen({
         </div>
       </section>
 
+      <section className="leak-score-card leak-score-share-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Step 4</span>
+            <strong>Share text</strong>
+          </div>
+          <em>{shareCopied ? "Copied" : "Local"}</em>
+        </div>
+        <p>
+          Copy a neutral DYOR note. It says “leak signals”, not “scam”, and it keeps the result framed as a manual checklist.
+        </p>
+        <textarea readOnly value={shareText} aria-label="Leak Score share text preview" />
+        <div className="leak-score-share-actions">
+          <button type="button" onClick={() => void copyLeakScoreText()}>{shareCopied ? "Copied" : "Copy text"}</button>
+          <button type="button" onClick={() => void shareLeakScoreText()}>Share text</button>
+        </div>
+        <small>{shareMessage}</small>
+      </section>
+
       <section className="leak-score-roadmap-card">
         <span>What comes next</span>
-        <strong>Manual first. Automation later.</strong>
+        <strong>Local draft now. Share card later.</strong>
         <p>
-          v59.45.0 keeps this as a safe concept screen. Later versions can add local drafts, shareable cards, then basic Solana signal fetch.
+          v59.45.1 saves one local Leak Score draft and generates neutral share text. Later versions can add visual share cards, then basic Solana signal fetch.
         </p>
       </section>
     </div>
