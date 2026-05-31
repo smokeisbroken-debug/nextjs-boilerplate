@@ -1,21 +1,24 @@
-# Smoke Is Broke — v59.43.4 Admin Wallet Transaction Helper Extraction
+# Smoke Is Broke — v59.43.5 Admin API Helper Extraction / Response Cleanup
 
-Patch-only release on top of v59.43.3.
+Patch-only release on top of v59.43.4.
 
 ## Summary
 
-v59.43.4 continues the Admin/Rewards extraction work by moving the private Admin browser-wallet transaction helper logic out of `app/page.tsx` into `app/lib/brokeAdminWalletTransactions.ts`.
+v59.43.5 continues the Admin/Rewards extraction work by moving repeated Admin distribution API helper logic out of `app/api/admin/distributions/route.ts` into `app/lib/brokeAdminApi.ts`.
 
-The patch is refactor-only. It does not intentionally change payout logic, reward eligibility, Daily Routine, Active Streak, wallet verification, Supabase schema, public UI behavior, server auto-send flow, or distribution API behavior.
+The patch is refactor-only. It does not intentionally change payout logic, reward eligibility, Daily Routine, Active Streak, wallet verification, Supabase schema, public UI behavior, server auto-send flow, or Admin UI behavior.
 
 ## Changed
 
-- Added `app/lib/brokeAdminWalletTransactions.ts`.
-- Moved Admin Wallet Standard signer helpers from `app/page.tsx` into the shared browser-wallet transaction module.
-- Moved Solana base58, RPC, transaction serialization, SOL transfer, SPL transfer-checked, batch chunking, and sign/send fallback helpers into the transaction module.
-- Added `buildAdminBatchTransactions()` to keep batch construction outside the Admin UI component.
-- Updated Admin build marker to `v59.43.4` through the shared `BROKE_APP_BUILD_VERSION` constant.
-- Kept `app/page.tsx` focused on UI flow: get signer, build transactions, sign/send, record tx signatures.
+- Added `app/lib/brokeAdminApi.ts`.
+- Moved Admin API JSON response wrapper into the helper module.
+- Moved shared no-store response headers into the helper module.
+- Moved required/optional environment variable helpers into the helper module.
+- Moved string/number normalization helpers into the helper module.
+- Moved distribution UUID and transaction signature normalization helpers into the helper module.
+- Added shared Admin distribution error formatting helpers.
+- Updated schema-missing error guidance to mention the v59.43.1 schema repair pack.
+- Updated shared Admin build marker to `v59.43.5` through `BROKE_APP_BUILD_VERSION`.
 
 ## Not changed
 
@@ -26,13 +29,14 @@ The patch is refactor-only. It does not intentionally change payout logic, rewar
 - No Supabase migration.
 - No public user UI behavior change.
 - No server-side payout wallet behavior change.
-- No distribution API behavior change.
+- No distribution API behavior change beyond cleaner response/error formatting.
+- No Admin UI behavior change.
 
 ## Verification
 
-- `npm ci` passed.
 - `npm run typecheck` passed.
 - `npm run lint:quiet` passed.
-- `NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully and finished TypeScript, then timed out during `Collecting page data using 26 workers` in the sandbox. Full build completion was not confirmed here.
+- Targeted TypeScript transpile diagnostics passed for `app/api/admin/distributions/route.ts`, `app/lib/brokeAdminApi.ts`, and `app/lib/brokeAdminRewards.ts`.
 - Raw brace/paren balance passed for changed TS files.
 - Targeted scan found no BigInt literal suffixes in changed TS files.
+- Zip integrity test passed.

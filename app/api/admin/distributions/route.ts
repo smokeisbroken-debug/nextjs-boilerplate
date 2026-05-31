@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import crypto from "crypto";
 import {
-  BROKE_APP_BUILD_VERSION,
   DEFAULT_BROKE_TOKEN_MINT_ADDRESS,
   DEFAULT_TREASURY_WALLET_ADDRESS,
   DEFAULT_USDC_TOKEN_MINT_ADDRESS,
@@ -9,6 +8,17 @@ import {
   SERVER_AUTO_SEND_CONFIRM_PHRASE,
   parseAdminCsv,
 } from "../../../lib/brokeAdminRewards";
+import {
+  adminApiJson as json,
+  cleanAdminString as cleanString,
+  formatAdminError,
+  formatAdminRewardDistributionError,
+  getOptionalAdminEnv as getOptionalEnv,
+  getRequiredAdminEnv as getEnv,
+  normalizeAdminDistributionId as normalizeDistributionId,
+  normalizeAdminTxSignature as normalizeTxSignature,
+  safeAdminNumber as safeNumber,
+} from "../../../lib/brokeAdminApi";
 
 export const runtime = "nodejs";
 
@@ -97,33 +107,6 @@ type PayoutRow = {
 
 const WEB_AUTH_COOKIE = "broke_tg_session";
 const DEFAULT_TREASURY_WALLET = DEFAULT_TREASURY_WALLET_ADDRESS;
-
-function json(data: unknown, status = 200) {
-  const payload = data && typeof data === "object" && !Array.isArray(data)
-    ? { ...(data as Record<string, unknown>), buildVersion: ADMIN_DISTRIBUTION_BUILD_VERSION }
-    : data;
-
-  return NextResponse.json(payload, {
-    status,
-    headers: {
-      "Cache-Control": "no-store, max-age=0",
-    },
-  });
-}
-
-function getEnv(name: string) {
-  const value = process.env[name];
-
-  if (!value) {
-    throw new Error(`Missing environment variable: ${name}`);
-  }
-
-  return value;
-}
-
-function getOptionalEnv(name: string) {
-  return process.env[name] || "";
-}
 
 function getAdminTelegramIds() {
   return parseAdminCsv(
@@ -244,15 +227,6 @@ async function supabaseFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-function safeNumber(value: unknown, fallback = 0) {
-  const parsed = Number(String(value ?? "").replace(/,/g, "."));
-  return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function cleanString(value: unknown, maxLength = 260) {
-  return String(value ?? "").trim().slice(0, maxLength);
-}
-
 function normalizeToken(value: unknown) {
   const token = cleanString(value || "USDC", 24).toUpperCase();
   if (["USDC", "SOL", "$BROKE", "BROKE"].includes(token)) return token === "BROKE" ? "$BROKE" : token;
@@ -292,16 +266,6 @@ function normalizePayouts(input: unknown) {
     .slice(0, 500);
 }
 
-function normalizeDistributionId(value: unknown) {
-  const id = cleanString(value, 80);
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) ? id : "";
-}
-
-function normalizeTxSignature(value: unknown) {
-  const tx = cleanString(value, 140).replace(/^https?:\/\/[^\s/]+\/tx\//i, "");
-  return /^[1-9A-HJ-NP-Za-km-z]{40,120}$/.test(tx) ? tx : "";
-}
-
 function parseManualSendRecords(input: DistributionPatchInput) {
   const explicitRecords = Array.isArray(input.records) ? input.records : [];
   const parsedRecords = explicitRecords.map((record) => ({
@@ -335,7 +299,6 @@ function parseManualSendRecords(input: DistributionPatchInput) {
     .slice(0, 500);
 }
 
-const ADMIN_DISTRIBUTION_BUILD_VERSION = BROKE_APP_BUILD_VERSION;
 const DEFAULT_BROKE_MINT = DEFAULT_BROKE_TOKEN_MINT_ADDRESS;
 const DEFAULT_USDC_MINT = DEFAULT_USDC_TOKEN_MINT_ADDRESS;
 const SERVER_SOLANA_MAINNET_RPC = "https://api.mainnet-beta.solana.com";
@@ -884,10 +847,7 @@ export async function GET(request: NextRequest) {
     return json(
       {
         ok: false,
-        error:
-          error instanceof Error
-            ? `${error.message}. Run the v59.37 reward distribution ledger migration first if the table is missing.`
-            : "Could not load distributions.",
+        error: formatAdminRewardDistributionError(error, "Could not load distributions."),
       },
       500
     );
@@ -1066,12 +1026,7 @@ export async function POST(request: NextRequest) {
     return json(
       {
         ok: false,
-        error:
-          error instanceof Error
-            ? error.message.includes("broke_reward_distributions") || error.message.includes("broke_reward_payouts")
-              ? `${error.message}. Run the v59.37 reward distribution ledger migration first.`
-              : error.message
-            : "Could not save distribution batch.",
+        error: formatAdminRewardDistributionError(error, "Could not save distribution batch."),
       },
       500
     );
@@ -1269,7 +1224,7 @@ export async function PATCH(request: NextRequest) {
     return json(
       {
         ok: false,
-        error: error instanceof Error ? error.message : "Could not update distribution manual send status.",
+        error: formatAdminError(error, "Could not update distribution manual send status."),
       },
       500
     );
