@@ -1,19 +1,21 @@
-# Smoke Is Broke — v59.46.5 Token Data Error States + Empty Mint UX
+# Smoke Is Broke — v59.46.6 Token Data Address Helpers + Paste Cleanup
 
-v59.46.5 hardens the Basic Token Data experience in BROKE Leak Research. Empty mint, unsupported chain, invalid Solana mint, invalid JSON, and source/error states now show clearer local guidance instead of generic failed-fetch behavior. Auto data remains a read-only research snapshot, not a verdict, scam label, or investment recommendation.
+v59.46.6 improves the Basic Token Data input flow in BROKE Leak Research. Users can paste a clean Solana mint, a Solscan/Solana explorer token URL, or text that contains a mint-like address; the app cleans/extracts the address locally before fetch. Auto data remains a read-only research snapshot, not a verdict, scam label, or investment recommendation.
 
 ## Changes
 
-- Added local input-state guidance for Basic Token Data: mint missing, unsupported chain, invalid mint format, and ready-to-fetch.
-- Disabled `Fetch data` and `Force refresh` until the current chain/address can be fetched safely.
-- Added clearer retryable error panel for failed token-data loads: continue manually, fix the mint, or retry/force-refresh later.
-- Hardened `/api/leak-score/token-data` request validation with stable error codes for invalid JSON body, empty contract address, unsupported chain, and invalid Solana mint.
-- Client now maps token-data error codes to safer user-facing copy instead of exposing raw source errors as the main UX.
-- Kept source-health, fetched-at display, 12-second fetch cooldown, 10-minute same-mint cache, Force refresh, Clear cache, and two-step Apply hints controls.
-- Updated shared build marker to `v59.46.5`.
+- Added local paste cleanup for the Leak Research contract/mint field.
+- Auto-trims whitespace, trailing punctuation, invisible zero-width characters, and surrounding quotes.
+- Extracts Solana-format addresses from Solscan/Solana explorer-style token/account URLs and query parameters such as `mint`, `token`, `address`, `contract`, and `ca`.
+- Adds cautious extraction from DEX-style/token URLs with a visible warning that DEX URLs can contain pair addresses and the user should confirm the token mint.
+- Added an inline address helper message explaining what was cleaned or extracted.
+- Server route now also uses the same cleanup helper before validation, so direct requests get the same safer normalization.
+- Kept empty mint, invalid mint, unsupported chain, source-health, fetched-at display, 12-second cooldown, 10-minute same-mint cache, Force refresh, Clear cache, and two-step Apply hints controls.
+- Updated shared build marker to `v59.46.6`.
 
 ## No changes
 
+- No new token-data source.
 - No Supabase persistence.
 - No public project database.
 - No automated scam detection.
@@ -33,7 +35,7 @@ v59.46.5 hardens the Basic Token Data experience in BROKE Leak Research. Empty m
 
 - `npm run typecheck` passed.
 - `npm run lint:quiet` passed.
-- `NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully and finished TypeScript, then timed out during Next.js page-data/static generation in the sandbox, consistent with the existing large monolithic `page.tsx` build-time issue.
+- `NEXT_TELEMETRY_DISABLED=1 npm run build` passed.
 - Targeted brace/paren balance passed for changed files.
 - Targeted scan found no BigInt literal suffixes.
 - Zip integrity test passed.
@@ -42,11 +44,12 @@ v59.46.5 hardens the Basic Token Data experience in BROKE Leak Research. Empty m
 
 1. Open Pro Mode → Leak.
 2. Keep contract/mint empty and confirm Fetch data / Force refresh are disabled with mint-needed guidance.
-3. Paste an invalid value like a ticker, URL, or short text and confirm invalid-mint guidance appears.
-4. Switch chain away from Solana and confirm unsupported-chain guidance appears while manual checklist remains usable.
-5. Paste a valid Solana mint and confirm buttons enable.
-6. Click Fetch data and confirm metric cards/source health still work.
-7. Trigger cache reuse, Force refresh, and Clear cache.
-8. If source fetch fails, confirm the retryable error panel appears.
-9. Confirm two-step Review hints → Confirm apply still works when hints exist.
-10. Test Save PNG / Send to TG bot.
+3. Paste a clean Solana mint with spaces before/after and confirm it is trimmed.
+4. Paste a Solscan token/account URL and confirm the mint-like address is extracted.
+5. Paste text containing a mint-like address and confirm the first Solana-format address is extracted.
+6. Paste a DEX Screener-style Solana URL and confirm the helper warns that DEX URLs may contain pair addresses.
+7. Paste invalid text like `BONK` or a website URL without a mint and confirm invalid-mint guidance appears.
+8. Switch chain away from Solana and confirm unsupported-chain guidance appears while manual checklist remains usable.
+9. Paste a valid Solana mint and confirm Fetch data / Force refresh enable.
+10. Click Fetch data and confirm metric cards/source health still work.
+11. Test cache reuse, Force refresh, Clear cache, Review hints → Confirm apply, Save PNG, and Send to TG bot.

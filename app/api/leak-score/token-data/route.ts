@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { LeakScoreSignalId } from "../../../lib/brokeLeakScore";
 import {
+  cleanupLeakScoreTokenAddressInput,
   getLeakScoreTokenDataSourceHealth,
   isLikelySolanaMintAddress,
   normalizeLeakScoreChainForData,
@@ -90,10 +91,6 @@ function toNumber(value: unknown): number | null {
 function toPositiveNumber(value: unknown): number | null {
   const numeric = toNumber(value);
   return numeric !== null && numeric > 0 ? numeric : null;
-}
-
-function normalizeAddress(value: unknown) {
-  return String(value || "").trim();
 }
 
 function getSolanaRpcUrl() {
@@ -261,7 +258,8 @@ export async function POST(request: NextRequest) {
       contractAddress?: unknown;
     };
     const chain = normalizeLeakScoreChainForData(body.chain);
-    const tokenAddress = normalizeAddress(body.contractAddress);
+    const tokenAddressCleanup = cleanupLeakScoreTokenAddressInput(body.contractAddress);
+    const tokenAddress = tokenAddressCleanup.cleanedAddress;
 
     if (chain !== "Solana") {
       return json({
@@ -283,7 +281,7 @@ export async function POST(request: NextRequest) {
       return json({
         ok: false,
         code: "invalid_solana_mint",
-        error: "Enter a valid Solana mint address before fetching token data.",
+        error: "Enter a valid Solana mint address before fetching token data. Pasted URLs are cleaned only when a mint-like address can be extracted safely.",
       }, 400);
     }
 
@@ -335,7 +333,7 @@ export async function POST(request: NextRequest) {
 
     const sourceHealth = getLeakScoreTokenDataSourceHealth(sources);
 
-    warnings.push("Holder count is not shown in v59.46.5 because reliable total holders require an indexer, not public Solana RPC alone.");
+    warnings.push("Holder count is not shown in v59.46.6 because reliable total holders require an indexer, not public Solana RPC alone.");
     warnings.push("Fetched data is a point-in-time research snapshot. Liquidity, volume, and account concentration can change quickly.");
     if (sourceHealth.sourceHealth === "partial") {
       warnings.push("Source status is partial. Treat automatic hints only as manual research prompts.");

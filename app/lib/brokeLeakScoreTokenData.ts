@@ -91,6 +91,163 @@ export function isLikelySolanaMintAddress(value: unknown) {
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(value || "").trim());
 }
 
+
+export type LeakScoreTokenAddressCleanupResult = {
+  original: string;
+  cleanedAddress: string;
+  changed: boolean;
+  sourceLabel: string;
+  helper: string;
+};
+
+const SOLANA_BASE58_ADDRESS_PATTERN = /[1-9A-HJ-NP-Za-km-z]{32,44}/g;
+const SOLANA_ADDRESS_QUERY_KEYS = new Set([
+  "address",
+  "addr",
+  "mint",
+  "token",
+  "tokenaddress",
+  "contract",
+  "contractaddress",
+  "ca",
+  "inputcurrency",
+  "outputcurrency",
+]);
+
+function stripLeakScoreAddressNoise(value: string) {
+  return value
+    .trim()
+    .replace(/^['"`]+|['"`,;:.]+$/g, "")
+    .replace(/[​-‍﻿]/g, "");
+}
+
+function getFirstValidSolanaAddressCandidate(values: string[]) {
+  for (const value of values) {
+    const candidate = stripLeakScoreAddressNoise(value);
+    if (isLikelySolanaMintAddress(candidate)) return candidate;
+  }
+
+  return "";
+}
+
+export function cleanupLeakScoreTokenAddressInput(value: unknown): LeakScoreTokenAddressCleanupResult {
+  const original = String(value || "");
+  const trimmed = stripLeakScoreAddressNoise(original);
+
+  if (!trimmed) {
+    return {
+      original,
+      cleanedAddress: "",
+      changed: original !== "",
+      sourceLabel: "Empty input",
+      helper: "Paste a Solana mint address, Solscan token URL, or token page URL.",
+    };
+  }
+
+  if (isLikelySolanaMintAddress(trimmed)) {
+    return {
+      original,
+      cleanedAddress: trimmed,
+      changed: trimmed !== original,
+      sourceLabel: trimmed !== original ? "Whitespace cleaned" : "Mint address detected",
+      helper: trimmed !== original ? "Extra spaces or punctuation were removed locally." : "Ready as a Solana-format address. Confirm this is the token mint, not a wallet or pair address.",
+    };
+  }
+
+  const decoded = (() => {
+    try {
+      return decodeURIComponent(trimmed);
+    } catch {
+      return trimmed;
+    }
+  })();
+
+  try {
+    const parsedUrl = new URL(decoded);
+    const queryCandidates: string[] = [];
+    parsedUrl.searchParams.forEach((paramValue, paramKey) => {
+      if (SOLANA_ADDRESS_QUERY_KEYS.has(paramKey.toLowerCase().replace(/[^a-z]/g, ""))) {
+        queryCandidates.push(paramValue);
+      }
+    });
+
+    const queryAddress = getFirstValidSolanaAddressCandidate(queryCandidates);
+    if (queryAddress) {
+      return {
+        original,
+        cleanedAddress: queryAddress,
+        changed: queryAddress !== original,
+        sourceLabel: "Address extracted from URL",
+        helper: "Extracted a mint-like address from the URL query. Confirm it is the token mint before fetching.",
+      };
+    }
+
+    const pathParts = parsedUrl.pathname.split("/").filter(Boolean);
+    const markerCandidates: string[] = [];
+    for (let index = 0; index < pathParts.length; index += 1) {
+      const part = pathParts[index].toLowerCase();
+      if (["token", "address", "account", "mint", "tokens"].includes(part) && pathParts[index + 1]) {
+        markerCandidates.push(pathParts[index + 1]);
+      }
+    }
+
+    const markerAddress = getFirstValidSolanaAddressCandidate(markerCandidates);
+    if (markerAddress) {
+      return {
+        original,
+        cleanedAddress: markerAddress,
+        changed: markerAddress !== original,
+        sourceLabel: "Mint extracted from explorer URL",
+        helper: "Cleaned a Solscan/Solana explorer-style token URL into a mint-like address.",
+      };
+    }
+
+    const pathCandidates = pathParts.flatMap((part) => part.match(SOLANA_BASE58_ADDRESS_PATTERN) || []);
+    const pathAddress = getFirstValidSolanaAddressCandidate(pathCandidates);
+    if (pathAddress) {
+      const isDexLike = parsedUrl.hostname.toLowerCase().includes("dexscreener") || parsedUrl.hostname.toLowerCase().includes("dex");
+      return {
+        original,
+        cleanedAddress: pathAddress,
+        changed: pathAddress !== original,
+        sourceLabel: isDexLike ? "Address extracted from DEX URL" : "Address extracted from URL",
+        helper: isDexLike
+          ? "DEX URLs can contain pair addresses. Confirm the extracted address is the token mint before fetching."
+          : "Extracted a Solana-format address from the pasted URL. Confirm it is the token mint before fetching.",
+      };
+    }
+  } catch {
+    // Not a URL; fall through to plain-text extraction.
+  }
+
+  const textCandidates = decoded.match(SOLANA_BASE58_ADDRESS_PATTERN) || [];
+  const textAddress = getFirstValidSolanaAddressCandidate(textCandidates);
+  if (textAddress) {
+    return {
+      original,
+      cleanedAddress: textAddress,
+      changed: textAddress !== original,
+      sourceLabel: "Address extracted from pasted text",
+      helper: "Removed surrounding text and kept the first Solana-format address. Confirm it is the token mint before fetching.",
+    };
+  }
+
+  return {
+    original,
+    cleanedAddress: trimmed,
+    changed: trimmed !== original,
+    sourceLabel: trimmed !== original ? "Paste cleaned" : "No mint extracted",
+    helper: "No Solana mint-like address could be extracted. Paste the token mint, not a ticker, website, pair label, or wallet name.",
+  };
+}
+
+export function getLeakScoreTokenAddressPasteHelper(value: unknown) {
+  const result = cleanupLeakScoreTokenAddressInput(value);
+  if (!result.cleanedAddress) return result.helper;
+  if (result.changed) return `${result.sourceLabel}: ${result.cleanedAddress.slice(0, 4)}…${result.cleanedAddress.slice(-4)}. ${result.helper}`;
+  return result.helper;
+}
+
 export type LeakScoreTokenDataInputStatus = {
   status: "empty" | "unsupported_chain" | "invalid_mint" | "ready";
   canFetch: boolean;

@@ -29480,6 +29480,18 @@ html.embedded-app-view .hero h1 {
   box-shadow: 0 0 0 3px rgba(167, 255, 41, 0.08);
 }
 
+.leak-score-address-helper {
+  display: block;
+  border-radius: 14px;
+  border: 1px solid rgba(167, 255, 41, 0.16);
+  background: rgba(167, 255, 41, 0.055);
+  color: rgba(238, 255, 224, 0.82);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.4;
+  padding: 8px 10px;
+}
+
 .leak-score-saved-drafts {
   margin-top: 14px;
   border-radius: 20px;

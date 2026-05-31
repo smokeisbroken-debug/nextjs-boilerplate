@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Dispatch, ReactNode, SetStateAction } from "react";
+import type { ClipboardEvent, Dispatch, ReactNode, SetStateAction } from "react";
 import {
   BROKE_APP_BUILD_NOTE,
   BROKE_APP_BUILD_VERSION,
@@ -38,6 +38,7 @@ import {
   LEAK_SCORE_TOKEN_DATA_CACHE_MAX_ENTRIES,
   LEAK_SCORE_TOKEN_DATA_CACHE_TTL_MS,
   buildLeakScoreTokenDataMetricCards,
+  cleanupLeakScoreTokenAddressInput,
   formatLeakScoreFetchedAt,
   formatLeakScorePercent,
   formatLeakScoreTokenDataCacheAge,
@@ -10955,7 +10956,7 @@ function HelpGuideModal({
         {
           title: "Basic token data fetch",
           body: [
-            "v59.46.5 hardens token-data empty and invalid mint states so failed fetches stay clear, local, and retryable.",
+            "v59.46.6 hardens token-data empty and invalid mint states so failed fetches stay clear, local, and retryable.",
             "It can show liquidity, 24h volume, market cap, FDV, pair age, token supply, and top-10 token account concentration when available.",
             "Total holder count is marked as indexer-needed because public Solana RPC alone is not a reliable holder-count source.",
             "Data hints are suggested manual checks, not verdicts. Review and edit them before sharing.",
@@ -22218,6 +22219,7 @@ function LeakScoreScreen({
   const [tokenDataCacheMode, setTokenDataCacheMode] = useState<LeakScoreTokenDataCacheMode>("");
   const [tokenDataCacheMessage, setTokenDataCacheMessage] = useState("");
   const [tokenDataCacheCount, setTokenDataCacheCount] = useState(() => readLeakScoreTokenDataCache().length);
+  const [tokenAddressHelperMessage, setTokenAddressHelperMessage] = useState("Paste a Solana mint, Solscan token URL, or token page URL. The app will clean it locally.");
   const [tokenHintsArmed, setTokenHintsArmed] = useState(false);
   const leakScoreCardRef = useRef<HTMLDivElement | null>(null);
 
@@ -22366,6 +22368,22 @@ function LeakScoreScreen({
     setSavedDrafts(nextDrafts);
     writeLeakScoreSavedDrafts(nextDrafts);
     setShareMessage("Local snapshot deleted from this device.");
+  }
+
+  function applyContractAddressInput(rawValue: string) {
+    const cleanup = cleanupLeakScoreTokenAddressInput(rawValue);
+    updateDraft({ contractAddress: cleanup.cleanedAddress });
+    setTokenAddressHelperMessage(cleanup.changed ? `${cleanup.sourceLabel}. ${cleanup.helper}` : cleanup.helper);
+  }
+
+  function handleContractAddressPaste(event: ClipboardEvent<HTMLInputElement>) {
+    const pasted = event.clipboardData.getData("text");
+    const cleanup = cleanupLeakScoreTokenAddressInput(pasted);
+    if (!cleanup.changed && cleanup.cleanedAddress === pasted.trim()) return;
+
+    event.preventDefault();
+    updateDraft({ contractAddress: cleanup.cleanedAddress });
+    setTokenAddressHelperMessage(`${cleanup.sourceLabel}. ${cleanup.helper}`);
   }
 
   function clearDraft() {
@@ -22724,9 +22742,11 @@ function LeakScoreScreen({
           <span>Contract / mint address</span>
           <input
             value={contractAddress}
-            onChange={(event) => updateDraft({ contractAddress: event.target.value })}
-            placeholder="Solana mint address for basic auto data"
+            onChange={(event) => applyContractAddressInput(event.target.value)}
+            onPaste={handleContractAddressPaste}
+            placeholder="Solana mint, Solscan URL, or token page URL"
           />
+          <small className="leak-score-address-helper">{tokenAddressHelperMessage}</small>
         </label>
 
         <div className="leak-score-token-data-card">
@@ -23038,7 +23058,7 @@ function LeakScoreScreen({
         <span>What comes next</span>
         <strong>Manual research + basic auto data now.</strong>
         <p>
-          v59.46.5 keeps cache controls and safer hint confirmation, while improving empty mint, invalid mint, unsupported chain, and retry/error states. Next step can expand data-source coverage or add wallet behavior checks.
+          v59.46.6 keeps cache controls and safer hint confirmation, while improving empty mint, invalid mint, unsupported chain, and retry/error states. Next step can expand data-source coverage or add wallet behavior checks.
         </p>
       </section>
     </div>
