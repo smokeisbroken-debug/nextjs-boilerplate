@@ -31161,6 +31161,7 @@ html.embedded-app-view .hero h1 {
 }
 
 .wallet-leak-data-warning,
+.wallet-leak-confidence,
 .wallet-leak-data-input-state,
 .wallet-leak-data-summary-row,
 .wallet-leak-source-health,
@@ -31180,6 +31181,7 @@ html.embedded-app-view .hero h1 {
 }
 
 .wallet-leak-data-input-state strong,
+.wallet-leak-confidence strong,
 .wallet-leak-source-health strong,
 .wallet-leak-visible-token-list strong,
 .wallet-leak-data-error strong {
@@ -31189,6 +31191,7 @@ html.embedded-app-view .hero h1 {
 
 .wallet-leak-data-input-state span,
 .wallet-leak-data-error span,
+.wallet-leak-confidence span,
 .wallet-leak-source-health span {
   font-size: 0.78rem;
   line-height: 1.35;
@@ -31196,6 +31199,7 @@ html.embedded-app-view .hero h1 {
 }
 
 .wallet-leak-data-input-state-ready,
+.wallet-leak-confidence-ready,
 .wallet-leak-source-health-complete {
   border-color: rgba(43, 245, 162, 0.26);
   background: rgba(43, 245, 162, 0.07);
@@ -31203,11 +31207,13 @@ html.embedded-app-view .hero h1 {
 
 .wallet-leak-data-input-state-invalid_wallet,
 .wallet-leak-data-error,
+.wallet-leak-confidence-pending,
 .wallet-leak-source-health-limited {
   border-color: rgba(255, 118, 118, 0.24);
   background: rgba(255, 118, 118, 0.07);
 }
 
+.wallet-leak-confidence-caution,
 .wallet-leak-source-health-partial {
   border-color: rgba(255, 217, 97, 0.28);
   background: rgba(255, 217, 97, 0.07);
@@ -31290,6 +31296,20 @@ html.embedded-app-view .hero h1 {
   color: rgba(235, 255, 247, 0.66);
   font-size: 0.72rem;
   line-height: 1.35;
+}
+
+
+.wallet-leak-source-detail-ready {
+  border-color: rgba(43, 245, 162, 0.18);
+}
+
+.wallet-leak-source-detail-caution {
+  border-color: rgba(255, 217, 97, 0.22);
+}
+
+.wallet-leak-source-detail-pending {
+  border-color: rgba(255, 255, 255, 0.08);
+  opacity: 0.86;
 }
 
 .wallet-leak-data-metric-caution {

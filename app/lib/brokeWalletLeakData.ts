@@ -1,4 +1,8 @@
 export const WALLET_LEAK_BASIC_DATA_ROUTE = "/api/leak-score/wallet-data";
+export const WALLET_LEAK_DATA_CACHE_KEY = "broke-wallet-leak-data-cache-v1";
+export const WALLET_LEAK_DATA_CACHE_TTL_MS = 5 * 60 * 1000;
+export const WALLET_LEAK_DATA_CACHE_MAX_ENTRIES = 10;
+
 
 export type WalletLeakDataSourceHealth = "complete" | "partial" | "limited";
 
@@ -40,6 +44,22 @@ export type WalletLeakBasicDataResponse = {
   code?: string;
   error?: string;
   data?: WalletLeakBasicData;
+};
+
+export type WalletLeakDataCacheEntry = {
+  cacheKey: string;
+  cachedAt: string;
+  data: WalletLeakBasicData;
+};
+
+export type WalletLeakDataFreshnessMode = "idle" | "live" | "cache" | "force";
+
+export type WalletLeakDataSourceDetail = {
+  id: string;
+  label: string;
+  status: string;
+  helper: string;
+  tone: "ready" | "caution" | "pending";
 };
 
 export type WalletLeakDataInputStatus = {
@@ -252,6 +272,145 @@ export function getWalletLeakDataSourceHealth(sources: WalletLeakDataSource[]): 
     sourceHealthLabel: "Limited context",
     sourceHealthHelper: "Public Solana RPC did not provide usable wallet context for this snapshot.",
   };
+}
+
+
+export function getWalletLeakDataCacheKey(walletAddress: unknown) {
+  const cleaned = cleanupWalletLeakAddressInput(walletAddress).cleanedAddress;
+  return `solana:${cleaned.toLowerCase()}`;
+}
+
+export function normalizeWalletLeakDataCacheEntries(value: unknown): WalletLeakDataCacheEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((entry): WalletLeakDataCacheEntry | null => {
+      if (!entry || typeof entry !== "object") return null;
+      const record = entry as Partial<WalletLeakDataCacheEntry>;
+      const data = record.data as WalletLeakBasicData | undefined;
+      const cacheKey = String(record.cacheKey || "").trim();
+      const cachedAt = String(record.cachedAt || "").trim();
+      if (!cacheKey || !cachedAt || !data || data.chain !== "Solana" || !isLikelySolanaWalletAddress(data.walletAddress)) return null;
+      const cachedAtTime = new Date(cachedAt).getTime();
+      if (!Number.isFinite(cachedAtTime)) return null;
+      return {
+        cacheKey,
+        cachedAt: new Date(cachedAtTime).toISOString(),
+        data,
+      };
+    })
+    .filter((entry): entry is WalletLeakDataCacheEntry => Boolean(entry))
+    .sort((a, b) => new Date(b.cachedAt).getTime() - new Date(a.cachedAt).getTime())
+    .slice(0, WALLET_LEAK_DATA_CACHE_MAX_ENTRIES);
+}
+
+export function isWalletLeakDataCacheFresh(entry: WalletLeakDataCacheEntry) {
+  const cachedAtTime = new Date(entry.cachedAt).getTime();
+  return Number.isFinite(cachedAtTime) && Date.now() - cachedAtTime < WALLET_LEAK_DATA_CACHE_TTL_MS;
+}
+
+export function formatWalletLeakDataCacheAge(cachedAt: unknown) {
+  const timestamp = new Date(String(cachedAt || "")).getTime();
+  if (!Number.isFinite(timestamp)) return "cached earlier";
+  const ageMs = Math.max(0, Date.now() - timestamp);
+  const ageMinutes = Math.floor(ageMs / 60000);
+  if (ageMinutes < 1) return "cached just now";
+  if (ageMinutes === 1) return "cached 1m ago";
+  return `cached ${ageMinutes}m ago`;
+}
+
+export function formatWalletLeakDataFreshness(data: WalletLeakBasicData | null, mode: WalletLeakDataFreshnessMode, cachedAt?: unknown) {
+  if (!data) return "No wallet data loaded";
+  if (mode === "cache") return `Cached snapshot · ${formatWalletLeakDataCacheAge(cachedAt || data.fetchedAt)}`;
+  if (mode === "force") return "Force refresh snapshot · live public RPC";
+  if (mode === "live") return "Live snapshot · public Solana RPC";
+  return "Source snapshot · public Solana RPC";
+}
+
+export function getWalletLeakDataConfidence(data: WalletLeakBasicData | null) {
+  if (!data) {
+    return {
+      label: "No context",
+      helper: "Paste a public wallet address to fetch a basic read-only context snapshot.",
+      tone: "pending" as const,
+    };
+  }
+
+  if (data.sourceHealth === "complete") {
+    return {
+      label: "Good context",
+      helper: "SOL balance and SPL token-account context loaded. This is still not transaction history or behavior proof.",
+      tone: "ready" as const,
+    };
+  }
+
+  if (data.sourceHealth === "partial") {
+    return {
+      label: "Partial context",
+      helper: "Some public wallet context loaded, but at least one RPC path was limited. Keep the manual self-check primary.",
+      tone: "caution" as const,
+    };
+  }
+
+  return {
+    label: "Limited context",
+    helper: "Automatic wallet context is limited. Continue with manual wallet behavior signals only.",
+    tone: "pending" as const,
+  };
+}
+
+export function buildWalletLeakDataSourceDetails(data: WalletLeakBasicData | null): WalletLeakDataSourceDetail[] {
+  if (!data) {
+    return [
+      {
+        id: "not_loaded",
+        label: "Wallet data",
+        status: "Not loaded",
+        helper: "No public wallet data has been fetched for this local self-check yet.",
+        tone: "pending",
+      },
+    ];
+  }
+
+  const balanceSource = data.sources.find((source) => source.id === "solana_balance");
+  const tokenSource = data.sources.find((source) => source.id === "solana_token_accounts");
+
+  return [
+    {
+      id: "balance",
+      label: "Solana RPC balance",
+      status: balanceSource?.ok ? "Connected" : "Limited",
+      helper: balanceSource?.helper || "SOL balance source status unavailable.",
+      tone: balanceSource?.ok ? "ready" : "caution",
+    },
+    {
+      id: "token_accounts",
+      label: "SPL token accounts",
+      status: tokenSource?.ok ? "Connected" : "Limited",
+      helper: tokenSource?.helper || "Token-account source status unavailable.",
+      tone: tokenSource?.ok ? "ready" : "caution",
+    },
+    {
+      id: "nonzero",
+      label: "Visible token exposure",
+      status: data.nonZeroTokenAccountsCount === null ? "Unavailable" : `${data.nonZeroTokenAccountsCount} non-zero`,
+      helper: "Counts visible non-zero SPL token accounts only. It does not show buys, sells, timing, or PnL.",
+      tone: data.nonZeroTokenAccountsCount === null ? "pending" : "ready",
+    },
+    {
+      id: "broke",
+      label: "$BROKE visibility",
+      status: data.brokeTokenAccountFound ? "Visible" : "Not found",
+      helper: "Checks only the configured $BROKE mint in visible SPL token accounts for this snapshot.",
+      tone: data.brokeTokenAccountFound ? "ready" : "caution",
+    },
+    {
+      id: "limits",
+      label: "Known limitation",
+      status: "No behavior proof",
+      helper: "This snapshot does not include transaction history, realized profit/loss, entry timing, or project quality scoring.",
+      tone: "pending",
+    },
+  ];
 }
 
 export function getWalletLeakDataErrorCopy(code: string | undefined, fallback: string | undefined) {
