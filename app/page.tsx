@@ -4795,20 +4795,23 @@ const defaultBadges: BadgeItem[] = [
   },
 ];
 
+const LEAK_HUB_TABS: Tab[] = ["check", "leakscore", "walletleak", "compare"];
+
 const navItems: {
   id: Tab;
   label: string;
   icon: string;
   proOnly?: boolean;
+  hubOnly?: boolean;
 }[] = [
   { id: "home", label: "Home", icon: "/nav-home.png" },
   { id: "check", label: "Check", icon: "/nav-chart.png" },
   { id: "add", label: "Add", icon: "/nav-add.png" },
   { id: "chart", label: "Chart", icon: "/nav-chart.png" },
   { id: "growth", label: "Growth", icon: "/nav-growth.png", proOnly: true },
-  { id: "leakscore", label: "Project", icon: "/nav-chart.png", proOnly: true },
-  { id: "walletleak", label: "Wallet", icon: "/nav-save.png", proOnly: true },
-  { id: "compare", label: "Vs", icon: "/nav-chart.png", proOnly: true },
+  { id: "leakscore", label: "Project", icon: "/nav-chart.png", proOnly: true, hubOnly: true },
+  { id: "walletleak", label: "Wallet", icon: "/nav-save.png", proOnly: true, hubOnly: true },
+  { id: "compare", label: "Vs", icon: "/nav-chart.png", proOnly: true, hubOnly: true },
   { id: "whatif", label: "Rewards", icon: "/nav-save.png", proOnly: true },
   { id: "settings", label: "Profile", icon: "/nav-settings.png" },
 ];
@@ -22747,6 +22750,38 @@ function UniversalLeakCheckScreen({
         </p>
       </div>
 
+      <div className="universal-check-hub-card">
+        <div className="section-title-row">
+          <div>
+            <span>Leak Hub</span>
+            <h3>All leak tools now live under Check</h3>
+          </div>
+          <em>Bottom nav stays cleaner</em>
+        </div>
+        <div className="universal-check-tool-grid">
+          <button type="button" className="active" onClick={() => document.getElementById("universal-leak-input")?.focus()}>
+            <span>Auto</span>
+            <strong>Universal Check</strong>
+            <small>Paste token, wallet, URL, or text with an address.</small>
+          </button>
+          <button type="button" onClick={onOpenTokenResearch}>
+            <span>Token</span>
+            <strong>Project Research</strong>
+            <small>Manual project notes, saved drafts, token-data hints.</small>
+          </button>
+          <button type="button" onClick={onOpenWalletReview}>
+            <span>Wallet</span>
+            <strong>Wallet Review</strong>
+            <small>Manual wallet behavior check plus public wallet context.</small>
+          </button>
+          <button type="button" onClick={onOpenCompare}>
+            <span>Compare</span>
+            <strong>Project vs Project</strong>
+            <small>Compare two local research drafts before buying.</small>
+          </button>
+        </div>
+      </div>
+
       <div className="universal-check-input-card">
         <label htmlFor="universal-leak-input">Token / wallet / URL</label>
         <textarea
@@ -29137,12 +29172,17 @@ function BottomNav({
   setActiveTab: (tab: Tab) => void;
   appMode: AppMode;
 }) {
-  const visibleItems = appMode === "standard"
+  const visibleItems = (appMode === "standard"
     ? navItems.filter((item) => !item.proOnly)
-    : navItems;
+    : navItems
+  ).filter((item) => !item.hubOnly);
+  const activeNavTab = LEAK_HUB_TABS.includes(activeTab) ? "check" : activeTab;
 
   return (
-    <nav className={`bottom-nav ${appMode === "standard" ? "standard-mode-nav" : "pro-mode-nav"}`}>
+    <nav
+      className={`bottom-nav ${appMode === "standard" ? "standard-mode-nav" : "pro-mode-nav"}`}
+      style={{ gridTemplateColumns: `repeat(${visibleItems.length}, minmax(0, 1fr))` }}
+    >
       {visibleItems.map((item) => (
         <button
           key={item.id}
@@ -29152,7 +29192,7 @@ function BottomNav({
             if (item.id === "whatif") markDailyRoutineAction("checkedSave");
             setActiveTab(item.id);
           }}
-          className={activeTab === item.id ? "active" : ""}
+          className={activeNavTab === item.id ? "active" : ""}
         >
           <img src={item.icon} alt="" />
           <span>{item.label}</span>

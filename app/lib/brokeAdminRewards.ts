@@ -1,4 +1,4 @@
-export const BROKE_APP_BUILD_VERSION = "v59.50.2";
+export const BROKE_APP_BUILD_VERSION = "v59.50.3";
 
 export const BROKE_APP_BUILD_NOTE =
   "Wallet Auto Signal Engine";
