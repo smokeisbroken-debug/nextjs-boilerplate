@@ -10248,7 +10248,11 @@ export default function Home() {
         )}
 
         {loaded && onboardingCompleted && activeTab === "leakscore" && (
-          <LeakScoreScreen onBack={goHome} onHelp={openHelp} />
+          <LeakScoreScreen
+            shareInitData={telegram.isTelegram ? telegram.initData : ""}
+            onBack={goHome}
+            onHelp={openHelp}
+          />
         )}
 
         {loaded && onboardingCompleted && activeTab === "whatif" && (
@@ -22000,9 +22004,11 @@ function writeLeakScoreDraft(draft: LeakScoreProjectDraft) {
 
 
 function LeakScoreScreen({
+  shareInitData,
   onBack,
   onHelp,
 }: {
+  shareInitData: string;
   onBack: () => void;
   onHelp: () => void;
 }) {
@@ -22121,6 +22127,35 @@ function LeakScoreScreen({
     } catch {
       setShareMessage("Card sharing is blocked or was cancelled. Try copying the text instead.");
       notifyApp("Card share blocked", "Try copying the Leak Score text instead.", "info");
+    } finally {
+      setCardSharing(false);
+    }
+  }
+
+  async function sendLeakScoreCardToBot() {
+    if (cardSharing) return;
+
+    let imageFile: File | null = null;
+
+    try {
+      triggerHaptic("light");
+      setCardSharing(true);
+      imageFile = await createLeakScoreCardFile();
+
+      if (!shareInitData) {
+        downloadImageFile(imageFile);
+        setShareMessage("Open inside Telegram to send the Leak Score card to the bot. The PNG was saved locally instead.");
+        notifyApp("Telegram needed", "Open inside Telegram to send the Leak Score card to the bot.", "info");
+        return;
+      }
+
+      await sendShareImageViaBot(imageFile, shareInitData, shareText);
+      setShareMessage("Leak Score card was sent to your Telegram bot chat. Open the bot and forward it anywhere.");
+      notifyApp("Sent to Telegram bot", "Leak Score card delivered to your bot chat.", "info");
+    } catch {
+      if (imageFile) downloadImageFile(imageFile);
+      setShareMessage("Bot delivery failed. The Leak Score card was saved as a PNG fallback.");
+      notifyApp("Bot delivery failed", "PNG fallback saved locally.", "info");
     } finally {
       setCardSharing(false);
     }
@@ -22319,9 +22354,12 @@ function LeakScoreScreen({
         <p>
           Export a clean visual card. The card is generated locally from this screen and keeps the same neutral DYOR framing.
         </p>
-        <div className="leak-score-share-actions">
+        <div className="leak-score-share-actions leak-score-card-actions">
+          <button type="button" onClick={() => void sendLeakScoreCardToBot()} disabled={cardSharing}>
+            {cardSharing ? "Preparing..." : "Send to TG bot"}
+          </button>
           <button type="button" onClick={() => void shareLeakScoreCard()} disabled={cardSharing}>
-            {cardSharing ? "Preparing..." : "Share card"}
+            Share card
           </button>
           <button type="button" onClick={() => void downloadLeakScoreCard()} disabled={cardSharing}>
             Save PNG
@@ -22352,7 +22390,7 @@ function LeakScoreScreen({
         <span>What comes next</span>
         <strong>Share card now. Signal fetch later.</strong>
         <p>
-          v59.45.2 adds a local PNG card export for Leak Score drafts. Later versions can add basic Solana signal fetch while staying neutral and educational.
+          v59.45.3 polishes the mobile card fit and adds Telegram bot delivery for the PNG. Later versions can add basic Solana signal fetch while staying neutral and educational.
         </p>
       </section>
     </div>
