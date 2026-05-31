@@ -35,9 +35,11 @@ import {
 import {
   LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE,
   formatLeakScoreAgeDays,
+  formatLeakScoreFetchedAt,
   formatLeakScoreNumber,
   formatLeakScorePercent,
   formatLeakScoreUsd,
+  isLeakScoreTokenDataLimited,
   summarizeLeakScoreTokenData,
   type LeakScoreBasicTokenData,
   type LeakScoreTokenDataResponse,
@@ -10945,7 +10947,7 @@ function HelpGuideModal({
         {
           title: "Basic token data fetch",
           body: [
-            "v59.46.0 can fetch read-only Solana token context from DEX pair data and Solana RPC.",
+            "v59.46.1 shows source health, fetched-at status, and safer partial-data warnings for read-only Solana token context.",
             "It can show liquidity, 24h volume, market cap, FDV, pair age, token supply, and top-10 token account concentration when available.",
             "Total holder count is marked as indexer-needed because public Solana RPC alone is not a reliable holder-count source.",
             "Data hints are suggested manual checks, not verdicts. Review and edit them before sharing.",
@@ -22005,6 +22007,7 @@ function HomeHabitLeaksPanel({
 const LEAK_SCORE_DRAFT_KEY = "broke-leak-score-local-draft-v1";
 const LEAK_SCORE_SAVED_DRAFTS_KEY = "broke-leak-score-saved-drafts-v1";
 const LEAK_SCORE_MAX_SAVED_DRAFTS = 5;
+const LEAK_SCORE_TOKEN_DATA_FETCH_COOLDOWN_MS = 12000;
 
 type LeakScoreSavedDraft = LeakScoreProjectDraft & {
   id: string;
@@ -22122,6 +22125,7 @@ function LeakScoreScreen({
   const [tokenDataLoading, setTokenDataLoading] = useState(false);
   const [tokenData, setTokenData] = useState<LeakScoreBasicTokenData | null>(null);
   const [tokenDataError, setTokenDataError] = useState("");
+  const [tokenDataLastFetchAt, setTokenDataLastFetchAt] = useState(0);
   const leakScoreCardRef = useRef<HTMLDivElement | null>(null);
 
   const projectName = draft.projectName;
@@ -22138,6 +22142,8 @@ function LeakScoreScreen({
   const researchStatus = useMemo(() => buildProjectLeakScoreResearchStatus(draft), [draft]);
   const shareText = useMemo(() => buildProjectLeakScoreShareText(draft), [draft]);
   const tokenDataSummary = useMemo(() => summarizeLeakScoreTokenData(tokenData), [tokenData]);
+  const tokenDataFetchedAtLabel = useMemo(() => formatLeakScoreFetchedAt(tokenData?.fetchedAt), [tokenData?.fetchedAt]);
+  const tokenDataLimited = isLeakScoreTokenDataLimited(tokenData);
   const tokenDataMatchesDraft = Boolean(
     tokenData
       && tokenData.chain === chain
@@ -22247,8 +22253,19 @@ function LeakScoreScreen({
       return;
     }
 
+    const now = Date.now();
+    const cooldownRemainingMs = LEAK_SCORE_TOKEN_DATA_FETCH_COOLDOWN_MS - (now - tokenDataLastFetchAt);
+    if (cooldownRemainingMs > 0) {
+      const seconds = Math.ceil(cooldownRemainingMs / 1000);
+      const message = `Wait ${seconds}s before re-fetching. Token data sources can rate-limit fast repeats.`;
+      setTokenDataError(message);
+      setShareMessage(message);
+      return;
+    }
+
     try {
       triggerHaptic("light");
+      setTokenDataLastFetchAt(now);
       setTokenDataLoading(true);
       setTokenDataError("");
       const response = await fetch(LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE, {
@@ -22265,8 +22282,8 @@ function LeakScoreScreen({
       }
 
       setTokenData(payload.data);
-      setShareMessage("Basic token data fetched. Review the data manually before applying any suggested checks.");
-      notifyApp("Token data fetched", "Basic read-only data added to the Leak Research draft.", "info");
+      setShareMessage(`${payload.data.sourceHealthLabel}. Review the data manually before applying any suggested checks.`);
+      notifyApp("Token data fetched", payload.data.sourceHealthLabel, "info");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Basic token data fetch failed.";
       setTokenData(null);
@@ -22279,7 +22296,7 @@ function LeakScoreScreen({
   }
 
   function applyTokenDataHints() {
-    if (!tokenData?.suggestedSignals.length) return;
+    if (!tokenData?.suggestedSignals.length || tokenDataLimited) return;
 
     triggerHaptic("light");
     setShareCopied(false);
@@ -22531,10 +22548,12 @@ function LeakScoreScreen({
 
           {tokenData && tokenDataMatchesDraft ? (
             <div className="leak-score-token-data-body">
-              <div className="leak-score-token-data-summary">
-                <span>Auto data summary</span>
+              <div className={`leak-score-token-data-summary leak-score-token-data-summary-${tokenData.sourceHealth}`}>
+                <span>Auto data summary · {tokenData.sourceHealthLabel}</span>
                 <strong>{tokenData.tokenName || tokenData.tokenSymbol || "Token data fetched"}</strong>
                 <small>{tokenDataSummary}</small>
+                <em>{tokenDataFetchedAtLabel}</em>
+                <small>{tokenData.sourceHealthHelper}</small>
               </div>
               <div className="leak-score-token-data-grid">
                 <article>
@@ -22587,7 +22606,7 @@ function LeakScoreScreen({
                     <strong>Suggested manual checks</strong>
                     <small>Data hints are not verdicts. Apply only if they match your research.</small>
                   </div>
-                  <button type="button" onClick={applyTokenDataHints}>Apply hints</button>
+                  <button type="button" onClick={applyTokenDataHints} disabled={tokenDataLimited}>Apply hints</button>
                 </div>
               ) : (
                 <p>No automatic manual-check hints were triggered by the fetched data.</p>
@@ -22806,7 +22825,7 @@ function LeakScoreScreen({
         <span>What comes next</span>
         <strong>Manual research + basic auto data now.</strong>
         <p>
-          v59.46.0 adds read-only basic token data fetch. Next step can improve data-source coverage or add wallet behavior checks.
+          v59.46.1 hardens basic token data with source health, fetched-at status, and safer partial-data handling. Next step can expand data-source coverage or add wallet behavior checks.
         </p>
       </section>
     </div>

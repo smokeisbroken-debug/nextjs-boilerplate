@@ -1,7 +1,7 @@
-export const BROKE_APP_BUILD_VERSION = "v59.46.0";
+export const BROKE_APP_BUILD_VERSION = "v59.46.1";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Leak Score basic token data fetch with DEX pair data and Solana RPC supply / largest-account checks; no Supabase or payout changes.";
+  "Leak Score token data safety layer with source health, fetched-at status, cooldown guard, and safer partial-data wording; no Supabase or payout changes.";
 
 export const DEFAULT_TREASURY_WALLET_ADDRESS = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
 export const DEFAULT_BROKE_TOKEN_MINT_ADDRESS = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";

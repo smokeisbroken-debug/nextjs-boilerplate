@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { LeakScoreSignalId } from "../../../lib/brokeLeakScore";
 import {
+  getLeakScoreTokenDataSourceHealth,
   isLikelySolanaMintAddress,
   normalizeLeakScoreChainForData,
   type LeakScoreBasicTokenData,
@@ -315,9 +316,21 @@ export async function POST(request: NextRequest) {
       warnings.push("Solana RPC supply / largest-account data could not be fetched right now.");
     }
 
-    warnings.push("Holder count is not shown in v59.46.0 because reliable total holders require an indexer, not public Solana RPC alone.");
+    const sourceHealth = getLeakScoreTokenDataSourceHealth(sources);
 
-    const suggestions = buildSuggestedSignals({
+    warnings.push("Holder count is not shown in v59.46.1 because reliable total holders require an indexer, not public Solana RPC alone.");
+    warnings.push("Fetched data is a point-in-time research snapshot. Liquidity, volume, and account concentration can change quickly.");
+    if (sourceHealth.sourceHealth === "partial") {
+      warnings.push("Source status is partial. Treat automatic hints only as manual research prompts.");
+    }
+    if (sourceHealth.sourceHealth === "limited") {
+      warnings.push("Automatic sources are limited for this mint right now. Do not use this fetch as a decision basis.");
+    }
+
+    const suggestions = sourceHealth.sourceHealth === "limited" ? {
+      suggestedSignals: [],
+      suggestedSignalNotes: {},
+    } : buildSuggestedSignals({
       pair: dexData?.pair || null,
       top10ConcentrationPercent: rpcData.top10ConcentrationPercent,
     });
@@ -338,6 +351,9 @@ export async function POST(request: NextRequest) {
       suggestedSignalNotes: suggestions.suggestedSignalNotes,
       warnings,
       sources,
+      sourceHealth: sourceHealth.sourceHealth,
+      sourceHealthLabel: sourceHealth.sourceHealthLabel,
+      sourceHealthHelper: sourceHealth.sourceHealthHelper,
     };
 
     return json({ ok: true, data });

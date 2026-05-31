@@ -3,6 +3,7 @@ import type { LeakScoreSignalId } from "./brokeLeakScore";
 export const LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE = "/api/leak-score/token-data";
 
 export type LeakScoreTokenDataSourceId = "dexscreener" | "solana_rpc";
+export type LeakScoreTokenDataSourceHealth = "complete" | "partial" | "limited";
 
 export type LeakScoreTokenDataSource = {
   id: LeakScoreTokenDataSourceId;
@@ -40,6 +41,9 @@ export type LeakScoreBasicTokenData = {
   suggestedSignalNotes: Partial<Record<LeakScoreSignalId, string>>;
   warnings: string[];
   sources: LeakScoreTokenDataSource[];
+  sourceHealth: LeakScoreTokenDataSourceHealth;
+  sourceHealthLabel: string;
+  sourceHealthHelper: string;
 };
 
 export type LeakScoreTokenDataResponse = {
@@ -106,4 +110,48 @@ export function summarizeLeakScoreTokenData(data: LeakScoreBasicTokenData | null
   ];
 
   return pieces.join(" · ");
+}
+
+
+export function getLeakScoreTokenDataSourceHealth(sources: LeakScoreTokenDataSource[]) {
+  const okCount = sources.filter((source) => source.ok).length;
+  const total = sources.length || 2;
+
+  if (okCount >= total && total > 0) {
+    return {
+      sourceHealth: "complete" as const,
+      sourceHealthLabel: "Sources complete",
+      sourceHealthHelper: "DEX pair data and Solana RPC account data both responded. Still treat this as a point-in-time research snapshot.",
+    };
+  }
+
+  if (okCount > 0) {
+    return {
+      sourceHealth: "partial" as const,
+      sourceHealthLabel: "Partial source data",
+      sourceHealthHelper: "At least one source responded, but the automatic context is incomplete. Use it only as a manual research prompt.",
+    };
+  }
+
+  return {
+    sourceHealth: "limited" as const,
+    sourceHealthLabel: "Sources limited",
+    sourceHealthHelper: "Automatic sources did not return usable data. Do not apply leak-signal hints from this fetch.",
+  };
+}
+
+export function formatLeakScoreFetchedAt(value: string | null | undefined) {
+  const timestamp = new Date(String(value || "")).getTime();
+  if (!Number.isFinite(timestamp)) return "Fetch time unavailable";
+
+  return `Fetched ${new Date(timestamp).toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+}
+
+export function isLeakScoreTokenDataLimited(data: LeakScoreBasicTokenData | null | undefined) {
+  return !data || data.sourceHealth === "limited";
 }
