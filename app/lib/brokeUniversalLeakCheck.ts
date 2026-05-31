@@ -145,18 +145,18 @@ function buildDecisionSummary(kind: UniversalLeakCheckKind, pressure: number, da
   if (dangerousLeaks.some((item) => item.riskLevel === "danger")) {
     return kind === "token"
       ? "The automatic token check found one or more dangerous leak patterns. Treat this as a stop-and-verify result before any buy decision."
-      : "The automatic wallet check found a high-pressure public-context pattern. Treat this as a review prompt, not a wallet judgment.";
+      : "The automatic wallet check found a high-pressure public-context pattern. Treat this as a wallet hygiene review prompt, not a wallet judgment.";
   }
 
   if (pressure >= 40 || dangerousLeaks.length) {
     return kind === "token"
       ? "The token has visible caution signals. It may still be legitimate, but the leak-risk context needs manual confirmation."
-      : "The wallet snapshot has caution signals. Use them as cleanup/review prompts only.";
+      : "The wallet snapshot has caution signals around gas runway, exposure breadth, account clutter, or source limits. Use them as cleanup/review prompts only.";
   }
 
   return kind === "token"
     ? "No major automatic token leak was visible from the available snapshot. This does not make the project safe; it only means the basic auto-check did not find a strong red flag."
-    : "No major wallet-context leak was visible from the available public snapshot. This does not show PnL, timing, or intent.";
+    : "No major wallet-context leak was visible from the available public snapshot. This does not show PnL, trade timing, token quality, or intent.";
 }
 
 function getFirstSolanaAddress(value: string) {
@@ -567,26 +567,55 @@ function buildTokenDangerExplanations(data: LeakScoreBasicTokenData, signals: Un
 function buildWalletDangerExplanations(data: WalletLeakBasicData, signals: UniversalLeakSignal[]): UniversalLeakDanger[] {
   const ids = new Set(signals.map((signal) => signal.id));
   const leaks: UniversalLeakDanger[] = [];
-
-  if (ids.has("very_wide_token_exposure") || ids.has("heavy_token_exposure")) {
-    leaks.push({
-      id: "exposure_sprawl_leak",
-      title: "Exposure-sprawl leak",
-      riskLevel: ids.has("very_wide_token_exposure") ? "danger" : "caution",
-      plain: `${data.nonZeroTokenAccountsCount ?? "Many"} non-zero SPL token accounts are visible.`,
-      whyDangerous: "Wide exposure can hide forgotten bags, dust positions, and impulse entries. It does not prove losses, but it can make review harder.",
-      checkNext: "Review which positions are intentional, stale, dead, or too small to matter before adding new exposure.",
-    });
-  }
+  const totalAccounts = data.tokenAccountsCount;
+  const nonZeroAccounts = data.nonZeroTokenAccountsCount;
+  const emptyAccounts = totalAccounts !== null && nonZeroAccounts !== null
+    ? Math.max(0, totalAccounts - nonZeroAccounts)
+    : null;
 
   if (ids.has("critical_gas_runway") || ids.has("low_gas_runway")) {
     leaks.push({
       id: "gas_runway_leak",
       title: "Gas-runway leak",
       riskLevel: ids.has("critical_gas_runway") ? "caution" : "watch",
-      plain: `SOL balance is ${formatWalletLeakSol(data.solBalance)}.`,
-      whyDangerous: "Low gas can force rushed top-ups, failed transactions, or inability to act when the wallet owner actually needs to move.",
-      checkNext: "Keep enough SOL for deliberate actions and avoid making decisions only because the wallet is blocked by gas friction.",
+      plain: `SOL balance is ${formatWalletLeakSol(data.solBalance)} for this public wallet snapshot.`,
+      whyDangerous: "Low gas does not prove bad behavior, but it can block calm exits, cleanup, swaps, or transfers and push the owner into rushed top-ups.",
+      checkNext: "Keep enough SOL for deliberate actions before entering new positions, closing accounts, or trying to move during volatility.",
+    });
+  }
+
+  if (ids.has("very_wide_token_exposure") || ids.has("heavy_token_exposure") || ids.has("wide_token_exposure")) {
+    leaks.push({
+      id: "exposure_spread_leak",
+      title: "Exposure-spread leak",
+      riskLevel: ids.has("very_wide_token_exposure") ? "danger" : ids.has("heavy_token_exposure") ? "caution" : "watch",
+      plain: `${nonZeroAccounts ?? "Multiple"} non-zero SPL token account${nonZeroAccounts === 1 ? "" : "s"} are visible.`,
+      whyDangerous: "Wide exposure can hide old bags, dust positions, impulsive entries, and tokens the wallet owner no longer actively tracks. It is a review signal, not PnL.",
+      checkNext: "Separate intentional holds from stale, dead, tiny, or unknown positions before adding more exposure.",
+    });
+  }
+
+  if (ids.has("high_token_account_clutter") || ids.has("empty_token_account_clutter")) {
+    leaks.push({
+      id: "dust_clutter_leak",
+      title: "Dust-clutter leak",
+      riskLevel: ids.has("high_token_account_clutter") ? "caution" : "watch",
+      plain: emptyAccounts !== null
+        ? `${totalAccounts ?? "Many"} SPL token accounts are visible, with about ${emptyAccounts} empty account${emptyAccounts === 1 ? "" : "s"}.`
+        : `${totalAccounts ?? "Many"} SPL token accounts are visible for this wallet.`,
+      whyDangerous: "Token-account clutter can make a wallet look active while much of the activity is leftover dust or abandoned accounts. It creates noise during review.",
+      checkNext: "Check which accounts are still relevant, close only accounts you understand, and avoid judging the wallet by account count alone.",
+    });
+  }
+
+  if (ids.has("no_active_spl_exposure")) {
+    leaks.push({
+      id: "low_visible_exposure_leak",
+      title: "Low visible exposure",
+      riskLevel: "watch",
+      plain: "No non-zero SPL token accounts were visible from the public RPC snapshot.",
+      whyDangerous: "This can be normal for a clean wallet, a fresh wallet, or a wallet that moved positions elsewhere. It is not a safety badge.",
+      checkNext: "Confirm whether this is the main wallet, a fresh wallet, or only one address from a wider setup before drawing conclusions.",
     });
   }
 
@@ -596,12 +625,23 @@ function buildWalletDangerExplanations(data: WalletLeakBasicData, signals: Unive
       title: "Wallet source blind spot",
       riskLevel: ids.has("limited_wallet_sources") ? "caution" : "watch",
       plain: data.sourceHealthHelper,
-      whyDangerous: "A limited RPC snapshot can miss context. It does not show buys, sells, PnL, timing, or intent.",
-      checkNext: "Use this only as public context. Manual wallet behavior review is still needed for FOMO, panic, churn, or revenge-entry patterns.",
+      whyDangerous: "A basic RPC snapshot can miss behavior context. It does not show buys, sells, PnL, timing, intent, or whether tokens were airdropped.",
+      checkNext: "Use this as public context only. Manual behavior review or an indexer-backed engine is needed for churn, FOMO, panic, or repeated risky-token exposure.",
     });
   }
 
-  return leaks.slice(0, 4);
+  if (ids.has("broke_not_visible") && leaks.length < 4) {
+    leaks.push({
+      id: "broke_context_gap",
+      title: "$BROKE context gap",
+      riskLevel: "watch",
+      plain: "The configured $BROKE mint was not visible in non-zero token accounts.",
+      whyDangerous: "This is not a wallet risk by itself. It only means the app cannot add $BROKE-holder context to this wallet snapshot.",
+      checkNext: "Use this only for $BROKE-specific context. Do not treat it as proof that the wallet is safe, unsafe, active, or inactive.",
+    });
+  }
+
+  return leaks.slice(0, 5);
 }
 
 export function buildUniversalTokenLeakCheckResult(data: LeakScoreBasicTokenData): UniversalTokenLeakCheckResult {
@@ -877,6 +917,7 @@ export function buildUniversalWalletLeakCheckResult(data: WalletLeakBasicData): 
     ],
     signals,
     actions: [
+      "Read Wallet leaks explained first. It turns gas, exposure, clutter, and source-limit signals into plain wallet-hygiene context.",
       "Use Wallet Review if you want to add manual FOMO, panic, churn, or revenge-entry behavior notes.",
       "Treat gas runway, token exposure breadth, and account clutter as prompts, not verdicts.",
       "Do not infer PnL, trade quality, identity, or intent from public RPC token-account counts.",

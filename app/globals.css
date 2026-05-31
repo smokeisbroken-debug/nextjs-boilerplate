@@ -31722,6 +31722,51 @@ html.embedded-app-view .hero h1 {
   color: #ff8da0;
 }
 
+
+/* ===== V59.51.0 WALLET DANGEROUS LEAKS EXPLAINED ===== */
+.universal-wallet-context-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.universal-wallet-context-strip div {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(113, 226, 255, 0.16);
+  background:
+    radial-gradient(circle at 90% 0%, rgba(113, 226, 255, 0.08), transparent 34%),
+    rgba(255, 255, 255, 0.035);
+}
+
+.universal-wallet-context-strip span {
+  color: #71e2ff;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.universal-wallet-context-strip strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.12;
+}
+
+.universal-wallet-context-strip small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.32;
+}
+
+@media (max-width: 430px) {
+  .universal-wallet-context-strip {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ===== V59.50.3 LEAK HUB NAVIGATION CLEANUP ===== */
 .bottom-nav.standard-mode-nav {
   width: min(calc(100% - 18px), 430px);

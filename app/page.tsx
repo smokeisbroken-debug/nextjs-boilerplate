@@ -22802,7 +22802,7 @@ function UniversalLeakCheckScreen({
         <span>Universal Leak Check</span>
         <h2>Paste token, wallet, or URL. Get a result.</h2>
         <p>
-          One entry point for automatic leak context. Token checks use liquidity, pair, supply, concentration, and volume signals. Wallet checks now add a safe Wallet Auto Signal Engine for gas runway, exposure breadth, and token-account clutter.
+          One entry point for automatic leak context. Token checks use liquidity, pair, supply, concentration, and volume signals. Wallet checks now explain public-context leaks like gas runway, exposure spread, dust clutter, and source blind spots.
         </p>
       </div>
 
@@ -22913,14 +22913,34 @@ function UniversalLeakCheckScreen({
             <p>{result.decisionSummary}</p>
           </div>
 
+          {result.kind === "wallet" && (
+            <div className="universal-wallet-context-strip">
+              <div>
+                <span>Public wallet context</span>
+                <strong>No private data</strong>
+                <small>Only public RPC balance and token-account context.</small>
+              </div>
+              <div>
+                <span>No PnL</span>
+                <strong>No trade history</strong>
+                <small>This does not judge timing, skill, identity, or intent.</small>
+              </div>
+              <div>
+                <span>Review prompt</span>
+                <strong>Wallet hygiene</strong>
+                <small>Use leaks as cleanup prompts before more exposure.</small>
+              </div>
+            </div>
+          )}
+
           {result.dangerousLeaks.length > 0 && (
             <div className="universal-result-section universal-danger-section">
               <div className="section-title-row">
                 <div>
-                  <span>Dangerous leaks explained</span>
-                  <h3>{result.dangerousLeaks.length} risk pattern{result.dangerousLeaks.length === 1 ? "" : "s"}</h3>
+                  <span>{result.kind === "wallet" ? "Wallet leaks explained" : "Dangerous leaks explained"}</span>
+                  <h3>{result.dangerousLeaks.length} public-context risk pattern{result.dangerousLeaks.length === 1 ? "" : "s"}</h3>
                 </div>
-                <em>Plain language</em>
+                <em>{result.kind === "wallet" ? "No PnL / no surveillance" : "Plain language"}</em>
               </div>
               <div className="universal-danger-list">
                 {result.dangerousLeaks.map((leak) => (

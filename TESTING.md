@@ -1,59 +1,49 @@
-# Smoke Is Broke — v59.50.5 Auto Result Summary + Share Card
+# Smoke Is Broke — v59.51.0 Wallet Dangerous Leaks Explained
 
-v59.50.5 finishes the Universal Check user-flow layer without adding another manual loop. After a token/wallet/URL check, the result now starts with a short auto summary and includes a local PNG share-card preview/export for X or Telegram.
+v59.51.0 strengthens the wallet side of Universal Check without adding another tab or manual loop. Token checks already explain dangerous token leaks; wallet checks now explain public-context wallet leaks in the same plain-language style.
 
 ## What changed
 
-- Added `buildUniversalLeakCheckAutoSummary()` for one clear user-facing result summary:
-  - result label,
-  - headline,
-  - main leak,
-  - meaning,
-  - next step,
-  - top signals.
-- Reworked Universal Check copy text into a shorter X/TG-ready note:
-  - result,
-  - pressure,
-  - main leak,
-  - meaning,
-  - next step,
-  - top signals,
-  - safe DYOR disclaimer.
-- Added an `Auto result summary` card at the top of Universal Check results.
-- Added a Universal Check public share card:
-  - `$BROKE LEAK CHECK` header,
-  - token/wallet type,
-  - short address,
-  - source confidence,
-  - leak pressure,
-  - main leak,
-  - plain-language meaning,
-  - top signals,
-  - DYOR / not financial advice footer.
-- Added `Share card` and `Save PNG` actions for Universal Check results using the existing local html2canvas export flow.
-- Updated shared build marker to `v59.50.5`.
+- Universal Check wallet results now show a wallet-specific context strip:
+  - public RPC snapshot only;
+  - no PnL / no trade history;
+  - review prompt, not wallet surveillance.
+- Wallet result language now uses `Wallet leaks explained` instead of generic token-risk wording.
+- Wallet danger explanations were expanded:
+  - `Gas-runway leak` for low SOL gas runway;
+  - `Exposure-spread leak` for wide/heavy/very-wide non-zero SPL exposure;
+  - `Dust-clutter leak` for large or mostly-empty token-account clutter;
+  - `Low visible exposure` for wallets with SOL but no visible non-zero SPL exposure;
+  - `Wallet source blind spot` for partial/limited RPC context;
+  - `$BROKE context gap` when the configured $BROKE mint is not visible and there is space for a low-severity context note.
+- Wallet decision summary and next actions were rewritten around wallet hygiene, not wallet judgment.
+- Universal Check share summary/card now benefits from richer wallet `main leak`, `meaning`, and `next step` fields automatically.
+- Updated shared build marker to `v59.51.0`.
 
 ## What did not change
 
-- No rewards changes.
-- No Admin distribution changes.
-- No payout logic changes.
-- No Daily Routine / Active Streak changes.
-- No wallet verification changes.
-- No Supabase schema changes.
-- No transaction-history scan.
-- No PnL analysis.
-- No scam labels.
-- No project accusations.
-- No investment advice.
-- No token/wallet auto-signal formula change beyond the new summary/share presentation layer.
+- No new bottom-nav button.
+- No new manual screen.
+- No token auto-signal formula changes.
+- No wallet transaction-history scan.
+- No PnL, buy/sell timing, or trade-quality inference.
+- No wallet accusations, bad-wallet labels, scam labels, or investment advice.
+- No rewards, Admin distribution, payout logic, Daily Routine / Active Streak, wallet verification, Supabase schema, payout-wallet env, or server auto-send changes.
 
-## Product rule
+## Product intent
 
-The main product direction remains:
+The product flow remains:
 
 ```txt
-Open app → Check → paste token / wallet / URL → get clear result → share card/copy text
+paste token / wallet / URL
+↓
+auto-check
+↓
+short result
+↓
+leaks explained
+↓
+copy/share
 ```
 
-The wording remains safe: leak signals, research context, educational, not scam detection, not financial advice.
+Wallet checks are intentionally limited to safe public context. They explain wallet hygiene risks such as gas friction, exposure breadth, and clutter while clearly avoiding surveillance or performance judgment.
