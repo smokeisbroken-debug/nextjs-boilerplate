@@ -30935,3 +30935,217 @@ html.embedded-app-view .hero h1 {
     max-width: 100%;
   }
 }
+
+/* ===== V59.47.1 WALLET LEAK SHARE CARD ===== */
+.wallet-leak-card-export {
+  display: grid;
+  gap: 14px;
+}
+
+.wallet-leak-card-preview {
+  width: min(100%, 420px);
+  min-height: 456px;
+  margin: 0 auto;
+  border: 1px solid rgba(82, 255, 191, 0.24);
+  border-radius: 28px;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 18% 0%, rgba(82, 255, 191, 0.18), transparent 36%),
+    radial-gradient(circle at 88% 18%, rgba(178, 255, 0, 0.16), transparent 32%),
+    linear-gradient(145deg, #07110c, #020402 72%);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: #f4fff0;
+  overflow: hidden;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.wallet-leak-card-topline,
+.wallet-leak-card-title-row,
+.wallet-leak-card-notes-row,
+.wallet-leak-card-preview footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wallet-leak-card-topline span {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: rgba(244, 255, 240, 0.7);
+  text-transform: uppercase;
+}
+
+.wallet-leak-card-topline b {
+  border: 1px solid rgba(82, 255, 191, 0.22);
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(82, 255, 191, 0.08);
+  font-size: 10px;
+  color: #b7ff4a;
+}
+
+.wallet-leak-card-title-row {
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.085);
+}
+
+.wallet-leak-card-title-row small,
+.wallet-leak-card-signals small,
+.wallet-leak-card-score small {
+  display: block;
+  color: rgba(244, 255, 240, 0.62);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.wallet-leak-card-title-row strong {
+  display: block;
+  margin-top: 6px;
+  max-width: 220px;
+  color: #ffffff;
+  font-size: 22px;
+  line-height: 1.02;
+  word-break: break-word;
+}
+
+.wallet-leak-card-title-row span {
+  display: block;
+  margin-top: 8px;
+  color: rgba(244, 255, 240, 0.68);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.wallet-leak-card-score {
+  min-width: 96px;
+  border-radius: 20px;
+  padding: 12px;
+  text-align: center;
+  background: rgba(82, 255, 191, 0.1);
+  border: 1px solid rgba(82, 255, 191, 0.2);
+}
+
+.wallet-leak-card-score b {
+  display: block;
+  margin-top: 4px;
+  color: #b7ff4a;
+  font-size: 40px;
+  line-height: 0.95;
+}
+
+.wallet-leak-card-score span {
+  display: block;
+  margin-top: 4px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.wallet-leak-card-signals {
+  display: grid;
+  gap: 10px;
+}
+
+.wallet-leak-card-signals div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 126px;
+  overflow: hidden;
+}
+
+.wallet-leak-card-signals span {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(244, 255, 240, 0.86);
+  font-size: 12px;
+  line-height: 1.15;
+}
+
+.wallet-leak-card-notes-row {
+  align-items: stretch;
+}
+
+.wallet-leak-card-notes-row span {
+  flex: 1 1 0;
+  border: 1px solid rgba(82, 255, 191, 0.14);
+  border-radius: 16px;
+  padding: 10px;
+  background: rgba(82, 255, 191, 0.065);
+  color: rgba(244, 255, 240, 0.78);
+  font-size: 12px;
+  font-weight: 750;
+  text-align: center;
+}
+
+.wallet-leak-card-preview footer {
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 12px;
+  color: rgba(244, 255, 240, 0.62);
+  font-size: 10.5px;
+  line-height: 1.35;
+  text-align: center;
+  justify-content: center;
+}
+
+.wallet-leak-card-preview-danger,
+.wallet-leak-card-preview-drained {
+  border-color: rgba(255, 91, 122, 0.28);
+  background:
+    radial-gradient(circle at 18% 0%, rgba(255, 91, 122, 0.16), transparent 36%),
+    radial-gradient(circle at 88% 18%, rgba(255, 214, 102, 0.14), transparent 32%),
+    linear-gradient(145deg, #11070b, #020402 72%);
+}
+
+.wallet-leak-card-actions button:disabled {
+  opacity: 0.62;
+  cursor: wait;
+}
+
+@media (max-width: 430px) {
+  .wallet-leak-card-preview {
+    width: 100%;
+    min-height: 430px;
+    border-radius: 24px;
+    padding: 16px;
+    gap: 13px;
+  }
+
+  .wallet-leak-card-title-row {
+    padding: 13px;
+    border-radius: 18px;
+  }
+
+  .wallet-leak-card-title-row strong {
+    font-size: 19px;
+    max-width: 180px;
+  }
+
+  .wallet-leak-card-score {
+    min-width: 82px;
+    padding: 10px;
+  }
+
+  .wallet-leak-card-score b {
+    font-size: 34px;
+  }
+
+  .wallet-leak-card-signals span {
+    font-size: 11px;
+    padding: 7px 9px;
+  }
+
+  .wallet-leak-card-notes-row {
+    flex-direction: column;
+  }
+}

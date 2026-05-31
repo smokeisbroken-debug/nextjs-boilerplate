@@ -34,6 +34,7 @@ import {
 } from "./lib/brokeLeakScore";
 
 import {
+  WALLET_LEAK_SCORE_SHARE_CARD_FILE_NAME,
   WALLET_LEAK_SIGNALS,
   buildWalletLeakResearchStatus,
   buildWalletLeakShareText,
@@ -10293,6 +10294,7 @@ export default function Home() {
 
         {loaded && onboardingCompleted && activeTab === "walletleak" && (
           <WalletLeakScoreScreen
+            shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onBack={goHome}
             onHelp={openHelp}
           />
@@ -23187,9 +23189,11 @@ function LeakScoreScreen({
 
 
 function WalletLeakScoreScreen({
+  shareInitData,
   onBack,
   onHelp,
 }: {
+  shareInitData: string;
   onBack: () => void;
   onHelp: () => void;
 }) {
@@ -23197,9 +23201,12 @@ function WalletLeakScoreScreen({
   const [shareCopied, setShareCopied] = useState(false);
   const [shareMessage, setShareMessage] = useState("Wallet review saves on this device only.");
   const [clearArmed, setClearArmed] = useState(false);
+  const [cardSharing, setCardSharing] = useState(false);
+  const walletLeakCardRef = useRef<HTMLDivElement | null>(null);
 
   const walletLabel = draft.walletLabel;
   const walletAddress = draft.walletAddress;
+  const walletAddressPreview = walletAddress.length > 14 ? `${walletAddress.slice(0, 5)}...${walletAddress.slice(-5)}` : walletAddress;
   const selectedSignals = draft.selectedSignals;
   const signalNotes = draft.signalNotes;
   const score = useMemo(() => calculateWalletLeakScore(selectedSignals), [selectedSignals]);
@@ -23305,6 +23312,84 @@ function WalletLeakScoreScreen({
       await copyWalletLeakText();
     } catch {
       setShareMessage("Sharing was cancelled or blocked. You can still copy the preview text manually.");
+    }
+  }
+
+  async function createWalletLeakCardFile() {
+    if (!walletLeakCardRef.current) {
+      throw new Error("Wallet Leak card preview is not ready.");
+    }
+
+    return createShareImageFileFromElement(walletLeakCardRef.current, WALLET_LEAK_SCORE_SHARE_CARD_FILE_NAME);
+  }
+
+  async function shareWalletLeakCard() {
+    if (cardSharing) return;
+
+    try {
+      triggerHaptic("light");
+      setCardSharing(true);
+      const imageFile = await createWalletLeakCardFile();
+      const nativeShared = await tryNativeImageShare(imageFile);
+
+      if (nativeShared) {
+        setShareMessage("Wallet Leak card shared. Keep it framed as a manual behavior self-check.");
+        return;
+      }
+
+      downloadImageFile(imageFile);
+      setShareMessage("Image sharing is blocked here, so the Wallet Leak card was saved as a PNG.");
+      notifyApp("Wallet Leak PNG saved", "Native image sharing is not available in this browser.", "info");
+    } catch {
+      setShareMessage("Card sharing is blocked or was cancelled. Try copying the text instead.");
+      notifyApp("Card share blocked", "Try copying the Wallet Leak text instead.", "info");
+    } finally {
+      setCardSharing(false);
+    }
+  }
+
+  async function sendWalletLeakCardToBot() {
+    if (cardSharing) return;
+
+    let imageFile: File | null = null;
+
+    try {
+      triggerHaptic("light");
+      setCardSharing(true);
+      imageFile = await createWalletLeakCardFile();
+
+      if (!shareInitData) {
+        downloadImageFile(imageFile);
+        setShareMessage("Open inside Telegram to send the Wallet Leak card to the bot. The PNG was saved locally instead.");
+        notifyApp("Telegram needed", "Open inside Telegram to send the Wallet Leak card to the bot.", "info");
+        return;
+      }
+
+      await sendShareImageViaBot(imageFile, shareInitData, shareText);
+      setShareMessage("Wallet Leak card was sent to your Telegram bot chat. Open the bot and forward it anywhere.");
+      notifyApp("Sent to Telegram bot", "Wallet Leak card delivered to your bot chat.", "info");
+    } catch {
+      if (imageFile) downloadImageFile(imageFile);
+      setShareMessage("Bot delivery failed. The Wallet Leak card was saved as a PNG fallback.");
+      notifyApp("Bot delivery failed", "PNG fallback saved locally.", "info");
+    } finally {
+      setCardSharing(false);
+    }
+  }
+
+  async function downloadWalletLeakCard() {
+    if (cardSharing) return;
+
+    try {
+      triggerHaptic("light");
+      setCardSharing(true);
+      const imageFile = await createWalletLeakCardFile();
+      downloadImageFile(imageFile);
+      setShareMessage("Wallet Leak card saved as a local PNG.");
+    } catch {
+      setShareMessage("PNG export is blocked in this browser. Try a screenshot or copy the text.");
+    } finally {
+      setCardSharing(false);
     }
   }
 
@@ -23466,6 +23551,57 @@ function WalletLeakScoreScreen({
         <div className="leak-score-share-actions">
           <button type="button" onClick={() => void copyWalletLeakText()}>{shareCopied ? "Copied" : "Copy text"}</button>
           <button type="button" onClick={() => void shareWalletLeakText()}>Share text</button>
+        </div>
+      </section>
+
+      <section className="leak-score-card wallet-leak-card-export">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Step 4</span>
+            <strong>Wallet Leak share card</strong>
+            <small>Local PNG · manual self-check · bot-ready</small>
+          </div>
+          <em>{cardSharing ? "Working" : "PNG"}</em>
+        </div>
+
+        <div ref={walletLeakCardRef} className={`wallet-leak-card-preview wallet-leak-card-preview-${score.tier.id}`}>
+          <div className="wallet-leak-card-topline">
+            <span>$BROKE WALLET LEAKS</span>
+            <b>Manual Self-Check</b>
+          </div>
+          <div className="wallet-leak-card-title-row">
+            <div>
+              <small>Wallet review</small>
+              <strong>{walletLabel || "Unnamed wallet"}</strong>
+              <span>{walletAddressPreview || "Wallet hidden / optional"}</span>
+            </div>
+            <div className="wallet-leak-card-score">
+              <small>Pressure</small>
+              <b>{score.score}</b>
+              <span>{score.tier.shortLabel}</span>
+            </div>
+          </div>
+          <div className="wallet-leak-card-signals">
+            <small>Visible behavior leaks</small>
+            <div>
+              {(selectedLabels.length ? selectedLabels.slice(0, 4) : ["No behavior leaks selected yet"]).map((label) => (
+                <span key={label}>{label}</span>
+              ))}
+            </div>
+          </div>
+          <div className="wallet-leak-card-notes-row">
+            <span>{signalNoteCount}/{score.selectedCount} local notes</span>
+            <span>{researchStatus.readyCount}/{researchStatus.total} review checks ready</span>
+          </div>
+          <footer>
+            Manual wallet behavior check · Not wallet surveillance · Not financial advice
+          </footer>
+        </div>
+
+        <div className="leak-score-share-actions wallet-leak-card-actions">
+          <button type="button" onClick={() => void sendWalletLeakCardToBot()} disabled={cardSharing}>{cardSharing ? "Working..." : "Send to TG bot"}</button>
+          <button type="button" onClick={() => void shareWalletLeakCard()} disabled={cardSharing}>Share card</button>
+          <button type="button" onClick={() => void downloadWalletLeakCard()} disabled={cardSharing}>Save PNG</button>
         </div>
         <small>{shareMessage}</small>
       </section>

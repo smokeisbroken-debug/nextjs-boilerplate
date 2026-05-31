@@ -1,23 +1,22 @@
-# Smoke Is Broke — v59.47.0 Token Data Source Details + Confidence UI
+# Smoke Is Broke — v59.47.1 Wallet Leak Share Card
 
-v59.47.0 improves the Basic Token Data research layer inside BROKE Leak Research. The app now explains source coverage more clearly, shows a confidence status for the fetched context, separates DEX/Solana RPC/cache/indexer limitations, and keeps the "auto data is not a verdict" positioning visible.
+v59.47.1 adds a local Wallet Leak Score PNG share card on top of the v59.47.0 manual wallet-behavior self-check. It keeps the feature framed as Manual Self-Check / Educational / Wallet Behavior Leaks / Not Wallet Surveillance / Not Financial Advice.
 
-## Changes
+## Patch contents
 
-- Added Token Data confidence status: `Good context`, `Partial context`, or `Limited context`.
-- Added Source details panel for DEX Screener, Solana RPC, visible DEX pair context, top-account concentration, and holder/indexer limitations.
-- Added clearer freshness/source row: live snapshot, cached snapshot, or source snapshot.
-- Added clearer source warnings for missing DEX pair context and unavailable top-10 account concentration.
-- Updated Leak Score share card compact auto-data row to include the confidence label and live/cache context.
-- Updated shared build marker to `v59.47.0`.
+- Added Wallet Leak share-card preview in the Wallet Leak Score screen.
+- Added `Send to TG bot`, `Share card`, and `Save PNG` actions using the existing share image helper and `/api/share-result` route.
+- Added Telegram fallback behavior: outside Telegram or on bot delivery failure, the PNG is saved locally.
+- Added mobile-safe card styling and compact signal chips for small WebView screens.
+- Updated shared build marker to `v59.47.1`.
 
-## Unchanged
+## Boundaries
 
-- No new token-data source was added.
+- No wallet API.
+- No on-chain wallet history scan.
 - No Supabase persistence.
-- No public project database.
-- No automated scam detection.
-- No project accusation labels.
+- No public wallet/project database.
+- No automated wallet accusations.
 - No investment advice.
 - No payout logic changes.
 - No reward eligibility formula changes.
@@ -27,17 +26,28 @@ v59.47.0 improves the Basic Token Data research layer inside BROKE Leak Research
 - No payout-wallet env changes.
 - No server auto-send changes.
 
-## Verification
+## Manual verification
 
-- `npm run typecheck`
-- `npm run lint:quiet`
-- `NEXT_TELEMETRY_DISABLED=1 npm run build`
+1. Open the app.
+2. Switch to Pro Mode.
+3. Open Wallet.
+4. Add wallet label and optional public wallet address.
+5. Select several behavior leaks.
+6. Add local notes.
+7. Confirm local score changes.
+8. Confirm share-card preview updates.
+9. Tap `Save PNG`.
+10. Tap `Share card`.
+11. Open inside Telegram and tap `Send to TG bot`.
+12. Confirm the PNG arrives in the bot chat or falls back to local save.
+13. Confirm `Copy text` and `Share text` still work.
+14. Confirm Project Leak Research and Admin/Rewards screens remain unchanged.
 
+## Verification run
 
-## v59.47.0 — Wallet Leak Score Foundation
-
-- Added a Pro-mode Wallet Leak Score screen as a manual/local wallet-behavior self-check.
-- Added wallet behavior signals for FOMO entries, buying after green candles, influencer chasing, too many hype tokens, no research before buy, no position-size rules, panic selling, holding dead projects, revenge trading, and no exit plan.
-- Added local wallet draft storage under `broke-wallet-leak-score-local-draft-v1`, local notes, auto review readiness, manual score tiers, copy/share text, and Help Guide coverage.
-- Kept the feature educational: no wallet API, no on-chain wallet scan, no Supabase persistence, no public wallet database, no wallet accusations, and no financial advice.
-- No payout logic, reward eligibility formula, Daily Routine, Active Streak, wallet verification, Admin distribution API behavior, payout-wallet env names, or server auto-send behavior changed.
+- `npm run typecheck` passed.
+- `npm run lint:quiet` passed.
+- `NEXT_TELEMETRY_DISABLED=1 npm run build` passed.
+- Targeted brace/paren balance passed.
+- Targeted BigInt suffix scan passed.
+- Zip integrity passed.
