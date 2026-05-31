@@ -36,6 +36,17 @@ export type UniversalLeakSignal = {
   action: string;
 };
 
+export type UniversalLeakRiskLevel = "watch" | "caution" | "danger";
+
+export type UniversalLeakDanger = {
+  id: string;
+  title: string;
+  riskLevel: UniversalLeakRiskLevel;
+  plain: string;
+  whyDangerous: string;
+  checkNext: string;
+};
+
 export type UniversalLeakCheckMetric = {
   id: string;
   label: string;
@@ -52,6 +63,9 @@ export type UniversalLeakCheckResultBase = {
   confidence: UniversalLeakCheckSourceConfidence;
   confidenceLabel: string;
   summary: string;
+  decisionLabel: string;
+  decisionSummary: string;
+  dangerousLeaks: UniversalLeakDanger[];
   metrics: UniversalLeakCheckMetric[];
   signals: UniversalLeakSignal[];
   actions: string[];
@@ -98,6 +112,42 @@ function getSignalWeight(severity: UniversalLeakSignalSeverity) {
   if (severity === "high") return 28;
   if (severity === "medium") return 16;
   return 8;
+}
+
+function formatMultiplier(value: number | null | undefined) {
+  if (!Number.isFinite(value || 0) || value === null || value === undefined) return "Unavailable";
+  return `${Number(value).toFixed(value >= 10 ? 0 : 1)}x`;
+}
+
+function shortAddress(value: string | null | undefined) {
+  const text = String(value || "").trim();
+  if (text.length <= 12) return text || "Unavailable";
+  return `${text.slice(0, 4)}…${text.slice(-4)}`;
+}
+
+function buildDecisionLabel(pressure: number, dangerCount: number) {
+  if (pressure >= 70 || dangerCount >= 2) return "High caution";
+  if (pressure >= 40 || dangerCount >= 1) return "Slow down";
+  if (pressure >= 15) return "Research first";
+  return "No major auto leak";
+}
+
+function buildDecisionSummary(kind: UniversalLeakCheckKind, pressure: number, dangerousLeaks: UniversalLeakDanger[]) {
+  if (dangerousLeaks.some((item) => item.riskLevel === "danger")) {
+    return kind === "token"
+      ? "The automatic token check found one or more dangerous leak patterns. Treat this as a stop-and-verify result before any buy decision."
+      : "The automatic wallet check found a high-pressure public-context pattern. Treat this as a review prompt, not a wallet judgment.";
+  }
+
+  if (pressure >= 40 || dangerousLeaks.length) {
+    return kind === "token"
+      ? "The token has visible caution signals. It may still be legitimate, but the leak-risk context needs manual confirmation."
+      : "The wallet snapshot has caution signals. Use them as cleanup/review prompts only.";
+  }
+
+  return kind === "token"
+    ? "No major automatic token leak was visible from the available snapshot. This does not make the project safe; it only means the basic auto-check did not find a strong red flag."
+    : "No major wallet-context leak was visible from the available public snapshot. This does not show PnL, timing, or intent.";
 }
 
 function getFirstSolanaAddress(value: string) {
@@ -210,8 +260,19 @@ export function buildTokenAutoSignals(data: LeakScoreBasicTokenData): UniversalL
   const liquidity = data.pair?.liquidityUsd ?? null;
   const volume = data.pair?.volume24hUsd ?? null;
   const ageDays = data.pair?.ageDays ?? null;
+  const marketCap = data.pair?.marketCapUsd ?? null;
+  const fdv = data.pair?.fdvUsd ?? null;
+  const price = data.pair?.priceUsd ?? null;
+  const valuation = marketCap || fdv || null;
   const concentration = data.top10ConcentrationPercent;
   const volumeLiquidityRatio = liquidity && volume ? volume / Math.max(liquidity, 1) : null;
+  const valuationLiquidityRatio = liquidity && valuation ? valuation / Math.max(liquidity, 1) : null;
+  const freshPair = ageDays !== null && ageDays <= 7;
+  const veryFreshPair = ageDays !== null && ageDays <= 1;
+  const weakLiquidity = liquidity !== null && liquidity < 20000;
+  const veryWeakLiquidity = liquidity !== null && liquidity < 5000;
+  const highConcentration = concentration !== null && concentration >= 45;
+  const extremeConcentration = concentration !== null && concentration >= 70;
 
   if (liquidity !== null && liquidity < 5000) {
     signals.push({
@@ -303,6 +364,90 @@ export function buildTokenAutoSignals(data: LeakScoreBasicTokenData): UniversalL
     });
   }
 
+  if (valuationLiquidityRatio !== null && valuationLiquidityRatio >= 100) {
+    signals.push({
+      id: "extreme_valuation_liquidity_gap",
+      label: "Extreme valuation/liquidity gap",
+      severity: "high",
+      evidence: `Visible valuation is about ${formatMultiplier(valuationLiquidityRatio)} detected liquidity.`,
+      action: "Check whether market cap/FDV can actually be exited through available liquidity.",
+    });
+  } else if (valuationLiquidityRatio !== null && valuationLiquidityRatio >= 30) {
+    signals.push({
+      id: "valuation_liquidity_gap",
+      label: "Valuation/liquidity gap",
+      severity: "medium",
+      evidence: `Visible valuation is about ${formatMultiplier(valuationLiquidityRatio)} detected liquidity.`,
+      action: "Do not treat headline market cap as exit depth; compare it with real liquidity.",
+    });
+  }
+
+  if (veryWeakLiquidity && freshPair) {
+    signals.push({
+      id: "fresh_pair_tiny_liquidity_combo",
+      label: "Fresh pair + tiny liquidity",
+      severity: "high",
+      evidence: `Pair age is ${formatLeakScoreAgeDays(ageDays)} and liquidity is ${formatLeakScoreUsd(liquidity)}.`,
+      action: "This is a dangerous entry context. Verify liquidity, lock status, and official source links before touching it.",
+    });
+  } else if (weakLiquidity && veryFreshPair) {
+    signals.push({
+      id: "new_pair_weak_liquidity_combo",
+      label: "New pair + weak liquidity",
+      severity: "medium",
+      evidence: `Pair age is ${formatLeakScoreAgeDays(ageDays)} and liquidity is ${formatLeakScoreUsd(liquidity)}.`,
+      action: "Slow down and wait for stronger market context instead of reacting to launch momentum.",
+    });
+  }
+
+  if (freshPair && extremeConcentration) {
+    signals.push({
+      id: "fresh_pair_extreme_concentration_combo",
+      label: "Fresh pair + extreme concentration",
+      severity: "high",
+      evidence: `Pair age is ${formatLeakScoreAgeDays(ageDays)} and top 10 accounts hold ${formatLeakScorePercent(concentration)}.`,
+      action: "Check whether concentrated wallets are known/locked. Unknown concentration on a fresh pair is a major leak-risk pattern.",
+    });
+  } else if (freshPair && highConcentration) {
+    signals.push({
+      id: "fresh_pair_high_concentration_combo",
+      label: "Fresh pair + high concentration",
+      severity: "medium",
+      evidence: `Pair age is ${formatLeakScoreAgeDays(ageDays)} and top 10 accounts hold ${formatLeakScorePercent(concentration)}.`,
+      action: "Require wallet-label context before assuming the supply is fairly distributed.",
+    });
+  }
+
+  if (data.pair && price === null) {
+    signals.push({
+      id: "price_unavailable",
+      label: "Price context unavailable",
+      severity: "low",
+      evidence: "A pair was visible, but price data was unavailable from the selected source.",
+      action: "Check another source before trusting chart screenshots or copied market-cap claims.",
+    });
+  }
+
+  if (data.pair && !marketCap && !fdv) {
+    signals.push({
+      id: "valuation_unavailable",
+      label: "Valuation unavailable",
+      severity: "low",
+      evidence: "Market cap and FDV were not returned by the visible pair source.",
+      action: "Avoid decisions based only on social hype when valuation context is missing.",
+    });
+  }
+
+  if (!data.tokenSupply) {
+    signals.push({
+      id: "supply_unavailable",
+      label: "Supply unavailable",
+      severity: "low",
+      evidence: "Solana RPC did not return usable token supply for this check.",
+      action: "Confirm the mint and token supply on another explorer before relying on concentration or valuation context.",
+    });
+  }
+
   if (data.sourceHealth === "limited") {
     signals.push({
       id: "limited_sources",
@@ -324,14 +469,144 @@ export function buildTokenAutoSignals(data: LeakScoreBasicTokenData): UniversalL
   return signals;
 }
 
+function buildTokenDangerExplanations(data: LeakScoreBasicTokenData, signals: UniversalLeakSignal[]): UniversalLeakDanger[] {
+  const ids = new Set(signals.map((signal) => signal.id));
+  const leaks: UniversalLeakDanger[] = [];
+  const liquidity = data.pair?.liquidityUsd ?? null;
+  const concentration = data.top10ConcentrationPercent;
+  const ageDays = data.pair?.ageDays ?? null;
+  const marketCap = data.pair?.marketCapUsd ?? null;
+  const fdv = data.pair?.fdvUsd ?? null;
+  const valuation = marketCap || fdv || null;
+  const volume = data.pair?.volume24hUsd ?? null;
+  const volumeLiquidityRatio = liquidity && volume ? volume / Math.max(liquidity, 1) : null;
+  const valuationLiquidityRatio = liquidity && valuation ? valuation / Math.max(liquidity, 1) : null;
+
+  if (ids.has("fresh_pair_tiny_liquidity_combo") || ids.has("very_weak_liquidity") || ids.has("liquidity_unavailable")) {
+    leaks.push({
+      id: "exit_depth_leak",
+      title: "Exit-depth leak",
+      riskLevel: ids.has("fresh_pair_tiny_liquidity_combo") || ids.has("very_weak_liquidity") ? "danger" : "caution",
+      plain: liquidity === null
+        ? "The app could not confirm usable liquidity from the automatic source."
+        : `Detected liquidity is only ${formatLeakScoreUsd(liquidity)}.`,
+      whyDangerous: "A chart can look active while real exit depth is thin. Small liquidity can turn one emotional buy into a hard-to-exit position.",
+      checkNext: "Check LP depth, lock/burn context, route size impact, and whether the visible pair is the official pair.",
+    });
+  }
+
+  if (ids.has("fresh_pair_extreme_concentration_combo") || ids.has("extreme_top10_concentration") || ids.has("high_top10_concentration")) {
+    leaks.push({
+      id: "supply_control_leak",
+      title: "Supply-control leak",
+      riskLevel: ids.has("fresh_pair_extreme_concentration_combo") || ids.has("extreme_top10_concentration") ? "danger" : "caution",
+      plain: concentration === null
+        ? "Top-wallet concentration could not be confirmed."
+        : `Top 10 token accounts hold about ${formatLeakScorePercent(concentration)} of visible supply.`,
+      whyDangerous: "Concentrated supply can mean a few wallets have enough control to move price, drain liquidity, or dominate future selling pressure.",
+      checkNext: "Label the top wallets: team, treasury, LP, CEX, burned, locked, or unknown. Unknown large wallets are the part to fear.",
+    });
+  }
+
+  if (ids.has("new_pair") || ids.has("recent_pair") || ids.has("new_pair_weak_liquidity_combo") || ids.has("fresh_pair_tiny_liquidity_combo")) {
+    leaks.push({
+      id: "freshness_leak",
+      title: "Freshness leak",
+      riskLevel: ids.has("fresh_pair_tiny_liquidity_combo") || ids.has("new_pair_weak_liquidity_combo") ? "danger" : "watch",
+      plain: `Detected pair age is ${formatLeakScoreAgeDays(ageDays)}.`,
+      whyDangerous: "New pairs have less history. The first candles often show hype, not durable demand, distribution quality, or real community strength.",
+      checkNext: "Verify official links, token age, update history, deployer/authority context, and whether early volume is organic.",
+    });
+  }
+
+  if (ids.has("extreme_volume_liquidity_imbalance") || ids.has("volume_liquidity_imbalance")) {
+    leaks.push({
+      id: "churn_leak",
+      title: "Volume-churn leak",
+      riskLevel: ids.has("extreme_volume_liquidity_imbalance") ? "danger" : "caution",
+      plain: `24h volume is about ${formatMultiplier(volumeLiquidityRatio)} detected liquidity.`,
+      whyDangerous: "High volume on low liquidity can be real demand, but it can also be churn, routing noise, or short-lived attention that disappears when you enter.",
+      checkNext: "Compare trades, makers, volume across sources, and whether liquidity grew with volume or only volume spiked.",
+    });
+  }
+
+  if (ids.has("extreme_valuation_liquidity_gap") || ids.has("valuation_liquidity_gap")) {
+    leaks.push({
+      id: "headline_valuation_leak",
+      title: "Headline-valuation leak",
+      riskLevel: ids.has("extreme_valuation_liquidity_gap") ? "danger" : "caution",
+      plain: `Visible valuation is about ${formatMultiplier(valuationLiquidityRatio)} detected liquidity.`,
+      whyDangerous: "Market cap and FDV are not exit liquidity. A large headline number with shallow liquidity can create fake confidence.",
+      checkNext: "Compare FDV/market cap with pool depth, holder distribution, and realistic trade-size impact.",
+    });
+  }
+
+  if (ids.has("limited_sources") || ids.has("partial_sources") || ids.has("no_visible_pair")) {
+    leaks.push({
+      id: "source_blind_spot_leak",
+      title: "Source blind-spot leak",
+      riskLevel: ids.has("limited_sources") || ids.has("no_visible_pair") ? "caution" : "watch",
+      plain: data.sourceHealthHelper,
+      whyDangerous: "Missing data is not safety. It only means the automatic check has less context and can miss important risk.",
+      checkNext: "Confirm the mint, official pair, explorer data, liquidity, top wallets, and links manually before trusting the result.",
+    });
+  }
+
+  return leaks.slice(0, 5);
+}
+
+function buildWalletDangerExplanations(data: WalletLeakBasicData, signals: UniversalLeakSignal[]): UniversalLeakDanger[] {
+  const ids = new Set(signals.map((signal) => signal.id));
+  const leaks: UniversalLeakDanger[] = [];
+
+  if (ids.has("very_wide_token_exposure") || ids.has("heavy_token_exposure")) {
+    leaks.push({
+      id: "exposure_sprawl_leak",
+      title: "Exposure-sprawl leak",
+      riskLevel: ids.has("very_wide_token_exposure") ? "danger" : "caution",
+      plain: `${data.nonZeroTokenAccountsCount ?? "Many"} non-zero SPL token accounts are visible.`,
+      whyDangerous: "Wide exposure can hide forgotten bags, dust positions, and impulse entries. It does not prove losses, but it can make review harder.",
+      checkNext: "Review which positions are intentional, stale, dead, or too small to matter before adding new exposure.",
+    });
+  }
+
+  if (ids.has("critical_gas_runway") || ids.has("low_gas_runway")) {
+    leaks.push({
+      id: "gas_runway_leak",
+      title: "Gas-runway leak",
+      riskLevel: ids.has("critical_gas_runway") ? "caution" : "watch",
+      plain: `SOL balance is ${formatWalletLeakSol(data.solBalance)}.`,
+      whyDangerous: "Low gas can force rushed top-ups, failed transactions, or inability to act when the wallet owner actually needs to move.",
+      checkNext: "Keep enough SOL for deliberate actions and avoid making decisions only because the wallet is blocked by gas friction.",
+    });
+  }
+
+  if (ids.has("limited_wallet_sources") || ids.has("partial_wallet_sources")) {
+    leaks.push({
+      id: "wallet_source_blind_spot_leak",
+      title: "Wallet source blind spot",
+      riskLevel: ids.has("limited_wallet_sources") ? "caution" : "watch",
+      plain: data.sourceHealthHelper,
+      whyDangerous: "A limited RPC snapshot can miss context. It does not show buys, sells, PnL, timing, or intent.",
+      checkNext: "Use this only as public context. Manual wallet behavior review is still needed for FOMO, panic, churn, or revenge-entry patterns.",
+    });
+  }
+
+  return leaks.slice(0, 4);
+}
+
 export function buildUniversalTokenLeakCheckResult(data: LeakScoreBasicTokenData): UniversalTokenLeakCheckResult {
   const signals = buildTokenAutoSignals(data);
   const pressure = normalizePressure(signals.reduce((total, signal) => total + getSignalWeight(signal.severity), 0));
   const pair = data.pair;
+  const dangerousLeaks = buildTokenDangerExplanations(data, signals);
   const hasGoodContext = data.sourceHealth === "complete" && Boolean(pair);
   const confidence: UniversalLeakCheckSourceConfidence = hasGoodContext ? "strong" : data.sourceHealth === "partial" ? "medium" : "limited";
   const tokenLabel = data.tokenSymbol || data.tokenName || "Token";
   const confidenceLabel = confidence === "strong" ? "Strong source context" : confidence === "medium" ? "Medium source context" : "Limited source context";
+  const requestedAddress = String(data.requestedAddress || "").trim();
+  const resolvedFromPair = Boolean(requestedAddress && requestedAddress !== data.tokenAddress);
+  const dangerCount = dangerousLeaks.filter((item) => item.riskLevel === "danger").length;
 
   return {
     kind: "token",
@@ -344,7 +619,16 @@ export function buildUniversalTokenLeakCheckResult(data: LeakScoreBasicTokenData
     summary: signals.length
       ? `${signals.length} automatic token leak signal${signals.length === 1 ? "" : "s"} found from visible source data.`
       : "No major automatic token leak signals were visible in this snapshot.",
+    decisionLabel: buildDecisionLabel(pressure, dangerCount),
+    decisionSummary: buildDecisionSummary("token", pressure, dangerousLeaks),
+    dangerousLeaks,
     metrics: [
+      ...(resolvedFromPair ? [{
+        id: "resolved_mint",
+        label: "Resolved mint",
+        value: shortAddress(data.tokenAddress),
+        helper: data.resolutionHelper || `Input ${shortAddress(requestedAddress)} was resolved into the likely token mint.`,
+      }] : []),
       {
         id: "liquidity",
         label: "Liquidity",
@@ -356,6 +640,12 @@ export function buildUniversalTokenLeakCheckResult(data: LeakScoreBasicTokenData
         label: "24h volume",
         value: formatLeakScoreUsd(pair?.volume24hUsd),
         helper: "Point-in-time DEX volume context.",
+      },
+      {
+        id: "market_cap",
+        label: "Market cap",
+        value: formatLeakScoreUsd(pair?.marketCapUsd),
+        helper: "Headline valuation context when the DEX source returns it.",
       },
       {
         id: "top10",
@@ -372,8 +662,8 @@ export function buildUniversalTokenLeakCheckResult(data: LeakScoreBasicTokenData
     ],
     signals,
     actions: [
-      "Verify the mint and official links before trusting any chart.",
-      "Check liquidity depth, top wallets, pair age, and volume/liquidity balance.",
+      "Read Dangerous leaks explained first. It tells you why the signal can drain a wallet, not just that a signal exists.",
+      "Verify the mint, official links, liquidity depth, top wallets, pair age, and volume/liquidity balance before trusting any chart.",
       "Use Project Research only if you want to add manual notes after the automatic result.",
     ],
     warnings: [
@@ -531,6 +821,8 @@ export function buildUniversalWalletLeakCheckResult(data: WalletLeakBasicData): 
   const pressure = normalizePressure(signals.reduce((total, signal) => total + getSignalWeight(signal.severity), 0));
   const confidence: UniversalLeakCheckSourceConfidence = data.sourceHealth === "complete" ? "medium" : data.sourceHealth === "partial" ? "medium" : "limited";
   const confidenceLabel = confidence === "medium" ? "Wallet Auto Signal context" : "Limited wallet context";
+  const dangerousLeaks = buildWalletDangerExplanations(data, signals);
+  const dangerCount = dangerousLeaks.filter((item) => item.riskLevel === "danger").length;
 
   return {
     kind: "wallet",
@@ -543,6 +835,9 @@ export function buildUniversalWalletLeakCheckResult(data: WalletLeakBasicData): 
     summary: signals.length
       ? `${signals.length} automatic wallet leak signal${signals.length === 1 ? "" : "s"} found from public RPC context.`
       : "No major wallet-context signal was visible from basic public RPC data.",
+    decisionLabel: buildDecisionLabel(pressure, dangerCount),
+    decisionSummary: buildDecisionSummary("wallet", pressure, dangerousLeaks),
+    dangerousLeaks,
     metrics: [
       {
         id: "sol_balance",
@@ -633,6 +928,11 @@ export function buildUniversalLeakCheckShareText(result: UniversalLeakCheckResul
     metrics,
     "Automatic signals:",
     signalLines,
+    "",
+    "Dangerous leaks explained:",
+    result.dangerousLeaks.length
+      ? result.dangerousLeaks.map((leak) => `• ${leak.title} (${leak.riskLevel}) — ${leak.plain} Check: ${leak.checkNext}`).join("\n")
+      : "• No dangerous leak explanation generated from this snapshot.",
     "",
     "Positioning: leak-signal research context / educational / not scam detection / not wallet surveillance / not financial advice.",
   ].join("\n");

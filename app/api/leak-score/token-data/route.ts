@@ -15,6 +15,14 @@ export const runtime = "nodejs";
 
 const DEFAULT_SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com";
 const DEXSCREENER_TOKEN_BASE_URL = "https://api.dexscreener.com/latest/dex/tokens";
+const DEXSCREENER_PAIR_BASE_URL = "https://api.dexscreener.com/latest/dex/pairs/solana";
+
+const COMMON_SOLANA_QUOTE_MINTS = new Set([
+  "So11111111111111111111111111111111111111112",
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY5A7Pr1rTDy9z3",
+  "DezXAZ8z7PnrnRJjz3Kpi8wq1bJWym5iuo8Z5uF8m6P",
+].map((item) => item.toLowerCase()));
 
 type SolanaRpcResponse<T> = {
   result?: T;
@@ -74,6 +82,11 @@ type DexScreenerTokenResponse = {
   pairs?: DexScreenerPair[] | null;
 };
 
+type DexScreenerPairResponse = {
+  pair?: DexScreenerPair | null;
+  pairs?: DexScreenerPair[] | null;
+};
+
 function json(payload: LeakScoreTokenDataResponse, status = 200) {
   return NextResponse.json(payload, {
     status,
@@ -129,6 +142,46 @@ async function rpc<T>(rpcUrl: string, method: string, params: unknown[]) {
   return data.result;
 }
 
+function mapDexScreenerPair(bestPair: DexScreenerPair, preferredTokenAddress = "") {
+  const preferredLower = preferredTokenAddress.toLowerCase();
+  const baseAddress = String(bestPair.baseToken?.address || "");
+  const quoteAddress = String(bestPair.quoteToken?.address || "");
+  const baseLower = baseAddress.toLowerCase();
+  const quoteLower = quoteAddress.toLowerCase();
+
+  const token = (() => {
+    if (preferredLower && baseLower === preferredLower) return bestPair.baseToken;
+    if (preferredLower && quoteLower === preferredLower) return bestPair.quoteToken;
+    if (baseAddress && !COMMON_SOLANA_QUOTE_MINTS.has(baseLower)) return bestPair.baseToken;
+    if (quoteAddress && !COMMON_SOLANA_QUOTE_MINTS.has(quoteLower)) return bestPair.quoteToken;
+    return bestPair.baseToken || bestPair.quoteToken || null;
+  })();
+
+  const tokenAddress = String(token?.address || preferredTokenAddress || "");
+  const pairCreatedAtMs = toPositiveNumber(bestPair.pairCreatedAt);
+  const pairCreatedAt = pairCreatedAtMs ? new Date(pairCreatedAtMs).toISOString() : null;
+  const ageDays = pairCreatedAtMs ? Math.max(0, Math.round((Date.now() - pairCreatedAtMs) / 86400000)) : null;
+  const pair: LeakScoreTokenDataPair = {
+    dexId: String(bestPair.dexId || "Unknown DEX"),
+    pairAddress: String(bestPair.pairAddress || ""),
+    url: String(bestPair.url || ""),
+    liquidityUsd: toPositiveNumber(bestPair.liquidity?.usd),
+    volume24hUsd: toPositiveNumber(bestPair.volume?.h24),
+    marketCapUsd: toPositiveNumber(bestPair.marketCap),
+    fdvUsd: toPositiveNumber(bestPair.fdv),
+    priceUsd: toPositiveNumber(bestPair.priceUsd),
+    pairCreatedAt,
+    ageDays,
+  };
+
+  return {
+    pair,
+    tokenName: String(token?.name || "") || null,
+    tokenSymbol: String(token?.symbol || "") || null,
+    tokenAddress,
+  };
+}
+
 async function fetchDexScreenerPair(tokenAddress: string) {
   const response = await fetch(`${DEXSCREENER_TOKEN_BASE_URL}/${encodeURIComponent(tokenAddress)}`, {
     headers: {
@@ -157,29 +210,36 @@ async function fetchDexScreenerPair(tokenAddress: string) {
 
   if (!bestPair) return null;
 
-  const pairCreatedAtMs = toPositiveNumber(bestPair.pairCreatedAt);
-  const pairCreatedAt = pairCreatedAtMs ? new Date(pairCreatedAtMs).toISOString() : null;
-  const ageDays = pairCreatedAtMs ? Math.max(0, Math.round((Date.now() - pairCreatedAtMs) / 86400000)) : null;
-  const baseMatches = String(bestPair.baseToken?.address || "").toLowerCase() === tokenAddressLower;
-  const token = baseMatches ? bestPair.baseToken : bestPair.quoteToken;
-  const pair: LeakScoreTokenDataPair = {
-    dexId: String(bestPair.dexId || "Unknown DEX"),
-    pairAddress: String(bestPair.pairAddress || ""),
-    url: String(bestPair.url || ""),
-    liquidityUsd: toPositiveNumber(bestPair.liquidity?.usd),
-    volume24hUsd: toPositiveNumber(bestPair.volume?.h24),
-    marketCapUsd: toPositiveNumber(bestPair.marketCap),
-    fdvUsd: toPositiveNumber(bestPair.fdv),
-    priceUsd: toPositiveNumber(bestPair.priceUsd),
-    pairCreatedAt,
-    ageDays,
-  };
+  return mapDexScreenerPair(bestPair, tokenAddress);
+}
 
-  return {
-    pair,
-    tokenName: String(token?.name || "") || null,
-    tokenSymbol: String(token?.symbol || "") || null,
-  };
+async function fetchDexScreenerPairByPairAddress(pairAddress: string) {
+  const response = await fetch(`${DEXSCREENER_PAIR_BASE_URL}/${encodeURIComponent(pairAddress)}`, {
+    headers: {
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`DEX Screener pair HTTP ${response.status}`);
+  }
+
+  const data = (await response.json()) as DexScreenerPairResponse;
+  const candidates = [
+    data.pair,
+    ...(Array.isArray(data.pairs) ? data.pairs : []),
+  ].filter(Boolean) as DexScreenerPair[];
+
+  const pairAddressLower = pairAddress.toLowerCase();
+  const bestPair = candidates
+    .filter((pair) => String(pair.chainId || "").toLowerCase() === "solana")
+    .find((pair) => String(pair.pairAddress || "").toLowerCase() === pairAddressLower)
+    || candidates.find((pair) => String(pair.chainId || "").toLowerCase() === "solana")
+    || null;
+
+  if (!bestPair) return null;
+  return mapDexScreenerPair(bestPair);
 }
 
 function parseUiAmount(value?: string | number | null) {
@@ -259,7 +319,11 @@ export async function POST(request: NextRequest) {
     };
     const chain = normalizeLeakScoreChainForData(body.chain);
     const tokenAddressCleanup = cleanupLeakScoreTokenAddressInput(body.contractAddress);
-    const tokenAddress = tokenAddressCleanup.cleanedAddress;
+    const requestedAddress = tokenAddressCleanup.cleanedAddress;
+    let tokenAddress = requestedAddress;
+    let resolutionSource: LeakScoreBasicTokenData["resolutionSource"] = "mint_input";
+    let resolutionLabel = "Mint input";
+    let resolutionHelper = "The input was treated as the token mint.";
 
     if (chain !== "Solana") {
       return json({
@@ -269,7 +333,7 @@ export async function POST(request: NextRequest) {
       }, 400);
     }
 
-    if (!tokenAddress) {
+    if (!requestedAddress) {
       return json({
         ok: false,
         code: "empty_contract_address",
@@ -277,7 +341,7 @@ export async function POST(request: NextRequest) {
       }, 400);
     }
 
-    if (!isLikelySolanaMintAddress(tokenAddress)) {
+    if (!isLikelySolanaMintAddress(requestedAddress)) {
       return json({
         ok: false,
         code: "invalid_solana_mint",
@@ -295,14 +359,31 @@ export async function POST(request: NextRequest) {
     };
 
     try {
-      dexData = await fetchDexScreenerPair(tokenAddress);
+      dexData = await fetchDexScreenerPair(requestedAddress);
+
+      if (!dexData?.pair) {
+        const pairResolved = await fetchDexScreenerPairByPairAddress(requestedAddress).catch(() => null);
+        if (pairResolved?.pair && pairResolved.tokenAddress && isLikelySolanaMintAddress(pairResolved.tokenAddress)) {
+          dexData = pairResolved;
+          tokenAddress = pairResolved.tokenAddress;
+          resolutionSource = "dex_pair_address";
+          resolutionLabel = "DEX pair resolved";
+          resolutionHelper = "The pasted address looked like a DEX pair address, so the app resolved the likely token mint before reading RPC concentration data.";
+          warnings.push("Input appeared to be a DEX pair address or URL. The app resolved the likely token mint from DEX Screener before RPC checks.");
+        }
+      }
+
       sources.push({
         id: "dexscreener",
         label: "DEX Screener",
         ok: Boolean(dexData?.pair),
-        helper: dexData?.pair ? "Best visible Solana pair by detected liquidity." : "No visible Solana DEX pair returned for this mint.",
+        helper: dexData?.pair
+          ? resolutionSource === "dex_pair_address"
+            ? "Resolved a visible Solana pair address into the likely token mint."
+            : "Best visible Solana pair by detected liquidity."
+          : "No visible Solana DEX pair returned for this mint or pair address.",
       });
-      if (!dexData?.pair) warnings.push("No DEX Screener pair was found for this mint yet.");
+      if (!dexData?.pair) warnings.push("No DEX Screener pair was found for this mint or pair address yet.");
     } catch (error) {
       sources.push({
         id: "dexscreener",
@@ -359,6 +440,10 @@ export async function POST(request: NextRequest) {
     const data: LeakScoreBasicTokenData = {
       chain,
       tokenAddress,
+      requestedAddress,
+      resolutionSource,
+      resolutionLabel,
+      resolutionHelper,
       tokenName: dexData?.tokenName || null,
       tokenSymbol: dexData?.tokenSymbol || null,
       fetchedAt: new Date().toISOString(),

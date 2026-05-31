@@ -1,34 +1,49 @@
-# Smoke Is Broke — v59.50.3 Leak Hub Navigation Cleanup
+# Smoke Is Broke — v59.50.4 Token Danger Explanation Engine
 
-v59.50.3 keeps the automatic leak-check product direction and fixes the overloaded Pro bottom navigation. The manual Project Research, Wallet Review, and Project vs Project tools are no longer separate bottom-nav buttons; they now live under the main Check tab as a compact Leak Hub.
+v59.50.4 continues the automatic leak-check product direction without adding another manual loop. Universal Check now explains dangerous token leak patterns in plain language after the automatic token scan, and token-data fetch can resolve DEX Screener pair addresses/URLs into the likely token mint before reading Solana RPC concentration data.
 
-## Changed
+## What changed
 
-- Bottom navigation is cleaner in Pro Mode by removing Project, Wallet, and Vs from the visible bottom bar.
-- The Check tab now acts as the single Leak Hub for:
-  - Universal Check
-  - Project Research
-  - Wallet Review
-  - Project vs Project
-- When a user opens Project Research, Wallet Review, or Compare from the Check tab, the bottom nav keeps Check highlighted so those screens feel like one section.
-- Added a compact Leak Hub card above the Universal Check input so users can reach deeper leak tools without adding more bottom buttons.
-- Reduced Pro bottom-nav width and restored more readable icons/labels on mobile after removing the three extra buttons.
-- Updated shared build marker to `v59.50.3`.
+- Added a plain-language `What this means` decision card to Universal Check results.
+- Added `Dangerous leaks explained` for automatic results, with:
+  - plain signal summary,
+  - why the pattern can drain a wallet,
+  - what to verify next.
+- Expanded Token Auto Signal Engine with more automatic token leak patterns:
+  - valuation/liquidity gap,
+  - fresh pair + tiny liquidity,
+  - fresh pair + high/extreme concentration,
+  - missing price/valuation/supply context,
+  - source blind spots.
+- Added DEX Screener pair-address fallback in `/api/leak-score/token-data`:
+  - if a pasted address is a pair address instead of a mint, the app attempts to resolve the likely token mint from the pair.
+- Added optional token-data resolution metadata:
+  - `requestedAddress`,
+  - `resolutionSource`,
+  - `resolutionLabel`,
+  - `resolutionHelper`.
+- Updated shared build marker to `v59.50.4`.
 
-## Not changed
+## What did not change
 
-- No new leak scoring formula.
-- No token auto-signal logic change.
-- No wallet auto-signal logic change.
-- No transaction-history scan, PnL, buy/sell timing, wallet accusation, or scam label.
-- No rewards, payout, admin distribution, streak, Daily Routine, wallet verification, Supabase, or server auto-send behavior change.
+- No rewards changes.
+- No Admin distribution changes.
+- No payout logic changes.
+- No Daily Routine / Active Streak changes.
+- No wallet verification changes.
+- No Supabase schema changes.
+- No transaction-history scan.
+- No PnL analysis.
+- No scam labels.
+- No project accusations.
+- No investment advice.
 
-## Verify
+## Product rule
 
-1. Open Pro Mode.
-2. Confirm bottom nav no longer shows separate Project / Wallet / Vs buttons.
-3. Open Check.
-4. Confirm the Leak Hub card shows Universal Check, Project Research, Wallet Review, and Project vs Project.
-5. Tap Project Research, Wallet Review, and Compare from the Check tab.
-6. Confirm each screen opens and the bottom nav still highlights Check.
-7. Paste a token mint or wallet address into Universal Check and confirm results still work.
+The main product direction remains:
+
+```txt
+Open app → Check → paste token / wallet / URL → get leak result
+```
+
+The wording remains safe: leak signals, research context, educational, not scam detection, not financial advice.

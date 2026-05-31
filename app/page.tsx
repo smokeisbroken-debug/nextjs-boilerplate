@@ -22823,6 +22823,35 @@ function UniversalLeakCheckScreen({
             <strong>{result.pressure}/100</strong>
           </div>
 
+          <div className={`universal-decision-card ${resultTone}`}>
+            <span>What this means</span>
+            <h3>{result.decisionLabel}</h3>
+            <p>{result.decisionSummary}</p>
+          </div>
+
+          {result.dangerousLeaks.length > 0 && (
+            <div className="universal-result-section universal-danger-section">
+              <div className="section-title-row">
+                <div>
+                  <span>Dangerous leaks explained</span>
+                  <h3>{result.dangerousLeaks.length} risk pattern{result.dangerousLeaks.length === 1 ? "" : "s"}</h3>
+                </div>
+                <em>Plain language</em>
+              </div>
+              <div className="universal-danger-list">
+                {result.dangerousLeaks.map((leak) => (
+                  <div className={`universal-danger-item ${leak.riskLevel}`} key={leak.id}>
+                    <span>{leak.riskLevel}</span>
+                    <strong>{leak.title}</strong>
+                    <p>{leak.plain}</p>
+                    <small>{leak.whyDangerous}</small>
+                    <em>{leak.checkNext}</em>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="universal-result-grid">
             {result.metrics.map((metric) => (
               <div className="universal-result-metric" key={metric.id}>

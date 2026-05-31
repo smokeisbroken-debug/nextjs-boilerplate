@@ -31630,6 +31630,98 @@ html.embedded-app-view .hero h1 {
   }
 }
 
+/* ===== V59.50.4 TOKEN DANGER EXPLANATION ENGINE ===== */
+.universal-decision-card {
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+  border-radius: 24px;
+  border: 1px solid rgba(183, 255, 25, 0.16);
+  background:
+    radial-gradient(circle at 92% 10%, rgba(183, 255, 25, 0.1), transparent 32%),
+    rgba(255, 255, 255, 0.045);
+}
+
+.universal-decision-card span,
+.universal-danger-item span {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.universal-decision-card h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.universal-decision-card p,
+.universal-danger-item p,
+.universal-danger-item small,
+.universal-danger-item em {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.38;
+}
+
+.universal-decision-card.warning {
+  border-color: rgba(255, 214, 102, 0.22);
+}
+
+.universal-decision-card.danger {
+  border-color: rgba(255, 91, 122, 0.28);
+}
+
+.universal-danger-list {
+  display: grid;
+  gap: 9px;
+}
+
+.universal-danger-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 19px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.universal-danger-item strong {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.universal-danger-item em {
+  padding: 9px;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--text);
+  font-style: normal;
+  font-weight: 800;
+}
+
+.universal-danger-item.caution {
+  border-color: rgba(255, 214, 102, 0.22);
+}
+
+.universal-danger-item.caution span {
+  color: #ffd666;
+}
+
+.universal-danger-item.danger {
+  border-color: rgba(255, 91, 122, 0.3);
+}
+
+.universal-danger-item.danger span {
+  color: #ff8da0;
+}
+
 /* ===== V59.50.3 LEAK HUB NAVIGATION CLEANUP ===== */
 .bottom-nav.standard-mode-nav {
   width: min(calc(100% - 18px), 430px);

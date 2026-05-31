@@ -31,6 +31,10 @@ export type LeakScoreTokenDataPair = {
 export type LeakScoreBasicTokenData = {
   chain: string;
   tokenAddress: string;
+  requestedAddress?: string | null;
+  resolutionSource?: "mint_input" | "dex_pair_address";
+  resolutionLabel?: string | null;
+  resolutionHelper?: string | null;
   tokenName: string | null;
   tokenSymbol: string | null;
   fetchedAt: string;
