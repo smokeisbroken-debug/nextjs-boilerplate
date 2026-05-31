@@ -7,6 +7,7 @@ import {
   DEFAULT_USDC_TOKEN_MINT_ADDRESS,
   REAL_DISTRIBUTION_CONFIRM_PHRASE,
   SERVER_AUTO_SEND_CONFIRM_PHRASE,
+  parseAdminCsv,
 } from "../../../lib/brokeAdminRewards";
 
 export const runtime = "nodejs";
@@ -124,15 +125,8 @@ function getOptionalEnv(name: string) {
   return process.env[name] || "";
 }
 
-function parseCsv(value: string) {
-  return value
-    .split(/[\s,;]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 function getAdminTelegramIds() {
-  return parseCsv(
+  return parseAdminCsv(
     [
       getOptionalEnv("BROKE_ADMIN_TELEGRAM_IDS"),
       getOptionalEnv("ADMIN_TELEGRAM_IDS"),

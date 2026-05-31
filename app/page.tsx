@@ -7,9 +7,14 @@ import {
   BROKE_APP_BUILD_VERSION,
   DEFAULT_BROKE_TOKEN_MINT_ADDRESS,
   DEFAULT_TREASURY_WALLET_ADDRESS,
-  DEFAULT_USDC_TOKEN_MINT_ADDRESS,
   REAL_DISTRIBUTION_CONFIRM_PHRASE,
   SERVER_AUTO_SEND_CONFIRM_PHRASE,
+  buildAdminDistributionManifest,
+  buildAdminDistributionSendSheet,
+  buildAdminPayoutPaymentLink,
+  buildAdminPayoutPaymentLinksCsv,
+  calculateAdminPayoutRows,
+  getAdminRewardTokenMint,
   parseAdminCsv,
   walletAddressEquals,
 } from "./lib/brokeAdminRewards";
@@ -23357,42 +23362,18 @@ function AdminTreasuryPanel({
 
   const rewardPoolValue = Number(rewardPoolAmount.replace(",", "."));
   const eligiblePayoutCandidates = holderIntel?.eligiblePayoutCandidates || holderIntel?.topLegitimateHolders || [];
-  const payoutRows = Number.isFinite(rewardPoolValue) && rewardPoolValue > 0
-    ? eligiblePayoutCandidates.map((holder) => ({
-        ...holder,
-        rewardAmount: Number(((rewardPoolValue * holder.balanceSharePercent) / 100).toFixed(6)),
-      }))
-    : [];
+  const payoutRows = calculateAdminPayoutRows(eligiblePayoutCandidates, rewardPoolValue);
   const payoutTotal = payoutRows.reduce((total, row) => total + row.rewardAmount, 0);
   const payoutPreviewReady = payoutRows.length > 0 && rewardPoolValue > 0;
   const realDistributionConfirmPhrase = REAL_DISTRIBUTION_CONFIRM_PHRASE;
   const realDistributionReady = distributionMode === "real_manual" && payoutPreviewReady && access.treasuryMatched && realDistributionConfirm.trim() === realDistributionConfirmPhrase;
-  const brokeRewardMint = DEFAULT_BROKE_TOKEN_MINT_ADDRESS;
-  const usdcRewardMint = DEFAULT_USDC_TOKEN_MINT_ADDRESS;
-
-  function getRewardTokenMint(token: string) {
-    const normalized = token.toUpperCase();
-    if (normalized === "$BROKE" || normalized === "BROKE") return brokeRewardMint;
-    if (normalized === "USDC") return usdcRewardMint;
-    return "";
-  }
 
   function buildPayoutPaymentLink(row: { walletAddress: string; rewardAmount: number; rank: number }) {
-    const params = new URLSearchParams();
-    params.set("amount", String(row.rewardAmount));
-    params.set("label", "Smoke Is Broke Rewards");
-    params.set(
-      "message",
-      distributionRecord?.id
-        ? `BROKE reward distribution ${distributionRecord.id.slice(0, 8)}`
-        : "BROKE reward distribution"
-    );
-    params.set("memo", `BROKE reward rank ${row.rank}`);
-
-    const mint = getRewardTokenMint(rewardPoolToken);
-    if (mint) params.set("spl-token", mint);
-
-    return `solana:${row.walletAddress}?${params.toString()}`;
+    return buildAdminPayoutPaymentLink({
+      row,
+      rewardPoolToken,
+      distributionId: distributionRecord?.id,
+    });
   }
 
   async function copyPayoutText(text: string, successMessage: string) {
@@ -23432,17 +23413,14 @@ function AdminTreasuryPanel({
       return;
     }
 
-    const header = "rank,wallet,amount,token,share_percent,payment_link";
-    const rows = payoutRows.map((row) => [
-      row.rank,
-      row.walletAddress,
-      row.rewardAmount,
-      rewardPoolToken,
-      row.balanceSharePercent,
-      buildPayoutPaymentLink(row),
-    ].join(","));
-
-    void copyPayoutText([header, ...rows].join("\n"), `Copied ${payoutRows.length} wallet payment link(s).`);
+    void copyPayoutText(
+      buildAdminPayoutPaymentLinksCsv({
+        rows: payoutRows,
+        rewardPoolToken,
+        distributionId: distributionRecord?.id,
+      }),
+      `Copied ${payoutRows.length} wallet payment link(s).`
+    );
   }
 
   function buildDistributionManifestFromRows(
@@ -23450,36 +23428,17 @@ function AdminTreasuryPanel({
     rows: Array<AdminLegitimateHolderRow & { rewardAmount: number }>,
     poolValue: number
   ) {
-    return {
-      type: mode === "real_manual" ? "BROKE_REWARD_DISTRIBUTION_REAL_MANUAL_MANIFEST" : "BROKE_REWARD_DISTRIBUTION_TEST_MANIFEST",
+    return buildAdminDistributionManifest({
       mode,
-      generatedAt: new Date().toISOString(),
-      token: rewardPoolToken,
-      poolAmount: poolValue,
-      eligibleHolders: rows.length,
-      treasuryWallet: access.treasuryWallet || "not_configured",
-      connectedWallet: access.connectedWallet || "not_connected",
-      confirmRealDistribution: mode === "real_manual" ? realDistributionConfirmPhrase : "",
-      rules: {
-        minHold: Number(eligibilityMinHold.replace(",", ".")) || 0,
-        minStreak: Number(eligibilityMinStreak) || 0,
-      },
-      note:
-        mode === "real_manual"
-          ? "Real distribution batch prepared for the dedicated payout wallet sender."
-          : "Manual test ledger only. No token transfer, claim, staking, wallet signing, or treasury spend was executed.",
-      payouts: rows.map((row) => ({
-        rank: row.rank,
-        telegramId: row.telegramId,
-        username: row.username,
-        displayName: row.displayName,
-        walletAddress: row.walletAddress,
-        verifiedBalance: row.verifiedBalance,
-        balanceSharePercent: row.balanceSharePercent,
-        rewardAmount: row.rewardAmount,
-        token: rewardPoolToken,
-      })),
-    };
+      rows,
+      poolValue,
+      rewardPoolToken,
+      treasuryWallet: access.treasuryWallet,
+      connectedWallet: access.connectedWallet,
+      confirmRealDistribution: realDistributionConfirmPhrase,
+      minHold: Number(eligibilityMinHold.replace(",", ".")) || 0,
+      minStreak: Number(eligibilityMinStreak) || 0,
+    });
   }
 
   function buildDistributionManifest(mode: "test" | "real_manual" = distributionMode) {
@@ -23487,16 +23446,7 @@ function AdminTreasuryPanel({
   }
 
   function buildDistributionSendSheet() {
-    const header = "rank,wallet,amount,token,share_percent";
-    const rows = payoutRows.map((row) => [
-      row.rank,
-      row.walletAddress,
-      row.rewardAmount,
-      rewardPoolToken,
-      row.balanceSharePercent,
-    ].join(","));
-
-    return [header, ...rows].join("\n");
+    return buildAdminDistributionSendSheet(payoutRows, rewardPoolToken);
   }
 
   function prepareDistributionDraft() {
@@ -23645,7 +23595,7 @@ function AdminTreasuryPanel({
   async function buildBatchTransactions(rows: AdminBatchPayoutRow[], treasuryWallet: string) {
     const token = rewardPoolToken.toUpperCase();
     const isSol = token === "SOL";
-    const mint = getRewardTokenMint(rewardPoolToken);
+    const mint = getAdminRewardTokenMint(rewardPoolToken);
     const chunkSize = isSol ? 6 : 2;
     const chunks = adminChunkRows(rows, chunkSize);
     const transactions: Array<{ rows: AdminBatchPayoutRow[]; transaction: Uint8Array }> = [];
