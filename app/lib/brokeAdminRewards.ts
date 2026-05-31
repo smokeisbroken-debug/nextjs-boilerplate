@@ -1,7 +1,7 @@
-export const BROKE_APP_BUILD_VERSION = "v59.46.4";
+export const BROKE_APP_BUILD_VERSION = "v59.46.5";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Token Data UI Polish + Safer Apply Hints";
+  "Token Data error states and empty mint UX";
 
 export const DEFAULT_TREASURY_WALLET_ADDRESS = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
 export const DEFAULT_BROKE_TOKEN_MINT_ADDRESS = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";

@@ -30176,7 +30176,7 @@ html.embedded-app-view .hero h1 {
   }
 }
 
-/* v59.46.0-4 Leak Score basic token data fetch + source safety/cache/apply-hint controls */
+/* v59.46.0-5 Leak Score basic token data fetch + source safety/cache/apply-hint/error-state controls */
 .leak-score-token-data-card {
   display: grid;
   gap: 12px;
@@ -30262,6 +30262,48 @@ html.embedded-app-view .hero h1 {
 .leak-score-token-data-error {
   color: #ffb4a9;
   font-weight: 850;
+}
+
+.leak-score-token-data-input-state,
+.leak-score-token-data-error {
+  display: grid;
+  gap: 4px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 9px 10px;
+}
+
+.leak-score-token-data-input-state b,
+.leak-score-token-data-error b {
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.leak-score-token-data-input-state span,
+.leak-score-token-data-error span,
+.leak-score-token-data-error small {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 780;
+  line-height: 1.34;
+}
+
+.leak-score-token-data-input-state-ready {
+  border-color: rgba(167, 255, 41, 0.14);
+  background: rgba(167, 255, 41, 0.045);
+}
+
+.leak-score-token-data-input-state-ready b {
+  color: var(--green);
+}
+
+.leak-score-token-data-input-state-empty,
+.leak-score-token-data-input-state-invalid_mint,
+.leak-score-token-data-input-state-unsupported_chain {
+  border-color: rgba(255, 214, 102, 0.15);
+  background: rgba(255, 214, 102, 0.045);
 }
 
 .leak-score-token-data-cache {
@@ -30537,6 +30579,25 @@ html.embedded-app-view .hero h1 {
   border: 1px dashed rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.03);
   padding: 10px;
+}
+
+.leak-score-token-data-empty strong,
+.leak-score-token-data-empty small {
+  display: block;
+}
+
+.leak-score-token-data-empty strong {
+  color: var(--text);
+  font-size: 0.74rem;
+  font-weight: 950;
+}
+
+.leak-score-token-data-empty small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 760;
+  line-height: 1.34;
 }
 
 .leak-score-token-data-warnings {

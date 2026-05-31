@@ -91,6 +91,69 @@ export function isLikelySolanaMintAddress(value: unknown) {
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(String(value || "").trim());
 }
 
+export type LeakScoreTokenDataInputStatus = {
+  status: "empty" | "unsupported_chain" | "invalid_mint" | "ready";
+  canFetch: boolean;
+  label: string;
+  helper: string;
+};
+
+export function getLeakScoreTokenDataInputStatus(chain: unknown, tokenAddress: unknown): LeakScoreTokenDataInputStatus {
+  const normalizedChain = normalizeLeakScoreChainForData(chain);
+  const mint = String(tokenAddress || "").trim();
+
+  if (normalizedChain !== "Solana") {
+    return {
+      status: "unsupported_chain",
+      canFetch: false,
+      label: "Solana only for now",
+      helper: "Basic token data currently supports Solana mint addresses only. You can still use the manual checklist for other chains.",
+    };
+  }
+
+  if (!mint) {
+    return {
+      status: "empty",
+      canFetch: false,
+      label: "Mint address needed",
+      helper: "Paste a Solana mint address to fetch liquidity, volume, supply, pair age, and top-account concentration.",
+    };
+  }
+
+  if (!isLikelySolanaMintAddress(mint)) {
+    return {
+      status: "invalid_mint",
+      canFetch: false,
+      label: "Check mint format",
+      helper: "This does not look like a Solana mint address. Use the token mint, not a website, ticker, pair URL, or wallet label.",
+    };
+  }
+
+  return {
+    status: "ready",
+    canFetch: true,
+    label: "Ready to fetch",
+    helper: "Read-only check. Nothing is published and no wallet action is required.",
+  };
+}
+
+export function getLeakScoreTokenDataErrorCopy(code: string | undefined, fallback: string | undefined) {
+  switch (code) {
+    case "invalid_json_body":
+      return "Token data request could not be read. Reload and try again.";
+    case "empty_contract_address":
+      return "Paste a Solana mint address before fetching token data.";
+    case "unsupported_chain":
+      return "Basic token data currently supports Solana only. Manual Leak Research still works for other chains.";
+    case "invalid_solana_mint":
+      return "This does not look like a valid Solana mint address. Paste the token mint, not a ticker, pair URL, website, or wallet name.";
+    case "token_data_fetch_failed":
+      return fallback || "Token data sources are unavailable right now. Try Force refresh later or continue with manual research.";
+    default:
+      return fallback || "Basic token data is unavailable right now. Try again later or continue with manual research.";
+  }
+}
+
 export function normalizeLeakScoreChainForData(value: unknown) {
   const normalized = String(value || "Solana").trim().toLowerCase();
   if (normalized === "sol" || normalized === "solana") return "Solana";

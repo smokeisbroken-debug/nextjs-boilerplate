@@ -247,7 +247,16 @@ async function fetchSolanaLargestAccounts(tokenAddress: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json().catch(() => ({}))) as {
+    const rawBody = await request.json().catch(() => null);
+    if (!rawBody || typeof rawBody !== "object" || Array.isArray(rawBody)) {
+      return json({
+        ok: false,
+        code: "invalid_json_body",
+        error: "Token data request body must be a JSON object.",
+      }, 400);
+    }
+
+    const body = rawBody as {
       chain?: unknown;
       contractAddress?: unknown;
     };
@@ -258,7 +267,15 @@ export async function POST(request: NextRequest) {
       return json({
         ok: false,
         code: "unsupported_chain",
-        error: "Basic token data fetch currently supports Solana mint addresses only.",
+        error: "Basic token data fetch currently supports Solana mint addresses only. Manual Leak Research still works for other chains.",
+      }, 400);
+    }
+
+    if (!tokenAddress) {
+      return json({
+        ok: false,
+        code: "empty_contract_address",
+        error: "Paste a Solana mint address before fetching token data.",
       }, 400);
     }
 
@@ -318,7 +335,7 @@ export async function POST(request: NextRequest) {
 
     const sourceHealth = getLeakScoreTokenDataSourceHealth(sources);
 
-    warnings.push("Holder count is not shown in v59.46.3 because reliable total holders require an indexer, not public Solana RPC alone.");
+    warnings.push("Holder count is not shown in v59.46.5 because reliable total holders require an indexer, not public Solana RPC alone.");
     warnings.push("Fetched data is a point-in-time research snapshot. Liquidity, volume, and account concentration can change quickly.");
     if (sourceHealth.sourceHealth === "partial") {
       warnings.push("Source status is partial. Treat automatic hints only as manual research prompts.");

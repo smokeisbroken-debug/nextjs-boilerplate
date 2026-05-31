@@ -43,6 +43,8 @@ import {
   formatLeakScoreTokenDataCacheAge,
   formatLeakScoreUsd,
   getLeakScoreTokenDataCacheKey,
+  getLeakScoreTokenDataErrorCopy,
+  getLeakScoreTokenDataInputStatus,
   isLeakScoreTokenDataCacheFresh,
   isLeakScoreTokenDataLimited,
   summarizeLeakScoreTokenData,
@@ -10953,7 +10955,7 @@ function HelpGuideModal({
         {
           title: "Basic token data fetch",
           body: [
-            "v59.46.4 polishes token-data readability and makes Apply hints a two-step confirmation so auto data stays a research prompt, not a verdict.",
+            "v59.46.5 hardens token-data empty and invalid mint states so failed fetches stay clear, local, and retryable.",
             "It can show liquidity, 24h volume, market cap, FDV, pair age, token supply, and top-10 token account concentration when available.",
             "Total holder count is marked as indexer-needed because public Solana RPC alone is not a reliable holder-count source.",
             "Data hints are suggested manual checks, not verdicts. Review and edit them before sharing.",
@@ -22237,6 +22239,8 @@ function LeakScoreScreen({
   const tokenDataFetchedAtLabel = useMemo(() => formatLeakScoreFetchedAt(tokenData?.fetchedAt), [tokenData?.fetchedAt]);
   const tokenDataCacheTtlMinutes = Math.round(LEAK_SCORE_TOKEN_DATA_CACHE_TTL_MS / 60000);
   const tokenDataLimited = isLeakScoreTokenDataLimited(tokenData);
+  const tokenDataInputStatus = useMemo(() => getLeakScoreTokenDataInputStatus(chain, contractAddress), [chain, contractAddress]);
+  const tokenDataCanFetch = tokenDataInputStatus.canFetch;
   const tokenDataMatchesDraft = Boolean(
     tokenData
       && tokenData.chain === chain
@@ -22267,8 +22271,9 @@ function LeakScoreScreen({
 
   useEffect(() => {
     setTokenDataCacheCount(readLeakScoreTokenDataCache().length);
+    setTokenHintsArmed(false);
 
-    if (!contractAddress.trim()) {
+    if (!tokenDataCanFetch) {
       setTokenDataCacheMessage("");
       return;
     }
@@ -22279,7 +22284,7 @@ function LeakScoreScreen({
     } else {
       setTokenDataCacheMessage("");
     }
-  }, [chain, contractAddress]);
+  }, [chain, contractAddress, tokenDataCanFetch]);
 
   function updateDraft(patch: Partial<LeakScoreProjectDraft>) {
     setShareCopied(false);
@@ -22387,9 +22392,15 @@ function LeakScoreScreen({
     if (tokenDataLoading) return;
 
     const mint = contractAddress.trim();
-    if (!mint) {
-      setTokenDataError("Enter a Solana mint address first.");
-      setShareMessage("Add a contract / mint address before fetching basic token data.");
+    const inputStatus = getLeakScoreTokenDataInputStatus(chain, mint);
+    if (!inputStatus.canFetch) {
+      const message = inputStatus.helper;
+      setTokenData(null);
+      setTokenHintsArmed(false);
+      setTokenDataCacheMode("");
+      setTokenDataCacheMessage("");
+      setTokenDataError(message);
+      setShareMessage(message);
       return;
     }
 
@@ -22435,7 +22446,7 @@ function LeakScoreScreen({
       const payload = (await response.json().catch(() => ({}))) as LeakScoreTokenDataResponse;
 
       if (!response.ok || !payload.ok || !payload.data) {
-        throw new Error(payload.error || "Basic token data fetch failed.");
+        throw new Error(getLeakScoreTokenDataErrorCopy(payload.code, payload.error));
       }
 
       const cachedEntry = upsertLeakScoreTokenDataCache(payload.data);
@@ -22725,10 +22736,10 @@ function LeakScoreScreen({
               <small>Read-only fetch · DEX pair data + Solana RPC supply checks · {tokenDataCacheTtlMinutes}m local cache · {tokenDataCacheCount} cached</small>
             </div>
             <div className="leak-score-token-data-actions">
-              <button type="button" onClick={() => void fetchBasicTokenData()} disabled={tokenDataLoading || !contractAddress.trim()}>
+              <button type="button" onClick={() => void fetchBasicTokenData()} disabled={tokenDataLoading || !tokenDataCanFetch}>
                 {tokenDataLoading ? "Fetching..." : tokenData ? "Use cache" : "Fetch data"}
               </button>
-              <button type="button" onClick={() => void fetchBasicTokenData({ force: true })} disabled={tokenDataLoading || !contractAddress.trim()}>
+              <button type="button" onClick={() => void fetchBasicTokenData({ force: true })} disabled={tokenDataLoading || !tokenDataCanFetch}>
                 Force refresh
               </button>
               <button type="button" onClick={clearTokenDataCache} disabled={tokenDataLoading || tokenDataCacheCount === 0}>
@@ -22737,7 +22748,18 @@ function LeakScoreScreen({
             </div>
           </div>
 
-          {tokenDataError && <p className="leak-score-token-data-error">{tokenDataError}</p>}
+          <div className={`leak-score-token-data-input-state leak-score-token-data-input-state-${tokenDataInputStatus.status}`}>
+            <b>{tokenDataInputStatus.label}</b>
+            <span>{tokenDataInputStatus.helper}</span>
+          </div>
+
+          {tokenDataError && (
+            <div className="leak-score-token-data-error">
+              <b>Token data not loaded</b>
+              <span>{tokenDataError}</span>
+              <small>You can continue with manual leak signals, fix the mint, or try Force refresh later.</small>
+            </div>
+          )}
           {tokenDataCacheMessage && !tokenDataError && (
             <p className={`leak-score-token-data-cache leak-score-token-data-cache-${tokenDataCacheMode || "available"}`}>
               {tokenDataCacheMode === "cache" ? "Cache reused" : tokenDataCacheMode === "live" ? "Cached locally" : tokenDataCacheMode === "cleared" ? "Cache cleared" : "Cache available"} · {tokenDataCacheMessage}
@@ -22808,9 +22830,11 @@ function LeakScoreScreen({
               )}
             </div>
           ) : (
-            <p className="leak-score-token-data-empty">
-              Paste a Solana mint and fetch basic data. This does not publish anything, does not score projects publicly, and does not label projects as scams.
-            </p>
+            <div className="leak-score-token-data-empty">
+              <strong>{tokenDataInputStatus.status === "ready" ? "Ready for read-only fetch" : tokenDataInputStatus.label}</strong>
+              <small>{tokenDataInputStatus.helper}</small>
+              <small>This does not publish anything, does not score projects publicly, and does not label projects as scams.</small>
+            </div>
           )}
         </div>
 
@@ -23014,7 +23038,7 @@ function LeakScoreScreen({
         <span>What comes next</span>
         <strong>Manual research + basic auto data now.</strong>
         <p>
-          v59.46.4 keeps cache controls, improves token-data metric context, and requires confirmation before applying data hints. Next step can expand data-source coverage or add wallet behavior checks.
+          v59.46.5 keeps cache controls and safer hint confirmation, while improving empty mint, invalid mint, unsupported chain, and retry/error states. Next step can expand data-source coverage or add wallet behavior checks.
         </p>
       </section>
     </div>
