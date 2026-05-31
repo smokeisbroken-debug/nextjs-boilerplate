@@ -1,50 +1,58 @@
-# Smoke Is Broke — v59.43.7 Admin Auth / Supabase Helper Extraction
+# Smoke Is Broke — v59.43.8 Admin Distribution Route Persistence Helper Extraction
 
-Patch-only release on top of v59.43.6.
+## Patch scope
 
-## Summary
+v59.43.8 continues the Admin/Rewards backend extraction work by moving Admin distribution persistence/store helpers out of `app/api/admin/distributions/route.ts` into `app/lib/brokeAdminDistributionStore.ts`.
 
-v59.43.7 continues the Admin/Rewards extraction work by moving Admin authorization and Supabase REST infrastructure helpers out of `app/api/admin/distributions/route.ts` into `app/lib/brokeAdminAuthSupabase.ts`.
+This is a refactor-only patch. It does not intentionally change reward payout logic, eligibility rules, payout share math, Daily Routine, Active Streak, wallet verification, Supabase schema, public UI behavior, Admin UI behavior, payout-wallet env names, server auto-send behavior, or distribution API behavior.
 
-The patch is refactor-only. It does not intentionally change payout logic, reward eligibility, Daily Routine, Active Streak, wallet verification, Supabase schema, public UI behavior, server auto-send behavior, Admin UI behavior, or distribution API behavior.
+## Changed files
 
-## Changed
+- `app/api/admin/distributions/route.ts`
+- `app/lib/brokeAdminRewards.ts`
+- `app/lib/brokeAdminDistributionStore.ts` — new
+- Root/app docs
 
-- Added `app/lib/brokeAdminAuthSupabase.ts`.
-- Moved private Admin auth helpers into the helper module:
-  - admin Telegram ID env parsing;
-  - treasury wallet env/default resolution;
-  - rewards admin secret fallback resolution;
-  - Telegram web auth session cookie parsing;
-  - timing-safe secret/session comparison;
-  - Admin request authorization by secret, bearer token, or configured Telegram admin session;
-  - Admin auth configured check;
-  - payout auto-send enabled flag helper.
-- Moved Supabase REST helpers into the helper module:
-  - Supabase base URL normalization;
-  - service-role request headers;
-  - REST URL construction;
-  - no-store Supabase fetch wrapper with compact error formatting.
-- Reduced `app/api/admin/distributions/route.ts` by keeping distribution route handling and persistence calls there while delegating auth/env/Supabase infrastructure to the new helper.
-- Updated shared Admin build marker to `v59.43.7` through `BROKE_APP_BUILD_VERSION`.
+## What changed
 
-## Not changed
+- Added `app/lib/brokeAdminDistributionStore.ts` for Admin reward distribution persistence helpers.
+- Moved distribution/payout row types out of the route into the store helper.
+- Moved distribution formatting into `formatAdminDistribution()`.
+- Moved distribution list/single fetch helpers into `getAdminDistributionRows()` and `getAdminDistributionById()`.
+- Moved payout row fetch helper into `getAdminPayoutRows()`.
+- Moved distribution and payout insert helpers into `insertAdminDistributionRow()` and `insertAdminPayoutRows()`.
+- Moved distribution status update helper into `updateAdminDistributionStatus()`.
+- Moved cancel-payout update helper into `cancelAdminPayoutRows()`.
+- Moved manual-send and server-send payout marking helpers into `markAdminManualSendRecordsSent()` and `markAdminPayoutRanksSent()`.
+- Updated shared Admin build marker to `v59.43.8` through `BROKE_APP_BUILD_VERSION`.
 
-- No reward eligibility formula change.
-- No payout share math change.
-- No Daily Routine or Active Streak change.
-- No wallet verification backend change.
-- No Supabase migration.
-- No public user UI behavior change.
-- No Admin UI behavior change.
-- No payout-wallet env name change.
-- No server auto-send behavior change.
-- No distribution API behavior change intended.
+## Safety notes
+
+- No new Supabase migration is included.
+- No payout sender logic was rewritten.
+- No server-side Solana transaction logic was changed.
+- No eligibility formula or payout share calculation was changed.
+- No public user-facing UI was changed.
 
 ## Verification
 
-- `npm run typecheck` passed.
-- `npm run lint:quiet` passed.
-- `NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully, then the sandbox command timed out during Next.js `Running TypeScript ...`; standalone `npm run typecheck` passed, so full build completion was not confirmed in this sandbox.
-- Targeted scan found no BigInt literal suffixes in changed TS files.
-- Zip integrity test passed.
+Passed in the patch workspace:
+
+```bash
+npm run typecheck
+npm run lint:quiet
+```
+
+`NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully and finished TypeScript, then timed out during `Collecting page data using 26 workers`. This is consistent with the existing large monolithic `app/page.tsx` build-time issue in the sandbox and was not introduced by this patch.
+
+Targeted checks:
+
+- changed TypeScript files passed brace/paren balance checks
+- no BigInt literal suffixes found in changed TypeScript files
+- patch zip integrity verified
+
+## Install
+
+Copy the contents of the `v59.43.8/` folder into the project root and replace files.
+
+Do not delete any files.

@@ -18,8 +18,22 @@ import {
   isAdminDistributionAuthConfigured,
   isBrokePayoutAutoSendEnabled,
   isAdminDistributionRequestAuthorized as isAuthorized,
-  supabaseAdminFetch as supabaseFetch,
 } from "../../../lib/brokeAdminAuthSupabase";
+import {
+  cancelAdminPayoutRows,
+  formatAdminDistribution,
+  getAdminDistributionById,
+  getAdminDistributionRows,
+  getAdminPayoutRows,
+  insertAdminDistributionRow,
+  insertAdminPayoutRows,
+  markAdminManualSendRecordsSent,
+  markAdminPayoutRanksSent,
+  updateAdminDistributionStatus,
+  type AdminDistributionInsertRow,
+  type AdminDistributionRow,
+  type AdminPayoutInsertRow,
+} from "../../../lib/brokeAdminDistributionStore";
 import { serverAutoSendPreparedDistribution } from "../../../lib/brokeAdminServerPayout";
 
 export const runtime = "nodejs";
@@ -71,33 +85,6 @@ type DistributionPatchInput = {
   records?: ManualSendRecord[];
   signaturesText?: string;
   confirmPhrase?: string;
-};
-
-type DistributionRow = {
-  id: string;
-  status: string;
-  pool_token: string;
-  pool_amount: number | string;
-  calculated_total: number | string;
-  treasury_wallet?: string | null;
-  min_hold: number | string;
-  min_streak: number;
-  recipient_count: number;
-  created_at: string;
-  updated_at: string;
-  manifest_payload?: unknown;
-};
-
-type PayoutRow = {
-  id: number;
-  distribution_id: string;
-  rank: number;
-  wallet_address: string;
-  reward_amount: number | string;
-  reward_token: string;
-  status: string;
-  tx_signature?: string | null;
-  sent_at?: string | null;
 };
 
 function normalizeToken(value: unknown) {
@@ -172,60 +159,6 @@ function parseManualSendRecords(input: DistributionPatchInput) {
     .slice(0, 500);
 }
 
-async function serverMarkPayoutRowsSent(distributionId: string, records: Array<{ rank: number; txSignature: string }>) {
-  const sentAt = new Date().toISOString();
-
-  for (const record of records) {
-    await supabaseFetch(`broke_reward_payouts?distribution_id=eq.${encodeURIComponent(distributionId)}&rank=eq.${record.rank}`, {
-      method: "PATCH",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({
-        status: "manual_sent",
-        tx_signature: record.txSignature,
-        sent_at: sentAt,
-        updated_at: sentAt,
-      }),
-    });
-  }
-}
-
-async function getDistributionRows(limit = 10) {
-  return supabaseFetch<DistributionRow[]>(
-    `broke_reward_distributions?select=*&order=created_at.desc&limit=${Math.max(1, Math.min(30, limit))}`
-  );
-}
-
-async function getPayoutRows(distributionId: string) {
-  return supabaseFetch<PayoutRow[]>(
-    `broke_reward_payouts?select=*&distribution_id=eq.${encodeURIComponent(distributionId)}&order=rank.asc`
-  );
-}
-
-async function updateDistributionStatus(distributionId: string, status: "prepared" | "manual_sent" | "cancelled") {
-  await supabaseFetch(`broke_reward_distributions?id=eq.${encodeURIComponent(distributionId)}`, {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ status, updated_at: new Date().toISOString() }),
-  });
-}
-
-function formatDistribution(row: DistributionRow) {
-  return {
-    id: row.id,
-    status: row.status,
-    poolToken: row.pool_token,
-    poolAmount: safeNumber(row.pool_amount),
-    calculatedTotal: safeNumber(row.calculated_total),
-    treasuryWallet: row.treasury_wallet || "",
-    minHold: safeNumber(row.min_hold),
-    minStreak: Number(row.min_streak || 0),
-    recipientCount: Number(row.recipient_count || 0),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    manifest: row.manifest_payload || {},
-  };
-}
-
 export async function GET(request: NextRequest) {
   if (!isAdminDistributionAuthConfigured()) {
     return json({ ok: false, error: "Missing REWARDS_ADMIN_SECRET or configured admin Telegram IDs." }, 500);
@@ -240,23 +173,21 @@ export async function GET(request: NextRequest) {
     const limit = Math.max(1, Math.min(30, Number(request.nextUrl.searchParams.get("limit") || 8)));
 
     if (distributionId) {
-      const distributions = await supabaseFetch<DistributionRow[]>(
-        `broke_reward_distributions?select=*&id=eq.${encodeURIComponent(distributionId)}&limit=1`
-      );
-      const payouts = await getPayoutRows(distributionId);
+      const distribution = await getAdminDistributionById(distributionId);
+      const payouts = await getAdminPayoutRows(distributionId);
 
       return json({
         ok: true,
-        distribution: distributions[0] ? formatDistribution(distributions[0]) : null,
+        distribution: distribution ? formatAdminDistribution(distribution) : null,
         payouts,
       });
     }
 
-    const distributions = await getDistributionRows(limit);
+    const distributions = await getAdminDistributionRows(limit);
 
     return json({
       ok: true,
-      distributions: distributions.map(formatDistribution),
+      distributions: distributions.map(formatAdminDistribution),
     });
   } catch (error) {
     return json(
@@ -315,7 +246,7 @@ export async function POST(request: NextRequest) {
     const createdAt = new Date().toISOString();
     const calculatedTotal = Number(payouts.reduce((sum, row) => sum + row.rewardAmount, 0).toFixed(9));
     const status = mode === "real_manual" ? "prepared" : "draft";
-    const distributionRow = {
+    const distributionRow: AdminDistributionInsertRow = {
       id,
       created_at: createdAt,
       updated_at: createdAt,
@@ -355,13 +286,9 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    await supabaseFetch("broke_reward_distributions", {
-      method: "POST",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify(distributionRow),
-    });
+    await insertAdminDistributionRow(distributionRow);
 
-    const payoutRows = payouts.map((row) => ({
+    const payoutRows: AdminPayoutInsertRow[] = payouts.map((row) => ({
       distribution_id: id,
       rank: row.rank,
       telegram_id: row.telegramId,
@@ -377,11 +304,7 @@ export async function POST(request: NextRequest) {
       updated_at: createdAt,
     }));
 
-    await supabaseFetch("broke_reward_payouts", {
-      method: "POST",
-      headers: { Prefer: "return=minimal" },
-      body: JSON.stringify(payoutRows),
-    });
+    await insertAdminPayoutRows(payoutRows);
 
     if (mode === "real_manual" && body.serverAutoSend) {
       if (cleanString(body.serverAutoConfirm, 80) !== SERVER_AUTO_SEND_CONFIRM_PHRASE) {
@@ -450,11 +373,13 @@ export async function POST(request: NextRequest) {
 
 async function autoSendPreparedDistribution(distributionId: string) {
   return serverAutoSendPreparedDistribution(distributionId, {
-    getDistributionRows: async (id) =>
-      supabaseFetch<DistributionRow[]>(`broke_reward_distributions?select=*&id=eq.${encodeURIComponent(id)}&limit=1`),
-    getPayoutRows,
-    markPayoutRowsSent: serverMarkPayoutRowsSent,
-    updateDistributionStatus,
+    getDistributionRows: async (id) => {
+      const distribution = await getAdminDistributionById(id);
+      return distribution ? [distribution as AdminDistributionRow] : [];
+    },
+    getPayoutRows: getAdminPayoutRows,
+    markPayoutRowsSent: markAdminPayoutRanksSent,
+    updateDistributionStatus: updateAdminDistributionStatus,
   });
 }
 
@@ -476,13 +401,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (body.action === "cancel_distribution") {
-      await updateDistributionStatus(distributionId, "cancelled");
-
-      await supabaseFetch(`broke_reward_payouts?distribution_id=eq.${encodeURIComponent(distributionId)}`, {
-        method: "PATCH",
-        headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({ status: "cancelled", updated_at: new Date().toISOString() }),
-      });
+      await updateAdminDistributionStatus(distributionId, "cancelled");
+      await cancelAdminPayoutRows(distributionId);
 
       return json({ ok: true, distributionId, status: "cancelled" });
     }
@@ -516,35 +436,14 @@ export async function PATCH(request: NextRequest) {
       return json({ ok: false, error: "Paste at least one rank/signature or wallet/signature row." }, 400);
     }
 
-    const sentAt = new Date().toISOString();
-    let updated = 0;
+    const updated = await markAdminManualSendRecordsSent(distributionId, records);
 
-    for (const record of records) {
-      const filter = record.rank
-        ? `distribution_id=eq.${encodeURIComponent(distributionId)}&rank=eq.${record.rank}`
-        : `distribution_id=eq.${encodeURIComponent(distributionId)}&wallet_address=eq.${encodeURIComponent(record.walletAddress || "")}`;
-
-      if (!record.txSignature) continue;
-
-      await supabaseFetch(`broke_reward_payouts?${filter}`, {
-        method: "PATCH",
-        headers: { Prefer: "return=minimal" },
-        body: JSON.stringify({
-          status: "manual_sent",
-          tx_signature: record.txSignature,
-          sent_at: sentAt,
-          updated_at: sentAt,
-        }),
-      });
-      updated += 1;
-    }
-
-    const payouts = await getPayoutRows(distributionId);
+    const payouts = await getAdminPayoutRows(distributionId);
     const sentCount = payouts.filter((row) => row.status === "manual_sent" && row.tx_signature).length;
     const totalCount = payouts.length;
     const nextStatus = totalCount > 0 && sentCount >= totalCount ? "manual_sent" : "prepared";
 
-    await updateDistributionStatus(distributionId, nextStatus);
+    await updateAdminDistributionStatus(distributionId, nextStatus);
 
     return json({
       ok: true,
