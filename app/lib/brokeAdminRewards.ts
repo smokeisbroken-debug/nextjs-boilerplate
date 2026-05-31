@@ -1,7 +1,7 @@
-export const BROKE_APP_BUILD_VERSION = "v59.45.3";
+export const BROKE_APP_BUILD_VERSION = "v59.45.4";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Leak Score card mobile fit polish and Telegram bot PNG delivery; no API scan, Supabase, or payout changes.";
+  "Leak Score saved local snapshots and reset safety; no API scan, Supabase, or payout changes.";
 
 export const DEFAULT_TREASURY_WALLET_ADDRESS = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
 export const DEFAULT_BROKE_TOKEN_MINT_ADDRESS = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";

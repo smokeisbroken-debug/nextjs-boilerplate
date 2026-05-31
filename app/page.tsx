@@ -10914,7 +10914,7 @@ function HelpGuideModal({
           title: "What this screen is",
           body: [
             "It is a manual risk-signal checklist for projects and wallets.",
-            "This version saves one local draft on this device only; it does not fetch on-chain data and does not publish public accusations.",
+            "This version saves one active local draft and optional local snapshots on this device only; it does not fetch on-chain data and does not publish public accusations.",
             "The score is educational: it helps users slow down, verify, and avoid FOMO-driven decisions.",
           ],
           icon: A.navChart,
@@ -10930,9 +10930,10 @@ function HelpGuideModal({
           icon: A.help,
         },
         {
-          title: "Local draft and share text",
+          title: "Local drafts and share text",
           body: [
-            "The screen saves one local draft on this device, so the checklist survives reloads.",
+            "The screen saves one active local draft on this device, so the checklist survives reloads.",
+            "Save snapshot stores up to five local versions before you test another project.",
             "Copy text creates a neutral DYOR note with project, chain, score, selected signals, and safety disclaimer.",
             "The share text says leak signals, not scam labels. Keep it factual and non-accusatory.",
           ],
@@ -21978,6 +21979,15 @@ function HomeHabitLeaksPanel({
 
 
 const LEAK_SCORE_DRAFT_KEY = "broke-leak-score-local-draft-v1";
+const LEAK_SCORE_SAVED_DRAFTS_KEY = "broke-leak-score-saved-drafts-v1";
+const LEAK_SCORE_MAX_SAVED_DRAFTS = 5;
+
+type LeakScoreSavedDraft = LeakScoreProjectDraft & {
+  id: string;
+  savedAt: string;
+  score: number;
+  tierLabel: string;
+};
 
 function readLeakScoreDraft(): LeakScoreProjectDraft {
   if (typeof window === "undefined") return normalizeLeakScoreDraft();
@@ -22002,6 +22012,73 @@ function writeLeakScoreDraft(draft: LeakScoreProjectDraft) {
   }
 }
 
+function normalizeLeakScoreSavedDraft(input: unknown): LeakScoreSavedDraft | null {
+  if (!input || typeof input !== "object") return null;
+
+  const record = input as Partial<LeakScoreSavedDraft>;
+  const draft = normalizeLeakScoreDraft(record);
+  const score = calculateProjectLeakScore(draft.selectedSignals);
+  const savedAt = String(record.savedAt || draft.updatedAt || new Date().toISOString());
+  const savedAtTime = new Date(savedAt).getTime();
+
+  return {
+    ...draft,
+    id: String(record.id || `leak-score-${savedAtTime || Date.now()}`).slice(0, 80),
+    savedAt: Number.isFinite(savedAtTime) ? new Date(savedAtTime).toISOString() : new Date().toISOString(),
+    score: score.score,
+    tierLabel: score.tier.label,
+  };
+}
+
+function readLeakScoreSavedDrafts(): LeakScoreSavedDraft[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(LEAK_SCORE_SAVED_DRAFTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .map(normalizeLeakScoreSavedDraft)
+      .filter((item): item is LeakScoreSavedDraft => Boolean(item))
+      .sort((a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime())
+      .slice(0, LEAK_SCORE_MAX_SAVED_DRAFTS);
+  } catch {
+    return [];
+  }
+}
+
+function writeLeakScoreSavedDrafts(drafts: LeakScoreSavedDraft[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(LEAK_SCORE_SAVED_DRAFTS_KEY, JSON.stringify(drafts.slice(0, LEAK_SCORE_MAX_SAVED_DRAFTS)));
+  } catch {
+    // Saved Leak Score snapshots are local-only and optional.
+  }
+}
+
+function buildLeakScoreSavedDraft(draft: LeakScoreProjectDraft): LeakScoreSavedDraft {
+  const normalized = normalizeLeakScoreDraft({ ...draft, updatedAt: new Date().toISOString() });
+  const score = calculateProjectLeakScore(normalized.selectedSignals);
+  const savedAt = new Date().toISOString();
+
+  return {
+    ...normalized,
+    id: `leak-score-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    savedAt,
+    score: score.score,
+    tierLabel: score.tier.label,
+  };
+}
+
+function upsertLeakScoreSavedDraft(draft: LeakScoreProjectDraft, currentDrafts: LeakScoreSavedDraft[]) {
+  const savedDraft = buildLeakScoreSavedDraft(draft);
+  const nextDrafts = [savedDraft, ...currentDrafts].slice(0, LEAK_SCORE_MAX_SAVED_DRAFTS);
+  writeLeakScoreSavedDrafts(nextDrafts);
+  return nextDrafts;
+}
+
 
 function LeakScoreScreen({
   shareInitData,
@@ -22013,8 +22090,10 @@ function LeakScoreScreen({
   onHelp: () => void;
 }) {
   const [draft, setDraft] = useState<LeakScoreProjectDraft>(() => readLeakScoreDraft());
+  const [savedDrafts, setSavedDrafts] = useState<LeakScoreSavedDraft[]>(() => readLeakScoreSavedDrafts());
   const [shareCopied, setShareCopied] = useState(false);
   const [shareMessage, setShareMessage] = useState("Draft saves on this device only.");
+  const [clearArmed, setClearArmed] = useState(false);
   const [cardSharing, setCardSharing] = useState(false);
   const leakScoreCardRef = useRef<HTMLDivElement | null>(null);
 
@@ -22035,6 +22114,7 @@ function LeakScoreScreen({
 
   function updateDraft(patch: Partial<LeakScoreProjectDraft>) {
     setShareCopied(false);
+    setClearArmed(false);
     setDraft((current) => normalizeLeakScoreDraft({
       ...current,
       ...patch,
@@ -22045,6 +22125,7 @@ function LeakScoreScreen({
   function toggleSignal(id: LeakScoreSignalId) {
     triggerHaptic("light");
     setShareCopied(false);
+    setClearArmed(false);
     setDraft((current) => {
       const selected = current.selectedSignals.includes(id)
         ? current.selectedSignals.filter((signalId) => signalId !== id)
@@ -22058,10 +22139,44 @@ function LeakScoreScreen({
     });
   }
 
+  function saveLeakScoreSnapshot() {
+    triggerHaptic("light");
+    setShareCopied(false);
+    setClearArmed(false);
+    const nextDrafts = upsertLeakScoreSavedDraft(draft, savedDrafts);
+    setSavedDrafts(nextDrafts);
+    setShareMessage(`Saved local snapshot. ${nextDrafts.length}/${LEAK_SCORE_MAX_SAVED_DRAFTS} stored on this device.`);
+    notifyApp("Leak Score saved", "Local snapshot saved on this device only.", "info");
+  }
+
+  function loadLeakScoreSnapshot(item: LeakScoreSavedDraft) {
+    triggerHaptic("light");
+    setShareCopied(false);
+    setClearArmed(false);
+    setDraft(normalizeLeakScoreDraft(item));
+    setShareMessage("Loaded a local Leak Score snapshot. Nothing was published.");
+  }
+
+  function deleteLeakScoreSnapshot(id: string) {
+    triggerHaptic("light");
+    const nextDrafts = savedDrafts.filter((item) => item.id !== id);
+    setSavedDrafts(nextDrafts);
+    writeLeakScoreSavedDrafts(nextDrafts);
+    setShareMessage("Local snapshot deleted from this device.");
+  }
+
   function clearDraft() {
     triggerHaptic("light");
     setShareCopied(false);
-    setShareMessage("Draft cleared locally.");
+
+    if (!clearArmed) {
+      setClearArmed(true);
+      setShareMessage("Tap Confirm clear to erase the active draft. Saved snapshots stay untouched.");
+      return;
+    }
+
+    setClearArmed(false);
+    setShareMessage("Active draft cleared locally. Saved snapshots were not deleted.");
     setDraft(normalizeLeakScoreDraft({ chain: "Solana", selectedSignals: [] }));
   }
 
@@ -22222,7 +22337,7 @@ function LeakScoreScreen({
             <strong>Project draft</strong>
             <small>{updatedAtLabel}</small>
           </div>
-          <button type="button" onClick={clearDraft}>Clear</button>
+          <button type="button" onClick={clearDraft}>{clearArmed ? "Confirm clear" : "Clear"}</button>
         </div>
 
         <label className="leak-score-input-line">
@@ -22253,6 +22368,42 @@ function LeakScoreScreen({
             placeholder="Optional local note"
           />
         </label>
+
+        <div className="leak-score-saved-drafts">
+          <div className="leak-score-saved-drafts-head">
+            <div>
+              <strong>Saved local snapshots</strong>
+              <small>{savedDrafts.length}/{LEAK_SCORE_MAX_SAVED_DRAFTS} stored on this device only</small>
+            </div>
+            <button type="button" onClick={saveLeakScoreSnapshot}>Save snapshot</button>
+          </div>
+
+          {savedDrafts.length > 0 ? (
+            <div className="leak-score-saved-draft-list">
+              {savedDrafts.map((item) => {
+                const savedTime = new Date(item.savedAt).getTime();
+                const savedLabel = Number.isFinite(savedTime)
+                  ? new Date(savedTime).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+                  : "Saved locally";
+
+                return (
+                  <article key={item.id}>
+                    <div>
+                      <strong>{item.projectName || "Unnamed draft"}</strong>
+                      <small>{item.chain} · {item.score}/100 · {item.tierLabel} · {savedLabel}</small>
+                    </div>
+                    <div>
+                      <button type="button" onClick={() => loadLeakScoreSnapshot(item)}>Load</button>
+                      <button type="button" onClick={() => deleteLeakScoreSnapshot(item.id)}>Delete</button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <p>Save a snapshot before testing another project. Snapshots stay local and never publish anything.</p>
+          )}
+        </div>
       </section>
 
       <section className="leak-score-card">
@@ -22390,7 +22541,7 @@ function LeakScoreScreen({
         <span>What comes next</span>
         <strong>Share card now. Signal fetch later.</strong>
         <p>
-          v59.45.3 polishes the mobile card fit and adds Telegram bot delivery for the PNG. Later versions can add basic Solana signal fetch while staying neutral and educational.
+          v59.45.4 adds saved local snapshots and safer reset flow. Later versions can add basic Solana signal fetch while staying neutral and educational.
         </p>
       </section>
     </div>
