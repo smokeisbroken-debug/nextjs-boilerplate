@@ -1,18 +1,17 @@
-# Smoke Is Broke — v59.48.1 Wallet Data Safety + Source Status
+# Smoke Is Broke — v59.48.2 Wallet Data Cache Polish + Error States
 
-v59.48.1 hardens the first Basic Wallet Data layer inside Wallet Leak Score. It keeps the wallet feature read-only and local-first while making source status, cache behavior, and safety limitations clearer.
+v59.48.2 polishes the Basic Wallet Data layer inside Wallet Leak Score. It keeps the wallet feature read-only and local-first while making cache status, empty states, error recovery, and source limitations clearer.
 
 ## Changes
 
-- Added a 5-minute local browser cache for basic wallet data under `broke-wallet-leak-data-cache-v1`.
-- Added same-wallet cache reuse before making another public Solana RPC request.
-- Added `Force refresh` to bypass fresh cache and request a live public RPC snapshot.
-- Added `Clear cache` to remove local wallet-data cache without clearing the manual wallet behavior draft.
-- Added visible wallet-data cache count in the Wallet Leak Score UI.
-- Added a clearer confidence panel: `Good context`, `Partial context`, `Limited context`, or `No context`.
-- Expanded source details for SOL balance, SPL token accounts, visible token exposure, `$BROKE` visibility, and known limitations.
-- Added stronger wording that wallet data is not behavior proof, not trade history, not PnL, not surveillance, and not financial advice.
-- Updated shared build marker to `v59.48.1`.
+- Added a visible cache-status panel for the current wallet address: fresh cache available, expired cache, no cache for this wallet, or empty cache.
+- Added clearer empty-state guidance before wallet data is loaded.
+- Added structured wallet-data error states with a label, helper text, and recovery action.
+- Cooldown errors now explain why the app asks the user to wait before re-fetching public RPC context.
+- Clear cache now leaves the current loaded data visible but marks it as a local snapshot whose cache was cleared.
+- Kept the 5-minute local browser cache under `broke-wallet-leak-data-cache-v1`.
+- Kept `Fetch wallet data`, `Force refresh`, `Clear data`, and `Clear cache` controls.
+- Updated the shared build marker to `v59.48.2`.
 
 ## Unchanged
 

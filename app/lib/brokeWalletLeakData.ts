@@ -52,7 +52,7 @@ export type WalletLeakDataCacheEntry = {
   data: WalletLeakBasicData;
 };
 
-export type WalletLeakDataFreshnessMode = "idle" | "live" | "cache" | "force";
+export type WalletLeakDataFreshnessMode = "idle" | "live" | "cache" | "force" | "local";
 
 export type WalletLeakDataSourceDetail = {
   id: string;
@@ -323,6 +323,7 @@ export function formatWalletLeakDataFreshness(data: WalletLeakBasicData | null, 
   if (mode === "cache") return `Cached snapshot · ${formatWalletLeakDataCacheAge(cachedAt || data.fetchedAt)}`;
   if (mode === "force") return "Force refresh snapshot · live public RPC";
   if (mode === "live") return "Live snapshot · public Solana RPC";
+  if (mode === "local") return "Local snapshot · cache was cleared after this data loaded";
   return "Source snapshot · public Solana RPC";
 }
 
@@ -411,6 +412,126 @@ export function buildWalletLeakDataSourceDetails(data: WalletLeakBasicData | nul
       tone: "pending",
     },
   ];
+}
+
+
+export type WalletLeakDataCacheStatus = {
+  label: string;
+  helper: string;
+  tone: "ready" | "caution" | "pending";
+  freshEntry: WalletLeakDataCacheEntry | null;
+};
+
+export function getWalletLeakDataCacheStatus(walletAddress: unknown, entries: WalletLeakDataCacheEntry[]): WalletLeakDataCacheStatus {
+  const cleaned = cleanupWalletLeakAddressInput(walletAddress).cleanedAddress;
+
+  if (!cleaned || !isLikelySolanaWalletAddress(cleaned)) {
+    return {
+      label: "No wallet cache target",
+      helper: "Paste a valid public wallet address before checking or reusing local wallet-data cache.",
+      tone: "pending",
+      freshEntry: null,
+    };
+  }
+
+  const cacheKey = getWalletLeakDataCacheKey(cleaned);
+  const matchingEntry = entries.find((entry) => entry.cacheKey === cacheKey) || null;
+
+  if (matchingEntry && isWalletLeakDataCacheFresh(matchingEntry)) {
+    return {
+      label: "Fresh cache available",
+      helper: `${formatWalletLeakDataCacheAge(matchingEntry.cachedAt)} · Fetch will reuse this local snapshot unless you choose Force refresh.`,
+      tone: "ready",
+      freshEntry: matchingEntry,
+    };
+  }
+
+  if (matchingEntry) {
+    return {
+      label: "Cache expired",
+      helper: "A previous snapshot exists for this wallet, but it is older than 5 minutes. Fetch will request a fresh public RPC snapshot.",
+      tone: "caution",
+      freshEntry: null,
+    };
+  }
+
+  if (entries.length > 0) {
+    return {
+      label: "No cache for this wallet",
+      helper: `${entries.length} other wallet snapshot${entries.length === 1 ? "" : "s"} stored locally. This wallet will fetch live context.`,
+      tone: "pending",
+      freshEntry: null,
+    };
+  }
+
+  return {
+    label: "Cache empty",
+    helper: "No wallet-data snapshots are stored locally yet. First fetch will request public Solana RPC context.",
+    tone: "pending",
+    freshEntry: null,
+  };
+}
+
+export function getWalletLeakDataEmptyState(inputStatus: WalletLeakDataInputStatus, cacheStatus: WalletLeakDataCacheStatus) {
+  if (!inputStatus.canFetch) {
+    return {
+      label: inputStatus.label,
+      helper: inputStatus.helper,
+      action: "Fix the public wallet address before fetching read-only context.",
+    };
+  }
+
+  if (cacheStatus.freshEntry) {
+    return {
+      label: "Ready · cache available",
+      helper: cacheStatus.helper,
+      action: "Fetch wallet data will reuse cache. Force refresh asks public RPC for a new snapshot.",
+    };
+  }
+
+  return {
+    label: "Ready for live snapshot",
+    helper: "The address looks valid and no fresh local cache is available for it.",
+    action: "Fetch wallet data requests read-only public Solana RPC context.",
+  };
+}
+
+export function getWalletLeakDataErrorState(code: string | undefined, fallback: string | undefined) {
+  const message = getWalletLeakDataErrorCopy(code, fallback);
+
+  switch (code) {
+    case "empty_wallet_address":
+    case "invalid_solana_wallet":
+      return {
+        label: "Check wallet address",
+        helper: message,
+        action: "Paste a public Solana wallet address or supported explorer URL. Never paste seed phrases or private keys.",
+      };
+    case "invalid_json_body":
+      return {
+        label: "Request format issue",
+        helper: message,
+        action: "Reload the app and try again. Manual Wallet Leak Score still works locally.",
+      };
+    case "cooldown_active":
+      return {
+        label: "Slow down fetches",
+        helper: message,
+        action: "Wait for the cooldown or use the existing cached/manual context. This reduces RPC rate-limit noise.",
+      };
+    case "wallet_data_fetch_failed":
+      return {
+        label: "Public wallet data unavailable",
+        helper: message,
+        action: "Try Force refresh later, switch RPC env if needed, or continue with manual behavior signals.",
+      };
+    default:
+      return {
+        label: "Wallet data not loaded",
+        helper: message,
+        action: "You can continue with the manual wallet behavior self-check without automatic public context.",
+      };
+  }
 }
 
 export function getWalletLeakDataErrorCopy(code: string | undefined, fallback: string | undefined) {

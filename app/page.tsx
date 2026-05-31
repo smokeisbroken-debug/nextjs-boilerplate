@@ -50,6 +50,9 @@ import {
   WALLET_LEAK_DATA_CACHE_MAX_ENTRIES,
   buildWalletLeakDataMetricCards,
   buildWalletLeakDataSourceDetails,
+  getWalletLeakDataCacheStatus,
+  getWalletLeakDataEmptyState,
+  getWalletLeakDataErrorState,
   cleanupWalletLeakAddressInput,
   formatWalletLeakDataFreshness,
   formatWalletLeakFetchedAt,
@@ -11050,7 +11053,7 @@ function HelpGuideModal({
           body: [
             "Wallet Leak Score is a manual self-check for wallet behavior leaks.",
             "It focuses on repeated FOMO entries, buying after big green candles, influencer chasing, panic selling, dead-bag holding, and missing exit rules.",
-            "v59.48.1 can fetch basic public Solana wallet context with source details, local cache, and clearer safety limits, but it still does not scan trade history or calculate PnL.",
+            "v59.48.2 can fetch basic public Solana wallet context with clearer cache status, safer empty/error states, and source limits, but it still does not scan trade history or calculate PnL.",
             "Use it to slow down before the next emotional buy, not to judge another user's wallet.",
           ],
           icon: A.walletHp,
@@ -13413,6 +13416,7 @@ function WeeklyBehaviorReportHomeCard({
 
   async function shareWeeklyImage() {
     if (!weeklyShareCardRef.current || weeklyImageSharing) return;
+
 
     try {
       triggerHaptic("light");
@@ -16506,6 +16510,7 @@ function ShareResultCard({
   }
 
   async function nativeShare() {
+
     try {
       triggerHaptic("light");
       if (typeof navigator !== "undefined" && navigator.share) {
@@ -16535,6 +16540,7 @@ function ShareResultCard({
 
   async function shareImageOnly() {
     if (!shareCardRef.current || imageSharing) return;
+
 
     try {
       triggerHaptic("light");
@@ -22707,6 +22713,7 @@ function LeakScoreScreen({
       return;
     }
 
+
     try {
       triggerHaptic("light");
       setTokenDataLastFetchAt(now);
@@ -22839,6 +22846,7 @@ function LeakScoreScreen({
   async function shareLeakScoreCard() {
     if (cardSharing) return;
 
+
     try {
       triggerHaptic("light");
       setCardSharing(true);
@@ -22866,6 +22874,7 @@ function LeakScoreScreen({
 
     let imageFile: File | null = null;
 
+
     try {
       triggerHaptic("light");
       setCardSharing(true);
@@ -22892,6 +22901,7 @@ function LeakScoreScreen({
 
   async function downloadLeakScoreCard() {
     if (cardSharing) return;
+
 
     try {
       triggerHaptic("light");
@@ -23359,7 +23369,9 @@ function WalletLeakScoreScreen({
   const [walletDataLoading, setWalletDataLoading] = useState(false);
   const [walletData, setWalletData] = useState<WalletLeakBasicData | null>(null);
   const [walletDataError, setWalletDataError] = useState("");
+  const [walletDataErrorCode, setWalletDataErrorCode] = useState("");
   const [walletDataLastFetchAt, setWalletDataLastFetchAt] = useState(0);
+  const [walletDataCacheEntries, setWalletDataCacheEntries] = useState<WalletLeakDataCacheEntry[]>([]);
   const [walletDataCacheCount, setWalletDataCacheCount] = useState(0);
   const [walletDataSourceMode, setWalletDataSourceMode] = useState<WalletLeakDataFreshnessMode>("idle");
   const [walletDataCachedAt, setWalletDataCachedAt] = useState("");
@@ -23386,6 +23398,9 @@ function WalletLeakScoreScreen({
   const walletDataFreshnessLabel = useMemo(() => formatWalletLeakDataFreshness(walletData, walletDataSourceMode, walletDataCachedAt), [walletData, walletDataSourceMode, walletDataCachedAt]);
   const walletDataConfidence = useMemo(() => getWalletLeakDataConfidence(walletData), [walletData]);
   const walletDataSourceDetails = useMemo(() => buildWalletLeakDataSourceDetails(walletData), [walletData]);
+  const walletDataCacheStatus = useMemo(() => getWalletLeakDataCacheStatus(walletAddress, walletDataCacheEntries), [walletAddress, walletDataCacheEntries]);
+  const walletDataEmptyState = useMemo(() => getWalletLeakDataEmptyState(walletDataInputStatus, walletDataCacheStatus), [walletDataInputStatus, walletDataCacheStatus]);
+  const walletDataErrorState = useMemo(() => getWalletLeakDataErrorState(walletDataErrorCode, walletDataError), [walletDataErrorCode, walletDataError]);
   const walletDataMatchesDraft = Boolean(
     walletData
       && walletData.walletAddress.toLowerCase() === walletAddress.trim().toLowerCase()
@@ -23397,7 +23412,9 @@ function WalletLeakScoreScreen({
   }, [draft]);
 
   useEffect(() => {
-    setWalletDataCacheCount(clearExpiredWalletLeakDataCache().length);
+    const freshEntries = clearExpiredWalletLeakDataCache();
+    setWalletDataCacheEntries(freshEntries);
+    setWalletDataCacheCount(freshEntries.length);
   }, []);
 
   function updateDraft(patch: Partial<WalletLeakDraft>) {
@@ -23448,6 +23465,7 @@ function WalletLeakScoreScreen({
     const cleanup = cleanupWalletLeakAddressInput(value);
     setWalletAddressHelperMessage(getWalletLeakAddressPasteHelper(value));
     setWalletDataError("");
+    setWalletDataErrorCode("");
     setWalletData((current) => {
       if (!current) return current;
       const matchesNextAddress = current.walletAddress.toLowerCase() === cleanup.cleanedAddress.toLowerCase();
@@ -23473,6 +23491,7 @@ function WalletLeakScoreScreen({
         setWalletDataSourceMode("cache");
         setWalletDataCachedAt(cachedEntry.cachedAt);
         setWalletDataError("");
+        setWalletDataErrorCode("");
         setShareMessage("Using local cached wallet context. Manual behavior self-check remains primary.");
         return;
       }
@@ -23481,14 +23500,18 @@ function WalletLeakScoreScreen({
     const elapsed = now - walletDataLastFetchAt;
     if (elapsed > 0 && elapsed < walletDataCooldownMs) {
       const waitSeconds = Math.ceil((walletDataCooldownMs - elapsed) / 1000);
+      setWalletDataErrorCode("cooldown_active");
       setWalletDataError(`Wait ${waitSeconds}s before re-fetching. Public RPC sources can rate-limit fast repeats.`);
       return;
     }
+
+    let nextErrorCode = "";
 
     try {
       triggerHaptic("light");
       setWalletDataLoading(true);
       setWalletDataError("");
+      setWalletDataErrorCode("");
       setWalletDataLastFetchAt(now);
 
       const response = await fetch(WALLET_LEAK_BASIC_DATA_ROUTE, {
@@ -23499,6 +23522,7 @@ function WalletLeakScoreScreen({
       const payload = (await response.json().catch(() => null)) as WalletLeakBasicDataResponse | null;
 
       if (!response.ok || !payload?.ok || !payload.data) {
+        nextErrorCode = payload?.code || "wallet_data_fetch_failed";
         throw new Error(getWalletLeakDataErrorCopy(payload?.code, payload?.error));
       }
 
@@ -23506,13 +23530,16 @@ function WalletLeakScoreScreen({
       setWalletData(payload.data);
       setWalletDataSourceMode(forceRefresh ? "force" : "live");
       setWalletDataCachedAt(cacheEntry.cachedAt);
-      setWalletDataCacheCount(readWalletLeakDataCache().length);
+      const nextCacheEntries = readWalletLeakDataCache();
+      setWalletDataCacheEntries(nextCacheEntries);
+      setWalletDataCacheCount(nextCacheEntries.length);
       setShareMessage(forceRefresh
         ? "Wallet context force-refreshed from public RPC and cached locally. This is still not behavior proof."
         : "Basic public wallet context loaded and cached locally. This is not trade history, surveillance, or financial advice.");
       notifyApp("Wallet context loaded", forceRefresh ? "Fresh public wallet context snapshot fetched." : "Read-only public wallet context snapshot fetched.", "info");
     } catch (error) {
       setWalletData(null);
+      setWalletDataErrorCode((typeof nextErrorCode === "string" && nextErrorCode) ? nextErrorCode : "wallet_data_fetch_failed");
       setWalletDataError(error instanceof Error ? error.message : "Basic wallet data is unavailable right now.");
     } finally {
       setWalletDataLoading(false);
@@ -23523,6 +23550,7 @@ function WalletLeakScoreScreen({
     triggerHaptic("light");
     setWalletData(null);
     setWalletDataError("");
+    setWalletDataErrorCode("");
     setWalletDataSourceMode("idle");
     setWalletDataCachedAt("");
     setShareMessage("Basic wallet context cleared locally. Manual behavior checklist stayed untouched.");
@@ -23530,8 +23558,12 @@ function WalletLeakScoreScreen({
 
   function clearWalletDataCacheOnly() {
     triggerHaptic("light");
-    setWalletDataCacheCount(clearWalletLeakDataCache());
-    setWalletDataSourceMode(walletData ? "live" : "idle");
+    const nextCount = clearWalletLeakDataCache();
+    setWalletDataCacheEntries([]);
+    setWalletDataCacheCount(nextCount);
+    setWalletDataError("");
+    setWalletDataErrorCode("");
+    setWalletDataSourceMode(walletData ? "local" : "idle");
     setWalletDataCachedAt("");
     setShareMessage("Wallet data cache cleared locally. Current manual behavior draft stayed untouched.");
   }
@@ -23622,6 +23654,7 @@ function WalletLeakScoreScreen({
   async function shareWalletLeakCard() {
     if (cardSharing) return;
 
+
     try {
       triggerHaptic("light");
       setCardSharing(true);
@@ -23649,6 +23682,7 @@ function WalletLeakScoreScreen({
 
     let imageFile: File | null = null;
 
+
     try {
       triggerHaptic("light");
       setCardSharing(true);
@@ -23675,6 +23709,7 @@ function WalletLeakScoreScreen({
 
   async function downloadWalletLeakCard() {
     if (cardSharing) return;
+
 
     try {
       triggerHaptic("light");
@@ -23826,7 +23861,7 @@ function WalletLeakScoreScreen({
           <div>
             <span>Optional auto context</span>
             <strong>Basic public wallet data</strong>
-            <small>Read-only Solana RPC snapshot · 5m local cache · {walletDataCacheCount} cached</small>
+            <small>Read-only Solana RPC snapshot · 5m local cache · {walletDataCacheCount} cached · safer errors</small>
           </div>
           <em>{walletDataLoading ? "Loading" : walletDataConfidence.label}</em>
         </div>
@@ -23834,6 +23869,11 @@ function WalletLeakScoreScreen({
         <p className="wallet-leak-data-warning">
           Wallet data is not behavior proof. It only shows public context such as SOL balance, token-account count, and visible $BROKE balance. It does not analyze buys, sells, timing, profit, losses, or private activity.
         </p>
+
+        <div className={`wallet-leak-cache-status wallet-leak-cache-status-${walletDataCacheStatus.tone}`}>
+          <strong>{walletDataCacheStatus.label}</strong>
+          <span>{walletDataCacheStatus.helper}</span>
+        </div>
 
         <div className={`wallet-leak-confidence wallet-leak-confidence-${walletDataConfidence.tone}`}>
           <strong>{walletDataConfidence.label}</strong>
@@ -23853,8 +23893,17 @@ function WalletLeakScoreScreen({
 
         {walletDataError && (
           <div className="wallet-leak-data-error">
-            <strong>Wallet data not loaded</strong>
-            <span>{walletDataError}</span>
+            <strong>{walletDataErrorState.label}</strong>
+            <span>{walletDataErrorState.helper}</span>
+            <small>{walletDataErrorState.action}</small>
+          </div>
+        )}
+
+        {!walletData && !walletDataError && (
+          <div className="wallet-leak-data-empty-state">
+            <strong>{walletDataEmptyState.label}</strong>
+            <span>{walletDataEmptyState.helper}</span>
+            <small>{walletDataEmptyState.action}</small>
           </div>
         )}
 
@@ -24048,7 +24097,7 @@ function WalletLeakScoreScreen({
         <span>What comes next</span>
         <strong>Manual wallet behavior first. Basic public context now.</strong>
         <p>
-          v59.48.1 adds safer read-only public wallet context: SOL balance, token-account count, visible $BROKE balance, source status, and 5-minute local cache. Transaction history, PnL, and wallet accusations are still out of scope.
+          v59.48.2 polishes wallet-data cache recovery and error states while keeping the scope read-only: SOL balance, token-account count, visible $BROKE balance, source status, and 5-minute local cache. Transaction history, PnL, and wallet accusations are still out of scope.
         </p>
       </section>
     </div>
