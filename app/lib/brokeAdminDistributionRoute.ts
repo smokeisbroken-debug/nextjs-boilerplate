@@ -81,7 +81,10 @@ export function getAdminDistributionAccessError(request: NextRequest): AdminDist
 }
 
 export function getAdminDistributionListLimit(value: unknown) {
-  return Math.max(1, Math.min(30, Number(value || 8)));
+  const parsed = Number(value ?? 8);
+  const safeLimit = Number.isFinite(parsed) ? parsed : 8;
+
+  return Math.max(1, Math.min(30, Math.round(safeLimit)));
 }
 
 export function normalizeAdminDistributionManifestRequest(

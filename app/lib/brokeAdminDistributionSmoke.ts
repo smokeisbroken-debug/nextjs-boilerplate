@@ -6,7 +6,8 @@ import {
   normalizeAdminDistributionManifestRequest,
   summarizeAdminDistributionBatch,
 } from "./brokeAdminDistributionRoute";
-import { parseAdminManualSendRecords, type AdminDistributionManifestInput } from "./brokeAdminDistributionValidation";
+import { buildAdminDistributionGetPayload, buildAdminDistributionListPayload } from "./brokeAdminDistributionResponses";
+import { normalizeAdminDistributionPatchAction, parseAdminManualSendRecords, type AdminDistributionManifestInput } from "./brokeAdminDistributionValidation";
 import { type AdminPayoutRow } from "./brokeAdminDistributionStore";
 
 export type AdminDistributionSmokeCheck = {
@@ -102,6 +103,12 @@ export function getAdminDistributionRouteSmokeReport(): AdminDistributionSmokeRe
     },
   ];
   const completion = getAdminManualSendCompletion(completionRows);
+  const listPayload = buildAdminDistributionListPayload({ distributions: [], limit: getAdminDistributionListLimit("abc") });
+  const missingGetPayload = buildAdminDistributionGetPayload({
+    distributionId: smokeDistributionId,
+    distribution: null,
+    payouts: completionRows,
+  });
 
   const checks = [
     smokeCheck(
@@ -118,6 +125,26 @@ export function getAdminDistributionRouteSmokeReport(): AdminDistributionSmokeRe
       "list-limit-clamp-high",
       getAdminDistributionListLimit("999") === 30,
       "GET list limit should clamp to at most 30."
+    ),
+    smokeCheck(
+      "list-limit-invalid-fallback",
+      getAdminDistributionListLimit("abc") === 8,
+      "Invalid GET list limit should fall back to 8 instead of NaN."
+    ),
+    smokeCheck(
+      "list-response-shape",
+      listPayload.ok === true && listPayload.count === 0 && listPayload.limit === 8 && Array.isArray(listPayload.distributions),
+      "GET list payload should include ok/count/limit/distributions."
+    ),
+    smokeCheck(
+      "missing-distribution-response-shape",
+      missingGetPayload.ok === true && missingGetPayload.found === false && missingGetPayload.payouts.length === 0,
+      "Missing GET distribution payload should return found=false and empty payouts."
+    ),
+    smokeCheck(
+      "patch-action-normalization",
+      normalizeAdminDistributionPatchAction("cancel_distribution") === "cancel_distribution" && normalizeAdminDistributionPatchAction("bad") === "",
+      "PATCH action normalization should accept known actions and reject unsupported actions."
     ),
     smokeCheck(
       "manifest-token-normalization",

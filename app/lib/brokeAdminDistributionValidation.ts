@@ -45,8 +45,10 @@ export type AdminManualSendRecordInput = {
   txSignature?: string;
 };
 
+export type AdminDistributionPatchAction = "record_manual_sends" | "cancel_distribution" | "server_auto_send";
+
 export type AdminDistributionPatchInput = {
-  action?: "record_manual_sends" | "cancel_distribution" | "server_auto_send";
+  action?: AdminDistributionPatchAction;
   distributionId?: string;
   records?: AdminManualSendRecordInput[];
   signaturesText?: string;
@@ -107,6 +109,14 @@ export function normalizeAdminDistributionPayouts(input: unknown) {
     })
     .filter((row): row is NonNullable<typeof row> => Boolean(row))
     .slice(0, 500);
+}
+
+export function normalizeAdminDistributionPatchAction(value: unknown): AdminDistributionPatchAction | "" {
+  if (value === "record_manual_sends" || value === "cancel_distribution" || value === "server_auto_send") {
+    return value;
+  }
+
+  return "";
 }
 
 export function parseAdminManualSendRecords(input: AdminDistributionPatchInput) {

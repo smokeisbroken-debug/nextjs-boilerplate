@@ -1,26 +1,38 @@
-# Smoke Is Broke — v59.44.1 Admin Distribution Route Smoke-Test Hardening
+# Smoke Is Broke — v59.44.2 Admin Distribution GET/PATCH Response Hardening
 
 ## Patch scope
 
-v59.44.1 adds an authorized smoke-test path for the private Admin distribution route after the v59.43.x → v59.44.0 refactor pass.
+v59.44.2 hardens the private Admin distribution route GET/PATCH response paths after the v59.44.1 smoke-test pass.
 
-This is a test-hardening patch. It does not intentionally change reward payout logic, eligibility rules, payout share math, Daily Routine, Active Streak, wallet verification, Supabase schema, public UI behavior, Admin UI behavior, payout-wallet env names, server auto-send behavior, or normal distribution API behavior.
+This is a response-hardening patch. It does not intentionally change reward payout logic, eligibility rules, payout share math, Daily Routine, Active Streak, wallet verification, Supabase schema, public UI behavior, Admin UI behavior, payout-wallet env names, server auto-send behavior, or normal successful distribution behavior.
 
 ## Changed files
 
 - `app/api/admin/distributions/route.ts`
 - `app/lib/brokeAdminRewards.ts`
-- `app/lib/brokeAdminDistributionSmoke.ts` — new
+- `app/lib/brokeAdminDistributionRoute.ts`
+- `app/lib/brokeAdminDistributionValidation.ts`
+- `app/lib/brokeAdminDistributionSmoke.ts`
+- `app/lib/brokeAdminDistributionResponses.ts` — new
 - Root/app docs
 
 ## What changed
 
-- Added `app/lib/brokeAdminDistributionSmoke.ts` for pure Admin distribution route smoke checks.
-- Added an authorized `GET /api/admin/distributions?smoke=1` path.
-- The smoke path runs without Supabase reads/writes and without token transfer/signing.
-- Smoke checks cover list-limit clamping, manifest normalization, `$BROKE` token normalization, treasury match detection, payout-row normalization, insert-batch composition, summary shaping, manual-send signature parsing, and partial manual-send completion status.
-- The smoke response is protected by the same Admin access gate as the normal distribution endpoint.
-- Updated shared Admin build marker to `v59.44.1` through `BROKE_APP_BUILD_VERSION`.
+- Added `app/lib/brokeAdminDistributionResponses.ts` for route response shaping and safer JSON/body handling.
+- Hardened `GET /api/admin/distributions` list responses with explicit `count` and sanitized `limit`.
+- Fixed invalid list limits such as `limit=abc` so they fall back to `8` instead of producing `NaN`.
+- Hardened `GET /api/admin/distributions?distributionId=...`:
+  - invalid UUID query values now return a clear `400 invalid_distribution_id` response instead of falling through to the list endpoint;
+  - missing distributions now return `found: false`, `distribution: null`, and empty `payouts` without querying payout rows.
+- Hardened JSON parsing for POST/PATCH bodies so invalid/non-object JSON returns `400 invalid_json_body` instead of a generic server error.
+- Hardened PATCH handling:
+  - unsupported actions now return `400 unsupported_distribution_action` with a stable error code;
+  - missing distribution rows now return `404 distribution_not_found`;
+  - distributions with no payout rows return `409 distribution_has_no_payout_rows` before manual/server-send updates;
+  - successful PATCH responses now echo the normalized `action`.
+- Added stable `code` fields to Admin distribution route error responses for easier frontend/debug handling.
+- Expanded the authorized smoke report to cover invalid limit fallback, list response shape, missing distribution GET shape, and PATCH action normalization.
+- Updated shared Admin build marker to `v59.44.2` through `BROKE_APP_BUILD_VERSION`.
 
 ## Smoke check
 
@@ -37,11 +49,11 @@ Expected high-level response shape:
   "ok": true,
   "smoke": {
     "ok": true,
-    "total": 13,
-    "passed": 13,
+    "total": 17,
+    "passed": 17,
     "failed": 0
   },
-  "buildVersion": "v59.44.1"
+  "buildVersion": "v59.44.2"
 }
 ```
 
@@ -55,7 +67,7 @@ If `smoke.ok` is false, do not run a real distribution until the failed check na
 - No eligibility formula or payout share calculation was changed.
 - No public user-facing UI was changed.
 - No Admin UI behavior was changed.
-- The smoke endpoint is authorized and does not expose secrets.
+- The smoke endpoint remains authorized and does not expose secrets.
 - The smoke endpoint does not read/write Supabase and does not send/sign transactions.
 
 ## Verification
@@ -77,6 +89,6 @@ Targeted checks:
 
 ## Install
 
-Copy the contents of the `v59.44.1/` folder into the project root and replace files.
+Copy the contents of the `v59.44.2/` folder into the project root and replace files.
 
 Do not delete any files.
