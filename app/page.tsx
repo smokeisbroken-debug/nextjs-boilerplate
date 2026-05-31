@@ -23,6 +23,7 @@ import {
   buildAdminBatchTransactions,
 } from "./lib/brokeAdminWalletTransactions";
 import {
+  LEAK_SCORE_SHARE_CARD_FILE_NAME,
   LEAK_SCORE_SIGNALS,
   buildProjectLeakScoreShareText,
   calculateProjectLeakScore,
@@ -16187,7 +16188,7 @@ function buildShareText({
   ].filter(Boolean).join("\n");
 }
 
-async function createShareImageFileFromElement(element: HTMLElement) {
+async function createShareImageFileFromElement(element: HTMLElement, fileName = "broke-life-tracker-result.png") {
   const html2canvasModule = await import("html2canvas");
   const html2canvas = html2canvasModule.default;
   const captureId = `share-capture-${Date.now()}`;
@@ -16235,7 +16236,7 @@ async function createShareImageFileFromElement(element: HTMLElement) {
       throw new Error("Could not create share image.");
     }
 
-    return new File([blob], "broke-life-tracker-result.png", {
+    return new File([blob], fileName, {
       type: "image/png",
     });
   } finally {
@@ -22008,6 +22009,8 @@ function LeakScoreScreen({
   const [draft, setDraft] = useState<LeakScoreProjectDraft>(() => readLeakScoreDraft());
   const [shareCopied, setShareCopied] = useState(false);
   const [shareMessage, setShareMessage] = useState("Draft saves on this device only.");
+  const [cardSharing, setCardSharing] = useState(false);
+  const leakScoreCardRef = useRef<HTMLDivElement | null>(null);
 
   const projectName = draft.projectName;
   const chain = draft.chain;
@@ -22087,6 +22090,55 @@ function LeakScoreScreen({
       await copyLeakScoreText();
     } catch {
       setShareMessage("Sharing was cancelled or blocked. You can still copy the preview text manually.");
+    }
+  }
+
+  async function createLeakScoreCardFile() {
+    if (!leakScoreCardRef.current) {
+      throw new Error("Leak Score card preview is not ready.");
+    }
+
+    return createShareImageFileFromElement(leakScoreCardRef.current, LEAK_SCORE_SHARE_CARD_FILE_NAME);
+  }
+
+  async function shareLeakScoreCard() {
+    if (cardSharing) return;
+
+    try {
+      triggerHaptic("light");
+      setCardSharing(true);
+      const imageFile = await createLeakScoreCardFile();
+      const nativeShared = await tryNativeImageShare(imageFile);
+
+      if (nativeShared) {
+        setShareMessage("Leak Score card shared. Keep the caption as DYOR, not an accusation.");
+        return;
+      }
+
+      downloadImageFile(imageFile);
+      setShareMessage("Image sharing is blocked here, so the Leak Score card was saved as a PNG.");
+      notifyApp("Leak Score PNG saved", "Native image sharing is not available in this browser.", "info");
+    } catch {
+      setShareMessage("Card sharing is blocked or was cancelled. Try copying the text instead.");
+      notifyApp("Card share blocked", "Try copying the Leak Score text instead.", "info");
+    } finally {
+      setCardSharing(false);
+    }
+  }
+
+  async function downloadLeakScoreCard() {
+    if (cardSharing) return;
+
+    try {
+      triggerHaptic("light");
+      setCardSharing(true);
+      const imageFile = await createLeakScoreCardFile();
+      downloadImageFile(imageFile);
+      setShareMessage("Leak Score card saved as a local PNG.");
+    } catch {
+      setShareMessage("PNG export is blocked in this browser. Try a screenshot or copy the text.");
+    } finally {
+      setCardSharing(false);
     }
   }
 
@@ -22215,10 +22267,72 @@ function LeakScoreScreen({
         </div>
       </section>
 
-      <section className="leak-score-card leak-score-share-card">
+      <section className="leak-score-card leak-score-visual-share-section">
         <div className="leak-score-section-head">
           <div>
             <span>Step 4</span>
+            <strong>Shareable card</strong>
+          </div>
+          <em>PNG</em>
+        </div>
+
+        <div className={`leak-score-public-card premium-share-card leak-score-public-card-${score.tier.id}`} ref={leakScoreCardRef}>
+          <img className="premium-share-card-art" src={SHARE_CARD_PUBLIC_ASSETS.background} alt="" />
+          <div className="leak-score-public-card-top">
+            <div>
+              <span>$BROKE LEAK SCORE</span>
+              <strong>{projectName.trim() || "Unnamed draft"}</strong>
+              <small>{chain}{contractAddress ? ` · ${contractAddress.slice(0, 6)}...${contractAddress.slice(-4)}` : ""}</small>
+            </div>
+            <b>DYOR</b>
+          </div>
+
+          <div className="leak-score-public-score-row">
+            <div>
+              <span>Manual score</span>
+              <strong>{score.score}<small>/100</small></strong>
+            </div>
+            <div>
+              <span>Visible tier</span>
+              <strong>{score.tier.shortLabel}</strong>
+            </div>
+          </div>
+
+          <div className="leak-score-public-signals">
+            <span>Visible leak signals</span>
+            {selectedLabels.length ? (
+              <div>
+                {selectedLabels.slice(0, 5).map((label) => <b key={label}>{label}</b>)}
+                {selectedLabels.length > 5 && <b>+{selectedLabels.length - 5} more</b>}
+              </div>
+            ) : (
+              <p>No visible leak signals selected yet.</p>
+            )}
+          </div>
+
+          <footer className="leak-score-public-footer">
+            <span>Manual checklist · not an accusation · not financial advice</span>
+            <b>SmokeIsBroke</b>
+          </footer>
+        </div>
+
+        <p>
+          Export a clean visual card. The card is generated locally from this screen and keeps the same neutral DYOR framing.
+        </p>
+        <div className="leak-score-share-actions">
+          <button type="button" onClick={() => void shareLeakScoreCard()} disabled={cardSharing}>
+            {cardSharing ? "Preparing..." : "Share card"}
+          </button>
+          <button type="button" onClick={() => void downloadLeakScoreCard()} disabled={cardSharing}>
+            Save PNG
+          </button>
+        </div>
+      </section>
+
+      <section className="leak-score-card leak-score-share-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Step 5</span>
             <strong>Share text</strong>
           </div>
           <em>{shareCopied ? "Copied" : "Local"}</em>
@@ -22236,9 +22350,9 @@ function LeakScoreScreen({
 
       <section className="leak-score-roadmap-card">
         <span>What comes next</span>
-        <strong>Local draft now. Share card later.</strong>
+        <strong>Share card now. Signal fetch later.</strong>
         <p>
-          v59.45.1 saves one local Leak Score draft and generates neutral share text. Later versions can add visual share cards, then basic Solana signal fetch.
+          v59.45.2 adds a local PNG card export for Leak Score drafts. Later versions can add basic Solana signal fetch while staying neutral and educational.
         </p>
       </section>
     </div>

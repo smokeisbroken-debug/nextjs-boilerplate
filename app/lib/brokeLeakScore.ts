@@ -1,3 +1,5 @@
+export const LEAK_SCORE_SHARE_CARD_FILE_NAME = "broke-leak-score-card.png";
+
 export type LeakScoreSignalId =
   | "wallet_concentration"
   | "unlocked_supply"
