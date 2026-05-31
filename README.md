@@ -1,28 +1,37 @@
-# Smoke Is Broke — v59.50.4 Token Danger Explanation Engine
+# Smoke Is Broke — v59.50.5 Auto Result Summary + Share Card
 
-v59.50.4 continues the automatic leak-check product direction without adding another manual loop. Universal Check now explains dangerous token leak patterns in plain language after the automatic token scan, and token-data fetch can resolve DEX Screener pair addresses/URLs into the likely token mint before reading Solana RPC concentration data.
+v59.50.5 finishes the Universal Check user-flow layer without adding another manual loop. After a token/wallet/URL check, the result now starts with a short auto summary and includes a local PNG share-card preview/export for X or Telegram.
 
 ## What changed
 
-- Added a plain-language `What this means` decision card to Universal Check results.
-- Added `Dangerous leaks explained` for automatic results, with:
-  - plain signal summary,
-  - why the pattern can drain a wallet,
-  - what to verify next.
-- Expanded Token Auto Signal Engine with more automatic token leak patterns:
-  - valuation/liquidity gap,
-  - fresh pair + tiny liquidity,
-  - fresh pair + high/extreme concentration,
-  - missing price/valuation/supply context,
-  - source blind spots.
-- Added DEX Screener pair-address fallback in `/api/leak-score/token-data`:
-  - if a pasted address is a pair address instead of a mint, the app attempts to resolve the likely token mint from the pair.
-- Added optional token-data resolution metadata:
-  - `requestedAddress`,
-  - `resolutionSource`,
-  - `resolutionLabel`,
-  - `resolutionHelper`.
-- Updated shared build marker to `v59.50.4`.
+- Added `buildUniversalLeakCheckAutoSummary()` for one clear user-facing result summary:
+  - result label,
+  - headline,
+  - main leak,
+  - meaning,
+  - next step,
+  - top signals.
+- Reworked Universal Check copy text into a shorter X/TG-ready note:
+  - result,
+  - pressure,
+  - main leak,
+  - meaning,
+  - next step,
+  - top signals,
+  - safe DYOR disclaimer.
+- Added an `Auto result summary` card at the top of Universal Check results.
+- Added a Universal Check public share card:
+  - `$BROKE LEAK CHECK` header,
+  - token/wallet type,
+  - short address,
+  - source confidence,
+  - leak pressure,
+  - main leak,
+  - plain-language meaning,
+  - top signals,
+  - DYOR / not financial advice footer.
+- Added `Share card` and `Save PNG` actions for Universal Check results using the existing local html2canvas export flow.
+- Updated shared build marker to `v59.50.5`.
 
 ## What did not change
 
@@ -37,13 +46,14 @@ v59.50.4 continues the automatic leak-check product direction without adding ano
 - No scam labels.
 - No project accusations.
 - No investment advice.
+- No token/wallet auto-signal formula change beyond the new summary/share presentation layer.
 
 ## Product rule
 
 The main product direction remains:
 
 ```txt
-Open app → Check → paste token / wallet / URL → get leak result
+Open app → Check → paste token / wallet / URL → get clear result → share card/copy text
 ```
 
 The wording remains safe: leak signals, research context, educational, not scam detection, not financial advice.

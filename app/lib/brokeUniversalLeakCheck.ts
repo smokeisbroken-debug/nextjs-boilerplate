@@ -85,6 +85,15 @@ export type UniversalWalletLeakCheckResult = UniversalLeakCheckResultBase & {
 
 export type UniversalLeakCheckResult = UniversalTokenLeakCheckResult | UniversalWalletLeakCheckResult;
 
+export type UniversalLeakCheckAutoSummary = {
+  label: string;
+  headline: string;
+  mainLeak: string;
+  meaning: string;
+  nextStep: string;
+  topSignals: string[];
+};
+
 const SOLANA_BASE58_ADDRESS_PATTERN = /[1-9A-HJ-NP-Za-km-z]{32,44}/g;
 const TOKEN_URL_MARKERS = new Set(["token", "tokens", "mint", "pair", "pairs", "dex", "chart"]);
 const WALLET_URL_MARKERS = new Set(["wallet", "owner", "holder", "account", "address"]);
@@ -913,27 +922,65 @@ export function chooseUniversalLeakCheckResult(input: {
   return tokenResult || walletResult;
 }
 
+export function buildUniversalLeakCheckAutoSummary(result: UniversalLeakCheckResult): UniversalLeakCheckAutoSummary {
+  const primaryDanger =
+    result.dangerousLeaks.find((leak) => leak.riskLevel === "danger") ||
+    result.dangerousLeaks.find((leak) => leak.riskLevel === "caution") ||
+    result.dangerousLeaks[0] ||
+    null;
+  const primarySignal = result.signals.find((signal) => signal.severity === "high") || result.signals[0] || null;
+  const topSignals = result.signals.slice(0, 3).map((signal) => signal.label);
+
+  if (primaryDanger) {
+    return {
+      label: result.decisionLabel,
+      headline: `${result.decisionLabel}: ${primaryDanger.title}`,
+      mainLeak: primaryDanger.title,
+      meaning: primaryDanger.plain,
+      nextStep: primaryDanger.checkNext,
+      topSignals,
+    };
+  }
+
+  if (primarySignal) {
+    return {
+      label: result.decisionLabel,
+      headline: `${result.decisionLabel}: ${primarySignal.label}`,
+      mainLeak: primarySignal.label,
+      meaning: primarySignal.evidence,
+      nextStep: primarySignal.action,
+      topSignals,
+    };
+  }
+
+  return {
+    label: result.decisionLabel,
+    headline: result.kind === "token" ? "No major token leak found" : "No major wallet leak found",
+    mainLeak: "No major automatic leak",
+    meaning: result.decisionSummary,
+    nextStep: "Still verify official links, source limits, and manual context before acting.",
+    topSignals: [],
+  };
+}
+
 export function buildUniversalLeakCheckShareText(result: UniversalLeakCheckResult) {
+  const summary = buildUniversalLeakCheckAutoSummary(result);
   const signalLines = result.signals.length
-    ? result.signals.map((signal) => `• ${signal.label} (${signal.severity}) — ${signal.evidence}`).join("\n")
+    ? result.signals.slice(0, 4).map((signal) => `• ${signal.label} — ${signal.evidence}`).join("\n")
     : "• No major automatic signal visible in this snapshot.";
-  const metrics = result.metrics.map((metric) => `${metric.label}: ${metric.value}`).join(" · ");
 
   return [
-    "$BROKE Universal Leak Check",
+    "$BROKE Leak Check",
     `Type: ${result.kind === "token" ? "Token" : "Wallet"}`,
-    `Address: ${result.address}`,
-    `Pressure: ${result.pressure}/100 — ${result.pressureLabel}`,
-    `Source context: ${result.confidenceLabel}`,
-    metrics,
-    "Automatic signals:",
+    `Result: ${summary.label}`,
+    `Pressure: ${result.pressure}/100`,
+    `Main leak: ${summary.mainLeak}`,
+    `Meaning: ${summary.meaning}`,
+    `Next: ${summary.nextStep}`,
+    "",
+    "Top signals:",
     signalLines,
     "",
-    "Dangerous leaks explained:",
-    result.dangerousLeaks.length
-      ? result.dangerousLeaks.map((leak) => `• ${leak.title} (${leak.riskLevel}) — ${leak.plain} Check: ${leak.checkNext}`).join("\n")
-      : "• No dangerous leak explanation generated from this snapshot.",
-    "",
-    "Positioning: leak-signal research context / educational / not scam detection / not wallet surveillance / not financial advice.",
+    "DYOR before your wallet leaks. Educational leak-signal context, not scam detection, not wallet surveillance, not financial advice.",
   ].join("\n");
 }

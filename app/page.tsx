@@ -106,6 +106,8 @@ import {
 } from "./lib/brokeLeakScoreTokenData";
 
 import {
+  UNIVERSAL_LEAK_CHECK_SHARE_CARD_FILE_NAME,
+  buildUniversalLeakCheckAutoSummary,
   buildUniversalLeakCheckShareText,
   buildUniversalTokenLeakCheckResult,
   buildUniversalWalletLeakCheckResult,
@@ -22614,10 +22616,13 @@ function UniversalLeakCheckScreen({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("Paste token, wallet, or URL. The app chooses the correct check path.");
   const [copied, setCopied] = useState(false);
+  const [cardSharing, setCardSharing] = useState(false);
+  const universalShareCardRef = useRef<HTMLDivElement | null>(null);
 
   const normalizedInput = useMemo(() => normalizeUniversalLeakCheckInput(rawInput), [rawInput]);
   const inputStatus = useMemo(() => getUniversalLeakCheckInputStatus(normalizedInput), [normalizedInput]);
   const shareText = useMemo(() => result ? buildUniversalLeakCheckShareText(result) : "", [result]);
+  const autoSummary = useMemo(() => result ? buildUniversalLeakCheckAutoSummary(result) : null, [result]);
 
   function updateInput(value: string) {
     setRawInput(value);
@@ -22732,6 +22737,57 @@ function UniversalLeakCheckScreen({
     }
   }
 
+  async function createUniversalCheckCardFile() {
+    if (!universalShareCardRef.current) {
+      throw new Error("Universal Check card preview is not ready.");
+    }
+
+    return createShareImageFileFromElement(universalShareCardRef.current, UNIVERSAL_LEAK_CHECK_SHARE_CARD_FILE_NAME);
+  }
+
+  async function shareUniversalCheckCard() {
+    if (cardSharing) return;
+
+    try {
+      triggerHaptic("light");
+      setCardSharing(true);
+      const imageFile = await createUniversalCheckCardFile();
+      const nativeShared = await tryNativeImageShare(imageFile);
+
+      if (nativeShared) {
+        setMessage("Leak Check card shared. Keep it framed as DYOR, not a verdict.");
+        return;
+      }
+
+      downloadImageFile(imageFile);
+      setMessage("Image sharing is blocked here, so the Leak Check card was saved as a PNG.");
+      notifyApp("Leak Check PNG saved", "Native image sharing is not available in this browser.", "info");
+    } catch {
+      setMessage("Card sharing is blocked or was cancelled. Try copying the result text instead.");
+      notifyApp("Card share blocked", "Try copying the Leak Check text instead.", "info");
+    } finally {
+      setCardSharing(false);
+    }
+  }
+
+  async function saveUniversalCheckPng() {
+    if (cardSharing) return;
+
+    try {
+      triggerHaptic("light");
+      setCardSharing(true);
+      const imageFile = await createUniversalCheckCardFile();
+      downloadImageFile(imageFile);
+      setMessage("Leak Check card saved as a local PNG.");
+      notifyApp("Leak Check PNG saved", "Share it only as educational leak-signal context.", "info");
+    } catch {
+      setMessage("PNG export is blocked in this browser. Try Copy result instead.");
+      notifyApp("PNG export failed", "Try Copy result instead.", "info");
+    } finally {
+      setCardSharing(false);
+    }
+  }
+
   const resultTone = result?.pressure && result.pressure >= 70
     ? "danger"
     : result?.pressure && result.pressure >= 40
@@ -22812,8 +22868,36 @@ function UniversalLeakCheckScreen({
         </div>
       )}
 
-      {result && (
+      {result && autoSummary && (
         <div className="universal-check-result-stack">
+          <div className={`universal-auto-summary-card ${resultTone}`}>
+            <div className="universal-auto-summary-top">
+              <div>
+                <span>Auto result summary</span>
+                <h3>{autoSummary.headline}</h3>
+              </div>
+              <strong>{result.pressure}<small>/100</small></strong>
+            </div>
+            <div className="universal-auto-summary-grid">
+              <div>
+                <span>Result</span>
+                <b>{autoSummary.label}</b>
+              </div>
+              <div>
+                <span>Main leak</span>
+                <b>{autoSummary.mainLeak}</b>
+              </div>
+              <div>
+                <span>Meaning</span>
+                <p>{autoSummary.meaning}</p>
+              </div>
+              <div>
+                <span>Next step</span>
+                <p>{autoSummary.nextStep}</p>
+              </div>
+            </div>
+          </div>
+
           <div className={`universal-result-card ${resultTone}`}>
             <div>
               <span>{result.kind === "token" ? "Token result" : "Wallet result"}</span>
@@ -22901,12 +22985,59 @@ function UniversalLeakCheckScreen({
             </div>
             <div className="universal-check-actions">
               <button className="ghost" onClick={copyResult}>{copied ? "Copied" : "Copy result"}</button>
+              <button className="ghost" onClick={shareUniversalCheckCard} disabled={cardSharing}>{cardSharing ? "Preparing..." : "Share card"}</button>
+              <button className="ghost" onClick={saveUniversalCheckPng} disabled={cardSharing}>Save PNG</button>
               {result.kind === "token" ? (
                 <button className="ghost" onClick={onOpenTokenResearch}>Open Project Research</button>
               ) : (
                 <button className="ghost" onClick={onOpenWalletReview}>Open Wallet Review</button>
               )}
               <button className="ghost" onClick={onOpenCompare}>Compare</button>
+            </div>
+          </div>
+
+          <div className="universal-result-section universal-share-card-section">
+            <div className="section-title-row">
+              <div>
+                <span>Share card</span>
+                <h3>Ready for X / Telegram</h3>
+              </div>
+              <em>PNG</em>
+            </div>
+            <div className={`universal-public-card premium-share-card universal-public-card-${resultTone}`} ref={universalShareCardRef}>
+              <img className="premium-share-card-art" src={SHARE_CARD_PUBLIC_ASSETS.background} alt="" />
+              <div className="universal-public-card-top">
+                <div>
+                  <span>$BROKE LEAK CHECK</span>
+                  <strong>{result.kind === "token" ? "Token check" : "Wallet check"}</strong>
+                  <small>{result.address.slice(0, 6)}...{result.address.slice(-4)} · {result.confidenceLabel}</small>
+                </div>
+                <b>{autoSummary.label}</b>
+              </div>
+              <div className="universal-public-score-row">
+                <div>
+                  <span>Leak pressure</span>
+                  <strong>{result.pressure}<small>/100</small></strong>
+                </div>
+                <div>
+                  <span>Main leak</span>
+                  <strong>{autoSummary.mainLeak}</strong>
+                </div>
+              </div>
+              <div className="universal-public-meaning">
+                <span>What this means</span>
+                <p>{autoSummary.meaning}</p>
+              </div>
+              <div className="universal-public-signals">
+                <span>Top signals</span>
+                <div>
+                  {autoSummary.topSignals.length ? autoSummary.topSignals.map((label) => <b key={label}>{label}</b>) : <b>No major auto signal</b>}
+                </div>
+              </div>
+              <footer className="universal-public-footer">
+                <span>DYOR · educational leak signals · not financial advice</span>
+                <b>SmokeIsBroke</b>
+              </footer>
             </div>
           </div>
 
