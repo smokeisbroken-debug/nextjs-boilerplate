@@ -30176,7 +30176,7 @@ html.embedded-app-view .hero h1 {
   }
 }
 
-/* v59.46.0-1 Leak Score basic token data fetch + source safety */
+/* v59.46.0-2 Leak Score basic token data fetch + source safety/cache */
 .leak-score-token-data-card {
   display: grid;
   gap: 12px;
@@ -30244,6 +30244,26 @@ html.embedded-app-view .hero h1 {
 .leak-score-token-data-error {
   color: #ffb4a9;
   font-weight: 850;
+}
+
+.leak-score-token-data-cache {
+  border-radius: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 8px 10px;
+  font-weight: 820;
+}
+
+.leak-score-token-data-cache-cache {
+  border-color: rgba(167, 255, 41, 0.16);
+  background: rgba(167, 255, 41, 0.055);
+  color: rgba(218, 255, 196, 0.9);
+}
+
+.leak-score-token-data-cache-live {
+  border-color: rgba(48, 255, 156, 0.16);
+  background: rgba(48, 255, 156, 0.05);
+  color: rgba(212, 255, 236, 0.9);
 }
 
 .leak-score-token-data-body {

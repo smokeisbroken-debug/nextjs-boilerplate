@@ -1,6 +1,9 @@
 import type { LeakScoreSignalId } from "./brokeLeakScore";
 
 export const LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE = "/api/leak-score/token-data";
+export const LEAK_SCORE_TOKEN_DATA_CACHE_KEY = "broke-leak-score-token-data-cache-v1";
+export const LEAK_SCORE_TOKEN_DATA_CACHE_TTL_MS = 10 * 60 * 1000;
+export const LEAK_SCORE_TOKEN_DATA_CACHE_MAX_ENTRIES = 12;
 
 export type LeakScoreTokenDataSourceId = "dexscreener" | "solana_rpc";
 export type LeakScoreTokenDataSourceHealth = "complete" | "partial" | "limited";
@@ -45,6 +48,37 @@ export type LeakScoreBasicTokenData = {
   sourceHealthLabel: string;
   sourceHealthHelper: string;
 };
+
+
+export type LeakScoreTokenDataCacheEntry = {
+  cacheKey: string;
+  cachedAt: string;
+  data: LeakScoreBasicTokenData;
+};
+
+export function getLeakScoreTokenDataCacheKey(chain: unknown, tokenAddress: unknown) {
+  return `${normalizeLeakScoreChainForData(chain).toLowerCase()}:${String(tokenAddress || "").trim().toLowerCase()}`;
+}
+
+export function getLeakScoreTokenDataCacheAgeMs(entry: Pick<LeakScoreTokenDataCacheEntry, "cachedAt"> | null | undefined, now = Date.now()) {
+  const cachedAtMs = new Date(String(entry?.cachedAt || "")).getTime();
+  return Number.isFinite(cachedAtMs) ? Math.max(0, now - cachedAtMs) : Number.POSITIVE_INFINITY;
+}
+
+export function isLeakScoreTokenDataCacheFresh(entry: Pick<LeakScoreTokenDataCacheEntry, "cachedAt"> | null | undefined, now = Date.now()) {
+  return getLeakScoreTokenDataCacheAgeMs(entry, now) <= LEAK_SCORE_TOKEN_DATA_CACHE_TTL_MS;
+}
+
+export function formatLeakScoreTokenDataCacheAge(entry: Pick<LeakScoreTokenDataCacheEntry, "cachedAt"> | null | undefined) {
+  const ageMs = getLeakScoreTokenDataCacheAgeMs(entry);
+  if (!Number.isFinite(ageMs)) return "cache age unavailable";
+  const ageSeconds = Math.max(0, Math.round(ageMs / 1000));
+  if (ageSeconds < 60) return `${ageSeconds}s old`;
+  const ageMinutes = Math.round(ageSeconds / 60);
+  if (ageMinutes < 60) return `${ageMinutes}m old`;
+  const ageHours = Math.round(ageMinutes / 60);
+  return `${ageHours}h old`;
+}
 
 export type LeakScoreTokenDataResponse = {
   ok: boolean;

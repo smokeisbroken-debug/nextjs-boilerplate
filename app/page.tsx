@@ -34,14 +34,21 @@ import {
 } from "./lib/brokeLeakScore";
 import {
   LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE,
+  LEAK_SCORE_TOKEN_DATA_CACHE_KEY,
+  LEAK_SCORE_TOKEN_DATA_CACHE_MAX_ENTRIES,
+  LEAK_SCORE_TOKEN_DATA_CACHE_TTL_MS,
   formatLeakScoreAgeDays,
   formatLeakScoreFetchedAt,
   formatLeakScoreNumber,
   formatLeakScorePercent,
+  formatLeakScoreTokenDataCacheAge,
   formatLeakScoreUsd,
+  getLeakScoreTokenDataCacheKey,
+  isLeakScoreTokenDataCacheFresh,
   isLeakScoreTokenDataLimited,
   summarizeLeakScoreTokenData,
   type LeakScoreBasicTokenData,
+  type LeakScoreTokenDataCacheEntry,
   type LeakScoreTokenDataResponse,
 } from "./lib/brokeLeakScoreTokenData";
 
@@ -10947,7 +10954,7 @@ function HelpGuideModal({
         {
           title: "Basic token data fetch",
           body: [
-            "v59.46.1 shows source health, fetched-at status, and safer partial-data warnings for read-only Solana token context.",
+            "v59.46.2 adds short local token-data cache and same-mint reuse while keeping source health, fetched-at status, and read-only Solana token context.",
             "It can show liquidity, 24h volume, market cap, FDV, pair age, token supply, and top-10 token account concentration when available.",
             "Total holder count is marked as indexer-needed because public Solana RPC alone is not a reliable holder-count source.",
             "Data hints are suggested manual checks, not verdicts. Review and edit them before sharing.",
@@ -22106,6 +22113,82 @@ function upsertLeakScoreSavedDraft(draft: LeakScoreProjectDraft, currentDrafts: 
   return nextDrafts;
 }
 
+type LeakScoreTokenDataCacheMode = "live" | "cache" | "";
+
+function normalizeLeakScoreTokenDataCacheEntry(input: unknown): LeakScoreTokenDataCacheEntry | null {
+  if (!input || typeof input !== "object") return null;
+
+  const record = input as Partial<LeakScoreTokenDataCacheEntry>;
+  if (!record.data?.tokenAddress || !record.data.chain) return null;
+
+  const cacheKey = getLeakScoreTokenDataCacheKey(record.data.chain, record.data.tokenAddress);
+  const cachedAt = String(record.cachedAt || record.data.fetchedAt || "");
+  const cachedAtTime = new Date(cachedAt).getTime();
+
+  if (!Number.isFinite(cachedAtTime)) return null;
+
+  return {
+    cacheKey,
+    cachedAt: new Date(cachedAtTime).toISOString(),
+    data: record.data,
+  };
+}
+
+function readLeakScoreTokenDataCache(): LeakScoreTokenDataCacheEntry[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    const raw = window.localStorage.getItem(LEAK_SCORE_TOKEN_DATA_CACHE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .map(normalizeLeakScoreTokenDataCacheEntry)
+      .filter((item): item is LeakScoreTokenDataCacheEntry => Boolean(item))
+      .sort((a, b) => new Date(b.cachedAt).getTime() - new Date(a.cachedAt).getTime())
+      .slice(0, LEAK_SCORE_TOKEN_DATA_CACHE_MAX_ENTRIES);
+  } catch {
+    return [];
+  }
+}
+
+function writeLeakScoreTokenDataCache(entries: LeakScoreTokenDataCacheEntry[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      LEAK_SCORE_TOKEN_DATA_CACHE_KEY,
+      JSON.stringify(entries.slice(0, LEAK_SCORE_TOKEN_DATA_CACHE_MAX_ENTRIES))
+    );
+  } catch {
+    // Token data cache is local-only and optional.
+  }
+}
+
+function getFreshLeakScoreTokenDataCacheEntry(chain: string, tokenAddress: string) {
+  const cacheKey = getLeakScoreTokenDataCacheKey(chain, tokenAddress);
+  return readLeakScoreTokenDataCache().find((entry) => entry.cacheKey === cacheKey && isLeakScoreTokenDataCacheFresh(entry)) || null;
+}
+
+function upsertLeakScoreTokenDataCache(data: LeakScoreBasicTokenData) {
+  const cacheKey = getLeakScoreTokenDataCacheKey(data.chain, data.tokenAddress);
+  const entry: LeakScoreTokenDataCacheEntry = {
+    cacheKey,
+    cachedAt: new Date().toISOString(),
+    data,
+  };
+  const nextEntries = [entry, ...readLeakScoreTokenDataCache().filter((item) => item.cacheKey !== cacheKey)]
+    .slice(0, LEAK_SCORE_TOKEN_DATA_CACHE_MAX_ENTRIES);
+  writeLeakScoreTokenDataCache(nextEntries);
+  return entry;
+}
+
+function clearExpiredLeakScoreTokenDataCache() {
+  const freshEntries = readLeakScoreTokenDataCache().filter((entry) => isLeakScoreTokenDataCacheFresh(entry));
+  writeLeakScoreTokenDataCache(freshEntries);
+  return freshEntries;
+}
+
 
 function LeakScoreScreen({
   shareInitData,
@@ -22126,6 +22209,8 @@ function LeakScoreScreen({
   const [tokenData, setTokenData] = useState<LeakScoreBasicTokenData | null>(null);
   const [tokenDataError, setTokenDataError] = useState("");
   const [tokenDataLastFetchAt, setTokenDataLastFetchAt] = useState(0);
+  const [tokenDataCacheMode, setTokenDataCacheMode] = useState<LeakScoreTokenDataCacheMode>("");
+  const [tokenDataCacheMessage, setTokenDataCacheMessage] = useState("");
   const leakScoreCardRef = useRef<HTMLDivElement | null>(null);
 
   const projectName = draft.projectName;
@@ -22143,6 +22228,7 @@ function LeakScoreScreen({
   const shareText = useMemo(() => buildProjectLeakScoreShareText(draft), [draft]);
   const tokenDataSummary = useMemo(() => summarizeLeakScoreTokenData(tokenData), [tokenData]);
   const tokenDataFetchedAtLabel = useMemo(() => formatLeakScoreFetchedAt(tokenData?.fetchedAt), [tokenData?.fetchedAt]);
+  const tokenDataCacheTtlMinutes = Math.round(LEAK_SCORE_TOKEN_DATA_CACHE_TTL_MS / 60000);
   const tokenDataLimited = isLeakScoreTokenDataLimited(tokenData);
   const tokenDataMatchesDraft = Boolean(
     tokenData
@@ -22154,12 +22240,31 @@ function LeakScoreScreen({
     writeLeakScoreDraft(draft);
   }, [draft]);
 
+  useEffect(() => {
+    clearExpiredLeakScoreTokenDataCache();
+  }, []);
+
+  useEffect(() => {
+    if (!contractAddress.trim()) {
+      setTokenDataCacheMessage("");
+      return;
+    }
+
+    const cached = getFreshLeakScoreTokenDataCacheEntry(chain, contractAddress.trim());
+    if (cached) {
+      setTokenDataCacheMessage(`Fresh local cache available for this mint · ${formatLeakScoreTokenDataCacheAge(cached)}.`);
+    } else {
+      setTokenDataCacheMessage("");
+    }
+  }, [chain, contractAddress]);
+
   function updateDraft(patch: Partial<LeakScoreProjectDraft>) {
     setShareCopied(false);
     setClearArmed(false);
     if (patch.chain !== undefined || patch.contractAddress !== undefined) {
       setTokenDataError("");
       setTokenData(null);
+      setTokenDataCacheMode("");
     }
     setDraft((current) => normalizeLeakScoreDraft({
       ...current,
@@ -22216,6 +22321,9 @@ function LeakScoreScreen({
     triggerHaptic("light");
     setShareCopied(false);
     setClearArmed(false);
+    setTokenData(null);
+    setTokenDataCacheMode("");
+    setTokenDataError("");
     setDraft(normalizeLeakScoreDraft(item));
     setShareMessage("Loaded a local Leak Score snapshot. Nothing was published.");
   }
@@ -22239,6 +22347,10 @@ function LeakScoreScreen({
     }
 
     setClearArmed(false);
+    setTokenData(null);
+    setTokenDataCacheMode("");
+    setTokenDataError("");
+    setTokenDataCacheMessage("");
     setShareMessage("Active draft cleared locally. Saved snapshots were not deleted.");
     setDraft(normalizeLeakScoreDraft({ chain: "Solana", selectedSignals: [], signalNotes: {} }));
   }
@@ -22250,6 +22362,19 @@ function LeakScoreScreen({
     if (!mint) {
       setTokenDataError("Enter a Solana mint address first.");
       setShareMessage("Add a contract / mint address before fetching basic token data.");
+      return;
+    }
+
+    const cached = getFreshLeakScoreTokenDataCacheEntry(chain, mint);
+    if (cached) {
+      triggerHaptic("light");
+      setTokenData(cached.data);
+      setTokenDataCacheMode("cache");
+      setTokenDataError("");
+      const message = `Using local cached token data for this mint (${formatLeakScoreTokenDataCacheAge(cached)}). Reuse keeps sources from rate-limiting fast checks.`;
+      setTokenDataCacheMessage(message);
+      setShareMessage(message);
+      notifyApp("Token data cache used", "Same-mint data reused locally. No source request was made.", "info");
       return;
     }
 
@@ -22267,6 +22392,7 @@ function LeakScoreScreen({
       triggerHaptic("light");
       setTokenDataLastFetchAt(now);
       setTokenDataLoading(true);
+      setTokenDataCacheMode("");
       setTokenDataError("");
       const response = await fetch(LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE, {
         method: "POST",
@@ -22281,12 +22407,16 @@ function LeakScoreScreen({
         throw new Error(payload.error || "Basic token data fetch failed.");
       }
 
+      const cachedEntry = upsertLeakScoreTokenDataCache(payload.data);
       setTokenData(payload.data);
-      setShareMessage(`${payload.data.sourceHealthLabel}. Review the data manually before applying any suggested checks.`);
-      notifyApp("Token data fetched", payload.data.sourceHealthLabel, "info");
+      setTokenDataCacheMode("live");
+      setTokenDataCacheMessage(`Live token data fetched and cached locally for ${tokenDataCacheTtlMinutes} minutes · ${formatLeakScoreTokenDataCacheAge(cachedEntry)}.`);
+      setShareMessage(`${payload.data.sourceHealthLabel}. Cached locally for same-mint reuse; review manually before applying checks.`);
+      notifyApp("Token data fetched", `${payload.data.sourceHealthLabel}. Cached locally for same-mint reuse.`, "info");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Basic token data fetch failed.";
       setTokenData(null);
+      setTokenDataCacheMode("");
       setTokenDataError(message);
       setShareMessage(message);
       notifyApp("Token data unavailable", message, "info");
@@ -22537,7 +22667,7 @@ function LeakScoreScreen({
           <div className="leak-score-token-data-head">
             <div>
               <strong>Basic token data</strong>
-              <small>Read-only fetch · DEX pair data + Solana RPC supply checks</small>
+              <small>Read-only fetch · DEX pair data + Solana RPC supply checks · {tokenDataCacheTtlMinutes}m local cache</small>
             </div>
             <button type="button" onClick={() => void fetchBasicTokenData()} disabled={tokenDataLoading || !contractAddress.trim()}>
               {tokenDataLoading ? "Fetching..." : tokenData ? "Re-fetch" : "Fetch data"}
@@ -22545,6 +22675,11 @@ function LeakScoreScreen({
           </div>
 
           {tokenDataError && <p className="leak-score-token-data-error">{tokenDataError}</p>}
+          {tokenDataCacheMessage && !tokenDataError && (
+            <p className={`leak-score-token-data-cache leak-score-token-data-cache-${tokenDataCacheMode || "available"}`}>
+              {tokenDataCacheMode === "cache" ? "Cache reused" : tokenDataCacheMode === "live" ? "Cached locally" : "Cache available"} · {tokenDataCacheMessage}
+            </p>
+          )}
 
           {tokenData && tokenDataMatchesDraft ? (
             <div className="leak-score-token-data-body">
@@ -22552,7 +22687,7 @@ function LeakScoreScreen({
                 <span>Auto data summary · {tokenData.sourceHealthLabel}</span>
                 <strong>{tokenData.tokenName || tokenData.tokenSymbol || "Token data fetched"}</strong>
                 <small>{tokenDataSummary}</small>
-                <em>{tokenDataFetchedAtLabel}</em>
+                <em>{tokenDataCacheMode === "cache" ? "Using local cache" : tokenDataCacheMode === "live" ? "Live fetch cached" : "Source snapshot"} · {tokenDataFetchedAtLabel}</em>
                 <small>{tokenData.sourceHealthHelper}</small>
               </div>
               <div className="leak-score-token-data-grid">
@@ -22825,7 +22960,7 @@ function LeakScoreScreen({
         <span>What comes next</span>
         <strong>Manual research + basic auto data now.</strong>
         <p>
-          v59.46.1 hardens basic token data with source health, fetched-at status, and safer partial-data handling. Next step can expand data-source coverage or add wallet behavior checks.
+          v59.46.2 reuses fresh same-mint token data from a short local cache to reduce repeated DEX/RPC requests. Next step can expand data-source coverage or add wallet behavior checks.
         </p>
       </section>
     </div>
