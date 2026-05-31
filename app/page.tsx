@@ -45,6 +45,16 @@ import {
 } from "./lib/brokeWalletLeakScore";
 
 import {
+  PROJECT_COMPARE_SHARE_CARD_FILE_NAME,
+  buildProjectCompareShareText,
+  buildProjectCompareSummary,
+  normalizeProjectCompareDraft,
+  type ProjectCompareDraft,
+  type ProjectCompareSideId,
+  type ProjectCompareSide,
+} from "./lib/brokeProjectCompare";
+
+import {
   WALLET_LEAK_BASIC_DATA_ROUTE,
   WALLET_LEAK_DATA_CACHE_KEY,
   WALLET_LEAK_DATA_CACHE_MAX_ENTRIES,
@@ -95,7 +105,7 @@ import {
   type LeakScoreTokenDataResponse,
 } from "./lib/brokeLeakScoreTokenData";
 
-type Tab = "home" | "add" | "chart" | "growth" | "leakscore" | "walletleak" | "whatif" | "settings";
+type Tab = "home" | "add" | "chart" | "growth" | "leakscore" | "walletleak" | "compare" | "whatif" | "settings";
 type AppMode = "standard" | "pro";
 type NeedType = "Needed" | "Not needed" | "Maybe";
 type Language = "en" | "ru";
@@ -4787,6 +4797,7 @@ const navItems: {
   { id: "growth", label: "Growth", icon: "/nav-growth.png", proOnly: true },
   { id: "leakscore", label: "Project", icon: "/nav-chart.png", proOnly: true },
   { id: "walletleak", label: "Wallet", icon: "/nav-save.png", proOnly: true },
+  { id: "compare", label: "Vs", icon: "/nav-chart.png", proOnly: true },
   { id: "whatif", label: "Rewards", icon: "/nav-save.png", proOnly: true },
   { id: "settings", label: "Profile", icon: "/nav-settings.png" },
 ];
@@ -10327,6 +10338,14 @@ export default function Home() {
           />
         )}
 
+        {loaded && onboardingCompleted && activeTab === "compare" && (
+          <ProjectCompareScreen
+            shareInitData={telegram.isTelegram ? telegram.initData : ""}
+            onBack={goHome}
+            onHelp={openHelp}
+          />
+        )}
+
         {loaded && onboardingCompleted && activeTab === "whatif" && (
           <WhatIfScreen
             settings={displaySettings}
@@ -11090,6 +11109,48 @@ function HelpGuideModal({
       ],
     },
 
+    compare: {
+      label: "Vs",
+      eyebrow: "Project Compare Guide",
+      title: "Project vs Project: Compare Leak Signals",
+      intro:
+        "This is a manual DYOR comparison tool. It compares visible leak-signal pressure between two projects without calling either project a scam, winner, or investment recommendation.",
+      icon: "/nav-chart.png",
+      footerTitle: "Comparison rule",
+      footerBody:
+        "Before you choose a project, compare the leaks. Lower signal pressure is not a buy signal; it is only a reason to research more carefully.",
+      sections: [
+        {
+          title: "What this screen is",
+          body: [
+            "Project vs Project is a local manual comparison screen for two project drafts.",
+            "It lets users compare manual signal pressure, visible signal count, liquidity context, top-10 concentration context, and short notes.",
+            "It does not publish rankings, name winners, call scams, or make investment decisions.",
+          ],
+          icon: A.navChart,
+        },
+        {
+          title: "How to use it",
+          body: [
+            "Add Project A and Project B names, chain, and optional contract or mint context.",
+            "Enter manual leak-signal pressure based on the research you already did in Project Leak Research.",
+            "Optional liquidity and top-10 concentration fields help give context, but missing values are allowed.",
+            "Use the generated text/card as a DYOR comparison, not as a price call.",
+          ],
+          icon: A.help,
+        },
+        {
+          title: "Safety framing",
+          body: [
+            "The screen says leak signals, not scam detection.",
+            "The comparison avoids winner language. It shows which side has lower manual signal pressure, stronger liquidity context, or lower concentration when values are provided.",
+            "No Supabase or public project database is used in this concept version.",
+          ],
+          icon: A.walletHp,
+        },
+      ],
+    },
+
     settings: {
       label: "Profile",
       eyebrow: "Profile Button Guide",
@@ -11224,7 +11285,7 @@ function HelpGuideModal({
     },
   };
 
-  const guideTabs: Tab[] = ["home", "add", "chart", "growth", "leakscore", "whatif", "settings"];
+  const guideTabs: Tab[] = ["home", "add", "chart", "growth", "leakscore", "walletleak", "compare", "whatif", "settings"];
   const guide = tabGuides[selectedGuide] ?? tabGuides.home;
 
   return (
@@ -24099,6 +24160,376 @@ function WalletLeakScoreScreen({
         <p>
           v59.48.2 polishes wallet-data cache recovery and error states while keeping the scope read-only: SOL balance, token-account count, visible $BROKE balance, source status, and 5-minute local cache. Transaction history, PnL, and wallet accusations are still out of scope.
         </p>
+      </section>
+    </div>
+  );
+}
+
+const PROJECT_COMPARE_DRAFT_KEY = "broke-project-compare-local-draft-v1";
+
+function readProjectCompareDraft(): ProjectCompareDraft {
+  if (typeof window === "undefined") return normalizeProjectCompareDraft();
+
+  try {
+    const raw = window.localStorage.getItem(PROJECT_COMPARE_DRAFT_KEY);
+    const parsed = raw ? (JSON.parse(raw) as Partial<ProjectCompareDraft>) : null;
+
+    return normalizeProjectCompareDraft(parsed);
+  } catch {
+    return normalizeProjectCompareDraft();
+  }
+}
+
+function writeProjectCompareDraft(draft: ProjectCompareDraft) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(PROJECT_COMPARE_DRAFT_KEY, JSON.stringify(normalizeProjectCompareDraft(draft)));
+  } catch {
+    // Project comparison drafts are local-only and optional.
+  }
+}
+
+function formatProjectCompareSideName(summary: ReturnType<typeof buildProjectCompareSummary>, side: ProjectCompareSideId | "tie" | "unknown") {
+  if (side === "a") return summary.a.displayName;
+  if (side === "b") return summary.b.displayName;
+  if (side === "tie") return "Tie";
+  return "Not enough data";
+}
+
+function ProjectCompareScreen({
+  shareInitData,
+  onBack,
+  onHelp,
+}: {
+  shareInitData: string;
+  onBack: () => void;
+  onHelp: () => void;
+}) {
+  const [draft, setDraft] = useState<ProjectCompareDraft>(() => readProjectCompareDraft());
+  const [shareMessage, setShareMessage] = useState("Comparison draft saves locally on this device only.");
+  const [shareCopied, setShareCopied] = useState(false);
+  const [clearArmed, setClearArmed] = useState(false);
+  const [cardSharing, setCardSharing] = useState(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  const summary = useMemo(() => buildProjectCompareSummary(draft), [draft]);
+  const shareText = useMemo(() => buildProjectCompareShareText(draft), [draft]);
+
+  useEffect(() => {
+    writeProjectCompareDraft(draft);
+  }, [draft]);
+
+  function updateSide(sideId: ProjectCompareSideId, patch: Partial<ProjectCompareSide>) {
+    setDraft((current) => normalizeProjectCompareDraft({
+      ...current,
+      [sideId]: {
+        ...current[sideId],
+        ...patch,
+      },
+      updatedAt: new Date().toISOString(),
+    }));
+    setClearArmed(false);
+  }
+
+  function clearDraft() {
+    if (!clearArmed) {
+      setClearArmed(true);
+      setShareMessage("Tap Confirm clear to reset the local comparison draft. Nothing is published.");
+      return;
+    }
+
+    const nextDraft = normalizeProjectCompareDraft();
+    setDraft(nextDraft);
+    setClearArmed(false);
+    setShareMessage("Local comparison draft cleared. No project data was published.");
+    triggerHaptic("light");
+  }
+
+  async function copyCompareText() {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareText);
+        setShareCopied(true);
+        setShareMessage("Project comparison text copied. Keep it framed as manual DYOR, not a ranking.");
+        notifyApp("Comparison copied", "Manual Project vs Project text copied locally.", "info");
+        window.setTimeout(() => setShareCopied(false), 1600);
+      }
+    } catch {
+      setShareMessage("Copy failed. You can still select and copy the preview text manually.");
+      notifyApp("Copy failed", "Clipboard is blocked in this browser.", "info");
+    }
+  }
+
+  async function shareCompareText() {
+    try {
+      if (typeof navigator !== "undefined" && "share" in navigator) {
+        await navigator.share({ title: "$BROKE Project vs Project", text: shareText });
+        setShareMessage("Project comparison text shared. Keep it factual and non-accusatory.");
+        return;
+      }
+
+      await copyCompareText();
+      setShareMessage("Native share is unavailable, so the comparison text was copied instead.");
+    } catch {
+      setShareMessage("Share cancelled or blocked. Copy text is still available.");
+    }
+  }
+
+  async function createCompareCardFile() {
+    if (!cardRef.current) throw new Error("Project compare card preview is not ready.");
+
+    return createShareImageFileFromElement(cardRef.current, PROJECT_COMPARE_SHARE_CARD_FILE_NAME);
+  }
+
+  async function shareCompareCard() {
+    if (cardSharing) return;
+    setCardSharing(true);
+    triggerHaptic("light");
+
+    try {
+      const imageFile = await createCompareCardFile();
+      const nativeShared = await tryNativeImageShare(imageFile);
+
+      if (nativeShared) {
+        setShareMessage("Project comparison card shared. This is a DYOR comparison, not a winner call.");
+        return;
+      }
+
+      downloadImageFile(imageFile);
+      setShareMessage("Image sharing is blocked here, so the Project vs Project card was saved as a PNG.");
+      notifyApp("Project comparison PNG saved", "Native image sharing is not available in this browser.", "info");
+    } catch {
+      setShareMessage("Card sharing is unavailable here. Try Copy text instead.");
+      notifyApp("Card share blocked", "Try copying the Project vs Project text instead.", "info");
+    } finally {
+      setCardSharing(false);
+    }
+  }
+
+  async function sendCompareCardToBot() {
+    if (cardSharing) return;
+    setCardSharing(true);
+    triggerHaptic("light");
+
+    try {
+      const imageFile = await createCompareCardFile();
+
+      if (!shareInitData) {
+        downloadImageFile(imageFile);
+        setShareMessage("Open inside Telegram to send the Project vs Project card to the bot. The PNG was saved locally instead.");
+        notifyApp("Telegram needed", "Open inside Telegram to send this card to the bot.", "info");
+        return;
+      }
+
+      await sendShareImageViaBot(imageFile, shareInitData, shareText);
+      setShareMessage("Project vs Project card was sent to your Telegram bot chat. Open the bot and forward it anywhere.");
+      notifyApp("Sent to Telegram bot", "Project comparison card delivered to your bot chat.", "info");
+    } catch {
+      setShareMessage("Bot delivery failed. The Project vs Project card was saved as a PNG fallback.");
+      try {
+        const imageFile = await createCompareCardFile();
+        downloadImageFile(imageFile);
+      } catch {
+        // Ignore fallback download failure.
+      }
+    } finally {
+      setCardSharing(false);
+    }
+  }
+
+  async function saveComparePng() {
+    if (cardSharing) return;
+    setCardSharing(true);
+
+    try {
+      const imageFile = await createCompareCardFile();
+      downloadImageFile(imageFile);
+      setShareMessage("Project vs Project card saved as a local PNG.");
+      notifyApp("Project comparison PNG saved", "Share it only as manual DYOR context.", "info");
+    } catch {
+      setShareMessage("PNG export is unavailable in this browser.");
+      notifyApp("PNG export failed", "Try Copy text instead.", "info");
+    } finally {
+      setCardSharing(false);
+    }
+  }
+
+  function renderSide(sideId: ProjectCompareSideId) {
+    const side = draft[sideId];
+    const sideSummary = summary[sideId];
+
+    return (
+      <article className={`project-compare-side project-compare-side-${sideId}`}>
+        <div className="project-compare-side-head">
+          <span>{sideSummary.label}</span>
+          <strong>{sideSummary.displayName}</strong>
+          <small>{sideSummary.tierLabel}</small>
+        </div>
+
+        <label className="leak-score-input-line">
+          <span>Project / token name</span>
+          <input value={side.projectName} onChange={(event) => updateSide(sideId, { projectName: event.target.value })} placeholder={sideId === "a" ? "Example: $BROKE" : "Example: XYZ"} />
+        </label>
+
+        <div className="project-compare-mini-grid">
+          <label className="leak-score-input-line">
+            <span>Chain</span>
+            <input value={side.chain} onChange={(event) => updateSide(sideId, { chain: event.target.value })} placeholder="Solana" />
+          </label>
+          <label className="leak-score-input-line">
+            <span>Manual signal score</span>
+            <input type="number" min="0" max="100" value={side.manualSignalScore} onChange={(event) => updateSide(sideId, { manualSignalScore: event.target.value === "" ? 0 : Number(event.target.value) })} />
+          </label>
+        </div>
+
+        <label className="leak-score-input-line">
+          <span>Contract / mint context</span>
+          <input value={side.contractAddress} onChange={(event) => updateSide(sideId, { contractAddress: event.target.value })} placeholder="Optional public address" />
+        </label>
+
+        <div className="project-compare-mini-grid">
+          <label className="leak-score-input-line">
+            <span>Visible signals</span>
+            <input type="number" min="0" max="20" value={side.selectedSignalCount} onChange={(event) => updateSide(sideId, { selectedSignalCount: event.target.value === "" ? 0 : Number(event.target.value) })} />
+          </label>
+          <label className="leak-score-input-line">
+            <span>Liquidity USD</span>
+            <input type="number" min="0" value={side.liquidityUsd ?? ""} onChange={(event) => updateSide(sideId, { liquidityUsd: event.target.value === "" ? null : Number(event.target.value) })} placeholder="Optional" />
+          </label>
+        </div>
+
+        <label className="leak-score-input-line">
+          <span>Top-10 concentration %</span>
+          <input type="number" min="0" max="100" value={side.top10ConcentrationPct ?? ""} onChange={(event) => updateSide(sideId, { top10ConcentrationPct: event.target.value === "" ? null : Number(event.target.value) })} placeholder="Optional" />
+        </label>
+
+        <label className="leak-score-input-line">
+          <span>Manual note</span>
+          <textarea value={side.note} onChange={(event) => updateSide(sideId, { note: event.target.value })} maxLength={180} placeholder="Why does this side look cleaner or riskier?" />
+        </label>
+      </article>
+    );
+  }
+
+  return (
+    <div className="screen leak-score-screen project-compare-screen">
+      <Header title="Project vs Project" showBack onBack={onBack} rightIcon={A.help} onRight={onHelp} />
+
+      <section className="leak-score-hero project-compare-hero">
+        <div className="eyebrow">Manual DYOR comparison</div>
+        <h1>Compare projects before they leak your wallet.</h1>
+        <p>
+          Put two projects side by side. Compare manual leak-signal pressure, liquidity context, and concentration context without calling either side a scam or a buy.
+        </p>
+        <div className="project-compare-readiness">
+          <strong>{summary.readiness.headline}</strong>
+          <span>{summary.readiness.readyCount}/{summary.readiness.total} ready · {summary.readiness.completionPercent}%</span>
+        </div>
+      </section>
+
+      <section className="leak-score-disclaimer project-compare-disclaimer">
+        <strong>Not a ranking. Not scam detection.</strong>
+        <p>This is a local manual comparison tool. It does not publish project rankings, pick winners, predict price, or replace research.</p>
+      </section>
+
+      <section className="leak-score-card project-compare-editor">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Project vs Project draft</span>
+            <strong>Manual side-by-side context</strong>
+          </div>
+          <button type="button" className="leak-score-secondary-btn" onClick={clearDraft}>{clearArmed ? "Confirm clear" : "Clear"}</button>
+        </div>
+
+        <div className="project-compare-sides">
+          {renderSide("a")}
+          {renderSide("b")}
+        </div>
+      </section>
+
+      <section className="leak-score-card project-compare-summary-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Auto comparison</span>
+            <strong>Signal context, not a verdict</strong>
+          </div>
+        </div>
+        <div className="project-compare-summary-grid">
+          <article>
+            <span>Lower signal pressure</span>
+            <strong>{formatProjectCompareSideName(summary, summary.lowerSignalSide)}</strong>
+            <small>{summary.a.manualSignalScore}/100 vs {summary.b.manualSignalScore}/100</small>
+          </article>
+          <article>
+            <span>Stronger liquidity context</span>
+            <strong>{formatProjectCompareSideName(summary, summary.liquiditySide)}</strong>
+            <small>{summary.a.liquidityLabel} vs {summary.b.liquidityLabel}</small>
+          </article>
+          <article>
+            <span>Lower top-10 concentration</span>
+            <strong>{formatProjectCompareSideName(summary, summary.concentrationSide)}</strong>
+            <small>{summary.a.concentrationLabel} vs {summary.b.concentrationLabel}</small>
+          </article>
+        </div>
+        <p className="project-compare-helper">{summary.readiness.helper}</p>
+      </section>
+
+      <section className="leak-score-card leak-score-share-card project-compare-share-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Share text</span>
+            <strong>Manual comparison copy</strong>
+          </div>
+          <div className="leak-score-share-actions">
+            <button type="button" onClick={copyCompareText}>{shareCopied ? "Copied" : "Copy text"}</button>
+            <button type="button" onClick={shareCompareText}>Share text</button>
+          </div>
+        </div>
+        <textarea readOnly value={shareText} aria-label="Project vs Project share text preview" />
+        <p>{shareMessage}</p>
+      </section>
+
+      <section className="leak-score-card project-compare-png-card">
+        <div className="leak-score-section-head">
+          <div>
+            <span>Share card</span>
+            <strong>Project vs Project PNG</strong>
+          </div>
+          <div className="leak-score-share-actions">
+            <button type="button" onClick={sendCompareCardToBot} disabled={cardSharing}>{cardSharing ? "Working..." : "Send to TG bot"}</button>
+            <button type="button" onClick={shareCompareCard} disabled={cardSharing}>Share card</button>
+            <button type="button" onClick={saveComparePng} disabled={cardSharing}>Save PNG</button>
+          </div>
+        </div>
+
+        <div className="project-compare-card-preview" ref={cardRef}>
+          <div className="project-compare-card-top">
+            <span>$BROKE PROJECT VS PROJECT</span>
+            <strong>Leak signals comparison</strong>
+            <small>Manual DYOR · Not scam detection · Not financial advice</small>
+          </div>
+          <div className="project-compare-card-columns">
+            {(["a", "b"] as ProjectCompareSideId[]).map((sideId) => {
+              const item = summary[sideId];
+              return (
+                <article key={sideId} className={`project-compare-card-side project-compare-card-side-${item.tier}`}>
+                  <span>{item.label}</span>
+                  <strong>{item.displayName}</strong>
+                  <b>{item.manualSignalScore}/100</b>
+                  <small>{item.tierLabel}</small>
+                  <em>{item.selectedSignalCount} visible signals</em>
+                  <em>{item.liquidityLabel} liquidity</em>
+                  <em>{item.concentrationLabel} top-10</em>
+                </article>
+              );
+            })}
+          </div>
+          <div className="project-compare-card-footer">
+            <span>Lower pressure: {formatProjectCompareSideName(summary, summary.lowerSignalSide)}</span>
+            <small>Before you buy a project, check for leaks.</small>
+          </div>
+        </div>
       </section>
     </div>
   );

@@ -1,24 +1,27 @@
-# Smoke Is Broke — v59.48.2 Wallet Data Cache Polish + Error States
+# Smoke Is Broke — v59.49.0 Project vs Project Concept
 
-v59.48.2 polishes the Basic Wallet Data layer inside Wallet Leak Score. It keeps the wallet feature read-only and local-first while making cache status, empty states, error recovery, and source limitations clearer.
+v59.49.0 adds the first Pro-mode Project vs Project comparison concept. It lets users compare two projects side by side using manual DYOR leak-signal context without publishing rankings, calling scams, or making investment recommendations.
 
 ## Changes
 
-- Added a visible cache-status panel for the current wallet address: fresh cache available, expired cache, no cache for this wallet, or empty cache.
-- Added clearer empty-state guidance before wallet data is loaded.
-- Added structured wallet-data error states with a label, helper text, and recovery action.
-- Cooldown errors now explain why the app asks the user to wait before re-fetching public RPC context.
-- Clear cache now leaves the current loaded data visible but marks it as a local snapshot whose cache was cleared.
-- Kept the 5-minute local browser cache under `broke-wallet-leak-data-cache-v1`.
-- Kept `Fetch wallet data`, `Force refresh`, `Clear data`, and `Clear cache` controls.
-- Updated the shared build marker to `v59.48.2`.
+- Added a new Pro bottom-nav `Vs` entry for Project vs Project.
+- Added a local-only Project vs Project screen.
+- Added Project A / Project B fields for project name, chain, optional contract or mint context, manual signal pressure, visible signal count, optional liquidity, optional top-10 concentration, and manual notes.
+- Added an automatic comparison summary for lower manual signal pressure, stronger liquidity context, and lower top-10 concentration when values are available.
+- Added local draft persistence under `broke-project-compare-local-draft-v1`.
+- Added copy/share text for manual comparison framing.
+- Added Project vs Project PNG share card with Save PNG, Share card, and Send to TG bot using the existing share image flow.
+- Added Help Guide coverage for the new comparison screen.
+- Updated shared build marker to `v59.49.0`.
 
 ## Unchanged
 
-- No transaction-history scan.
-- No PnL or buy/sell timing analysis.
-- No wallet accusations or public wallet database.
+- No automatic Project vs Project scanner.
+- No public project ranking.
+- No scam detection labels.
+- No project accusation labels.
 - No Supabase persistence.
+- No public project database.
 - No investment advice.
 - No payout logic changes.
 - No reward eligibility formula changes.
