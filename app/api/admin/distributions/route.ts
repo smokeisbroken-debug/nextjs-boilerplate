@@ -1,5 +1,4 @@
 import { NextRequest } from "next/server";
-import crypto from "crypto";
 import {
   REAL_DISTRIBUTION_CONFIRM_PHRASE,
   SERVER_AUTO_SEND_CONFIRM_PHRASE,
@@ -10,14 +9,8 @@ import {
   formatAdminError,
   formatAdminRewardDistributionError,
   normalizeAdminDistributionId as normalizeDistributionId,
-  safeAdminNumber as safeNumber,
 } from "../../../lib/brokeAdminApi";
-import {
-  getTreasuryWalletAddress,
-  isAdminDistributionAuthConfigured,
-  isBrokePayoutAutoSendEnabled,
-  isAdminDistributionRequestAuthorized as isAuthorized,
-} from "../../../lib/brokeAdminAuthSupabase";
+import { isBrokePayoutAutoSendEnabled } from "../../../lib/brokeAdminAuthSupabase";
 import {
   cancelAdminPayoutRows,
   formatAdminDistribution,
@@ -27,36 +20,32 @@ import {
   insertAdminDistributionRow,
   insertAdminPayoutRows,
   markAdminManualSendRecordsSent,
-  markAdminPayoutRanksSent,
   updateAdminDistributionStatus,
-  type AdminDistributionInsertRow,
-  type AdminDistributionRow,
-  type AdminPayoutInsertRow,
 } from "../../../lib/brokeAdminDistributionStore";
 import {
-  normalizeAdminDistributionMode as normalizeMode,
-  normalizeAdminDistributionPayouts as normalizePayouts,
-  normalizeAdminDistributionToken as normalizeToken,
   parseAdminManualSendRecords as parseManualSendRecords,
   type AdminDistributionManifestInput as DistributionManifestInput,
   type AdminDistributionPatchInput as DistributionPatchInput,
 } from "../../../lib/brokeAdminDistributionValidation";
-import { serverAutoSendPreparedDistribution } from "../../../lib/brokeAdminServerPayout";
+import {
+  autoSendAdminPreparedDistribution,
+  buildAdminDistributionInsertBatch,
+  getAdminDistributionAccessError,
+  getAdminDistributionListLimit,
+  getAdminManualSendCompletion,
+  normalizeAdminDistributionManifestRequest,
+  summarizeAdminDistributionBatch,
+} from "../../../lib/brokeAdminDistributionRoute";
 
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  if (!isAdminDistributionAuthConfigured()) {
-    return json({ ok: false, error: "Missing REWARDS_ADMIN_SECRET or configured admin Telegram IDs." }, 500);
-  }
-
-  if (!isAuthorized(request)) {
-    return json({ ok: false, error: "Unauthorized. Enter REWARDS_ADMIN_SECRET or open as a configured Telegram admin." }, 401);
-  }
+  const accessError = getAdminDistributionAccessError(request);
+  if (accessError) return json(accessError.payload, accessError.status);
 
   try {
     const distributionId = normalizeDistributionId(request.nextUrl.searchParams.get("distributionId"));
-    const limit = Math.max(1, Math.min(30, Number(request.nextUrl.searchParams.get("limit") || 8)));
+    const limit = getAdminDistributionListLimit(request.nextUrl.searchParams.get("limit"));
 
     if (distributionId) {
       const distribution = await getAdminDistributionById(distributionId);
@@ -87,130 +76,47 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isAdminDistributionAuthConfigured()) {
-    return json({ ok: false, error: "Missing REWARDS_ADMIN_SECRET or configured admin Telegram IDs." }, 500);
-  }
-
-  if (!isAuthorized(request)) {
-    return json({ ok: false, error: "Unauthorized. Enter REWARDS_ADMIN_SECRET or open as a configured Telegram admin." }, 401);
-  }
+  const accessError = getAdminDistributionAccessError(request);
+  if (accessError) return json(accessError.payload, accessError.status);
 
   try {
     const body = (await request.json()) as DistributionManifestInput;
-    const token = normalizeToken(body.token);
-    const mode = normalizeMode(body.mode);
-    const poolAmount = safeNumber(body.poolAmount);
-    const payouts = normalizePayouts(body.payouts);
-    const minHold = Math.max(0, safeNumber(body.rules?.minHold));
-    const minStreak = Math.max(0, Math.round(safeNumber(body.rules?.minStreak)));
-    const treasuryWallet = cleanString(body.treasuryWallet || getTreasuryWalletAddress(), 90);
-    const connectedWallet = cleanString(body.connectedWallet, 90);
-    const treasuryMatched = Boolean(
-      treasuryWallet && connectedWallet && treasuryWallet.toLowerCase() === connectedWallet.toLowerCase()
-    );
+    const normalized = normalizeAdminDistributionManifestRequest(body);
 
-    if (poolAmount <= 0) {
+    if (normalized.poolAmount <= 0) {
       return json({ ok: false, error: "Pool amount must be greater than zero." }, 400);
     }
 
-    if (payouts.length === 0) {
+    if (normalized.payouts.length === 0) {
       return json({ ok: false, error: "No payout recipients were provided." }, 400);
     }
 
-    if (mode === "real_manual") {
+    if (normalized.mode === "real_manual") {
       if (body.confirmRealDistribution !== REAL_DISTRIBUTION_CONFIRM_PHRASE) {
         return json({ ok: false, error: `Type ${REAL_DISTRIBUTION_CONFIRM_PHRASE} before preparing a real distribution.` }, 400);
       }
 
       const serverAutoSendEnabled = isBrokePayoutAutoSendEnabled();
-      if (!treasuryMatched && !serverAutoSendEnabled) {
+      if (!normalized.treasuryMatched && !serverAutoSendEnabled) {
         return json({ ok: false, error: "Connect and verify the configured treasury wallet, or enable BROKE_PAYOUT_AUTO_SEND_ENABLED for dedicated payout wallet distribution." }, 400);
       }
     }
 
-    const id = crypto.randomUUID();
-    const createdAt = new Date().toISOString();
-    const calculatedTotal = Number(payouts.reduce((sum, row) => sum + row.rewardAmount, 0).toFixed(9));
-    const status = mode === "real_manual" ? "prepared" : "draft";
-    const distributionRow: AdminDistributionInsertRow = {
-      id,
-      created_at: createdAt,
-      updated_at: createdAt,
-      status,
-      pool_token: token,
-      pool_amount: poolAmount,
-      calculated_total: calculatedTotal,
-      treasury_wallet: treasuryWallet,
-      min_hold: minHold,
-      min_streak: minStreak,
-      recipient_count: payouts.length,
-      manifest_payload: {
-        type:
-          body.type ||
-          (mode === "real_manual"
-            ? "BROKE_REWARD_DISTRIBUTION_REAL_MANUAL_MANIFEST"
-            : "BROKE_REWARD_DISTRIBUTION_TEST_MANIFEST"),
-        mode,
-        generatedAt: body.generatedAt || createdAt,
-        adminNote: cleanString(body.adminNote, 500),
-        note:
-          body.note ||
-          (mode === "real_manual"
-            ? "Real distribution prepared for manual treasury signing/sending. No token transfer was executed by the server."
-            : "Manual test ledger only. No token transfer was executed."),
-        treasury: {
-          expectedWallet: treasuryWallet,
-          connectedWallet,
-          matched: treasuryMatched,
-        },
-        safety: {
-          noPrivateKey: true,
-          noServerTokenTransfers: true,
-          walletSigningNotExecutedByServer: true,
-          readyForManualTreasurySend: mode === "real_manual",
-        },
-      },
-    };
+    const batch = buildAdminDistributionInsertBatch(body, normalized);
 
-    await insertAdminDistributionRow(distributionRow);
+    await insertAdminDistributionRow(batch.distributionRow);
+    await insertAdminPayoutRows(batch.payoutRows);
 
-    const payoutRows: AdminPayoutInsertRow[] = payouts.map((row) => ({
-      distribution_id: id,
-      rank: row.rank,
-      telegram_id: row.telegramId,
-      username: row.username || null,
-      display_name: row.displayName || null,
-      wallet_address: row.walletAddress,
-      verified_balance: row.verifiedBalance,
-      balance_share_percent: row.balanceSharePercent,
-      reward_amount: row.rewardAmount,
-      reward_token: token,
-      status: "pending_manual_send",
-      created_at: createdAt,
-      updated_at: createdAt,
-    }));
-
-    await insertAdminPayoutRows(payoutRows);
-
-    if (mode === "real_manual" && body.serverAutoSend) {
+    if (batch.mode === "real_manual" && body.serverAutoSend) {
       if (cleanString(body.serverAutoConfirm, 80) !== SERVER_AUTO_SEND_CONFIRM_PHRASE) {
         return json({ ok: false, error: `Type ${SERVER_AUTO_SEND_CONFIRM_PHRASE} before server auto-send.` }, 400);
       }
 
-      const autoSend = await autoSendPreparedDistribution(id);
+      const autoSend = await autoSendAdminPreparedDistribution(batch.id);
 
       return json({
         ok: true,
-        distribution: {
-          id,
-          status: autoSend.status,
-          mode,
-          poolToken: token,
-          poolAmount,
-          recipientCount: payouts.length,
-          calculatedTotal,
-          createdAt,
-        },
+        distribution: summarizeAdminDistributionBatch(batch, autoSend.status),
         autoSend,
         updated: autoSend.updated,
         sentCount: autoSend.sentCount,
@@ -229,21 +135,12 @@ export async function POST(request: NextRequest) {
 
     return json({
       ok: true,
-      distribution: {
-        id,
-        status,
-        mode,
-        poolToken: token,
-        poolAmount,
-        recipientCount: payouts.length,
-        calculatedTotal,
-        createdAt,
-      },
+      distribution: summarizeAdminDistributionBatch(batch),
       safety: {
         noPrivateKey: true,
         noServerTokenTransfers: true,
         walletSigningNotExecutedByServer: true,
-        readyForManualTreasurySend: mode === "real_manual",
+        readyForManualTreasurySend: batch.mode === "real_manual",
       },
     });
   } catch (error) {
@@ -257,26 +154,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function autoSendPreparedDistribution(distributionId: string) {
-  return serverAutoSendPreparedDistribution(distributionId, {
-    getDistributionRows: async (id) => {
-      const distribution = await getAdminDistributionById(id);
-      return distribution ? [distribution as AdminDistributionRow] : [];
-    },
-    getPayoutRows: getAdminPayoutRows,
-    markPayoutRowsSent: markAdminPayoutRanksSent,
-    updateDistributionStatus: updateAdminDistributionStatus,
-  });
-}
-
 export async function PATCH(request: NextRequest) {
-  if (!isAdminDistributionAuthConfigured()) {
-    return json({ ok: false, error: "Missing REWARDS_ADMIN_SECRET or configured admin Telegram IDs." }, 500);
-  }
-
-  if (!isAuthorized(request)) {
-    return json({ ok: false, error: "Unauthorized. Enter REWARDS_ADMIN_SECRET or open as a configured Telegram admin." }, 401);
-  }
+  const accessError = getAdminDistributionAccessError(request);
+  if (accessError) return json(accessError.payload, accessError.status);
 
   try {
     const body = (await request.json()) as DistributionPatchInput;
@@ -298,7 +178,7 @@ export async function PATCH(request: NextRequest) {
         return json({ ok: false, error: `Type ${SERVER_AUTO_SEND_CONFIRM_PHRASE} to unlock server auto-send.` }, 400);
       }
 
-      const autoSend = await autoSendPreparedDistribution(distributionId);
+      const autoSend = await autoSendAdminPreparedDistribution(distributionId);
 
       return json({
         ok: true,
@@ -323,11 +203,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     const updated = await markAdminManualSendRecordsSent(distributionId, records);
-
     const payouts = await getAdminPayoutRows(distributionId);
-    const sentCount = payouts.filter((row) => row.status === "manual_sent" && row.tx_signature).length;
-    const totalCount = payouts.length;
-    const nextStatus = totalCount > 0 && sentCount >= totalCount ? "manual_sent" : "prepared";
+    const { sentCount, totalCount, nextStatus } = getAdminManualSendCompletion(payouts);
 
     await updateAdminDistributionStatus(distributionId, nextStatus);
 
