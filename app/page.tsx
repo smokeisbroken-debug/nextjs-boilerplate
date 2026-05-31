@@ -10621,9 +10621,9 @@ function HelpGuideModal({
         {
           title: "Wallet result",
           body: [
-            "Wallet checks use read-only public wallet context only: SOL balance, SPL token-account count, non-zero token count, and configured $BROKE visibility.",
-            "The app does not read private keys, does not sign anything, and does not claim PnL or trade quality.",
-            "For behavior analysis, a later indexer layer is needed instead of guessing from basic RPC context.",
+            "Wallet checks use read-only public wallet context only: SOL balance, SPL token-account count, non-zero token count, token-account clutter, and configured $BROKE visibility.",
+            "The Wallet Auto Signal Engine turns that public context into safe prompts around gas runway, exposure breadth, account clutter, and source confidence.",
+            "The app does not read private keys, does not sign anything, and does not claim PnL, trade quality, identity, or intent.",
           ],
           icon: A.walletHp,
         },
@@ -22743,7 +22743,7 @@ function UniversalLeakCheckScreen({
         <span>Universal Leak Check</span>
         <h2>Paste token, wallet, or URL. Get a result.</h2>
         <p>
-          One entry point for automatic leak context. Token checks use liquidity, pair, supply, concentration, and volume signals. Wallet checks stay read-only and public-context only.
+          One entry point for automatic leak context. Token checks use liquidity, pair, supply, concentration, and volume signals. Wallet checks now add a safe Wallet Auto Signal Engine for gas runway, exposure breadth, and token-account clutter.
         </p>
       </div>
 
@@ -22801,7 +22801,7 @@ function UniversalLeakCheckScreen({
           <div className="universal-result-section">
             <div className="section-title-row">
               <div>
-                <span>Auto Signal Engine</span>
+                <span>{result.kind === "token" ? "Token Auto Signal Engine" : "Wallet Auto Signal Engine"}</span>
                 <h3>{result.signals.length ? `${result.signals.length} signals found` : "No major signal found"}</h3>
               </div>
               <em>{result.confidenceLabel}</em>
@@ -22819,7 +22819,7 @@ function UniversalLeakCheckScreen({
                   <span>clear</span>
                   <strong>No major automatic leak signal</strong>
                   <p>The available source snapshot did not expose a strong token/wallet leak signal.</p>
-                  <small>Still verify official links and context manually before acting.</small>
+                  <small>Still verify official links, wallet context, and source limitations manually before acting.</small>
                 </div>
               )}
             </div>
