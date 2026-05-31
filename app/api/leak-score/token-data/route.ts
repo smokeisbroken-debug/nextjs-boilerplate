@@ -318,7 +318,7 @@ export async function POST(request: NextRequest) {
 
     const sourceHealth = getLeakScoreTokenDataSourceHealth(sources);
 
-    warnings.push("Holder count is not shown in v59.46.2 because reliable total holders require an indexer, not public Solana RPC alone.");
+    warnings.push("Holder count is not shown in v59.46.3 because reliable total holders require an indexer, not public Solana RPC alone.");
     warnings.push("Fetched data is a point-in-time research snapshot. Liquidity, volume, and account concentration can change quickly.");
     if (sourceHealth.sourceHealth === "partial") {
       warnings.push("Source status is partial. Treat automatic hints only as manual research prompts.");

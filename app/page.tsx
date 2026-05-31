@@ -10954,7 +10954,7 @@ function HelpGuideModal({
         {
           title: "Basic token data fetch",
           body: [
-            "v59.46.2 adds short local token-data cache and same-mint reuse while keeping source health, fetched-at status, and read-only Solana token context.",
+            "v59.46.3 adds Force refresh and Clear cache controls while keeping source health, fetched-at status, and read-only Solana token context.",
             "It can show liquidity, 24h volume, market cap, FDV, pair age, token supply, and top-10 token account concentration when available.",
             "Total holder count is marked as indexer-needed because public Solana RPC alone is not a reliable holder-count source.",
             "Data hints are suggested manual checks, not verdicts. Review and edit them before sharing.",
@@ -22113,7 +22113,7 @@ function upsertLeakScoreSavedDraft(draft: LeakScoreProjectDraft, currentDrafts: 
   return nextDrafts;
 }
 
-type LeakScoreTokenDataCacheMode = "live" | "cache" | "";
+type LeakScoreTokenDataCacheMode = "live" | "cache" | "cleared" | "";
 
 function normalizeLeakScoreTokenDataCacheEntry(input: unknown): LeakScoreTokenDataCacheEntry | null {
   if (!input || typeof input !== "object") return null;
@@ -22189,6 +22189,11 @@ function clearExpiredLeakScoreTokenDataCache() {
   return freshEntries;
 }
 
+function clearLeakScoreTokenDataCache() {
+  writeLeakScoreTokenDataCache([]);
+  return 0;
+}
+
 
 function LeakScoreScreen({
   shareInitData,
@@ -22211,6 +22216,7 @@ function LeakScoreScreen({
   const [tokenDataLastFetchAt, setTokenDataLastFetchAt] = useState(0);
   const [tokenDataCacheMode, setTokenDataCacheMode] = useState<LeakScoreTokenDataCacheMode>("");
   const [tokenDataCacheMessage, setTokenDataCacheMessage] = useState("");
+  const [tokenDataCacheCount, setTokenDataCacheCount] = useState(() => readLeakScoreTokenDataCache().length);
   const leakScoreCardRef = useRef<HTMLDivElement | null>(null);
 
   const projectName = draft.projectName;
@@ -22241,10 +22247,12 @@ function LeakScoreScreen({
   }, [draft]);
 
   useEffect(() => {
-    clearExpiredLeakScoreTokenDataCache();
+    setTokenDataCacheCount(clearExpiredLeakScoreTokenDataCache().length);
   }, []);
 
   useEffect(() => {
+    setTokenDataCacheCount(readLeakScoreTokenDataCache().length);
+
     if (!contractAddress.trim()) {
       setTokenDataCacheMessage("");
       return;
@@ -22252,7 +22260,7 @@ function LeakScoreScreen({
 
     const cached = getFreshLeakScoreTokenDataCacheEntry(chain, contractAddress.trim());
     if (cached) {
-      setTokenDataCacheMessage(`Fresh local cache available for this mint · ${formatLeakScoreTokenDataCacheAge(cached)}.`);
+      setTokenDataCacheMessage(`Fresh local cache available for this mint · ${formatLeakScoreTokenDataCacheAge(cached)}. Use Fetch data to reuse it or Force refresh for a new live request.`);
     } else {
       setTokenDataCacheMessage("");
     }
@@ -22355,7 +22363,7 @@ function LeakScoreScreen({
     setDraft(normalizeLeakScoreDraft({ chain: "Solana", selectedSignals: [], signalNotes: {} }));
   }
 
-  async function fetchBasicTokenData() {
+  async function fetchBasicTokenData(options?: { force?: boolean }) {
     if (tokenDataLoading) return;
 
     const mint = contractAddress.trim();
@@ -22365,13 +22373,15 @@ function LeakScoreScreen({
       return;
     }
 
+    const force = Boolean(options?.force);
     const cached = getFreshLeakScoreTokenDataCacheEntry(chain, mint);
-    if (cached) {
+    if (cached && !force) {
       triggerHaptic("light");
       setTokenData(cached.data);
       setTokenDataCacheMode("cache");
       setTokenDataError("");
-      const message = `Using local cached token data for this mint (${formatLeakScoreTokenDataCacheAge(cached)}). Reuse keeps sources from rate-limiting fast checks.`;
+      setTokenDataCacheCount(readLeakScoreTokenDataCache().length);
+      const message = `Using local cached token data for this mint (${formatLeakScoreTokenDataCacheAge(cached)}). Use Force refresh if you need a new live source check.`;
       setTokenDataCacheMessage(message);
       setShareMessage(message);
       notifyApp("Token data cache used", "Same-mint data reused locally. No source request was made.", "info");
@@ -22410,9 +22420,10 @@ function LeakScoreScreen({
       const cachedEntry = upsertLeakScoreTokenDataCache(payload.data);
       setTokenData(payload.data);
       setTokenDataCacheMode("live");
-      setTokenDataCacheMessage(`Live token data fetched and cached locally for ${tokenDataCacheTtlMinutes} minutes · ${formatLeakScoreTokenDataCacheAge(cachedEntry)}.`);
-      setShareMessage(`${payload.data.sourceHealthLabel}. Cached locally for same-mint reuse; review manually before applying checks.`);
-      notifyApp("Token data fetched", `${payload.data.sourceHealthLabel}. Cached locally for same-mint reuse.`, "info");
+      setTokenDataCacheCount(readLeakScoreTokenDataCache().length);
+      setTokenDataCacheMessage(`${force ? "Force refresh completed" : "Live token data fetched"} and cached locally for ${tokenDataCacheTtlMinutes} minutes · ${formatLeakScoreTokenDataCacheAge(cachedEntry)}.`);
+      setShareMessage(`${payload.data.sourceHealthLabel}. ${force ? "Live source refresh completed" : "Cached locally for same-mint reuse"}; review manually before applying checks.`);
+      notifyApp(force ? "Token data refreshed" : "Token data fetched", `${payload.data.sourceHealthLabel}. Cached locally for same-mint reuse.`, "info");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Basic token data fetch failed.";
       setTokenData(null);
@@ -22423,6 +22434,17 @@ function LeakScoreScreen({
     } finally {
       setTokenDataLoading(false);
     }
+  }
+
+  function clearTokenDataCache() {
+    triggerHaptic("light");
+    clearLeakScoreTokenDataCache();
+    setTokenDataCacheCount(0);
+    setTokenDataCacheMode("cleared");
+    setTokenDataCacheMessage("Local token-data cache cleared. Next Fetch data will request live source data again.");
+    setTokenDataError("");
+    setShareMessage("Local token-data cache cleared on this device only.");
+    notifyApp("Token cache cleared", "Next token-data check will request live source data again.", "info");
   }
 
   function applyTokenDataHints() {
@@ -22667,17 +22689,25 @@ function LeakScoreScreen({
           <div className="leak-score-token-data-head">
             <div>
               <strong>Basic token data</strong>
-              <small>Read-only fetch · DEX pair data + Solana RPC supply checks · {tokenDataCacheTtlMinutes}m local cache</small>
+              <small>Read-only fetch · DEX pair data + Solana RPC supply checks · {tokenDataCacheTtlMinutes}m local cache · {tokenDataCacheCount} cached</small>
             </div>
-            <button type="button" onClick={() => void fetchBasicTokenData()} disabled={tokenDataLoading || !contractAddress.trim()}>
-              {tokenDataLoading ? "Fetching..." : tokenData ? "Re-fetch" : "Fetch data"}
-            </button>
+            <div className="leak-score-token-data-actions">
+              <button type="button" onClick={() => void fetchBasicTokenData()} disabled={tokenDataLoading || !contractAddress.trim()}>
+                {tokenDataLoading ? "Fetching..." : tokenData ? "Use cache" : "Fetch data"}
+              </button>
+              <button type="button" onClick={() => void fetchBasicTokenData({ force: true })} disabled={tokenDataLoading || !contractAddress.trim()}>
+                Force refresh
+              </button>
+              <button type="button" onClick={clearTokenDataCache} disabled={tokenDataLoading || tokenDataCacheCount === 0}>
+                Clear cache
+              </button>
+            </div>
           </div>
 
           {tokenDataError && <p className="leak-score-token-data-error">{tokenDataError}</p>}
           {tokenDataCacheMessage && !tokenDataError && (
             <p className={`leak-score-token-data-cache leak-score-token-data-cache-${tokenDataCacheMode || "available"}`}>
-              {tokenDataCacheMode === "cache" ? "Cache reused" : tokenDataCacheMode === "live" ? "Cached locally" : "Cache available"} · {tokenDataCacheMessage}
+              {tokenDataCacheMode === "cache" ? "Cache reused" : tokenDataCacheMode === "live" ? "Cached locally" : tokenDataCacheMode === "cleared" ? "Cache cleared" : "Cache available"} · {tokenDataCacheMessage}
             </p>
           )}
 
@@ -22687,7 +22717,7 @@ function LeakScoreScreen({
                 <span>Auto data summary · {tokenData.sourceHealthLabel}</span>
                 <strong>{tokenData.tokenName || tokenData.tokenSymbol || "Token data fetched"}</strong>
                 <small>{tokenDataSummary}</small>
-                <em>{tokenDataCacheMode === "cache" ? "Using local cache" : tokenDataCacheMode === "live" ? "Live fetch cached" : "Source snapshot"} · {tokenDataFetchedAtLabel}</em>
+                <em>{tokenDataCacheMode === "cache" ? "Using local cache" : tokenDataCacheMode === "live" ? "Live fetch cached" : tokenDataCacheMode === "cleared" ? "Cache cleared locally" : "Source snapshot"} · {tokenDataFetchedAtLabel}</em>
                 <small>{tokenData.sourceHealthHelper}</small>
               </div>
               <div className="leak-score-token-data-grid">
@@ -22960,7 +22990,7 @@ function LeakScoreScreen({
         <span>What comes next</span>
         <strong>Manual research + basic auto data now.</strong>
         <p>
-          v59.46.2 reuses fresh same-mint token data from a short local cache to reduce repeated DEX/RPC requests. Next step can expand data-source coverage or add wallet behavior checks.
+          v59.46.3 keeps same-mint cache reuse, adds live Force refresh, and lets users clear local token-data cache before the next source check. Next step can expand data-source coverage or add wallet behavior checks.
         </p>
       </section>
     </div>

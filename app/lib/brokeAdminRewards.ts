@@ -1,7 +1,7 @@
-export const BROKE_APP_BUILD_VERSION = "v59.46.2";
+export const BROKE_APP_BUILD_VERSION = "v59.46.3";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Leak Score token data local cache and same-mint reuse with short TTL, source safety preserved, and no Supabase or payout changes.";
+  "Leak Score token data force refresh and local cache clear controls, with source safety preserved and no Supabase or payout changes.";
 
 export const DEFAULT_TREASURY_WALLET_ADDRESS = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
 export const DEFAULT_BROKE_TOKEN_MINT_ADDRESS = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
