@@ -29582,6 +29582,20 @@ html.embedded-app-view .hero h1 {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.035);
   color: var(--text);
+  padding: 0;
+  overflow: hidden;
+}
+
+.leak-score-signal > button {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  min-height: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
   padding: 13px 44px 13px 13px;
 }
 
@@ -29596,7 +29610,7 @@ html.embedded-app-view .hero h1 {
   line-height: 1.36;
 }
 
-.leak-score-signal small {
+.leak-score-signal > button > small {
   position: absolute;
   top: 12px;
   right: 12px;
@@ -29605,14 +29619,56 @@ html.embedded-app-view .hero h1 {
   font-weight: 950;
 }
 
+.leak-score-signal-note {
+  display: grid;
+  gap: 7px;
+  margin: 0 12px 12px;
+  border-radius: 15px;
+  border: 1px solid rgba(167, 255, 41, 0.12);
+  background: rgba(0, 0, 0, 0.18);
+  padding: 10px;
+}
+
+.leak-score-signal-note span {
+  color: var(--green);
+  font-size: 0.67rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.leak-score-signal-note textarea {
+  width: 100%;
+  min-height: 68px;
+  resize: vertical;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text);
+  font-size: 0.76rem;
+  line-height: 1.42;
+  padding: 10px;
+  outline: none;
+}
+
+.leak-score-signal-note textarea:focus {
+  border-color: rgba(167, 255, 41, 0.32);
+}
+
+.leak-score-signal-note small {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
 .leak-score-signal.selected {
   border-color: rgba(167, 255, 41, 0.42);
   background: rgba(167, 255, 41, 0.095);
   box-shadow: inset 0 0 0 1px rgba(167, 255, 41, 0.05);
 }
 
-.leak-score-signal.selected small,
-.leak-score-signal.selected strong {
+.leak-score-signal.selected > button > small,
+.leak-score-signal.selected > button strong {
   color: var(--green);
 }
 
@@ -29821,6 +29877,14 @@ html.embedded-app-view .hero h1 {
   color: rgba(255, 255, 255, 0.64);
   font-size: 0.8rem;
   line-height: 1.4;
+}
+
+.leak-score-public-signals > small {
+  display: block;
+  margin-top: 10px;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.68rem;
+  font-weight: 850;
 }
 
 .leak-score-public-footer {

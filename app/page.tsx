@@ -10924,6 +10924,7 @@ function HelpGuideModal({
           body: [
             "Enter the project or token name, chain, and optional contract/mint address if useful.",
             "Select only the signals you can actually observe.",
+            "Add a short local note when a selected signal needs context, such as what you saw and why it matters.",
             "Read the risk tier as a discipline warning, not as investment advice.",
             "If many severe signals are selected, pause before acting.",
           ],
@@ -10934,7 +10935,8 @@ function HelpGuideModal({
           body: [
             "The screen saves one active local draft on this device, so the checklist survives reloads.",
             "Save snapshot stores up to five local versions before you test another project.",
-            "Copy text creates a neutral DYOR note with project, chain, score, selected signals, and safety disclaimer.",
+            "Signal notes stay local with the draft and snapshots unless you intentionally share the generated text or card.",
+            "Copy text creates a neutral DYOR note with project, chain, score, selected signals, signal notes, and safety disclaimer.",
             "The share text says leak signals, not scam labels. Keep it factual and non-accusatory.",
           ],
           icon: A.export,
@@ -22101,11 +22103,13 @@ function LeakScoreScreen({
   const chain = draft.chain;
   const contractAddress = draft.contractAddress;
   const selectedSignals = draft.selectedSignals;
+  const signalNotes = draft.signalNotes;
   const score = useMemo(() => calculateProjectLeakScore(selectedSignals), [selectedSignals]);
   const selectedSet = useMemo(() => new Set(selectedSignals), [selectedSignals]);
   const selectedLabels = LEAK_SCORE_SIGNALS
     .filter((signal) => selectedSet.has(signal.id))
     .map((signal) => signal.label);
+  const signalNoteCount = LEAK_SCORE_SIGNALS.filter((signal) => selectedSet.has(signal.id) && signalNotes[signal.id]).length;
   const shareText = useMemo(() => buildProjectLeakScoreShareText(draft), [draft]);
 
   useEffect(() => {
@@ -22127,16 +22131,33 @@ function LeakScoreScreen({
     setShareCopied(false);
     setClearArmed(false);
     setDraft((current) => {
-      const selected = current.selectedSignals.includes(id)
+      const removing = current.selectedSignals.includes(id);
+      const selected = removing
         ? current.selectedSignals.filter((signalId) => signalId !== id)
         : [...current.selectedSignals, id];
+      const nextNotes = { ...current.signalNotes };
+      if (removing) delete nextNotes[id];
 
       return normalizeLeakScoreDraft({
         ...current,
         selectedSignals: selected,
+        signalNotes: nextNotes,
         updatedAt: new Date().toISOString(),
       });
     });
+  }
+
+  function updateSignalNote(id: LeakScoreSignalId, note: string) {
+    setShareCopied(false);
+    setClearArmed(false);
+    setDraft((current) => normalizeLeakScoreDraft({
+      ...current,
+      signalNotes: {
+        ...current.signalNotes,
+        [id]: note,
+      },
+      updatedAt: new Date().toISOString(),
+    }));
   }
 
   function saveLeakScoreSnapshot() {
@@ -22177,7 +22198,7 @@ function LeakScoreScreen({
 
     setClearArmed(false);
     setShareMessage("Active draft cleared locally. Saved snapshots were not deleted.");
-    setDraft(normalizeLeakScoreDraft({ chain: "Solana", selectedSignals: [] }));
+    setDraft(normalizeLeakScoreDraft({ chain: "Solana", selectedSignals: [], signalNotes: {} }));
   }
 
   async function copyLeakScoreText() {
@@ -22418,18 +22439,28 @@ function LeakScoreScreen({
         <div className="leak-score-signal-grid">
           {LEAK_SCORE_SIGNALS.map((signal) => {
             const selected = selectedSet.has(signal.id);
+            const note = signalNotes[signal.id] || "";
 
             return (
-              <button
-                key={signal.id}
-                type="button"
-                className={`leak-score-signal ${selected ? "selected" : ""}`}
-                onClick={() => toggleSignal(signal.id)}
-              >
-                <strong>{signal.label}</strong>
-                <span>{signal.helper}</span>
-                <small>+{signal.weight}</small>
-              </button>
+              <article key={signal.id} className={`leak-score-signal ${selected ? "selected" : ""}`}>
+                <button type="button" onClick={() => toggleSignal(signal.id)}>
+                  <strong>{signal.label}</strong>
+                  <span>{signal.helper}</span>
+                  <small>+{signal.weight}</small>
+                </button>
+                {selected && (
+                  <label className="leak-score-signal-note">
+                    <span>Local note</span>
+                    <textarea
+                      value={note}
+                      onChange={(event) => updateSignalNote(signal.id, event.target.value)}
+                      placeholder="Why did you select this signal? Example: top wallets look too concentrated."
+                      maxLength={180}
+                    />
+                    <small>{note.length}/180 · stays on this device unless you share the text/card</small>
+                  </label>
+                )}
+              </article>
             );
           })}
         </div>
@@ -22450,6 +22481,10 @@ function LeakScoreScreen({
         <div className="leak-score-result-line">
           <small>Signals</small>
           <b>{selectedLabels.length ? selectedLabels.slice(0, 3).join(", ") : "No signals selected"}</b>
+        </div>
+        <div className="leak-score-result-line">
+          <small>Notes</small>
+          <b>{signalNoteCount}/{score.selectedCount} selected signals have local notes</b>
         </div>
       </section>
 
@@ -22487,10 +22522,13 @@ function LeakScoreScreen({
           <div className="leak-score-public-signals">
             <span>Visible leak signals</span>
             {selectedLabels.length ? (
-              <div>
-                {selectedLabels.slice(0, 5).map((label) => <b key={label}>{label}</b>)}
-                {selectedLabels.length > 5 && <b>+{selectedLabels.length - 5} more</b>}
-              </div>
+              <>
+                <div>
+                  {selectedLabels.slice(0, 5).map((label) => <b key={label}>{label}</b>)}
+                  {selectedLabels.length > 5 && <b>+{selectedLabels.length - 5} more</b>}
+                </div>
+                <small>{signalNoteCount ? `${signalNoteCount} local signal notes added` : "No signal notes added"}</small>
+              </>
             ) : (
               <p>No visible leak signals selected yet.</p>
             )}
@@ -22541,7 +22579,7 @@ function LeakScoreScreen({
         <span>What comes next</span>
         <strong>Share card now. Signal fetch later.</strong>
         <p>
-          v59.45.4 adds saved local snapshots and safer reset flow. Later versions can add basic Solana signal fetch while staying neutral and educational.
+          v59.45.5 adds local notes for selected signals. Later versions can add basic Solana signal fetch while staying neutral and educational.
         </p>
       </section>
     </div>

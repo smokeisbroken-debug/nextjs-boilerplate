@@ -1,16 +1,18 @@
-# Smoke Is Broke — v59.45.4 Leak Score Saved Drafts + Reset Safety
+# Smoke Is Broke — v59.45.5 Leak Score Signal Notes
 
-v59.45.4 hardens the local-only BROKE Leak Score flow after the Telegram bot PNG delivery hotfix. Users can now save up to five local Leak Score snapshots on the same device, load or delete them, and clear the active draft through a two-step reset guard.
+v59.45.5 adds local-only notes to the BROKE Leak Score checklist. When a user selects a visible leak signal, they can now write a short reason/context note for that signal. Notes stay in the local draft and saved snapshots, and are included only when the user intentionally copies/shares the generated Leak Score text or card.
 
 ## Patch scope
 
-- Added local-only saved Leak Score snapshots under `broke-leak-score-saved-drafts-v1`.
-- Added `Save snapshot`, `Load`, and `Delete` actions inside the Leak Score project draft card.
-- Kept the active draft under `broke-leak-score-local-draft-v1`.
-- Changed Clear into a two-step safety action: first tap arms the clear action, second tap confirms it.
-- Clear only resets the active draft; saved snapshots stay untouched.
+- Added `signalNotes` to the local Leak Score draft model.
+- Added a local note textarea under each selected Leak Score signal.
+- Notes are limited to 180 characters per signal and sanitized through the existing Leak Score text cleaner.
+- Unselecting a signal removes its note from the active draft.
+- Saved local snapshots preserve signal notes.
+- Share text now includes signal notes beside selected signals and a `Signal notes: X/Y` summary.
+- Share card now shows whether local signal notes were added, without printing long notes onto the PNG.
 - Updated Leak Score guide and roadmap copy.
-- Updated shared build marker to `v59.45.4`.
+- Updated shared build marker to `v59.45.5`.
 
 ## Safety notes
 
@@ -33,4 +35,4 @@ v59.45.4 hardens the local-only BROKE Leak Score flow after the Telegram bot PNG
 - Targeted brace/paren balance passed for changed files.
 - Targeted BigInt literal suffix scan passed.
 - Zip integrity passed.
-- `NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully but timed out during Next.js page-data/typecheck work in the sandbox while standalone typecheck passed, consistent with the existing large monolithic `page.tsx` build-time issue.
+- `NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully but timed out during Next.js “Running TypeScript ...” in the sandbox while standalone typecheck passed, consistent with the existing large monolithic `page.tsx` build-time issue.

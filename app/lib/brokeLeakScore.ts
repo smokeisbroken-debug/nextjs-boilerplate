@@ -28,11 +28,14 @@ export type LeakScoreTier = {
   helper: string;
 };
 
+export type LeakScoreSignalNotes = Partial<Record<LeakScoreSignalId, string>>;
+
 export type LeakScoreProjectDraft = {
   projectName: string;
   chain: string;
   contractAddress: string;
   selectedSignals: LeakScoreSignalId[];
+  signalNotes: LeakScoreSignalNotes;
   updatedAt: string;
 };
 
@@ -171,12 +174,32 @@ export function normalizeLeakScoreSignalIds(input: unknown): LeakScoreSignalId[]
   return unique.slice(0, LEAK_SCORE_SIGNALS.length);
 }
 
+export function normalizeLeakScoreSignalNotes(input: unknown, selectedSignals?: LeakScoreSignalId[]): LeakScoreSignalNotes {
+  if (!input || typeof input !== "object") return {};
+
+  const selected = Array.isArray(selectedSignals) ? new Set(selectedSignals) : null;
+  const record = input as Record<string, unknown>;
+  const notes: LeakScoreSignalNotes = {};
+
+  LEAK_SCORE_SIGNALS.forEach((signal) => {
+    if (selected && !selected.has(signal.id)) return;
+
+    const note = cleanLeakScoreText(record[signal.id], 180);
+    if (note) notes[signal.id] = note;
+  });
+
+  return notes;
+}
+
 export function normalizeLeakScoreDraft(input?: Partial<LeakScoreProjectDraft> | null): LeakScoreProjectDraft {
+  const selectedSignals = normalizeLeakScoreSignalIds(input?.selectedSignals);
+
   return {
     projectName: cleanLeakScoreText(input?.projectName, 64),
     chain: cleanLeakScoreText(input?.chain, 24) || "Solana",
     contractAddress: cleanLeakScoreText(input?.contractAddress, 120),
-    selectedSignals: normalizeLeakScoreSignalIds(input?.selectedSignals),
+    selectedSignals,
+    signalNotes: normalizeLeakScoreSignalNotes(input?.signalNotes, selectedSignals),
     updatedAt: cleanLeakScoreText(input?.updatedAt, 40) || new Date().toISOString(),
   };
 }
@@ -185,13 +208,17 @@ export function buildProjectLeakScoreShareText(draft: LeakScoreProjectDraft) {
   const normalizedDraft = normalizeLeakScoreDraft(draft);
   const result = calculateProjectLeakScore(normalizedDraft.selectedSignals);
   const selected = new Set(normalizedDraft.selectedSignals);
-  const selectedLabels = LEAK_SCORE_SIGNALS
-    .filter((signal) => selected.has(signal.id))
-    .map((signal) => signal.label);
   const projectName = normalizedDraft.projectName || "Unnamed project draft";
-  const signalText = selectedLabels.length
-    ? selectedLabels.map((label) => `• ${label}`).join("\n")
+  const selectedSignalsWithNotes = LEAK_SCORE_SIGNALS
+    .filter((signal) => selected.has(signal.id))
+    .map((signal) => ({
+      label: signal.label,
+      note: normalizedDraft.signalNotes[signal.id] || "",
+    }));
+  const signalText = selectedSignalsWithNotes.length
+    ? selectedSignalsWithNotes.map((item) => item.note ? `• ${item.label} — note: ${item.note}` : `• ${item.label}`).join("\n")
     : "• No visible leak signals selected yet";
+  const noteCount = selectedSignalsWithNotes.filter((item) => item.note).length;
   const addressLine = normalizedDraft.contractAddress
     ? `\nContract / mint: ${normalizedDraft.contractAddress}`
     : "";
@@ -201,10 +228,11 @@ export function buildProjectLeakScoreShareText(draft: LeakScoreProjectDraft) {
     `Project: ${projectName}`,
     `Chain: ${normalizedDraft.chain}${addressLine}`,
     `Score: ${result.score}/100 — ${result.tier.label}`,
+    `Signal notes: ${noteCount}/${result.selectedCount}`,
     "Visible signals:",
     signalText,
     "",
-    "Note: this is a manual DYOR checklist, not an accusation, not a scam label, and not financial advice.",
+    "Note: signal notes are local personal context for DYOR. This is not an accusation, not a scam label, and not financial advice.",
     "$BROKE helps people notice leaks before they become damage.",
   ].join("\n");
 }
