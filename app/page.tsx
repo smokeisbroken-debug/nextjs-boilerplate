@@ -22741,7 +22741,7 @@ function adminBase58Decode(value: string) {
   let leadingZeroCount = 0;
   while (leadingZeroCount < input.length && input[leadingZeroCount] === "1") leadingZeroCount += 1;
 
-  let bytes = [0];
+  const bytes = [0];
   for (const char of input.slice(leadingZeroCount)) {
     const digit = ADMIN_BASE58_MAP.get(char);
     if (digit === undefined) throw new Error("Invalid base58 value.");
@@ -23311,7 +23311,7 @@ function AdminTreasuryPanel({
     { label: "Panel visibility", value: "Admin only", detail: `Unlocked by ${access.sourceLabel}.` },
     { label: "Treasury status", value: treasuryStatus, detail: treasuryDetail },
     { label: "Connected wallet", value: access.connectedWallet ? compactWalletAddress(access.connectedWallet) : "Not connected", detail: wallet.isVerified ? "Verified message signature proof." : "Wallet must be verified before it can be treated as treasury-ready." },
-    { label: "Reward payouts", value: "Off", detail: "This version does not send tokens, open claims, or sign payout transactions." },
+    { label: "Reward payouts", value: "Beta payout wallet", detail: "Admin-only distribution can use the dedicated payout wallet when BROKE_PAYOUT_AUTO_SEND_ENABLED is enabled. Main treasury seed is never used here." },
   ];
 
   async function loadHolderIntel() {
@@ -23906,7 +23906,7 @@ function AdminTreasuryPanel({
         <div>
           <span>Private admin</span>
           <strong>Reward distribution</strong>
-          <small>Build v59.43 · 7+ eligibility, Daily Routine polish, smart leak excess restored. Check eligible first, review recipients, then distribute.</small>
+          <small>Build v59.43.1 · schema repair pack, clean admin payout wording, version sync. Check eligible first, review recipients, then distribute.</small>
         </div>
         <b>{access.sourceLabel}</b>
       </div>

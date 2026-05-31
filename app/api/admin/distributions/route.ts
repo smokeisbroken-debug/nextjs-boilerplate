@@ -334,7 +334,7 @@ function parseManualSendRecords(input: DistributionPatchInput) {
     .slice(0, 500);
 }
 
-const ADMIN_DISTRIBUTION_BUILD_VERSION = "v59.42.9";
+const ADMIN_DISTRIBUTION_BUILD_VERSION = "v59.43.1";
 const SERVER_AUTO_SEND_CONFIRM_PHRASE = "SERVER AUTO SEND";
 const DEFAULT_BROKE_MINT = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
 const DEFAULT_USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -420,7 +420,7 @@ function serverBase58Decode(value: string) {
   let leadingZeroCount = 0;
   while (leadingZeroCount < input.length && input[leadingZeroCount] === "1") leadingZeroCount += 1;
 
-  let bytes = [0];
+  const bytes = [0];
   for (const char of input.slice(leadingZeroCount)) {
     const digit = SERVER_BASE58_MAP.get(char);
     if (digit === undefined) throw new Error("Invalid base58 value.");
