@@ -8309,6 +8309,19 @@ function getTodayExpenses(expenses: Expense[]) {
   return expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === today);
 }
 
+function findSameDayDuplicateExpense(
+  expenses: Expense[],
+  candidate: Pick<Expense, "amount" | "category" | "needType">,
+  date = dayKey(new Date())
+) {
+  return expenses.find((expense) => {
+    const sameDay = dayKey(new Date(expense.createdAt)) === date;
+    const sameAmount = Math.abs(Number(expense.amount || 0) - Number(candidate.amount || 0)) < 0.01;
+
+    return sameDay && sameAmount && expense.category === candidate.category && expense.needType === candidate.needType;
+  }) || null;
+}
+
 function readLocalLeakMission(): LocalLeakMission | null {
   if (typeof window === "undefined") return null;
 
@@ -9202,6 +9215,7 @@ export default function Home() {
   const [necessaryAmount, setNecessaryAmount] = useState("");
   const [selectedLeakTriggers, setSelectedLeakTriggers] = useState<LeakTriggerId[]>([]);
   const [lastTrackedExpense, setLastTrackedExpense] = useState<Expense | null>(null);
+  const [lastEditedExpense, setLastEditedExpense] = useState<Expense | null>(null);
   const [leakReflection, setLeakReflection] = useState<LeakReflection | null>(null);
 
   useEffect(() => {
@@ -9694,6 +9708,7 @@ export default function Home() {
     return buildWalletSummary(displaySettings, displayExpenses);
   }, [displaySettings, displayExpenses]);
   const currentMonthExpenses = walletSummary.currentMonthExpenses;
+  const rawCurrentMonthExpenses = useMemo(() => getCurrentMonthExpenses(expenses), [expenses]);
   const totalIncome = walletSummary.totalIncome;
   const fixedCosts = walletSummary.fixedCosts;
   const spentThisMonth = walletSummary.spentThisMonth;
@@ -9756,6 +9771,16 @@ export default function Home() {
     const normalizedAvoidableLeakAmount = normalizedNecessaryAmount !== null
       ? clamp(value - normalizedNecessaryAmount, 0, value)
       : null;
+    const duplicate = findSameDayDuplicateExpense(expenses, {
+      amount: value,
+      category: selectedCategory,
+      needType: expenseType,
+    });
+
+    if (duplicate && !window.confirm("Similar leak already exists today. Track it again anyway?")) {
+      showToast("Duplicate not saved", "Edit the existing leak instead if the amount or category was wrong.", "info");
+      return;
+    }
 
     const expense: Expense = {
       id: uid(),
@@ -9777,6 +9802,7 @@ export default function Home() {
     setExpenses((prev) => [expense, ...prev]);
     setLastTrackedExpense(expense);
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
+    markDailyRoutineAction("reviewedDay");
     setAmount("");
     setNote("");
     setNecessaryAmount("");
@@ -9814,6 +9840,17 @@ export default function Home() {
   async function addQuickExpense(category: string, value: number, needType: NeedType = "Not needed") {
     if (value <= 0) return;
 
+    const duplicate = findSameDayDuplicateExpense(expenses, {
+      amount: value,
+      category,
+      needType,
+    });
+
+    if (duplicate && !window.confirm("Similar quick leak already exists today. Track it again anyway?")) {
+      showToast("Duplicate not saved", "Use Edit on the existing leak if the amount was wrong.", "info");
+      return;
+    }
+
     const expense: Expense = {
       id: uid(),
       amount: value,
@@ -9831,6 +9868,7 @@ export default function Home() {
     setExpenses((prev) => [expense, ...prev]);
     setLastTrackedExpense(expense);
     setLeakReflection(buildLeakReflection(expense, nextExpenses, settings));
+    markDailyRoutineAction("reviewedDay");
     setAmount("");
     setNote("");
     setSelectedLeakTriggers([]);
@@ -9954,9 +9992,70 @@ export default function Home() {
     };
   }
 
+  async function updateExpense(id: string, patch: Partial<Expense>) {
+    const existing = expenses.find((expense) => expense.id === id);
+
+    if (!existing) return;
+
+    const patched: Expense = normalizeExpense({
+      ...existing,
+      ...patch,
+      id: existing.id,
+      createdAt: patch.createdAt || existing.createdAt,
+      currency: patch.currency || existing.currency || settings.currency,
+    });
+
+    const nextExpenses = expenses.map((expense) =>
+      expense.id === id ? patched : expense
+    );
+
+    triggerHaptic("success");
+    setExpenses(nextExpenses);
+    setLastEditedExpense(patched);
+    setLastTrackedExpense((current) => current?.id === id ? patched : current);
+    setLeakReflection(buildLeakReflection(patched, nextExpenses, settings));
+    markDailyRoutineAction("reviewedDay");
+    showToast("Leak updated", "Analysis recalculated with the corrected record.", "info");
+
+    if (cloudAuthReady) {
+      try {
+        const data = await callBrokeApi(cloudInitData, "updateExpense", {
+          expense: patched,
+        });
+
+        if (data.expense) {
+          const normalizedCloudExpense = normalizeExpense({
+            ...data.expense,
+            necessaryAmount: patched.necessaryAmount,
+            avoidableLeakAmount: patched.avoidableLeakAmount,
+          });
+
+          setExpenses((prev) =>
+            prev.map((item) => item.id === id ? normalizedCloudExpense : item)
+          );
+        }
+        if (data.streak) setStreak(data.streak);
+        if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
+        if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
+        applyApiFeedback(data, "Leak edited");
+        setCloudStatus("cloud");
+      } catch (error) {
+        setCloudStatus("error");
+        setCloudError(error instanceof Error ? error.message : "Expense cloud update failed");
+      }
+    }
+  }
+
   async function deleteExpense(id: string) {
+    const existing = expenses.find((expense) => expense.id === id);
+
+    if (existing && !window.confirm("Delete this tracked leak? Your charts and analysis will recalculate.")) {
+      return;
+    }
+
     triggerHaptic("medium");
     setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+    showToast("Leak deleted", "Mistaken record removed. Analysis recalculated.", "info");
 
     if (cloudAuthReady) {
       try {
@@ -10151,7 +10250,9 @@ export default function Home() {
 
   function markCleanDayProof() {
     triggerHaptic("light");
-    notifyApp("Daily Routine required", "Active Streak is protected only after the full 7/7 Daily Routine is complete.", "info");
+    markDailyRoutineAction("reviewedDay");
+    markDailyRoutineAction("lockedNextMove");
+    notifyApp("No-spend day noted", "Clean Day updated Daily Routine progress. Finish 7/7, including Share on X, to protect Active Streak.", "info");
   }
 
   function completeOneFixProof() {
@@ -10253,7 +10354,7 @@ export default function Home() {
             weeklyPatternSummary={currentWeeklyPatternSummary}
             patternHistory={patternHistory}
             leaderboard={leaderboard}
-            expenses={currentMonthExpenses.slice(0, 6)}
+            expenses={rawCurrentMonthExpenses.slice(0, 6)}
             routineExpenses={currentMonthExpenses}
             allExpenses={displayExpenses}
             leakMission={leakMission}
@@ -10263,6 +10364,7 @@ export default function Home() {
             onStartLeakMission={startLocalLeakMission}
             onResetLeakMission={resetLocalLeakMission}
             onDeleteExpense={deleteExpense}
+            onUpdateExpense={updateExpense}
             onQuickLeak={addQuickExpense}
             onOpenAdd={() => setActiveTab("add")}
             onOpenChart={() => {
@@ -10418,6 +10520,7 @@ export default function Home() {
             conversionSourceCount={getUniqueCurrencies(appCurrencySources, settings.currency).filter((currency) => currency !== settings.currency).length}
             onReset={resetData}
             onDeleteExpense={deleteExpense}
+            onUpdateExpense={updateExpense}
             onRepairOldCurrency={repairOldCurrencyData}
             telegram={telegram}
             webAuth={webAuth}
@@ -12251,6 +12354,7 @@ function DashboardScreen({
   onStartLeakMission,
   onResetLeakMission,
   onDeleteExpense,
+  onUpdateExpense,
   onQuickLeak,
   onOpenAdd,
   onOpenChart,
@@ -12293,6 +12397,7 @@ function DashboardScreen({
   onStartLeakMission: (category: string, baselineWeekly: number) => void;
   onResetLeakMission: () => void;
   onDeleteExpense: (id: string) => void;
+  onUpdateExpense: (id: string, patch: Partial<Expense>) => void;
   onQuickLeak: (category: string, value: number, needType?: NeedType) => void;
   onOpenAdd: () => void;
   onOpenChart: () => void;
@@ -12663,7 +12768,7 @@ function DashboardScreen({
         <summary>
           <div>
             <span>Daily Routine</span>
-            <small>7 actions. Final task: Share on X.</small>
+            <small>No-spend days count. Final task: Share on X.</small>
           </div>
           <b>Streak proof</b>
         </summary>
@@ -12792,6 +12897,7 @@ function DashboardScreen({
           settings={settings}
           expenses={expenses}
           onDeleteExpense={onDeleteExpense}
+          onUpdateExpense={onUpdateExpense}
           onOpenAdd={onOpenAdd}
         />
       </details>
@@ -15298,6 +15404,16 @@ function DailyRoutinePanel({
     return expenses.filter((expense) => dayKey(new Date(expense.createdAt)) === today);
   }, [expenses, today]);
 
+  useEffect(() => {
+    markDailyRoutineAction("reviewedWallet");
+
+    if (todayExpenses.length === 0) {
+      markDailyRoutineAction("reviewedDay");
+    }
+
+    setActions(readDailyRoutineActions(today));
+  }, [today, todayExpenses.length]);
+
   const routineItems: Array<{
     id: DailyRoutineActionKey;
     title: string;
@@ -15309,14 +15425,14 @@ function DailyRoutinePanel({
     {
       id: "openedApp",
       title: "Open the app",
-      body: "Start the day with a wallet check.",
+      body: "Start the day. The app records this automatically when you open the routine.",
       icon: A.appFrog,
       done: actions.openedApp,
     },
     {
       id: "reviewedWallet",
       title: "Check wallet state",
-      body: `Real balance: ${money(summary.realBalance, settings.currency)} · Wallet HP ${summary.walletHp}/100.`,
+      body: `Real balance: ${money(summary.realBalance, settings.currency)} · Wallet HP ${summary.walletHp}/100. Auto-checked when the routine opens.`,
       icon: A.walletHp,
       done: actions.reviewedWallet,
       actionLabel: "Checked",
@@ -15326,7 +15442,7 @@ function DailyRoutinePanel({
       title: todayExpenses.length > 0 ? "Review today’s spend" : "Confirm no extra spend",
       body: todayExpenses.length > 0
         ? `${todayExpenses.length} record${todayExpenses.length === 1 ? "" : "s"} today. Review the decision instead of forcing another leak.`
-        : "No spend day still counts. Confirm you had no extra wallet leak today.",
+        : "No-spend day counts automatically when there are no records today. No fake leak needed.",
       icon: todayExpenses.length > 0 ? A.leaks : A.dailyCheck,
       done: actions.reviewedDay,
       actionLabel: todayExpenses.length > 0 ? "Reviewed" : "No spend",
@@ -16798,11 +16914,13 @@ function RecentExpenses({
   settings,
   expenses,
   onDeleteExpense,
+  onUpdateExpense,
   onOpenAdd,
 }: {
   settings: Settings;
   expenses: Expense[];
   onDeleteExpense: (id: string) => void;
+  onUpdateExpense?: (id: string, patch: Partial<Expense>) => void;
   onOpenAdd: () => void;
 }) {
   return (
@@ -16835,6 +16953,7 @@ function RecentExpenses({
               expense={expense}
               settings={settings}
               onDeleteExpense={onDeleteExpense}
+              onUpdateExpense={onUpdateExpense}
             />
           ))}
         </div>
@@ -16848,16 +16967,117 @@ function ExpenseRow({
   settings,
   currency,
   onDeleteExpense,
+  onUpdateExpense,
 }: {
   expense: Expense;
   settings?: Settings;
   currency?: Currency;
   onDeleteExpense: (id: string) => void;
+  onUpdateExpense?: (id: string, patch: Partial<Expense>) => void;
 }) {
   const rowCurrency = expense.currency ?? settings?.currency ?? currency ?? "USD";
   const rowCategoryLabel = settings
     ? categoryDisplayName(settings, expense.category)
     : sentenceCase(categoryLabel(expense.category));
+  const [editing, setEditing] = useState(false);
+  const [draftAmount, setDraftAmount] = useState(String(expense.amount));
+  const [draftCategory, setDraftCategory] = useState(expense.category);
+  const [draftNeedType, setDraftNeedType] = useState<NeedType>(expense.needType);
+  const [draftNote, setDraftNote] = useState(expense.note || "");
+  const canEdit = Boolean(onUpdateExpense);
+
+  function openEdit() {
+    setDraftAmount(String(expense.amount));
+    setDraftCategory(expense.category);
+    setDraftNeedType(expense.needType);
+    setDraftNote(expense.note || "");
+    setEditing(true);
+  }
+
+  function saveEdit() {
+    if (!onUpdateExpense) return;
+
+    const normalizedAmount = safeNumber(draftAmount);
+
+    if (normalizedAmount <= 0) {
+      notifyApp("Amount needed", "Enter a positive amount before saving the corrected leak.", "info");
+      return;
+    }
+
+    const nextNecessaryAmount = draftNeedType === "Needed"
+      ? undefined
+      : Number.isFinite(expense.necessaryAmount)
+        ? clamp(Number(expense.necessaryAmount), 0, normalizedAmount)
+        : undefined;
+    const nextAvoidableLeakAmount = nextNecessaryAmount === undefined
+      ? undefined
+      : clamp(normalizedAmount - nextNecessaryAmount, 0, normalizedAmount);
+
+    onUpdateExpense(expense.id, {
+      amount: normalizedAmount,
+      category: draftCategory,
+      needType: draftNeedType,
+      note: draftNote.trim(),
+      triggerTags: normalizeLeakTriggerTags(expense.triggerTags, draftNote),
+      necessaryAmount: nextNecessaryAmount,
+      avoidableLeakAmount: nextAvoidableLeakAmount,
+    });
+    setEditing(false);
+  }
+
+  if (editing && canEdit) {
+    return (
+      <div className="expense-row expense-row-editing">
+        <img src={getCategoryIcon(draftCategory)} alt="" />
+
+        <div className="expense-edit-fields">
+          <label>
+            <span>Amount</span>
+            <input
+              value={draftAmount}
+              inputMode="decimal"
+              type="number"
+              min="0"
+              step="0.01"
+              onChange={(event) => setDraftAmount(event.target.value)}
+            />
+          </label>
+          <label>
+            <span>Category</span>
+            <select value={draftCategory} onChange={(event) => setDraftCategory(event.target.value)}>
+              {categories.map((category) => (
+                <option key={category.name} value={category.name}>
+                  {settings ? categoryDisplayName(settings, category.name) : sentenceCase(categoryLabel(category.name))}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            <span>Decision</span>
+            <select value={draftNeedType} onChange={(event) => setDraftNeedType(event.target.value as NeedType)}>
+              <option value="Needed">Needed</option>
+              <option value="Maybe">Maybe</option>
+              <option value="Not needed">Not needed</option>
+            </select>
+          </label>
+          <label>
+            <span>Note</span>
+            <input
+              value={draftNote}
+              placeholder="Context"
+              onChange={(event) => setDraftNote(event.target.value)}
+            />
+          </label>
+          <small>Editing recalculates Wallet HP, chart, streak source data, and reports.</small>
+        </div>
+
+        <div className="expense-row-actions stacked">
+          <button type="button" onClick={saveEdit} aria-label="Save edited expense">Save</button>
+          <button type="button" onClick={() => setEditing(false)} aria-label="Cancel edit">Cancel</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="expense-row">
@@ -16898,13 +17118,24 @@ function ExpenseRow({
           )}
       </b>
 
-      <button
-        type="button"
-        onClick={() => onDeleteExpense(expense.id)}
-        aria-label="Delete expense"
-      >
-        ×
-      </button>
+      <div className="expense-row-actions">
+        {canEdit && (
+          <button
+            type="button"
+            onClick={openEdit}
+            aria-label="Edit expense"
+          >
+            Edit
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => onDeleteExpense(expense.id)}
+          aria-label="Delete expense"
+        >
+          ×
+        </button>
+      </div>
     </div>
   );
 }
@@ -22708,6 +22939,7 @@ function UniversalLeakCheckScreen({
 
       setResult(chosen);
       setMessage(`${chosen.confidenceLabel}. ${chosen.summary}`);
+      markDailyRoutineAction("reviewedWallet");
       notifyApp("Leak check complete", `${chosen.pressure}/100 · ${chosen.pressureLabel}`, "info");
     } catch (checkError) {
       const nextError = checkError instanceof Error ? checkError.message : "Universal leak check failed.";
@@ -26680,6 +26912,7 @@ function SettingsScreen({
   conversionSourceCount,
   onReset,
   onDeleteExpense,
+  onUpdateExpense,
   onRepairOldCurrency,
   telegram,
   webAuth,
@@ -26705,6 +26938,7 @@ function SettingsScreen({
   conversionSourceCount: number;
   onReset: () => void;
   onDeleteExpense: (id: string) => void;
+  onUpdateExpense: (id: string, patch: Partial<Expense>) => void;
   onRepairOldCurrency: (currency: Currency, repairScope?: CurrencyRepairScope) => Promise<CurrencyRepairResult>;
   telegram: TelegramState;
   webAuth: WebAuthState;
@@ -26727,7 +26961,7 @@ function SettingsScreen({
   const fixedCosts = getFixedCosts(displaySettings);
   const monthSpent = sumTrackedExpenses(currentMonthExpenses);
   const categorySummaries = getCategorySummaries(currentMonthExpenses);
-  const latestExpenses = expenses.slice(0, 8);
+  const latestExpenses = rawExpenses.slice(0, 8);
   const publicLeaderboard = Boolean(leaderboard?.me?.publicLeaderboard);
   const oldExpenseCount = rawExpenses.filter((expense) => !expense.currency).length;
   const [repairCurrency, setRepairCurrency] = useState<Currency>(settings.currency);
@@ -29136,6 +29370,7 @@ function SettingsScreen({
             expenses={latestExpenses}
             currency={settings.currency}
             onDeleteExpense={onDeleteExpense}
+            onUpdateExpense={onUpdateExpense}
           />
         </section>
       </details>
@@ -29184,10 +29419,12 @@ function LatestRecordsList({
   expenses,
   currency,
   onDeleteExpense,
+  onUpdateExpense,
 }: {
   expenses: Expense[];
   currency: Currency;
   onDeleteExpense: (id: string) => void;
+  onUpdateExpense?: (id: string, patch: Partial<Expense>) => void;
 }) {
   if (expenses.length === 0) {
     return (
@@ -29207,6 +29444,7 @@ function LatestRecordsList({
             expense={expense}
             currency={currency}
             onDeleteExpense={onDeleteExpense}
+            onUpdateExpense={onUpdateExpense}
           />
         );
       })}    </div>

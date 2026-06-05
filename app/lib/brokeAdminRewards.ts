@@ -1,7 +1,7 @@
-export const BROKE_APP_BUILD_VERSION = "v59.51.0";
+export const BROKE_APP_BUILD_VERSION = "v59.51.1";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Wallet Dangerous Leaks Explained";
+  "Leak Edit and No-Spend Routine Clarity";
 
 export const DEFAULT_TREASURY_WALLET_ADDRESS = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
 export const DEFAULT_BROKE_TOKEN_MINT_ADDRESS = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";

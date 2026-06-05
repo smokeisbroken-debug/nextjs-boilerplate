@@ -32425,3 +32425,105 @@ html.embedded-app-view .hero h1 {
     text-align: left;
   }
 }
+
+/* v59.51.1: leak edit / reset safety */
+.expense-row {
+  grid-template-columns: 38px minmax(0, 1fr) auto auto;
+}
+
+.expense-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.expense-row-actions.stacked {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.expense-row-actions button,
+.expense-row .expense-row-actions button {
+  width: auto;
+  min-width: 34px;
+  height: 30px;
+  padding: 0 9px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.expense-row-actions button:first-child:not(:last-child) {
+  border-color: rgba(145, 255, 94, 0.34);
+  background: rgba(145, 255, 94, 0.08);
+  color: var(--green);
+}
+
+.expense-row-editing {
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  align-items: flex-start;
+  border-color: rgba(145, 255, 94, 0.22);
+  background: rgba(145, 255, 94, 0.055);
+}
+
+.expense-edit-fields {
+  display: grid;
+  gap: 8px;
+}
+
+.expense-edit-fields label {
+  display: grid;
+  gap: 4px;
+}
+
+.expense-edit-fields label span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.expense-edit-fields input,
+.expense-edit-fields select {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text);
+  font: inherit;
+}
+
+.expense-edit-fields small {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+@media (max-width: 420px) {
+  .expense-row {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+  }
+
+  .expense-row > b {
+    grid-column: 2 / 4;
+    justify-self: start;
+  }
+
+  .expense-row-actions {
+    grid-column: 2 / 4;
+    justify-content: flex-start;
+  }
+
+  .expense-row-editing {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .expense-row-editing .expense-row-actions {
+    grid-column: 2 / 3;
+  }
+}

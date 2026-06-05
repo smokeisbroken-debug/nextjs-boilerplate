@@ -3192,6 +3192,72 @@ async function addExpense(telegramId: number, expense: Expense) {
   }
 }
 
+async function updateExpense(telegramId: number, expense: Expense) {
+  const expenseCurrency = normalizeOptionalCurrency(expense.currency);
+  const rowWithCurrency = {
+    amount: Math.max(0, Number(expense.amount || 0)),
+    category: String(expense.category || "Custom"),
+    need_type: String(expense.needType || "Needed"),
+    note: String(expense.note || ""),
+    trigger_tags: normalizeLeakTriggerTags(expense.triggerTags, expense.note),
+    created_at: expense.createdAt || new Date().toISOString(),
+    necessary_amount: Number.isFinite(expense.necessaryAmount) ? Number(expense.necessaryAmount) : null,
+    avoidable_leak_amount: Number.isFinite(expense.avoidableLeakAmount) ? Number(expense.avoidableLeakAmount) : null,
+    ...(expenseCurrency ? { currency: expenseCurrency } : {}),
+  };
+
+  try {
+    const rows = (await supabaseFetch(
+      `broke_expenses?id=eq.${encodeURIComponent(expense.id)}&telegram_id=eq.${telegramId}&select=*`,
+      {
+        method: "PATCH",
+        headers: {
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(rowWithCurrency),
+      }
+    )) as Record<string, unknown>[];
+
+    return rows[0] ? dbToExpense(rows[0]) : expense;
+  } catch (error) {
+    const missingCurrency = isMissingExpenseCurrencyColumnError(error);
+    const missingTriggerTags = isMissingExpenseTriggerTagsColumnError(error);
+    const missingSmartLeakColumns = isMissingExpenseSmartLeakColumnError(error);
+
+    if (!missingCurrency && !missingTriggerTags && !missingSmartLeakColumns) {
+      throw error;
+    }
+
+    const legacyRow: Record<string, unknown> = { ...rowWithCurrency };
+
+    if (missingCurrency) {
+      delete legacyRow.currency;
+    }
+
+    if (missingTriggerTags) {
+      delete legacyRow.trigger_tags;
+    }
+
+    if (missingSmartLeakColumns) {
+      delete legacyRow.necessary_amount;
+      delete legacyRow.avoidable_leak_amount;
+    }
+
+    const rows = (await supabaseFetch(
+      `broke_expenses?id=eq.${encodeURIComponent(expense.id)}&telegram_id=eq.${telegramId}&select=*`,
+      {
+        method: "PATCH",
+        headers: {
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(legacyRow),
+      }
+    )) as Record<string, unknown>[];
+
+    return rows[0] ? { ...dbToExpense(rows[0]), necessaryAmount: expense.necessaryAmount, avoidableLeakAmount: expense.avoidableLeakAmount } : expense;
+  }
+}
+
 async function deleteExpense(telegramId: number, id: string) {
   await supabaseFetch(`broke_expenses?id=eq.${id}&telegram_id=eq.${telegramId}`, {
     method: "DELETE",
@@ -3682,6 +3748,26 @@ export async function POST(request: NextRequest) {
         badges,
         leaderboard,
         xpAwarded,
+        ...challengeState,
+      });
+    }
+
+    if (action === "updateExpense") {
+      const expense = await updateExpense(telegramId, body.expense as Expense);
+      const settings = await getSettings(telegramId);
+      const expenses = await getExpenses(telegramId);
+      const streak = await getAndUpdateStreak(telegramId, expenses);
+      const challengeState = await getChallengeState(telegramId, expenses);
+      await awardChallengeCompletionXp(telegramId, user, streak, challengeState);
+      const badges = await getBadgeState(telegramId, user, settings, expenses, streak);
+      const leaderboard = await getLeaderboardState(telegramId, user, streak);
+
+      return NextResponse.json({
+        ok: true,
+        expense,
+        streak,
+        badges,
+        leaderboard,
         ...challengeState,
       });
     }
