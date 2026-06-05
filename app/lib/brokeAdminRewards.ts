@@ -1,4 +1,4 @@
-export const BROKE_APP_BUILD_VERSION = "v59.51.1";
+export const BROKE_APP_BUILD_VERSION = "v59.51.2";
 
 export const BROKE_APP_BUILD_NOTE =
   "Leak Edit and No-Spend Routine Clarity";

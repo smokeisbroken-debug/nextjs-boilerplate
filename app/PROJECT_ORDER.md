@@ -1,48 +1,25 @@
-# Smoke Is Broke — v59.51.1 Leak Edit + No-Spend Routine Clarity
+# Smoke Is Broke — v59.51.2 Mobile Edit Visibility Hotfix
 
-v59.51.1 turns the latest community feedback into core tracker fixes. The focus is not another new screen: it is correcting mistaken leak records, preventing duplicate tracking mistakes, and making no-spend Daily Routine behavior clearer.
+v59.51.2 is a focused UX hotfix on top of v59.51.1. It fixes the mobile wallet-behavior checklist layout where labels could run together, and makes corrected leak editing easier to find from the Track Leak screen.
 
-## What changed
+## Changes
 
-- Recent tracked leaks can now be edited directly from the expense rows:
-  - amount;
-  - category;
-  - decision type;
-  - note/context.
-- Edited leaks immediately recalculate local Wallet HP, charts, reports, leak patterns, Growth/Rewards context, and reflection feedback.
-- Cloud sync now supports a new `updateExpense` action for corrected records when Telegram/web sync is available.
-- Delete now has a confirmation guard so a mistaken tap does not silently remove a tracked leak.
-- Add and Quick Add now warn when the same amount/category/decision is already tracked on the same day.
-- Clean Day now updates Daily Routine progress as a no-spend review instead of only showing an informational warning.
-- Daily Routine now auto-recognizes safe review actions:
-  - opening the routine marks wallet review;
-  - no-spend days can auto-confirm the day review when no records exist;
-  - adding or editing a leak marks the day review;
-  - Universal Check marks wallet review.
-- Daily Routine copy now says more clearly that no fake expense is needed; full 7/7 completion with Share on X still protects Active Streak.
-- Updated shared build marker to `v59.51.1`.
+- Fixed Manual wallet behavior leak items on mobile by applying the existing `leak-score-signal` layout class and separating the Check/Selected status pill from the signal label/helper text.
+- Changed selected wallet-behavior local notes to use the same textarea pattern as Project Leak Score notes, with local character count helper text.
+- Added a visible `Wrong amount or duplicate?` panel inside Track Leak showing the latest records with Edit/Delete actions.
+- The edit entry point is now visible near the leak-tracking flow, not only inside collapsed Home/Chart/Profile record lists.
+- Existing edit behavior is unchanged: amount, category, decision type, and note can be corrected, and charts / Wallet HP / analysis recalculate after saving.
 
-## What did not change
+## Not changed
 
-- No new bottom-nav button.
-- No new manual screen.
-- No rewards, Admin distribution, payout logic, wallet verification, Supabase schema, payout-wallet env, or server auto-send changes.
-- No wallet transaction-history scan, PnL, buy/sell timing, wallet accusation, scam label, project accusation, or investment advice.
-- Active Streak is still protected only by full Daily Routine completion; this patch only makes routine progress smarter and no-spend days clearer.
-- Email reports were intentionally not added yet; that needs a separate privacy/backend phase.
+- No rewards/Admin payout logic changes.
+- No wallet verification changes.
+- No Supabase schema changes.
+- No transaction-history scan, PnL, scam labels, project accusations, or investment advice added.
+- No new bottom-nav tab or new manual screen added.
 
-## Product intent
+## Verification
 
-This patch fixes the highest-trust issue from testers: if a user enters the wrong amount or records a leak twice, the app must let them correct it without destroying their analysis.
-
-The corrected flow is:
-
-```txt
-track leak
-↓
-edit/delete if wrong
-↓
-analysis recalculates
-↓
-no-spend days stay valid through Daily Routine
-```
+- `npm run typecheck`
+- `npm run lint:quiet`
+- `NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build`

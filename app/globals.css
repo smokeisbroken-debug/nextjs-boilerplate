@@ -32527,3 +32527,73 @@ html.embedded-app-view .hero h1 {
     grid-column: 2 / 3;
   }
 }
+
+/* v59.51.2: mobile wallet behavior + visible leak edit entry point */
+.track-leak-fix-panel {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(145, 255, 94, 0.14);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(145, 255, 94, 0.11), transparent 38%),
+    rgba(255, 255, 255, 0.035);
+}
+
+.track-leak-fix-panel > p {
+  margin: 0;
+  color: rgba(244, 247, 240, 0.68);
+  font-size: 0.74rem;
+  font-weight: 760;
+  line-height: 1.4;
+}
+
+.track-leak-fix-panel .expense-list {
+  gap: 7px;
+}
+
+.track-leak-fix-panel .expense-row {
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.leak-score-signal-grid > article:not(.leak-score-signal) {
+  display: grid;
+  gap: 5px;
+}
+
+@media (max-width: 430px) {
+  .leak-score-signal > button {
+    padding: 14px 12px 13px 12px;
+    gap: 6px;
+  }
+
+  .leak-score-signal > button > small {
+    position: static;
+    justify-self: start;
+    order: -1;
+    display: inline-flex;
+    width: fit-content;
+    padding: 4px 8px;
+    border: 1px solid rgba(145, 255, 94, 0.18);
+    border-radius: 999px;
+    background: rgba(145, 255, 94, 0.07);
+    color: var(--green);
+    font-size: 0.62rem;
+    line-height: 1;
+  }
+
+  .leak-score-signal strong,
+  .leak-score-signal span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .leak-score-signal span {
+    font-size: 0.72rem;
+    line-height: 1.34;
+  }
+
+  .track-leak-fix-panel {
+    padding: 12px;
+  }
+}

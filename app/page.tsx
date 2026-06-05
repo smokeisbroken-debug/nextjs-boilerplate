@@ -10406,6 +10406,9 @@ export default function Home() {
             selectedLeakTriggers={selectedLeakTriggers}
             setSelectedLeakTriggers={setSelectedLeakTriggers}
             lastTrackedExpense={lastTrackedExpense}
+            recentExpenses={displayExpenses.slice(0, 3)}
+            onDeleteExpense={deleteExpense}
+            onUpdateExpense={updateExpense}
             onAdd={addExpense}
             onBack={goHome}
             onHelp={openHelp}
@@ -17155,6 +17158,9 @@ function AddExpenseScreen({
   selectedLeakTriggers,
   setSelectedLeakTriggers,
   lastTrackedExpense,
+  recentExpenses,
+  onDeleteExpense,
+  onUpdateExpense,
   onAdd,
   onBack,
   onHelp,
@@ -17173,6 +17179,9 @@ function AddExpenseScreen({
   selectedLeakTriggers: LeakTriggerId[];
   setSelectedLeakTriggers: (value: LeakTriggerId[]) => void;
   lastTrackedExpense: Expense | null;
+  recentExpenses: Expense[];
+  onDeleteExpense: (id: string) => void;
+  onUpdateExpense: (id: string, patch: Partial<Expense>) => void;
   onAdd: () => void;
   onBack: () => void;
   onHelp: () => void;
@@ -17409,6 +17418,24 @@ function AddExpenseScreen({
       </button>
 
       <ExpenseImpactCard settings={settings} expense={lastTrackedExpense} />
+
+      {recentExpenses.length > 0 && (
+        <section className="track-leak-fix-panel">
+          <div className="section-title">
+            <span>Wrong amount or duplicate?</span>
+            <small>Edit latest leaks here</small>
+          </div>
+          <p>
+            If you entered the wrong amount or tracked the same leak twice, use Edit below. Charts and Wallet HP recalculate after saving.
+          </p>
+          <LatestRecordsList
+            expenses={recentExpenses}
+            currency={settings.currency}
+            onDeleteExpense={onDeleteExpense}
+            onUpdateExpense={onUpdateExpense}
+          />
+        </section>
+      )}
 
       <div className="tiny-note">
         <img src={A.addFrog} alt="" />
@@ -24821,21 +24848,22 @@ function WalletLeakScoreScreen({
             const selected = selectedSet.has(signal.id);
 
             return (
-              <article key={signal.id} className={selected ? "selected" : ""}>
+              <article key={signal.id} className={`leak-score-signal ${selected ? "selected" : ""}`}>
                 <button type="button" onClick={() => toggleSignal(signal.id)}>
-                  <span>{selected ? "Selected" : "Check"}</span>
                   <strong>{signal.label}</strong>
-                  <small>{signal.helper}</small>
+                  <span>{signal.helper}</span>
+                  <small>{selected ? "Selected" : "Check"}</small>
                 </button>
                 {selected && (
                   <label className="leak-score-signal-note">
                     <span>Local note</span>
-                    <input
+                    <textarea
                       value={signalNotes[signal.id] || ""}
                       onChange={(event) => updateSignalNote(signal.id, event.target.value)}
                       placeholder="Example: I bought after the move again."
                       maxLength={180}
                     />
+                    <small>{(signalNotes[signal.id] || "").length}/180 · stays local unless you share it</small>
                   </label>
                 )}
               </article>
