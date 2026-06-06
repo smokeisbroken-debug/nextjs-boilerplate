@@ -22899,6 +22899,7 @@ function UniversalLeakCheckScreen({
   const [message, setMessage] = useState("Paste token, wallet, or URL. The app chooses the correct check path.");
   const [copied, setCopied] = useState(false);
   const [cardSharing, setCardSharing] = useState(false);
+  const [openHubTool, setOpenHubTool] = useState<"auto" | "token" | "wallet" | "compare" | null>("auto");
   const universalShareCardRef = useRef<HTMLDivElement | null>(null);
 
   const normalizedInput = useMemo(() => normalizeUniversalLeakCheckInput(rawInput), [rawInput]);
@@ -23105,26 +23106,87 @@ function UniversalLeakCheckScreen({
           <em>Bottom nav stays cleaner</em>
         </div>
         <div className="universal-check-tool-grid">
-          <button type="button" className="active" onClick={() => document.getElementById("universal-leak-input")?.focus()}>
-            <span>Auto</span>
-            <strong>Universal Check</strong>
-            <small>Paste token, wallet, URL, or text with an address.</small>
-          </button>
-          <button type="button" onClick={onOpenTokenResearch}>
-            <span>Token</span>
-            <strong>Project Research</strong>
-            <small>Manual project notes, saved drafts, token-data hints.</small>
-          </button>
-          <button type="button" onClick={onOpenWalletReview}>
-            <span>Wallet</span>
-            <strong>Wallet Review</strong>
-            <small>Manual wallet behavior check plus public wallet context.</small>
-          </button>
-          <button type="button" onClick={onOpenCompare}>
-            <span>Compare</span>
-            <strong>Project vs Project</strong>
-            <small>Compare two local research drafts before buying.</small>
-          </button>
+          <div className={`universal-check-tool-card ${openHubTool === "auto" ? "active expanded" : ""}`}>
+            <button
+              type="button"
+              className="universal-check-tool-trigger"
+              aria-expanded={openHubTool === "auto"}
+              onClick={() => setOpenHubTool(openHubTool === "auto" ? null : "auto")}
+            >
+              <span>Auto</span>
+              <strong>Universal Check</strong>
+              <small>Paste token, wallet, URL, or text with an address.</small>
+              <b aria-hidden="true">{openHubTool === "auto" ? "⌃" : "⌄"}</b>
+            </button>
+            {openHubTool === "auto" ? (
+              <div className="universal-check-tool-panel">
+                <p>Automatic check is the main flow. Paste below and the app will detect token, wallet, or supported URL.</p>
+                <button type="button" className="ghost mini" onClick={() => document.getElementById("universal-leak-input")?.focus()}>
+                  Paste / focus input
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className={`universal-check-tool-card ${openHubTool === "token" ? "active expanded" : ""}`}>
+            <button
+              type="button"
+              className="universal-check-tool-trigger"
+              aria-expanded={openHubTool === "token"}
+              onClick={() => setOpenHubTool(openHubTool === "token" ? null : "token")}
+            >
+              <span>Token</span>
+              <strong>Project Research</strong>
+              <small>Manual project notes, saved drafts, token-data hints.</small>
+              <b aria-hidden="true">{openHubTool === "token" ? "⌃" : "⌄"}</b>
+            </button>
+            {openHubTool === "token" ? (
+              <div className="universal-check-tool-panel">
+                <p>Use this when you want to save manual research notes after an automatic token check.</p>
+                <button type="button" className="ghost mini" onClick={onOpenTokenResearch}>Open Project Research</button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className={`universal-check-tool-card ${openHubTool === "wallet" ? "active expanded" : ""}`}>
+            <button
+              type="button"
+              className="universal-check-tool-trigger"
+              aria-expanded={openHubTool === "wallet"}
+              onClick={() => setOpenHubTool(openHubTool === "wallet" ? null : "wallet")}
+            >
+              <span>Wallet</span>
+              <strong>Wallet Review</strong>
+              <small>Manual wallet behavior check plus public wallet context.</small>
+              <b aria-hidden="true">{openHubTool === "wallet" ? "⌃" : "⌄"}</b>
+            </button>
+            {openHubTool === "wallet" ? (
+              <div className="universal-check-tool-panel">
+                <p>Use this for manual wallet behavior notes. Public wallet checks still stay in Universal Check.</p>
+                <button type="button" className="ghost mini" onClick={onOpenWalletReview}>Open Wallet Review</button>
+              </div>
+            ) : null}
+          </div>
+
+          <div className={`universal-check-tool-card ${openHubTool === "compare" ? "active expanded" : ""}`}>
+            <button
+              type="button"
+              className="universal-check-tool-trigger"
+              aria-expanded={openHubTool === "compare"}
+              onClick={() => setOpenHubTool(openHubTool === "compare" ? null : "compare")}
+            >
+              <span>Compare</span>
+              <strong>Project vs Project</strong>
+              <small>Compare two local research drafts before buying.</small>
+              <b aria-hidden="true">{openHubTool === "compare" ? "⌃" : "⌄"}</b>
+            </button>
+            {openHubTool === "compare" ? (
+              <div className="universal-check-tool-panel">
+                <p>Use this when you want a side-by-side manual comparison before making a wallet decision.</p>
+                <button type="button" className="ghost mini" onClick={onOpenCompare}>Open Project vs Project</button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
 

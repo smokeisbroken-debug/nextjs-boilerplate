@@ -1,21 +1,19 @@
-# Smoke Is Broke — v59.51.5 Token Data Fallback + Limited Result Honesty
+# Smoke Is Broke — v59.51.6 Leak Hub Accordion UX Hotfix
 
-v59.51.5 is a focused UX/mechanics patch on top of confirmed working v59.51.3 stable8. It improves the main Check flow so new users understand what they can paste, what the app detected, what address will be checked, and why an input cannot be checked.
+v59.51.6 is a small UX hotfix on top of confirmed working v59.51.5 stable8. It keeps the main Check tab as the single leak-tools hub, but makes the hub cards behave like an accordion instead of immediate navigation buttons.
 
 ## Changes
 
-- Universal Check now shows a compact first-use guide before the input flow.
-- Added supported-input chips for Solscan, DEX Screener, Birdeye, Jupiter, Raydium, and plain Solana addresses.
-- Improved resolver output for Token, Wallet, Auto-detect, Unsupported URL, Unknown input, and sensitive/private-key-like input.
-- Resolver now extracts URL context from pasted text, not only when the whole paste is a URL.
-- Resolver shows source host, source label, detected path, address used, and a first-use tip.
-- Multiple Solana-format addresses are explicitly disclosed; the app uses the first detected address.
-- Sensitive/private-key/seed-phrase-like input is blocked with safer copy.
-- Loading copy now explains when the app is auto-detecting vs checking a known token/wallet path.
+- Leak Hub cards now open and close in place with an arrow-style control.
+- Universal Check, Project Research, Wallet Review, and Project vs Project can each expand inside Check.
+- Project Research, Wallet Review, and Project vs Project now reveal a short explanation and an explicit Open button instead of jumping immediately when the card header is tapped.
+- Universal Check expansion includes a direct focus action for the paste input.
+- Users can tap the same arrow/card again to close the expanded section without leaving Check or switching to Home/Add.
+- Check remains the highlighted bottom-nav section for all leak tools.
 
 ## Not changed
 
-No rewards, Admin distribution, payout logic, wallet verification, Supabase schema, transaction history, PnL, scam labels, investment advice, bottom-nav, or new manual screen changes.
+No token/wallet data logic, scoring formulas, rewards, Admin distribution, payout logic, Daily Routine/Active Streak, wallet verification, Supabase schema, transaction history, PnL, scam labels, investment advice, bottom-nav item count, or new manual screen changes.
 
 ## Verification
 
@@ -26,4 +24,3 @@ npm run typecheck
 npm run lint:quiet
 NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
-

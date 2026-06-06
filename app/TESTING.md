@@ -1,25 +1,22 @@
-# Smoke Is Broke — v59.51.5 Token Data Fallback + Limited Result Honesty
+# Testing — v59.51.6 Leak Hub Accordion UX Hotfix
 
-v59.51.5 is a focused UX/mechanics patch on top of confirmed working v59.51.3 stable8. It improves the main Check flow so new users understand what they can paste, what the app detected, what address will be checked, and why an input cannot be checked.
+## Manual checks
 
-## Changes
+1. Open the app and go to `Check`.
+2. Confirm the Leak Hub shows four cards: Universal Check, Project Research, Wallet Review, Project vs Project.
+3. Tap the Universal Check card arrow/header.
+   - It should close if open.
+   - Tapping again should open it.
+   - `Paste / focus input` should focus the input.
+4. Tap Project Research.
+   - The card should expand in place.
+   - It should show explanation text and an `Open Project Research` button.
+   - Tapping the card again should close it.
+5. Repeat for Wallet Review and Project vs Project.
+6. Confirm no user has to switch to Home/Add to close an expanded hub section.
+7. Confirm bottom nav still has the same items and Check stays the active leak section.
 
-- Universal Check now shows a compact first-use guide before the input flow.
-- Added supported-input chips for Solscan, DEX Screener, Birdeye, Jupiter, Raydium, and plain Solana addresses.
-- Improved resolver output for Token, Wallet, Auto-detect, Unsupported URL, Unknown input, and sensitive/private-key-like input.
-- Resolver now extracts URL context from pasted text, not only when the whole paste is a URL.
-- Resolver shows source host, source label, detected path, address used, and a first-use tip.
-- Multiple Solana-format addresses are explicitly disclosed; the app uses the first detected address.
-- Sensitive/private-key/seed-phrase-like input is blocked with safer copy.
-- Loading copy now explains when the app is auto-detecting vs checking a known token/wallet path.
-
-## Not changed
-
-No rewards, Admin distribution, payout logic, wallet verification, Supabase schema, transaction history, PnL, scam labels, investment advice, bottom-nav, or new manual screen changes.
-
-## Verification
-
-Run:
+## Commands
 
 ```bash
 npm run typecheck
@@ -27,3 +24,6 @@ npm run lint:quiet
 NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
+## Not changed
+
+No data-source logic, score formulas, rewards, Admin payout, streak logic, Supabase schema, transaction history, PnL, scam labels, or investment advice changed.
