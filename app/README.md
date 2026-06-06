@@ -1,25 +1,15 @@
-# Smoke Is Broke — v59.51.2 Mobile Edit Visibility Hotfix
+# Smoke Is Broke — v59.51.3 Small Amount Tracking Minimum
 
-v59.51.2 is a focused UX hotfix on top of v59.51.1. It fixes the mobile wallet-behavior checklist layout where labels could run together, and makes corrected leak editing easier to find from the Track Leak screen.
+v59.51.3 is a focused hotfix on top of v59.51.2. It lowers the tracked leak minimum from the practical old 1-unit behavior to 0.01 so users in cheaper countries can record small real expenses without rounding the analysis to zero or forcing a larger fake amount.
 
 ## Changes
 
-- Fixed Manual wallet behavior leak items on mobile by applying the existing `leak-score-signal` layout class and separating the Check/Selected status pill from the signal label/helper text.
-- Changed selected wallet-behavior local notes to use the same textarea pattern as Project Leak Score notes, with local character count helper text.
-- Added a visible `Wrong amount or duplicate?` panel inside Track Leak showing the latest records with Edit/Delete actions.
-- The edit entry point is now visible near the leak-tracking flow, not only inside collapsed Home/Chart/Profile record lists.
-- Existing edit behavior is unchanged: amount, category, decision type, and note can be corrected, and charts / Wallet HP / analysis recalculate after saving.
+- Track Leak amount input now uses a 0.01 minimum and 0.01 step.
+- Corrected leak editing now accepts values from 0.01 and rejects only values below 0.01.
+- Added a visible Track Leak helper showing the minimum tracked amount.
+- Money formatting now preserves cents for fractional records, so 0.01 displays as 0.01 instead of being rounded to 0.
+- Onboarding starter leak amount no longer clamps to 1; it respects the 0.01 minimum.
 
 ## Not changed
 
-- No rewards/Admin payout logic changes.
-- No wallet verification changes.
-- No Supabase schema changes.
-- No transaction-history scan, PnL, scam labels, project accusations, or investment advice added.
-- No new bottom-nav tab or new manual screen added.
-
-## Verification
-
-- `npm run typecheck`
-- `npm run lint:quiet`
-- `NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build`
+No rewards, Admin payout logic, wallet verification, Supabase schema, transaction history, PnL, scam labels, investment advice, bottom-nav, or new screens were changed.

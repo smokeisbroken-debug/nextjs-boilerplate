@@ -1,25 +1,18 @@
-# Smoke Is Broke — v59.51.2 Mobile Edit Visibility Hotfix
+# Smoke Is Broke — v59.51.3 Testing
 
-v59.51.2 is a focused UX hotfix on top of v59.51.1. It fixes the mobile wallet-behavior checklist layout where labels could run together, and makes corrected leak editing easier to find from the Track Leak screen.
+## Checks run
 
-## Changes
+- `npm ci --ignore-scripts --no-audit --no-fund` passed.
+- `npm run typecheck` passed.
+- `npm run lint:quiet` passed.
+- `NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully, then timed out in this sandbox during Next.js `Running TypeScript ...` while standalone typecheck had already passed.
 
-- Fixed Manual wallet behavior leak items on mobile by applying the existing `leak-score-signal` layout class and separating the Check/Selected status pill from the signal label/helper text.
-- Changed selected wallet-behavior local notes to use the same textarea pattern as Project Leak Score notes, with local character count helper text.
-- Added a visible `Wrong amount or duplicate?` panel inside Track Leak showing the latest records with Edit/Delete actions.
-- The edit entry point is now visible near the leak-tracking flow, not only inside collapsed Home/Chart/Profile record lists.
-- Existing edit behavior is unchanged: amount, category, decision type, and note can be corrected, and charts / Wallet HP / analysis recalculate after saving.
+## Manual test targets
 
-## Not changed
-
-- No rewards/Admin payout logic changes.
-- No wallet verification changes.
-- No Supabase schema changes.
-- No transaction-history scan, PnL, scam labels, project accusations, or investment advice added.
-- No new bottom-nav tab or new manual screen added.
-
-## Verification
-
-- `npm run typecheck`
-- `npm run lint:quiet`
-- `NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build`
+1. Open Track Leak.
+2. Enter `0.01` and save.
+3. Confirm it saves and displays as `0.01`, not `0`.
+4. Edit that leak to `0.02`.
+5. Confirm charts/Wallet HP/recent records update.
+6. Try `0` or blank amount and confirm the app rejects it.
+7. Confirm old whole-number leaks still display normally.

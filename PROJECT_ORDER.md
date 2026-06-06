@@ -1,25 +1,22 @@
-# Smoke Is Broke — v59.51.2 Mobile Edit Visibility Hotfix
+# Smoke Is Broke — v59.51.3 Small Amount Tracking Minimum
 
-v59.51.2 is a focused UX hotfix on top of v59.51.1. It fixes the mobile wallet-behavior checklist layout where labels could run together, and makes corrected leak editing easier to find from the Track Leak screen.
+## Base
 
-## Changes
+Built on the confirmed working v59.51.2 stable8 clean/full base.
 
-- Fixed Manual wallet behavior leak items on mobile by applying the existing `leak-score-signal` layout class and separating the Check/Selected status pill from the signal label/helper text.
-- Changed selected wallet-behavior local notes to use the same textarea pattern as Project Leak Score notes, with local character count helper text.
-- Added a visible `Wrong amount or duplicate?` panel inside Track Leak showing the latest records with Edit/Delete actions.
-- The edit entry point is now visible near the leak-tracking flow, not only inside collapsed Home/Chart/Profile record lists.
-- Existing edit behavior is unchanged: amount, category, decision type, and note can be corrected, and charts / Wallet HP / analysis recalculate after saving.
+## Scope
 
-## Not changed
+Lower the practical minimum tracked leak amount to 0.01 and preserve fractional display for very small expenses.
 
-- No rewards/Admin payout logic changes.
-- No wallet verification changes.
-- No Supabase schema changes.
-- No transaction-history scan, PnL, scam labels, project accusations, or investment advice added.
-- No new bottom-nav tab or new manual screen added.
+## Implementation
 
-## Verification
+- Added `MIN_TRACKED_MONEY_AMOUNT = 0.01`.
+- Added tracked-money normalization/validation helpers.
+- Updated Track Leak amount input min and placeholder.
+- Updated edit amount validation to accept 0.01+.
+- Updated money formatting so cents are visible for fractional values.
+- Updated onboarding starter expense clamp from 1 to 0.01.
 
-- `npm run typecheck`
-- `npm run lint:quiet`
-- `NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build`
+## Exclusions
+
+No database migration, no reward/admin changes, no wallet verification changes, no PnL/history/indexer logic, no scam labels, and no investment advice changes.

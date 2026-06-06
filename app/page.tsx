@@ -5616,8 +5616,9 @@ function formatMoney(value: number, currencyInput: Currency | string | undefined
   const safeValue = Number.isFinite(value) ? value : 0;
   const absoluteValue = Math.abs(safeValue);
   const precision = options.precision || "whole";
-  const minimumFractionDigits = precision === "auto" && absoluteValue > 0 && absoluteValue < 10 ? 2 : 0;
-  const maximumFractionDigits = precision === "auto" && absoluteValue > 0 && absoluteValue < 100 ? 2 : 0;
+  const shouldShowCents = absoluteValue > 0 && (absoluteValue < 1 || hasFractionalMoneyPart(absoluteValue));
+  const minimumFractionDigits = precision === "auto" && shouldShowCents ? 2 : 0;
+  const maximumFractionDigits = precision === "auto" || shouldShowCents ? 2 : 0;
   const displayValue = absoluteValue.toLocaleString("en-US", {
     minimumFractionDigits,
     maximumFractionDigits,
@@ -5629,7 +5630,7 @@ function formatMoney(value: number, currencyInput: Currency | string | undefined
 }
 
 function money(value: number, currency: Currency) {
-  return formatMoney(value, currency);
+  return formatMoney(value, currency, { precision: "auto" });
 }
 
 function exchangeRateKey(baseCurrency: Currency, quoteCurrency: Currency) {
@@ -5983,6 +5984,24 @@ function publicProofValue(settings: Settings, value: string) {
 
 function publicProofMoney(settings: Settings, value: number) {
   return publicProofValue(settings, money(value, settings.currency));
+}
+
+const MIN_TRACKED_MONEY_AMOUNT = 0.01;
+
+function hasFractionalMoneyPart(value: number) {
+  return Math.abs(value - Math.round(value)) > 0.000001;
+}
+
+function normalizeTrackedMoneyAmount(value: string | number) {
+  const parsed = typeof value === "number" ? value : safeNumber(value);
+
+  if (!Number.isFinite(parsed)) return 0;
+
+  return Math.round(parsed * 100) / 100;
+}
+
+function isValidTrackedMoneyAmount(value: number) {
+  return Number.isFinite(value) && value >= MIN_TRACKED_MONEY_AMOUNT;
 }
 
 function safeNumber(value: string) {
@@ -9759,9 +9778,12 @@ export default function Home() {
   }, [displayExpenses, displaySettings, smartInsightContext]);
 
   async function addExpense() {
-    const value = safeNumber(amount);
+    const value = normalizeTrackedMoneyAmount(amount);
 
-    if (value <= 0) return;
+    if (!isValidTrackedMoneyAmount(value)) {
+      showToast("Amount needed", "Enter at least 0.01 before tracking a leak.", "info");
+      return;
+    }
 
     const noteWithTriggers = buildNoteWithLeakTriggers(note, selectedLeakTriggers);
     const necessaryInput = necessaryAmount.trim();
@@ -9838,10 +9860,12 @@ export default function Home() {
   }
 
   async function addQuickExpense(category: string, value: number, needType: NeedType = "Not needed") {
-    if (value <= 0) return;
+    const normalizedValue = normalizeTrackedMoneyAmount(value);
+
+    if (!isValidTrackedMoneyAmount(normalizedValue)) return;
 
     const duplicate = findSameDayDuplicateExpense(expenses, {
-      amount: value,
+      amount: normalizedValue,
       category,
       needType,
     });
@@ -9853,7 +9877,7 @@ export default function Home() {
 
     const expense: Expense = {
       id: uid(),
-      amount: value,
+      amount: normalizedValue,
       category,
       needType,
       note: "First leak",
@@ -11857,7 +11881,7 @@ function OnboardingScreen({
       targetTab === "add"
         ? {
             category: starterLeak.category,
-            amount: Math.max(Math.round(starterAmount), 1),
+            amount: Math.max(normalizeTrackedMoneyAmount(starterAmount), MIN_TRACKED_MONEY_AMOUNT),
             needType: "Not needed" as NeedType,
             note: "First leak from onboarding",
           }
@@ -17000,10 +17024,10 @@ function ExpenseRow({
   function saveEdit() {
     if (!onUpdateExpense) return;
 
-    const normalizedAmount = safeNumber(draftAmount);
+    const normalizedAmount = normalizeTrackedMoneyAmount(draftAmount);
 
-    if (normalizedAmount <= 0) {
-      notifyApp("Amount needed", "Enter a positive amount before saving the corrected leak.", "info");
+    if (!isValidTrackedMoneyAmount(normalizedAmount)) {
+      notifyApp("Amount needed", "Enter at least 0.01 before saving the corrected leak.", "info");
       return;
     }
 
@@ -17040,7 +17064,7 @@ function ExpenseRow({
               value={draftAmount}
               inputMode="decimal"
               type="number"
-              min="0"
+              min={MIN_TRACKED_MONEY_AMOUNT}
               step="0.01"
               onChange={(event) => setDraftAmount(event.target.value)}
             />
@@ -17252,14 +17276,14 @@ function AddExpenseScreen({
             value={amount}
             inputMode="decimal"
             type="number"
-            min="0"
+            min={MIN_TRACKED_MONEY_AMOUNT}
             step="0.01"
-            placeholder="0.00"
+            placeholder="0.01"
             onChange={(event) => setAmount(event.target.value)}
           />
           <b>{settings.currency}</b>
         </div>
-        <p className="tiny-note">New records are saved with their original currency.</p>
+        <p className="tiny-note">Minimum tracked amount is {money(MIN_TRACKED_MONEY_AMOUNT, settings.currency)}. New records are saved with their original currency.</p>
       </section>
 
       <section className="quick-add-panel">
