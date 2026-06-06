@@ -1,6 +1,6 @@
-# Smoke Is Broke — v59.51.9 Bottom Nav Label Removal + Bigger Icon Fill
+# Smoke Is Broke — v59.51.10 Deep Screen Close + Scroll Top Navigation
 
-v59.51.9 is a small UX hotfix on top of confirmed working v59.51.8 stable8. It removes duplicated text labels from the bottom nav because the new icon artwork already contains labels, and it makes the nav icons render larger so each button feels fuller and easier to read on mobile.
+v59.51.10 is a small UX hotfix on top of confirmed working v59.51.9 stable8. It adds a clear Close control on the deep Leak Hub screens opened from Check, returns those screens back to Check instead of Home, renames the in-hub close control to Collapse section, and forces screen navigation to start at the top instead of preserving random scroll positions.
 
 No navigation logic, Check accordion behavior, rewards/Admin payout logic, wallet verification, Supabase schema, token/wallet data logic, scoring formulas, transaction-history scan, PnL, scam labels, or investment-advice behavior changed.
 
@@ -15,7 +15,7 @@ No navigation logic, Check accordion behavior, rewards/Admin payout logic, walle
   - `public/nav-rewards.png`
   - `public/nav-profile.png`
 - Updated visible nav mapping so Check, Rewards, and Profile no longer reuse old generic chart/save/settings icons.
-- Updated build marker to `v59.51.9`.
+- Updated build marker to `v59.51.10`.
 
 ## Test checklist
 

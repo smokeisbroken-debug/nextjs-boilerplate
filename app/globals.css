@@ -32844,3 +32844,49 @@ html.embedded-app-view .hero h1 {
     transform: scale(1.3);
   }
 }
+
+/* ===== V59.51.10 DEEP SCREEN CLOSE + SCROLL TOP NAVIGATION ===== */
+.screen-header.has-back-label {
+  grid-template-columns: 96px 1fr 58px;
+}
+
+.header-button.with-label {
+  width: auto;
+  min-width: 88px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  padding: 0 10px 0 6px;
+  border: 1px solid rgba(183, 255, 25, 0.12);
+  background: rgba(183, 255, 25, 0.055);
+  color: var(--text);
+}
+
+.header-button.with-label .header-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.header-back-text {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+@media (max-width: 380px) {
+  .screen-header.has-back-label {
+    grid-template-columns: 84px 1fr 50px;
+  }
+
+  .header-button.with-label {
+    min-width: 76px;
+    padding-inline: 5px 8px;
+  }
+
+  .header-back-text {
+    font-size: 12px;
+  }
+}

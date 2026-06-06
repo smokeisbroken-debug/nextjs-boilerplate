@@ -9607,6 +9607,17 @@ export default function Home() {
   }, [loaded, appMode, activeTab]);
 
   useEffect(() => {
+    if (!loaded || !onboardingCompleted) return;
+    const timeoutId = window.setTimeout(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+      document.querySelector(".screen")?.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [loaded, onboardingCompleted, activeTab]);
+
+  useEffect(() => {
     if (!loaded || cloudStatus !== "cloud" || !cloudAuthReady) return;
 
     const timeout = window.setTimeout(async () => {
@@ -10482,7 +10493,7 @@ export default function Home() {
         {loaded && onboardingCompleted && activeTab === "leakscore" && (
           <LeakScoreScreen
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
-            onBack={goHome}
+            onBack={() => setActiveTab("check")}
             onHelp={openHelp}
           />
         )}
@@ -10490,7 +10501,7 @@ export default function Home() {
         {loaded && onboardingCompleted && activeTab === "walletleak" && (
           <WalletLeakScoreScreen
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
-            onBack={goHome}
+            onBack={() => setActiveTab("check")}
             onHelp={openHelp}
           />
         )}
@@ -10498,7 +10509,7 @@ export default function Home() {
         {loaded && onboardingCompleted && activeTab === "compare" && (
           <ProjectCompareScreen
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
-            onBack={goHome}
+            onBack={() => setActiveTab("check")}
             onHelp={openHelp}
           />
         )}
@@ -12301,6 +12312,7 @@ function StandardModeNoticeCard({
 function Header({
   title,
   showBack = false,
+  backText,
   rightIcon,
   extraRight,
   onBack,
@@ -12308,16 +12320,17 @@ function Header({
 }: {
   title: string;
   showBack?: boolean;
+  backText?: string;
   rightIcon?: string;
   extraRight?: ReactNode;
   onBack?: () => void;
   onRight?: () => void;
 }) {
   return (
-    <div className="screen-header">
+    <div className={`screen-header ${showBack && backText ? "has-back-label" : ""}`}>
       <div className="header-side">
         <button
-          className="header-button"
+          className={`header-button ${showBack && backText ? "with-label" : ""}`}
           type="button"
           onClick={() => {
             triggerHaptic("light");
@@ -12325,10 +12338,13 @@ function Header({
               onBack?.();
             }
           }}
-          aria-label={showBack ? "Back" : "App"}
+          aria-label={showBack ? backText || "Back" : "App"}
         >
           {showBack ? (
-            <img className="header-icon" src={A.back} alt="Back" />
+            <>
+              <img className="header-icon" src={A.back} alt="" />
+              {backText ? <span className="header-back-text">{backText}</span> : null}
+            </>
           ) : (
             <img className="app-icon" src={A.appFrog} alt="$BROKE" />
           )}
@@ -23157,7 +23173,7 @@ function UniversalLeakCheckScreen({
                     Paste / focus input
                   </button>
                   <button type="button" className="ghost mini universal-check-tool-close" onClick={closeHubTool}>
-                    Close section
+                    Collapse section
                   </button>
                 </div>
               </div>
@@ -23186,7 +23202,7 @@ function UniversalLeakCheckScreen({
                 <p>Use this when you want to save manual research notes after an automatic token check.</p>
                 <div className="universal-check-tool-panel-actions">
                   <button type="button" className="ghost mini" onClick={onOpenTokenResearch}>Open Project Research</button>
-                  <button type="button" className="ghost mini universal-check-tool-close" onClick={closeHubTool}>Close section</button>
+                  <button type="button" className="ghost mini universal-check-tool-close" onClick={closeHubTool}>Collapse section</button>
                 </div>
               </div>
             ) : null}
@@ -23214,7 +23230,7 @@ function UniversalLeakCheckScreen({
                 <p>Use this for manual wallet behavior notes. Public wallet checks still stay in Universal Check.</p>
                 <div className="universal-check-tool-panel-actions">
                   <button type="button" className="ghost mini" onClick={onOpenWalletReview}>Open Wallet Review</button>
-                  <button type="button" className="ghost mini universal-check-tool-close" onClick={closeHubTool}>Close section</button>
+                  <button type="button" className="ghost mini universal-check-tool-close" onClick={closeHubTool}>Collapse section</button>
                 </div>
               </div>
             ) : null}
@@ -23242,7 +23258,7 @@ function UniversalLeakCheckScreen({
                 <p>Use this when you want a side-by-side manual comparison before making a wallet decision.</p>
                 <div className="universal-check-tool-panel-actions">
                   <button type="button" className="ghost mini" onClick={onOpenCompare}>Open Project vs Project</button>
-                  <button type="button" className="ghost mini universal-check-tool-close" onClick={closeHubTool}>Close section</button>
+                  <button type="button" className="ghost mini universal-check-tool-close" onClick={closeHubTool}>Collapse section</button>
                 </div>
               </div>
             ) : null}
@@ -24004,7 +24020,7 @@ function LeakScoreScreen({
 
   return (
     <div className="screen leak-score-screen">
-      <Header title="BROKE Leak Research" showBack onBack={onBack} rightIcon={A.help} onRight={onHelp} />
+      <Header title="BROKE Leak Research" showBack backText="Close" onBack={onBack} rightIcon={A.help} onRight={onHelp} />
 
       <section className="leak-score-hero">
         <div>
@@ -24812,7 +24828,7 @@ function WalletLeakScoreScreen({
 
   return (
     <div className="screen leak-score-screen wallet-leak-screen">
-      <Header title="Wallet Leak Score" showBack onBack={onBack} rightIcon={A.help} onRight={onHelp} />
+      <Header title="Wallet Leak Score" showBack backText="Close" onBack={onBack} rightIcon={A.help} onRight={onHelp} />
 
       <section className="leak-score-hero wallet-leak-hero">
         <div>
@@ -25428,7 +25444,7 @@ function ProjectCompareScreen({
 
   return (
     <div className="screen leak-score-screen project-compare-screen">
-      <Header title="Project vs Project" showBack onBack={onBack} rightIcon={A.help} onRight={onHelp} />
+      <Header title="Project vs Project" showBack backText="Close" onBack={onBack} rightIcon={A.help} onRight={onHelp} />
 
       <section className="leak-score-hero project-compare-hero">
         <div className="eyebrow">Manual DYOR comparison</div>
