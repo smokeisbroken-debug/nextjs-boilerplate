@@ -168,6 +168,12 @@ type ProfileShareSettings = {
   enabledItems: ProfileShareItemId[];
 };
 
+type TelegramReminderSettings = {
+  enabled: boolean;
+  time: string;
+  timezone: string;
+};
+
 type DailyRoutineActions = {
   date: string;
   openedApp: boolean;
@@ -213,6 +219,7 @@ type Settings = {
   currencyMode: CurrencyMode;
   language: Language;
   dailyReminder: boolean;
+  reminders: TelegramReminderSettings;
   onboardingCompleted?: boolean;
   profile: {
     region: RegionPreset;
@@ -571,11 +578,31 @@ const defaultProfileShareSettings: ProfileShareSettings = {
   enabledItems: ["survival", "walletHp", "streak", "badges"],
 };
 
+const defaultTelegramReminderSettings: TelegramReminderSettings = {
+  enabled: false,
+  time: "21:00",
+  timezone: "UTC",
+};
+
+function normalizeReminderTime(value: unknown, fallback = defaultTelegramReminderSettings.time) {
+  const raw = String(value || "").trim();
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(raw) ? raw : fallback;
+}
+
+function normalizeTelegramReminderSettings(input?: Partial<TelegramReminderSettings> | null, legacyEnabled?: boolean): TelegramReminderSettings {
+  const enabled = typeof input?.enabled === "boolean" ? input.enabled : Boolean(legacyEnabled ?? defaultTelegramReminderSettings.enabled);
+  const time = normalizeReminderTime(input?.time);
+  const timezone = String(input?.timezone || defaultTelegramReminderSettings.timezone).trim() || defaultTelegramReminderSettings.timezone;
+
+  return { enabled, time, timezone };
+}
+
 const defaultSettings: Settings = {
   currency: defaultCurrency,
   currencyMode: "display",
   language: "en",
-  dailyReminder: true,
+  dailyReminder: false,
+  reminders: defaultTelegramReminderSettings,
   onboardingCompleted: false,
   profile: {
     region: "Global",
@@ -1583,6 +1610,8 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
     ...(input || {}),
     currency: normalizeCurrency(input?.currency, defaultSettings.currency),
     currencyMode: normalizeCurrencyMode(input?.currencyMode),
+    dailyReminder: normalizeTelegramReminderSettings(input?.reminders, input?.dailyReminder).enabled,
+    reminders: normalizeTelegramReminderSettings(input?.reminders, input?.dailyReminder),
     profile: {
       ...defaultSettings.profile,
       ...(input?.profile || {}),
@@ -1629,6 +1658,7 @@ function legacySettingsFromDb(row: Record<string, unknown>): Partial<Settings> {
   return {
     currency: normalizeCurrency(row.currency, defaultSettings.currency),
     dailyReminder: toBoolean(row.daily_reminder, defaultSettings.dailyReminder),
+    reminders: normalizeTelegramReminderSettings(null, toBoolean(row.daily_reminder, defaultSettings.dailyReminder)),
     onboardingCompleted: toBoolean(row.onboarding_completed, Boolean(defaultSettings.onboardingCompleted)),
     income: {
       salary: toNumber(row.income_salary, defaultSettings.income.salary),
@@ -1829,7 +1859,7 @@ function settingsToDb(telegramId: number, input: Settings, includeExtendedPayloa
   const row: Record<string, unknown> = {
     telegram_id: telegramId,
     currency: normalizeCurrency(settings.currency, defaultSettings.currency),
-    daily_reminder: settings.dailyReminder,
+    daily_reminder: settings.reminders.enabled,
     onboarding_completed: Boolean(settings.onboardingCompleted),
     income_salary: settings.income.salary,
     income_side: settings.income.side,

@@ -529,6 +529,7 @@ type Settings = {
   currencyMode: CurrencyMode;
   language: Language;
   dailyReminder: boolean;
+  reminders: TelegramReminderSettings;
   onboardingCompleted?: boolean;
   profile: {
     region: RegionPreset;
@@ -1011,6 +1012,12 @@ type ProfileShareSettings = {
   enabledItems: ProfileShareItemId[];
 };
 
+type TelegramReminderSettings = {
+  enabled: boolean;
+  time: string;
+  timezone: string;
+};
+
 type ProfileShareMetric = {
   label: string;
   value: string;
@@ -1460,11 +1467,39 @@ const defaultWalletLinkSettings: WalletLinkSettings = {
 const CUSTOM_AVATAR_UNLOCK_BALANCE = 500_000;
 const CUSTOM_AVATAR_MAX_BYTES = 2 * 1024 * 1024;
 
+const defaultTelegramReminderSettings: TelegramReminderSettings = {
+  enabled: false,
+  time: "21:00",
+  timezone: "UTC",
+};
+
+function getClientTimeZone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  } catch {
+    return "UTC";
+  }
+}
+
+function normalizeReminderTime(value: unknown, fallback = defaultTelegramReminderSettings.time) {
+  const raw = String(value || "").trim();
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(raw) ? raw : fallback;
+}
+
+function normalizeTelegramReminderSettings(input?: Partial<TelegramReminderSettings> | null, legacyEnabled?: boolean): TelegramReminderSettings {
+  const enabled = typeof input?.enabled === "boolean" ? input.enabled : Boolean(legacyEnabled ?? defaultTelegramReminderSettings.enabled);
+  const time = normalizeReminderTime(input?.time);
+  const timezone = String(input?.timezone || getClientTimeZone() || defaultTelegramReminderSettings.timezone).trim() || defaultTelegramReminderSettings.timezone;
+
+  return { enabled, time, timezone };
+}
+
 const defaultSettings: Settings = {
   currency: defaultCurrency,
   currencyMode: "display",
   language: "en",
-  dailyReminder: true,
+  dailyReminder: false,
+  reminders: defaultTelegramReminderSettings,
   onboardingCompleted: false,
   profile: {
     region: "Global",
@@ -3961,6 +3996,8 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
     ...(input || {}),
     currency: normalizeCurrency(input?.currency, defaultSettings.currency),
     currencyMode: normalizeCurrencyMode(input?.currencyMode),
+    dailyReminder: normalizeTelegramReminderSettings(input?.reminders, input?.dailyReminder).enabled,
+    reminders: normalizeTelegramReminderSettings(input?.reminders, input?.dailyReminder),
     profile: {
       ...defaultSettings.profile,
       ...(input?.profile || {}),
@@ -29456,26 +29493,61 @@ function SettingsScreen({
               <span>Notifications & Sync</span>
               <small>Daily reminder, Telegram connection and cloud status.</small>
             </div>
-            <b>{settings.dailyReminder ? "Reminder on" : profileConnectionLabel}</b>
+            <b>{settings.reminders.enabled ? settings.reminders.time : profileConnectionLabel}</b>
           </summary>
           <div className="profile-section-body profile-section-stack">
             <section className="settings-menu profile-section-menu">
         <button
           className="menu-line menu-button"
-          onClick={() =>
-            setSettings((prev) => ({
-              ...prev,
-              dailyReminder: !prev.dailyReminder,
-            }))
-          }
+          onClick={() => {
+            const timezone = settings.reminders.timezone || getClientTimeZone();
+            setSettings((prev) => {
+              const enabled = !prev.reminders.enabled;
+              return {
+                ...prev,
+                dailyReminder: enabled,
+                reminders: {
+                  ...normalizeTelegramReminderSettings(prev.reminders, prev.dailyReminder),
+                  enabled,
+                  timezone,
+                },
+              };
+            });
+          }}
         >
           <img src={A.reminder} alt="" />
           <div>
-            <strong>Daily Reminder</strong>
-            <span>{settings.dailyReminder ? "On" : "Off"}</span>
+            <strong>Reminder</strong>
+            <span>{settings.reminders.enabled ? settings.reminders.time : "Off"}</span>
           </div>
-          <i className={settings.dailyReminder ? "toggle" : "toggle off"} />
+          <i className={settings.reminders.enabled ? "toggle" : "toggle off"} />
         </button>
+        {settings.reminders.enabled ? (
+          <label className="menu-line reminder-time-row">
+            <img src={A.calendar} alt="" />
+            <div>
+              <strong>Time</strong>
+              <span>{settings.reminders.timezone || getClientTimeZone()}</span>
+            </div>
+            <input
+              type="time"
+              value={settings.reminders.time}
+              onChange={(event) => {
+                const time = normalizeReminderTime(event.target.value, settings.reminders.time);
+                setSettings((prev) => ({
+                  ...prev,
+                  dailyReminder: true,
+                  reminders: {
+                    ...normalizeTelegramReminderSettings(prev.reminders, prev.dailyReminder),
+                    enabled: true,
+                    time,
+                    timezone: prev.reminders.timezone || getClientTimeZone(),
+                  },
+                }));
+              }}
+            />
+          </label>
+        ) : null}
             </section>
       <details className="tech-details">
         <summary>Sync & connection details</summary>

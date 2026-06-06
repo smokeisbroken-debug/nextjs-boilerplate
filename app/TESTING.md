@@ -1,42 +1,44 @@
-# Testing — v59.52.2 Automatic Daily Routine Proof Tasks
+# Testing — v59.52.3 User Reminder Time + Telegram Routine Notifications
 
-v59.52.2 updates Daily Routine into seven automatic proof tasks: Open app, Run Check, Track Leak/Clean Day, One Fix, Read Chart, Review Rewards, and Share on X. Manual routine task buttons were removed; progress is now filled only by app actions already performed elsewhere.
+## UI checks
 
-No rewards/Admin payout, wallet verification, Supabase schema, Universal Check data logic, token/wallet scoring, transaction history, PnL, scam labels, investment advice, or bottom-nav item count changed.
+1. Open Profile.
+2. Open Notifications & Sync.
+3. Turn Reminder on.
+4. Set a time.
+5. Confirm the summary shows the chosen time.
+6. Reload and confirm the chosen time is still stored.
 
+## Server checks
 
-## Automated checks
+1. Ensure required env vars are set.
+2. Call dry run:
 
-Run:
-
-```bash
-npm run typecheck
-npm run lint:quiet
-NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
+```txt
+/api/notifications/routine-reminders?key=<CRON_SECRET>&dryRun=1
 ```
 
-## Manual checks
+3. Confirm unauthorized calls return 401.
+4. Confirm missing secret returns locked error.
+5. Confirm route skips users when:
+   - reminder is off
+   - current local time is not due
+   - Daily Routine is already complete
+   - reminder was already sent today
 
-- Bottom nav uses the new icon/button art for:
-  - Home
-  - Check
-  - Add
-  - Chart
-  - Growth
-  - Rewards
-  - Profile
-- Check opens the same Check / Leak Hub screen.
-- Leak Hub accordion still expands and collapses.
-- Add, Chart, Growth, Rewards, and Profile still open their existing sections.
-- No duplicate root files should exist:
-  - `page.tsx`
-  - `route.ts`
-  - `globals.css`
+## Send check
 
+Temporarily set a test user's reminder time to current local time and call:
 
-## v59.52.0 extraction notes
+```txt
+/api/notifications/routine-reminders?key=<CRON_SECRET>
+```
 
-- Moved bottom navigation rendering from `app/page.tsx` to `app/components/BottomNav.tsx`.
-- Moved bottom navigation config/types/helpers to `app/lib/brokeNavigation.ts`.
-- Moved the latest bottom-nav icon-fill override styles to `app/styles/bottom-nav.css`, imported from `app/layout.tsx`.
-- No routing, rewards, Admin payout, Universal Check logic, Daily Routine, wallet verification, or scoring formula changes were intended.
+Expected: Telegram bot sends one message with an Open $BROKE button.
+
+## Guardrails
+
+- Do not send browser/Firebase push.
+- Do not send more than one successful reminder per local day.
+- Do not change rewards/admin logic.
+- Do not change Universal Check data logic.

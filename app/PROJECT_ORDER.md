@@ -1,42 +1,40 @@
-# Project Order — v59.52.2 Automatic Daily Routine Proof Tasks
+# Project Order — v59.52.3 User Reminder Time + Telegram Routine Notifications
 
-v59.52.2 updates Daily Routine into seven automatic proof tasks: Open app, Run Check, Track Leak/Clean Day, One Fix, Read Chart, Review Rewards, and Share on X. Manual routine task buttons were removed; progress is now filled only by app actions already performed elsewhere.
+Base: confirmed working `v59.52.2 stable8`.
 
-No rewards/Admin payout, wallet verification, Supabase schema, Universal Check data logic, token/wallet scoring, transaction history, PnL, scam labels, investment advice, or bottom-nav item count changed.
+## Goal
 
+Let users set their own reminder time and receive a phone notification through Telegram bot messages.
 
-Base: `v59.52.0 stable8`.
+## Scope
 
-Scope: visual-only bottom navigation asset refresh using the user's generated button artwork.
+- Profile reminder toggle/time control.
+- Settings payload now stores reminder enabled/time/timezone.
+- Protected routine-reminder cron endpoint.
+- Telegram bot message with web app open button.
+- One reminder per user per local day.
 
-## Included
+## Out of scope
 
-- Processed the uploaded 7-button set into app-ready public nav assets.
-- Mapped by meaning:
-  - Home → `nav-home.png`
-  - Check → `nav-check.png`
-  - Add → `nav-add.png`
-  - Chart → `nav-chart.png`
-  - Growth → `nav-growth.png`
-  - Rewards → `nav-rewards.png`
-  - Profile → `nav-profile.png`
-- Updated `navItems` so visible bottom nav uses the correct matching art.
-- Updated shared build marker to `v59.52.1`.
+- Browser Push / Firebase notifications.
+- Email reports.
+- New reward logic.
+- Admin payout changes.
+- Daily Routine proof-task formula changes.
+- Universal Check signal/scoring changes.
 
-## Not included
+## Verification
 
-- No bottom-nav item count change.
-- No route/screen changes.
-- No token/wallet data logic changes.
-- No scoring formula changes.
-- No rewards/Admin payout changes.
-- No wallet verification or Supabase schema changes.
-- No transaction-history, PnL, scam label, or investment-advice changes.
+Run:
 
+```txt
+npm run typecheck
+npm run lint:quiet
+NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
+```
 
-## v59.52.0 extraction notes
+Cron dry-run:
 
-- Moved bottom navigation rendering from `app/page.tsx` to `app/components/BottomNav.tsx`.
-- Moved bottom navigation config/types/helpers to `app/lib/brokeNavigation.ts`.
-- Moved the latest bottom-nav icon-fill override styles to `app/styles/bottom-nav.css`, imported from `app/layout.tsx`.
-- No routing, rewards, Admin payout, Universal Check logic, Daily Routine, wallet verification, or scoring formula changes were intended.
+```txt
+/api/notifications/routine-reminders?key=<CRON_SECRET>&dryRun=1
+```
