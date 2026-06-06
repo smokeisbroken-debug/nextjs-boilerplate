@@ -1,42 +1,17 @@
-# Project Order — v59.52.2 Automatic Daily Routine Proof Tasks
+# Project Order — v59.52.4 Sync Payload Key Normalization Hotfix
 
-v59.52.2 updates Daily Routine into seven automatic proof tasks: Open app, Run Check, Track Leak/Clean Day, One Fix, Read Chart, Review Rewards, and Share on X. Manual routine task buttons were removed; progress is now filled only by app actions already performed elsewhere.
+Base: confirmed v59.52.3 stable8.
 
-No rewards/Admin payout, wallet verification, Supabase schema, Universal Check data logic, token/wallet scoring, transaction history, PnL, scam labels, investment advice, or bottom-nav item count changed.
+## Scope
 
+Fix the Supabase `PGRST102` sync error shown in Profile/Notifications by making bulk local-expense import rows use matching keys.
 
-Base: `v59.52.0 stable8`.
+## Files changed
 
-Scope: visual-only bottom navigation asset refresh using the user's generated button artwork.
+- `app/api/broke/route.ts`
+- `app/lib/brokeAdminRewards.ts`
+- docs
 
-## Included
+## Constraints
 
-- Processed the uploaded 7-button set into app-ready public nav assets.
-- Mapped by meaning:
-  - Home → `nav-home.png`
-  - Check → `nav-check.png`
-  - Add → `nav-add.png`
-  - Chart → `nav-chart.png`
-  - Growth → `nav-growth.png`
-  - Rewards → `nav-rewards.png`
-  - Profile → `nav-profile.png`
-- Updated `navItems` so visible bottom nav uses the correct matching art.
-- Updated shared build marker to `v59.52.1`.
-
-## Not included
-
-- No bottom-nav item count change.
-- No route/screen changes.
-- No token/wallet data logic changes.
-- No scoring formula changes.
-- No rewards/Admin payout changes.
-- No wallet verification or Supabase schema changes.
-- No transaction-history, PnL, scam label, or investment-advice changes.
-
-
-## v59.52.0 extraction notes
-
-- Moved bottom navigation rendering from `app/page.tsx` to `app/components/BottomNav.tsx`.
-- Moved bottom navigation config/types/helpers to `app/lib/brokeNavigation.ts`.
-- Moved the latest bottom-nav icon-fill override styles to `app/styles/bottom-nav.css`, imported from `app/layout.tsx`.
-- No routing, rewards, Admin payout, Universal Check logic, Daily Routine, wallet verification, or scoring formula changes were intended.
+No changes to rewards/Admin payout, Daily Routine proof formula, reminders behavior, Universal Check scoring, wallet verification, or schema migrations.

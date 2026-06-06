@@ -1,40 +1,17 @@
-# Project Order — v59.52.3 User Reminder Time + Telegram Routine Notifications
+# Project Order — v59.52.4 Sync Payload Key Normalization Hotfix
 
-Base: confirmed working `v59.52.2 stable8`.
-
-## Goal
-
-Let users set their own reminder time and receive a phone notification through Telegram bot messages.
+Base: confirmed v59.52.3 stable8.
 
 ## Scope
 
-- Profile reminder toggle/time control.
-- Settings payload now stores reminder enabled/time/timezone.
-- Protected routine-reminder cron endpoint.
-- Telegram bot message with web app open button.
-- One reminder per user per local day.
+Fix the Supabase `PGRST102` sync error shown in Profile/Notifications by making bulk local-expense import rows use matching keys.
 
-## Out of scope
+## Files changed
 
-- Browser Push / Firebase notifications.
-- Email reports.
-- New reward logic.
-- Admin payout changes.
-- Daily Routine proof-task formula changes.
-- Universal Check signal/scoring changes.
+- `app/api/broke/route.ts`
+- `app/lib/brokeAdminRewards.ts`
+- docs
 
-## Verification
+## Constraints
 
-Run:
-
-```txt
-npm run typecheck
-npm run lint:quiet
-NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
-```
-
-Cron dry-run:
-
-```txt
-/api/notifications/routine-reminders?key=<CRON_SECRET>&dryRun=1
-```
+No changes to rewards/Admin payout, Daily Routine proof formula, reminders behavior, Universal Check scoring, wallet verification, or schema migrations.

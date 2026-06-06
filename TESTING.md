@@ -1,11 +1,4 @@
-# Testing — v59.52.2 Automatic Daily Routine Proof Tasks
-
-v59.52.2 updates Daily Routine into seven automatic proof tasks: Open app, Run Check, Track Leak/Clean Day, One Fix, Read Chart, Review Rewards, and Share on X. Manual routine task buttons were removed; progress is now filled only by app actions already performed elsewhere.
-
-No rewards/Admin payout, wallet verification, Supabase schema, Universal Check data logic, token/wallet scoring, transaction history, PnL, scam labels, investment advice, or bottom-nav item count changed.
-
-
-## Automated checks
+# Testing — v59.52.4 Sync Payload Key Normalization Hotfix
 
 Run:
 
@@ -15,28 +8,10 @@ npm run lint:quiet
 NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-## Manual checks
+Manual checks:
 
-- Bottom nav uses the new icon/button art for:
-  - Home
-  - Check
-  - Add
-  - Chart
-  - Growth
-  - Rewards
-  - Profile
-- Check opens the same Check / Leak Hub screen.
-- Leak Hub accordion still expands and collapses.
-- Add, Chart, Growth, Rewards, and Profile still open their existing sections.
-- No duplicate root files should exist:
-  - `page.tsx`
-  - `route.ts`
-  - `globals.css`
-
-
-## v59.52.0 extraction notes
-
-- Moved bottom navigation rendering from `app/page.tsx` to `app/components/BottomNav.tsx`.
-- Moved bottom navigation config/types/helpers to `app/lib/brokeNavigation.ts`.
-- Moved the latest bottom-nav icon-fill override styles to `app/styles/bottom-nav.css`, imported from `app/layout.tsx`.
-- No routing, rewards, Admin payout, Universal Check logic, Daily Routine, wallet verification, or scoring formula changes were intended.
+1. Open Profile / Notifications & Sync in Telegram.
+2. Toggle Reminder On/Off and save/update settings.
+3. Confirm sync no longer shows `PGRST102: All object keys must match`.
+4. Confirm existing expenses still sync/import correctly.
+5. Confirm Daily Routine and reminder settings still display normally.

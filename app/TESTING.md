@@ -1,44 +1,17 @@
-# Testing — v59.52.3 User Reminder Time + Telegram Routine Notifications
+# Testing — v59.52.4 Sync Payload Key Normalization Hotfix
 
-## UI checks
+Run:
 
-1. Open Profile.
-2. Open Notifications & Sync.
-3. Turn Reminder on.
-4. Set a time.
-5. Confirm the summary shows the chosen time.
-6. Reload and confirm the chosen time is still stored.
-
-## Server checks
-
-1. Ensure required env vars are set.
-2. Call dry run:
-
-```txt
-/api/notifications/routine-reminders?key=<CRON_SECRET>&dryRun=1
+```bash
+npm run typecheck
+npm run lint:quiet
+NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
 ```
 
-3. Confirm unauthorized calls return 401.
-4. Confirm missing secret returns locked error.
-5. Confirm route skips users when:
-   - reminder is off
-   - current local time is not due
-   - Daily Routine is already complete
-   - reminder was already sent today
+Manual checks:
 
-## Send check
-
-Temporarily set a test user's reminder time to current local time and call:
-
-```txt
-/api/notifications/routine-reminders?key=<CRON_SECRET>
-```
-
-Expected: Telegram bot sends one message with an Open $BROKE button.
-
-## Guardrails
-
-- Do not send browser/Firebase push.
-- Do not send more than one successful reminder per local day.
-- Do not change rewards/admin logic.
-- Do not change Universal Check data logic.
+1. Open Profile / Notifications & Sync in Telegram.
+2. Toggle Reminder On/Off and save/update settings.
+3. Confirm sync no longer shows `PGRST102: All object keys must match`.
+4. Confirm existing expenses still sync/import correctly.
+5. Confirm Daily Routine and reminder settings still display normally.

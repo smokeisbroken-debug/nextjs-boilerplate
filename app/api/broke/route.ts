@@ -3106,18 +3106,22 @@ async function importLocalExpensesIfMissing(telegramId: number, expenses: Expens
 
   if (!missingExpenses.length) return 0;
 
-  const rowsWithCurrency = missingExpenses.slice(0, 200).map((expense) => ({
-    telegram_id: telegramId,
-    amount: expense.amount,
-    category: expense.category,
-    need_type: expense.needType,
-    note: expense.note || "",
-    trigger_tags: normalizeLeakTriggerTags(expense.triggerTags, expense.note),
-    created_at: expense.createdAt || new Date().toISOString(),
-    ...(Number.isFinite(expense.necessaryAmount) ? { necessary_amount: Number(expense.necessaryAmount) } : {}),
-    ...(Number.isFinite(expense.avoidableLeakAmount) ? { avoidable_leak_amount: Number(expense.avoidableLeakAmount) } : {}),
-    ...(normalizeOptionalCurrency(expense.currency) ? { currency: normalizeOptionalCurrency(expense.currency) } : {}),
-  }));
+  const rowsWithCurrency = missingExpenses.slice(0, 200).map((expense) => {
+    const expenseCurrency = normalizeOptionalCurrency(expense.currency);
+
+    return {
+      telegram_id: telegramId,
+      amount: expense.amount,
+      category: expense.category,
+      need_type: expense.needType,
+      note: expense.note || "",
+      trigger_tags: normalizeLeakTriggerTags(expense.triggerTags, expense.note),
+      created_at: expense.createdAt || new Date().toISOString(),
+      necessary_amount: Number.isFinite(expense.necessaryAmount) ? Number(expense.necessaryAmount) : null,
+      avoidable_leak_amount: Number.isFinite(expense.avoidableLeakAmount) ? Number(expense.avoidableLeakAmount) : null,
+      currency: expenseCurrency || null,
+    };
+  });
 
   try {
     await supabaseFetch("broke_expenses", {

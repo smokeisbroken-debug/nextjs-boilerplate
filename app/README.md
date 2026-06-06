@@ -1,47 +1,17 @@
-# Smoke Is Broke — v59.52.3 User Reminder Time + Telegram Routine Notifications
+# Smoke Is Broke — v59.52.4 Sync Payload Key Normalization Hotfix
 
-v59.52.3 adds the first user-controlled Telegram reminder foundation on top of v59.52.2 stable8.
+v59.52.4 is a small hotfix on top of v59.52.3 stable8. It fixes a Supabase sync error where imported local expense rows could be sent with different JSON keys, causing PostgREST `PGRST102: All object keys must match` during sync.
 
-Users can enable a routine reminder from Profile, choose their own reminder time, and the app stores the selected time/timezone in settings. A protected server endpoint can be called by cron to send Telegram bot reminders only when the user opted in, the selected local time is due, and the Daily Routine is not complete.
+## Changes
 
-## What changed
+- Normalized bulk local-expense sync rows so optional columns are always present as values or `null`.
+- Keeps fallback handling for older Supabase schemas that do not yet have currency/trigger/smart-leak columns.
+- Updated shared build marker to `v59.52.4`.
 
-- Added user reminder settings: enabled/off, reminder time, timezone.
-- Reworked the Profile notification row into a compact reminder control.
-- Added `app/api/notifications/routine-reminders/route.ts`.
-- Reminder endpoint uses Telegram `sendMessage` with an `Open $BROKE` web app button.
-- Anti-spam: max one successful routine reminder per local day through `broke_notification_logs`.
-- No browser/Firebase push was added; this uses Telegram-native bot reminders.
+## Not changed
 
-## What did not change
-
-- No rewards/Admin payout logic changes.
-- No wallet verification changes.
-- No Supabase schema migration required.
-- No Universal Check data/scoring changes.
-- No Daily Routine task formula changes.
-- No transaction history, PnL, scam labels, or investment advice.
-
-## Cron target
-
-Call this route every 5–10 minutes from Vercel Cron or another scheduler:
-
-```txt
-/api/notifications/routine-reminders?key=<CRON_SECRET>
-```
-
-Dry run:
-
-```txt
-/api/notifications/routine-reminders?key=<CRON_SECRET>&dryRun=1
-```
-
-Required env:
-
-```txt
-TELEGRAM_BOT_TOKEN
-WEBAPP_URL
-SUPABASE_URL
-SUPABASE_SERVICE_ROLE_KEY
-CRON_SECRET or NOTIFICATIONS_SECRET
-```
+- No reminder logic changes.
+- No rewards/Admin payout changes.
+- No Daily Routine formula changes.
+- No Universal Check scoring changes.
+- No wallet verification or Supabase migration added.
