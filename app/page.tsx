@@ -22919,11 +22919,11 @@ function UniversalLeakCheckScreen({
     setCopied(false);
   }
 
-  async function fetchTokenResult(address: string) {
+  async function fetchTokenResult(address: string, originalInputValue = rawInput) {
     const response = await fetch(LEAK_SCORE_BASIC_TOKEN_DATA_ROUTE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chain: "Solana", contractAddress: address }),
+      body: JSON.stringify({ chain: "Solana", contractAddress: address, originalInput: originalInputValue }),
     });
     const payload = (await response.json().catch(() => ({}))) as LeakScoreTokenDataResponse;
     if (!response.ok || !payload.ok || !payload.data) {
@@ -22969,12 +22969,12 @@ function UniversalLeakCheckScreen({
       const errors: string[] = [];
 
       if (normalizedInput.kind === "token") {
-        tokenResult = await fetchTokenResult(address);
+        tokenResult = await fetchTokenResult(address, rawInput);
       } else if (normalizedInput.kind === "wallet") {
         walletResult = await fetchWalletResult(address);
       } else {
         const [tokenSettled, walletSettled] = await Promise.allSettled([
-          fetchTokenResult(address),
+          fetchTokenResult(address, rawInput),
           fetchWalletResult(address),
         ]);
 

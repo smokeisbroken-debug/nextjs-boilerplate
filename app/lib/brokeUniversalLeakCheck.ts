@@ -231,6 +231,16 @@ function shortAddress(value: string | null | undefined) {
   return `${text.slice(0, 4)}…${text.slice(-4)}`;
 }
 
+
+function hasUsableTokenAutoData(data: LeakScoreBasicTokenData) {
+  return Boolean(data.pair || data.tokenSupply || data.top10ConcentrationPercent !== null || data.largestAccountsCount > 0);
+}
+
+function buildLimitedTokenDecisionSummary(data: LeakScoreBasicTokenData) {
+  const addressCopy = shortAddress(data.tokenAddress || data.requestedAddress || "");
+  return `Automatic sources did not return enough usable token context for ${addressCopy}. This is not a safe result; it means the app needs a verified mint/pair or richer source data before it can explain real leaks.`;
+}
+
 function buildDecisionLabel(pressure: number, dangerCount: number) {
   if (pressure >= 70 || dangerCount >= 2) return "High caution";
   if (pressure >= 40 || dangerCount >= 1) return "Slow down";
@@ -429,6 +439,17 @@ export function buildTokenAutoSignals(data: LeakScoreBasicTokenData): UniversalL
   const veryWeakLiquidity = liquidity !== null && liquidity < 5000;
   const highConcentration = concentration !== null && concentration >= 45;
   const extremeConcentration = concentration !== null && concentration >= 70;
+  const hasUsableData = hasUsableTokenAutoData(data);
+
+  if (!hasUsableData) {
+    signals.push({
+      id: "insufficient_token_data",
+      label: "Not enough public token data",
+      severity: "medium",
+      evidence: "The automatic check could not confirm a visible DEX pair, usable supply, or concentration context for this input.",
+      action: "Paste the official mint or official pair link, then confirm data on Solscan, DEX Screener, Birdeye, or Jupiter before trusting the result.",
+    });
+  }
 
   if (liquidity !== null && liquidity < 5000) {
     signals.push({
@@ -796,6 +817,7 @@ export function buildUniversalTokenLeakCheckResult(data: LeakScoreBasicTokenData
   const pressure = normalizePressure(signals.reduce((total, signal) => total + getSignalWeight(signal.severity), 0));
   const pair = data.pair;
   const dangerousLeaks = buildTokenDangerExplanations(data, signals);
+  const noUsableTokenData = !hasUsableTokenAutoData(data);
   const hasGoodContext = data.sourceHealth === "complete" && Boolean(pair);
   const confidence: UniversalLeakCheckSourceConfidence = hasGoodContext ? "strong" : data.sourceHealth === "partial" ? "medium" : "limited";
   const tokenLabel = data.tokenSymbol || data.tokenName || "Token";
@@ -812,13 +834,23 @@ export function buildUniversalTokenLeakCheckResult(data: LeakScoreBasicTokenData
     pressureLabel: getPressureLabel(pressure),
     confidence,
     confidenceLabel,
-    summary: signals.length
-      ? `${signals.length} automatic token leak signal${signals.length === 1 ? "" : "s"} found from visible source data.`
-      : "No major automatic token leak signals were visible in this snapshot.",
-    decisionLabel: buildDecisionLabel(pressure, dangerCount),
-    decisionSummary: buildDecisionSummary("token", pressure, dangerousLeaks),
+    summary: noUsableTokenData
+      ? "Automatic sources did not return enough usable token context. Treat this as a data-limit result, not as safety."
+      : signals.length
+        ? `${signals.length} automatic token leak signal${signals.length === 1 ? "" : "s"} found from visible source data.`
+        : "No major automatic token leak signals were visible in this snapshot.",
+    decisionLabel: noUsableTokenData ? "Not enough data" : buildDecisionLabel(pressure, dangerCount),
+    decisionSummary: noUsableTokenData ? buildLimitedTokenDecisionSummary(data) : buildDecisionSummary("token", pressure, dangerousLeaks),
     dangerousLeaks,
     metrics: [
+      {
+        id: "data_status",
+        label: "Data status",
+        value: noUsableTokenData ? "Limited" : data.sourceHealthLabel,
+        helper: noUsableTokenData
+          ? "The app could not confirm enough DEX/RPC context to show a useful automatic result. Try the official mint or pair URL."
+          : data.sourceHealthHelper,
+      },
       ...(resolvedFromPair ? [{
         id: "resolved_mint",
         label: "Resolved mint",
@@ -846,8 +878,10 @@ export function buildUniversalTokenLeakCheckResult(data: LeakScoreBasicTokenData
       {
         id: "top10",
         label: "Top 10 accounts",
-        value: formatLeakScorePercent(data.top10ConcentrationPercent),
-        helper: "Largest token-account concentration, not a full holder map.",
+        value: data.largestAccountsCount > 0 ? formatLeakScorePercent(data.top10ConcentrationPercent) : "Unavailable",
+        helper: data.largestAccountsCount > 0
+          ? "Largest token-account concentration, not a full holder map."
+          : "Largest-account context was not returned by RPC, so the app does not show a fake 0% value.",
       },
       {
         id: "pair_age",
@@ -1111,6 +1145,17 @@ export function chooseUniversalLeakCheckResult(input: {
 }
 
 export function buildUniversalLeakCheckAutoSummary(result: UniversalLeakCheckResult): UniversalLeakCheckAutoSummary {
+  if (result.kind === "token" && !hasUsableTokenAutoData(result.tokenData)) {
+    return {
+      label: "Not enough data",
+      headline: "Not enough data: verify the input",
+      mainLeak: "Source blind spot",
+      meaning: "The app could not confirm a visible DEX pair, usable supply, or concentration context from automatic sources.",
+      nextStep: "Paste the official mint or official pair link, then verify liquidity, holders, pair age, and links manually.",
+      topSignals: result.signals.slice(0, 3).map((signal) => signal.label),
+    };
+  }
+
   const primaryDanger =
     result.dangerousLeaks.find((leak) => leak.riskLevel === "danger") ||
     result.dangerousLeaks.find((leak) => leak.riskLevel === "caution") ||

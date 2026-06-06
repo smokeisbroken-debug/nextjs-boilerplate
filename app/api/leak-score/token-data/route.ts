@@ -16,6 +16,8 @@ export const runtime = "nodejs";
 const DEFAULT_SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com";
 const DEXSCREENER_TOKEN_BASE_URL = "https://api.dexscreener.com/latest/dex/tokens";
 const DEXSCREENER_PAIR_BASE_URL = "https://api.dexscreener.com/latest/dex/pairs/solana";
+const DEXSCREENER_SEARCH_URL = "https://api.dexscreener.com/latest/dex/search";
+const SOLANA_BASE58_ADDRESS_PATTERN = /[1-9A-HJ-NP-Za-km-z]{32,44}/g;
 
 const COMMON_SOLANA_QUOTE_MINTS = new Set([
   "So11111111111111111111111111111111111111112",
@@ -108,6 +110,26 @@ function toPositiveNumber(value: unknown): number | null {
 
 function getSolanaRpcUrl() {
   return String(process.env.LEAK_SCORE_SOLANA_RPC_URL || process.env.SOLANA_RPC_URL || DEFAULT_SOLANA_RPC_URL).trim();
+}
+
+
+function getSolanaAddressCandidates(value: unknown) {
+  const text = String(value || "");
+  const matches = text.match(SOLANA_BASE58_ADDRESS_PATTERN) || [];
+  return Array.from(new Set(matches.filter((candidate) => isLikelySolanaMintAddress(candidate)))).slice(0, 6);
+}
+
+function dedupeAddressCandidates(...groups: Array<Array<string | null | undefined>>) {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  groups.flat().forEach((candidate) => {
+    const address = String(candidate || "").trim();
+    const key = address.toLowerCase();
+    if (!address || seen.has(key) || !isLikelySolanaMintAddress(address)) return;
+    seen.add(key);
+    out.push(address);
+  });
+  return out.slice(0, 6);
 }
 
 async function rpc<T>(rpcUrl: string, method: string, params: unknown[]) {
@@ -242,6 +264,124 @@ async function fetchDexScreenerPairByPairAddress(pairAddress: string) {
   return mapDexScreenerPair(bestPair);
 }
 
+
+async function fetchDexScreenerSearchPair(query: string, preferredAddresses: string[]) {
+  const searchText = String(query || "").trim();
+  if (!searchText) return null;
+
+  const response = await fetch(`${DEXSCREENER_SEARCH_URL}?q=${encodeURIComponent(searchText)}`, {
+    headers: {
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`DEX Screener search HTTP ${response.status}`);
+  }
+
+  const data = (await response.json()) as DexScreenerTokenResponse;
+  const preferred = new Set(preferredAddresses.map((address) => address.toLowerCase()));
+  const solanaPairs = (Array.isArray(data.pairs) ? data.pairs : [])
+    .filter((pair) => String(pair.chainId || "").toLowerCase() === "solana")
+    .map((pair) => {
+      const pairAddress = String(pair.pairAddress || "").toLowerCase();
+      const baseAddress = String(pair.baseToken?.address || "").toLowerCase();
+      const quoteAddress = String(pair.quoteToken?.address || "").toLowerCase();
+      const matchBonus = preferred.has(pairAddress)
+        ? 1_000_000_000
+        : preferred.has(baseAddress) || preferred.has(quoteAddress)
+          ? 900_000_000
+          : 0;
+      return {
+        pair,
+        score: matchBonus + Number(pair.liquidity?.usd || 0),
+        preferredTokenAddress: preferred.has(baseAddress)
+          ? String(pair.baseToken?.address || "")
+          : preferred.has(quoteAddress)
+            ? String(pair.quoteToken?.address || "")
+            : "",
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  const best = solanaPairs[0] || null;
+  if (!best) return null;
+  return mapDexScreenerPair(best.pair, best.preferredTokenAddress);
+}
+
+async function resolveDexScreenerTokenContext(input: {
+  requestedAddress: string;
+  candidateAddresses: string[];
+  originalInput: string;
+}) {
+  const candidates = dedupeAddressCandidates([input.requestedAddress], input.candidateAddresses);
+
+  for (const candidate of candidates) {
+    const direct = await fetchDexScreenerPair(candidate).catch(() => null);
+    if (direct?.pair) {
+      return {
+        data: direct,
+        resolutionSource: "mint_input" as LeakScoreBasicTokenData["resolutionSource"],
+        resolutionLabel: candidate.toLowerCase() === input.requestedAddress.toLowerCase() ? "Mint input" : "Mint extracted",
+        resolutionHelper: candidate.toLowerCase() === input.requestedAddress.toLowerCase()
+          ? "The input was treated as the token mint."
+          : "The app extracted a token-like address from the pasted text/URL and found a visible DEX pair.",
+        usedAddress: candidate,
+        method: "token",
+      };
+    }
+  }
+
+  for (const candidate of candidates) {
+    const pairResolved = await fetchDexScreenerPairByPairAddress(candidate).catch(() => null);
+    if (pairResolved?.pair && pairResolved.tokenAddress && isLikelySolanaMintAddress(pairResolved.tokenAddress)) {
+      return {
+        data: pairResolved,
+        resolutionSource: "dex_pair_address" as LeakScoreBasicTokenData["resolutionSource"],
+        resolutionLabel: "DEX pair resolved",
+        resolutionHelper: "The pasted address looked like a DEX pair address, so the app resolved the likely token mint before reading RPC concentration data.",
+        usedAddress: candidate,
+        method: "pair",
+      };
+    }
+  }
+
+  for (const candidate of candidates) {
+    const searchResolved = await fetchDexScreenerSearchPair(candidate, candidates).catch(() => null);
+    if (searchResolved?.pair && searchResolved.tokenAddress && isLikelySolanaMintAddress(searchResolved.tokenAddress)) {
+      return {
+        data: searchResolved,
+        resolutionSource: searchResolved.tokenAddress.toLowerCase() === input.requestedAddress.toLowerCase()
+          ? "mint_input" as LeakScoreBasicTokenData["resolutionSource"]
+          : "dex_pair_address" as LeakScoreBasicTokenData["resolutionSource"],
+        resolutionLabel: "DEX search resolved",
+        resolutionHelper: "Direct pair/token lookup was limited, so the app used DEX Screener search fallback to find the most relevant Solana pair.",
+        usedAddress: candidate,
+        method: "search",
+      };
+    }
+  }
+
+  if (input.originalInput && input.originalInput !== input.requestedAddress) {
+    const searchResolved = await fetchDexScreenerSearchPair(input.originalInput, candidates).catch(() => null);
+    if (searchResolved?.pair && searchResolved.tokenAddress && isLikelySolanaMintAddress(searchResolved.tokenAddress)) {
+      return {
+        data: searchResolved,
+        resolutionSource: searchResolved.tokenAddress.toLowerCase() === input.requestedAddress.toLowerCase()
+          ? "mint_input" as LeakScoreBasicTokenData["resolutionSource"]
+          : "dex_pair_address" as LeakScoreBasicTokenData["resolutionSource"],
+        resolutionLabel: "DEX URL/text resolved",
+        resolutionHelper: "The pasted URL/text did not return enough context from direct lookup, so the app used DEX Screener search fallback.",
+        usedAddress: input.requestedAddress,
+        method: "search_text",
+      };
+    }
+  }
+
+  return null;
+}
+
 function parseUiAmount(value?: string | number | null) {
   const numeric = Number(String(value ?? "0"));
   return Number.isFinite(numeric) ? numeric : 0;
@@ -293,7 +433,7 @@ async function fetchSolanaLargestAccounts(tokenAddress: string) {
   const top10Amount = accounts
     .slice(0, 10)
     .reduce((total, account) => total + parseUiAmount(account.uiAmountString || account.uiAmount), 0);
-  const top10ConcentrationPercent = supply > 0 ? Math.max(0, Math.min(100, (top10Amount / supply) * 100)) : null;
+  const top10ConcentrationPercent = supply > 0 && accounts.length > 0 ? Math.max(0, Math.min(100, (top10Amount / supply) * 100)) : null;
 
   return {
     tokenSupply: supplyResult.value?.uiAmountString || supplyResult.value?.amount || null,
@@ -316,10 +456,17 @@ export async function POST(request: NextRequest) {
     const body = rawBody as {
       chain?: unknown;
       contractAddress?: unknown;
+      originalInput?: unknown;
     };
     const chain = normalizeLeakScoreChainForData(body.chain);
     const tokenAddressCleanup = cleanupLeakScoreTokenAddressInput(body.contractAddress);
     const requestedAddress = tokenAddressCleanup.cleanedAddress;
+    const originalInput = String(body.originalInput || body.contractAddress || "");
+    const candidateAddresses = dedupeAddressCandidates(
+      [requestedAddress],
+      getSolanaAddressCandidates(body.contractAddress),
+      getSolanaAddressCandidates(body.originalInput),
+    );
     let tokenAddress = requestedAddress;
     let resolutionSource: LeakScoreBasicTokenData["resolutionSource"] = "mint_input";
     let resolutionLabel = "Mint input";
@@ -359,17 +506,22 @@ export async function POST(request: NextRequest) {
     };
 
     try {
-      dexData = await fetchDexScreenerPair(requestedAddress);
+      const resolvedDexContext = await resolveDexScreenerTokenContext({
+        requestedAddress,
+        candidateAddresses,
+        originalInput,
+      });
 
-      if (!dexData?.pair) {
-        const pairResolved = await fetchDexScreenerPairByPairAddress(requestedAddress).catch(() => null);
-        if (pairResolved?.pair && pairResolved.tokenAddress && isLikelySolanaMintAddress(pairResolved.tokenAddress)) {
-          dexData = pairResolved;
-          tokenAddress = pairResolved.tokenAddress;
-          resolutionSource = "dex_pair_address";
-          resolutionLabel = "DEX pair resolved";
-          resolutionHelper = "The pasted address looked like a DEX pair address, so the app resolved the likely token mint before reading RPC concentration data.";
-          warnings.push("Input appeared to be a DEX pair address or URL. The app resolved the likely token mint from DEX Screener before RPC checks.");
+      if (resolvedDexContext?.data?.pair) {
+        dexData = resolvedDexContext.data;
+        if (resolvedDexContext.data.tokenAddress && isLikelySolanaMintAddress(resolvedDexContext.data.tokenAddress)) {
+          tokenAddress = resolvedDexContext.data.tokenAddress;
+        }
+        resolutionSource = resolvedDexContext.resolutionSource;
+        resolutionLabel = resolvedDexContext.resolutionLabel;
+        resolutionHelper = resolvedDexContext.resolutionHelper;
+        if (resolvedDexContext.method !== "token" || tokenAddress.toLowerCase() !== requestedAddress.toLowerCase()) {
+          warnings.push("The app used token/pair/search fallback to resolve the best visible Solana DEX context for this input.");
         }
       }
 
@@ -379,11 +531,15 @@ export async function POST(request: NextRequest) {
         ok: Boolean(dexData?.pair),
         helper: dexData?.pair
           ? resolutionSource === "dex_pair_address"
-            ? "Resolved a visible Solana pair address into the likely token mint."
-            : "Best visible Solana pair by detected liquidity."
-          : "No visible Solana DEX pair returned for this mint or pair address.",
+            ? resolutionHelper
+            : resolvedDexContext?.method === "search" || resolvedDexContext?.method === "search_text"
+              ? "Found a visible Solana pair through DEX Screener search fallback."
+              : "Best visible Solana pair by detected liquidity."
+          : candidateAddresses.length > 1
+            ? "No visible Solana DEX pair returned for the extracted token/pair candidates."
+            : "No visible Solana DEX pair returned for this mint or pair address.",
       });
-      if (!dexData?.pair) warnings.push("No DEX Screener pair was found for this mint or pair address yet.");
+      if (!dexData?.pair) warnings.push("No DEX Screener pair was found for this mint, pair address, URL, or extracted candidate yet.");
     } catch (error) {
       sources.push({
         id: "dexscreener",

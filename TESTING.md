@@ -1,6 +1,6 @@
-# Smoke Is Broke — v59.51.4 Input Resolver + First-Use Clarity
+# Smoke Is Broke — v59.51.5 Token Data Fallback + Limited Result Honesty
 
-v59.51.4 is a focused UX/mechanics patch on top of confirmed working v59.51.3 stable8. It improves the main Check flow so new users understand what they can paste, what the app detected, what address will be checked, and why an input cannot be checked.
+v59.51.5 is a focused UX/mechanics patch on top of confirmed working v59.51.3 stable8. It improves the main Check flow so new users understand what they can paste, what the app detected, what address will be checked, and why an input cannot be checked.
 
 ## Changes
 
