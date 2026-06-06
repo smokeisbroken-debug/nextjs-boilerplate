@@ -1,4 +1,4 @@
-# Testing — v59.51.10 Deep Screen Close + Scroll Top Navigation
+# Testing — v59.52.1 Standard Mode Check Tab Restore
 
 ## Automated checks
 
@@ -27,3 +27,11 @@ NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
   - `page.tsx`
   - `route.ts`
   - `globals.css`
+
+
+## v59.52.0 extraction notes
+
+- Moved bottom navigation rendering from `app/page.tsx` to `app/components/BottomNav.tsx`.
+- Moved bottom navigation config/types/helpers to `app/lib/brokeNavigation.ts`.
+- Moved the latest bottom-nav icon-fill override styles to `app/styles/bottom-nav.css`, imported from `app/layout.tsx`.
+- No routing, rewards, Admin payout, Universal Check logic, Daily Routine, wallet verification, or scoring formula changes were intended.

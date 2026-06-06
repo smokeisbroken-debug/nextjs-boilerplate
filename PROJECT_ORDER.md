@@ -1,6 +1,6 @@
-# Project Order — v59.51.10 Deep Screen Close + Scroll Top Navigation
+# Project Order — v59.52.1 Standard Mode Check Tab Restore
 
-Base: confirmed working `v59.51.9 stable8`.
+Base: `v59.52.0 stable8`.
 
 Scope: visual-only bottom navigation asset refresh using the user's generated button artwork.
 
@@ -16,7 +16,7 @@ Scope: visual-only bottom navigation asset refresh using the user's generated bu
   - Rewards → `nav-rewards.png`
   - Profile → `nav-profile.png`
 - Updated `navItems` so visible bottom nav uses the correct matching art.
-- Updated shared build marker to `v59.51.10`.
+- Updated shared build marker to `v59.52.1`.
 
 ## Not included
 
@@ -27,3 +27,11 @@ Scope: visual-only bottom navigation asset refresh using the user's generated bu
 - No rewards/Admin payout changes.
 - No wallet verification or Supabase schema changes.
 - No transaction-history, PnL, scam label, or investment-advice changes.
+
+
+## v59.52.0 extraction notes
+
+- Moved bottom navigation rendering from `app/page.tsx` to `app/components/BottomNav.tsx`.
+- Moved bottom navigation config/types/helpers to `app/lib/brokeNavigation.ts`.
+- Moved the latest bottom-nav icon-fill override styles to `app/styles/bottom-nav.css`, imported from `app/layout.tsx`.
+- No routing, rewards, Admin payout, Universal Check logic, Daily Routine, wallet verification, or scoring formula changes were intended.

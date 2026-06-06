@@ -117,8 +117,9 @@ import {
   type UniversalLeakCheckResult,
 } from "./lib/brokeUniversalLeakCheck";
 
-type Tab = "home" | "check" | "add" | "chart" | "growth" | "leakscore" | "walletleak" | "compare" | "whatif" | "settings";
-type AppMode = "standard" | "pro";
+import { BottomNav } from "./components/BottomNav";
+import type { AppMode, Tab } from "./lib/brokeNavigation";
+
 type NeedType = "Needed" | "Not needed" | "Maybe";
 type Language = "en" | "ru";
 type Currency =
@@ -4799,27 +4800,6 @@ const defaultBadges: BadgeItem[] = [
 
 type HubTool = "auto" | "token" | "wallet" | "compare";
 
-const LEAK_HUB_TABS: Tab[] = ["check", "leakscore", "walletleak", "compare"];
-
-const navItems: {
-  id: Tab;
-  label: string;
-  icon: string;
-  proOnly?: boolean;
-  hubOnly?: boolean;
-}[] = [
-  { id: "home", label: "Home", icon: "/nav-home.png" },
-  { id: "check", label: "Check", icon: "/nav-check.png" },
-  { id: "add", label: "Add", icon: "/nav-add.png" },
-  { id: "chart", label: "Chart", icon: "/nav-chart.png" },
-  { id: "growth", label: "Growth", icon: "/nav-growth.png", proOnly: true },
-  { id: "leakscore", label: "Project", icon: "/nav-chart.png", proOnly: true, hubOnly: true },
-  { id: "walletleak", label: "Wallet", icon: "/nav-profile.png", proOnly: true, hubOnly: true },
-  { id: "compare", label: "Vs", icon: "/nav-chart.png", proOnly: true, hubOnly: true },
-  { id: "whatif", label: "Rewards", icon: "/nav-rewards.png", proOnly: true },
-  { id: "settings", label: "Profile", icon: "/nav-profile.png" },
-];
-
 function uid() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -6454,7 +6434,7 @@ const APP_MODE_LABELS: Record<AppMode, { label: string; detail: string }> = {
   },
 };
 
-const STANDARD_MODE_ALLOWED_TABS: Tab[] = ["home", "add", "chart", "settings"];
+const STANDARD_MODE_ALLOWED_TABS: Tab[] = ["home", "check", "add", "chart", "settings"];
 
 function normalizeAppMode(input?: unknown): AppMode {
   return input === "pro" ? "pro" : "standard";
@@ -10578,7 +10558,13 @@ export default function Home() {
         )}
 
         {loaded && onboardingCompleted && (
-          <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} appMode={appMode} />
+          <BottomNav
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            appMode={appMode}
+            onHaptic={triggerHaptic}
+            onRoutineAction={markDailyRoutineAction}
+          />
         )}
 
         {helpOpen && <HelpGuideModal activeTab={activeTab} onClose={() => setHelpOpen(false)} />}
@@ -29827,45 +29813,5 @@ function MiniChart({ chartDays }: { chartDays: ChartPoint[] }) {
         );
       })}
     </div>
-  );
-}
-
-function BottomNav({
-  activeTab,
-  setActiveTab,
-  appMode,
-}: {
-  activeTab: Tab;
-  setActiveTab: (tab: Tab) => void;
-  appMode: AppMode;
-}) {
-  const visibleItems = (appMode === "standard"
-    ? navItems.filter((item) => !item.proOnly)
-    : navItems
-  ).filter((item) => !item.hubOnly);
-  const activeNavTab = LEAK_HUB_TABS.includes(activeTab) ? "check" : activeTab;
-
-  return (
-    <nav
-      className={`bottom-nav ${appMode === "standard" ? "standard-mode-nav" : "pro-mode-nav"}`}
-      style={{ gridTemplateColumns: `repeat(${visibleItems.length}, minmax(0, 1fr))` }}
-    >
-      {visibleItems.map((item) => (
-        <button
-          key={item.id}
-          onClick={() => {
-            triggerHaptic("light");
-            if (item.id === "chart") markDailyRoutineAction("checkedChart");
-            if (item.id === "whatif") markDailyRoutineAction("checkedSave");
-            setActiveTab(item.id);
-          }}
-          className={activeNavTab === item.id ? "active" : ""}
-          aria-label={item.label}
-          title={item.label}
-        >
-          <img src={item.icon} alt="" />
-        </button>
-      ))}
-    </nav>
   );
 }
