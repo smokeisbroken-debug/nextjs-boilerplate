@@ -4797,6 +4797,8 @@ const defaultBadges: BadgeItem[] = [
   },
 ];
 
+type HubTool = "auto" | "token" | "wallet" | "compare";
+
 const LEAK_HUB_TABS: Tab[] = ["check", "leakscore", "walletleak", "compare"];
 
 const navItems: {
@@ -22899,8 +22901,14 @@ function UniversalLeakCheckScreen({
   const [message, setMessage] = useState("Paste token, wallet, or URL. The app chooses the correct check path.");
   const [copied, setCopied] = useState(false);
   const [cardSharing, setCardSharing] = useState(false);
-  const [openHubTool, setOpenHubTool] = useState<"auto" | "token" | "wallet" | "compare" | null>("auto");
+  const [openHubTool, setOpenHubTool] = useState<HubTool | null>("auto");
   const universalShareCardRef = useRef<HTMLDivElement | null>(null);
+  const hubToolRefs = useRef<Record<HubTool, HTMLDivElement | null>>({
+    auto: null,
+    token: null,
+    wallet: null,
+    compare: null,
+  });
 
   const normalizedInput = useMemo(() => normalizeUniversalLeakCheckInput(rawInput), [rawInput]);
   const inputStatus = useMemo(() => getUniversalLeakCheckInputStatus(normalizedInput), [normalizedInput]);
@@ -22913,6 +22921,24 @@ function UniversalLeakCheckScreen({
       : normalizedInput.cleanedAddress
         ? "Auto-detect"
         : "Waiting";
+
+  useEffect(() => {
+    if (!openHubTool) return;
+    const card = hubToolRefs.current[openHubTool];
+    if (!card) return;
+    const timeoutId = window.setTimeout(() => {
+      card.scrollIntoView({ behavior: "smooth", block: "start", inline: "nearest" });
+    }, 90);
+    return () => window.clearTimeout(timeoutId);
+  }, [openHubTool]);
+
+  function toggleHubTool(tool: HubTool) {
+    setOpenHubTool((current) => (current === tool ? null : tool));
+  }
+
+  function closeHubTool() {
+    setOpenHubTool(null);
+  }
 
   function updateInput(value: string) {
     setRawInput(value);
@@ -23106,12 +23132,17 @@ function UniversalLeakCheckScreen({
           <em>Bottom nav stays cleaner</em>
         </div>
         <div className="universal-check-tool-grid">
-          <div className={`universal-check-tool-card ${openHubTool === "auto" ? "active expanded" : ""}`}>
+          <div
+            ref={(node) => {
+              hubToolRefs.current.auto = node;
+            }}
+            className={`universal-check-tool-card ${openHubTool === "auto" ? "active expanded" : ""}`}
+          >
             <button
               type="button"
               className="universal-check-tool-trigger"
               aria-expanded={openHubTool === "auto"}
-              onClick={() => setOpenHubTool(openHubTool === "auto" ? null : "auto")}
+              onClick={() => toggleHubTool("auto")}
             >
               <span>Auto</span>
               <strong>Universal Check</strong>
@@ -23121,19 +23152,29 @@ function UniversalLeakCheckScreen({
             {openHubTool === "auto" ? (
               <div className="universal-check-tool-panel">
                 <p>Automatic check is the main flow. Paste below and the app will detect token, wallet, or supported URL.</p>
-                <button type="button" className="ghost mini" onClick={() => document.getElementById("universal-leak-input")?.focus()}>
-                  Paste / focus input
-                </button>
+                <div className="universal-check-tool-panel-actions">
+                  <button type="button" className="ghost mini" onClick={() => document.getElementById("universal-leak-input")?.focus()}>
+                    Paste / focus input
+                  </button>
+                  <button type="button" className="ghost mini universal-check-tool-close" onClick={closeHubTool}>
+                    Close section
+                  </button>
+                </div>
               </div>
             ) : null}
           </div>
 
-          <div className={`universal-check-tool-card ${openHubTool === "token" ? "active expanded" : ""}`}>
+          <div
+            ref={(node) => {
+              hubToolRefs.current.token = node;
+            }}
+            className={`universal-check-tool-card ${openHubTool === "token" ? "active expanded" : ""}`}
+          >
             <button
               type="button"
               className="universal-check-tool-trigger"
               aria-expanded={openHubTool === "token"}
-              onClick={() => setOpenHubTool(openHubTool === "token" ? null : "token")}
+              onClick={() => toggleHubTool("token")}
             >
               <span>Token</span>
               <strong>Project Research</strong>
@@ -23143,17 +23184,25 @@ function UniversalLeakCheckScreen({
             {openHubTool === "token" ? (
               <div className="universal-check-tool-panel">
                 <p>Use this when you want to save manual research notes after an automatic token check.</p>
-                <button type="button" className="ghost mini" onClick={onOpenTokenResearch}>Open Project Research</button>
+                <div className="universal-check-tool-panel-actions">
+                  <button type="button" className="ghost mini" onClick={onOpenTokenResearch}>Open Project Research</button>
+                  <button type="button" className="ghost mini universal-check-tool-close" onClick={closeHubTool}>Close section</button>
+                </div>
               </div>
             ) : null}
           </div>
 
-          <div className={`universal-check-tool-card ${openHubTool === "wallet" ? "active expanded" : ""}`}>
+          <div
+            ref={(node) => {
+              hubToolRefs.current.wallet = node;
+            }}
+            className={`universal-check-tool-card ${openHubTool === "wallet" ? "active expanded" : ""}`}
+          >
             <button
               type="button"
               className="universal-check-tool-trigger"
               aria-expanded={openHubTool === "wallet"}
-              onClick={() => setOpenHubTool(openHubTool === "wallet" ? null : "wallet")}
+              onClick={() => toggleHubTool("wallet")}
             >
               <span>Wallet</span>
               <strong>Wallet Review</strong>
@@ -23163,17 +23212,25 @@ function UniversalLeakCheckScreen({
             {openHubTool === "wallet" ? (
               <div className="universal-check-tool-panel">
                 <p>Use this for manual wallet behavior notes. Public wallet checks still stay in Universal Check.</p>
-                <button type="button" className="ghost mini" onClick={onOpenWalletReview}>Open Wallet Review</button>
+                <div className="universal-check-tool-panel-actions">
+                  <button type="button" className="ghost mini" onClick={onOpenWalletReview}>Open Wallet Review</button>
+                  <button type="button" className="ghost mini universal-check-tool-close" onClick={closeHubTool}>Close section</button>
+                </div>
               </div>
             ) : null}
           </div>
 
-          <div className={`universal-check-tool-card ${openHubTool === "compare" ? "active expanded" : ""}`}>
+          <div
+            ref={(node) => {
+              hubToolRefs.current.compare = node;
+            }}
+            className={`universal-check-tool-card ${openHubTool === "compare" ? "active expanded" : ""}`}
+          >
             <button
               type="button"
               className="universal-check-tool-trigger"
               aria-expanded={openHubTool === "compare"}
-              onClick={() => setOpenHubTool(openHubTool === "compare" ? null : "compare")}
+              onClick={() => toggleHubTool("compare")}
             >
               <span>Compare</span>
               <strong>Project vs Project</strong>
@@ -23183,7 +23240,10 @@ function UniversalLeakCheckScreen({
             {openHubTool === "compare" ? (
               <div className="universal-check-tool-panel">
                 <p>Use this when you want a side-by-side manual comparison before making a wallet decision.</p>
-                <button type="button" className="ghost mini" onClick={onOpenCompare}>Open Project vs Project</button>
+                <div className="universal-check-tool-panel-actions">
+                  <button type="button" className="ghost mini" onClick={onOpenCompare}>Open Project vs Project</button>
+                  <button type="button" className="ghost mini universal-check-tool-close" onClick={closeHubTool}>Close section</button>
+                </div>
               </div>
             ) : null}
           </div>

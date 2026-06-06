@@ -1739,6 +1739,7 @@ img {
 
 .bottom-nav button.active img {
   opacity: 1;
+  transform: scale(1.18);
   filter: drop-shadow(0 0 16px rgba(183, 255, 25, 0.55));
 }
 
@@ -31843,6 +31844,15 @@ html.embedded-app-view .hero h1 {
   text-align: left;
 }
 
+.universal-check-tool-card.expanded .universal-check-tool-trigger {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  z-index: 2;
+  background: linear-gradient(180deg, rgba(15, 28, 18, 0.98), rgba(15, 28, 18, 0.92));
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .universal-check-tool-trigger b {
   position: absolute;
   top: 12px;
@@ -31884,6 +31894,20 @@ html.embedded-app-view .hero h1 {
   gap: 9px;
   padding: 0 12px 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.universal-check-tool-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.universal-check-tool-panel-actions button {
+  flex: 1 1 140px;
+}
+
+.universal-check-tool-close {
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .universal-check-tool-panel p {
@@ -32158,13 +32182,15 @@ html.embedded-app-view .hero h1 {
 
   .bottom-nav.pro-mode-nav button img,
   .bottom-nav.standard-mode-nav button img {
-    width: 24px;
-    height: 24px;
+    width: 29px;
+    height: 29px;
+    transform: scale(1.2);
   }
 
   .bottom-nav.pro-mode-nav button span,
   .bottom-nav.standard-mode-nav button span {
-    font-size: 7.5px;
+    font-size: 7.2px;
+    margin-top: -5px;
   }
 
   .universal-check-tool-grid {
@@ -32184,6 +32210,10 @@ html.embedded-app-view .hero h1 {
 
   .section-title-row {
     flex-direction: column;
+  }
+
+  .universal-check-tool-panel-actions button {
+    flex-basis: 100%;
   }
 }
 

@@ -1,6 +1,6 @@
-# Project Order — v59.51.7 Bottom Nav Icon Refresh
+# Project Order — v59.51.8 Bottom Nav Icon Fill + Leak Hub Close Control
 
-Base: confirmed working `v59.51.6 stable8`.
+Base: confirmed working `v59.51.7 stable8`.
 
 Scope: visual-only bottom navigation asset refresh using the user's generated button artwork.
 
@@ -16,7 +16,7 @@ Scope: visual-only bottom navigation asset refresh using the user's generated bu
   - Rewards → `nav-rewards.png`
   - Profile → `nav-profile.png`
 - Updated `navItems` so visible bottom nav uses the correct matching art.
-- Updated shared build marker to `v59.51.7`.
+- Updated shared build marker to `v59.51.8`.
 
 ## Not included
 
