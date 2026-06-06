@@ -27,6 +27,10 @@ type SettingsPayload = {
 
 type AppStatePayload = {
   dailyRoutineActions?: DailyRoutineActions;
+  notificationState?: {
+    routineReminderLastSentDate?: string;
+    routineReminderLastSentAt?: string;
+  };
 };
 
 type SettingsRow = {
@@ -37,12 +41,6 @@ type SettingsRow = {
   app_state_payload?: AppStatePayload | null;
 };
 
-type NotificationLogRow = {
-  sent_at: string;
-  status: string;
-};
-
-const NOTIFICATION_TYPE = "user_daily_routine_reminder";
 const MAX_PER_RUN = 220;
 const DUE_WINDOW_MINUTES = 12;
 
@@ -208,25 +206,32 @@ async function getEligibleSettingsRows() {
   )) as SettingsRow[];
 }
 
-async function getRecentNotificationLogs(telegramId: number, dateKey: string) {
-  const since = new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString();
-
-  return (await supabaseFetch(
-    [
-      "broke_notification_logs",
-      "?select=sent_at,status",
-      `&telegram_id=eq.${telegramId}`,
-      `&type=eq.${NOTIFICATION_TYPE}`,
-      `&reason=eq.${dateKey}`,
-      `&sent_at=gte.${encodeURIComponent(since)}`,
-      "&order=sent_at.desc",
-      "&limit=5",
-    ].join("")
-  )) as NotificationLogRow[];
+function alreadySentToday(appState: AppStatePayload | null | undefined, dateKey: string) {
+  return appState?.notificationState?.routineReminderLastSentDate === dateKey;
 }
 
-function alreadySentToday(logs: NotificationLogRow[]) {
-  return logs.some((log) => log.status === "sent");
+async function markReminderSent(row: SettingsRow, dateKey: string) {
+  const telegramId = Number(row.telegram_id);
+  const appState: AppStatePayload = {
+    ...(row.app_state_payload || {}),
+    notificationState: {
+      ...(row.app_state_payload?.notificationState || {}),
+      routineReminderLastSentDate: dateKey,
+      routineReminderLastSentAt: new Date().toISOString(),
+    },
+  };
+
+  await supabaseFetch("broke_settings?on_conflict=telegram_id", {
+    method: "POST",
+    headers: {
+      Prefer: "resolution=merge-duplicates",
+    },
+    body: JSON.stringify({
+      telegram_id: telegramId,
+      app_state_payload: appState,
+      updated_at: new Date().toISOString(),
+    }),
+  });
 }
 
 function buildRoutineMessage() {
@@ -275,30 +280,6 @@ async function sendTelegramMessage(telegramId: number, text: string) {
   return Number(data.result?.message_id || 0);
 }
 
-async function logNotification(input: {
-  telegramId: number;
-  message: string;
-  status: "sent" | "skipped" | "failed";
-  reason?: string;
-  telegramMessageId?: number | null;
-}) {
-  await supabaseFetch("broke_notification_logs", {
-    method: "POST",
-    headers: {
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify({
-      telegram_id: input.telegramId,
-      type: NOTIFICATION_TYPE,
-      message: input.message,
-      status: input.status,
-      reason: input.reason || null,
-      telegram_message_id: input.telegramMessageId ?? null,
-      sent_at: new Date().toISOString(),
-    }),
-  });
-}
-
 export async function GET(request: NextRequest) {
   try {
     if (!getNotificationSecret()) {
@@ -316,8 +297,22 @@ export async function GET(request: NextRequest) {
     }
 
     const dryRun = request.nextUrl.searchParams.get("dryRun") === "1";
+    const testTelegramId = Number(request.nextUrl.searchParams.get("testTelegramId") || 0);
     const rows = await getEligibleSettingsRows();
     const message = buildRoutineMessage();
+
+    if (testTelegramId > 0) {
+      if (dryRun) {
+        return NextResponse.json({ ok: true, dryRun: true, testTelegramId, status: "test-ready" });
+      }
+
+      const telegramMessageId = await sendTelegramMessage(
+        testTelegramId,
+        ["$BROKE test reminder", "", "Telegram reminders are connected."].join("\n")
+      );
+
+      return NextResponse.json({ ok: true, testTelegramId, status: "test-sent", telegramMessageId });
+    }
 
     const result = {
       checked: 0,
@@ -359,8 +354,7 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      const logs = await getRecentNotificationLogs(telegramId, dateKey);
-      if (alreadySentToday(logs)) {
+      if (alreadySentToday(row.app_state_payload, dateKey)) {
         result.skipped += 1;
         result.details.push({ telegramId, status: "skipped", reason: "already-sent", time: reminder.time, timezone: reminder.timezone });
         continue;
@@ -373,25 +367,13 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        const telegramMessageId = await sendTelegramMessage(telegramId, message);
-        await logNotification({
-          telegramId,
-          message,
-          status: "sent",
-          reason: dateKey,
-          telegramMessageId,
-        });
+        await sendTelegramMessage(telegramId, message);
+        await markReminderSent(row, dateKey);
 
         result.sent += 1;
         result.details.push({ telegramId, status: "sent", time: reminder.time, timezone: reminder.timezone });
       } catch (error) {
         const reason = error instanceof Error ? error.message : "send-failed";
-        await logNotification({
-          telegramId,
-          message,
-          status: "failed",
-          reason,
-        });
         result.failed += 1;
         result.details.push({ telegramId, status: "failed", reason, time: reminder.time, timezone: reminder.timezone });
       }
