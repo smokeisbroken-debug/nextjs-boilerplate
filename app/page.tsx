@@ -22905,6 +22905,13 @@ function UniversalLeakCheckScreen({
   const inputStatus = useMemo(() => getUniversalLeakCheckInputStatus(normalizedInput), [normalizedInput]);
   const shareText = useMemo(() => result ? buildUniversalLeakCheckShareText(result) : "", [result]);
   const autoSummary = useMemo(() => result ? buildUniversalLeakCheckAutoSummary(result) : null, [result]);
+  const resolverKindCopy = normalizedInput.kind === "token"
+    ? "Token"
+    : normalizedInput.kind === "wallet"
+      ? "Wallet"
+      : normalizedInput.cleanedAddress
+        ? "Auto-detect"
+        : "Waiting";
 
   function updateInput(value: string) {
     setRawInput(value);
@@ -22955,7 +22962,7 @@ function UniversalLeakCheckScreen({
       setLoading(true);
       setError("");
       setCopied(false);
-      setMessage(normalizedInput.kind === "unknown" ? "Checking token and wallet paths..." : `Checking ${normalizedInput.kind} path...`);
+      setMessage(normalizedInput.kind === "unknown" ? "Auto-detecting the best path, then checking public leak signals..." : `Detected ${normalizedInput.kind} input. Checking public leak signals...`);
 
       let tokenResult: UniversalLeakCheckResult | null = null;
       let walletResult: UniversalLeakCheckResult | null = null;
@@ -23121,6 +23128,33 @@ function UniversalLeakCheckScreen({
         </div>
       </div>
 
+      <div className="universal-first-use-card">
+        <div className="section-title-row">
+          <div>
+            <span>How to test</span>
+            <h3>Start with one paste</h3>
+          </div>
+          <em>Token / wallet / URL</em>
+        </div>
+        <div className="universal-first-use-steps">
+          <div>
+            <b>1</b>
+            <strong>Paste a token or DEX link</strong>
+            <small>Use a mint, Solscan token URL, DEX Screener, Birdeye, Jupiter, Raydium, or pair URL.</small>
+          </div>
+          <div>
+            <b>2</b>
+            <strong>Paste a public wallet</strong>
+            <small>Only public RPC context is checked. No private data, no PnL, no signature.</small>
+          </div>
+          <div>
+            <b>3</b>
+            <strong>Read the detected path</strong>
+            <small>The app shows whether it will run Token, Wallet, or Auto-detect before checking.</small>
+          </div>
+        </div>
+      </div>
+
       <div className="universal-check-input-card">
         <label htmlFor="universal-leak-input">Token / wallet / URL</label>
         <textarea
@@ -23130,14 +23164,39 @@ function UniversalLeakCheckScreen({
           placeholder="Paste Solana token mint, public wallet, Solscan URL, DEX token URL, or text with an address"
           rows={4}
         />
+        <div className="universal-supported-inputs" aria-label="Supported Universal Check inputs">
+          <span>Supports</span>
+          <b>Solscan</b>
+          <b>DEX Screener</b>
+          <b>Birdeye</b>
+          <b>Jupiter</b>
+          <b>Raydium</b>
+          <b>Plain address</b>
+        </div>
         <div className={`universal-check-status ${inputStatus.canCheck ? "ready" : "pending"}`}>
-          <strong>{inputStatus.label}</strong>
+          <div>
+            <span>Detected</span>
+            <strong>{resolverKindCopy}</strong>
+          </div>
+          <div>
+            <span>Status</span>
+            <strong>{inputStatus.label}</strong>
+          </div>
           <small>{inputStatus.helper}</small>
         </div>
         {normalizedInput.cleanedAddress && (
           <div className="universal-check-detected">
-            <span>{normalizedInput.sourceLabel}</span>
-            <code>{normalizedInput.cleanedAddress}</code>
+            <div>
+              <span>Source</span>
+              <strong>{normalizedInput.sourceLabel}</strong>
+              {normalizedInput.sourceHost && <small>{normalizedInput.sourceHost}</small>}
+            </div>
+            <div>
+              <span>Address used</span>
+              <code>{normalizedInput.cleanedAddress}</code>
+              {normalizedInput.addressCount > 1 && <small>Multiple addresses found. Using the first detected address.</small>}
+            </div>
+            <p>{normalizedInput.firstUseTip}</p>
           </div>
         )}
         <button className="primary wide" onClick={runUniversalCheck} disabled={loading || !inputStatus.canCheck}>

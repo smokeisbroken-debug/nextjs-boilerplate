@@ -1,15 +1,29 @@
-# Smoke Is Broke — v59.51.3 Small Amount Tracking Minimum
+# Smoke Is Broke — v59.51.4 Input Resolver + First-Use Clarity
 
-v59.51.3 is a focused hotfix on top of v59.51.2. It lowers the tracked leak minimum from the practical old 1-unit behavior to 0.01 so users in cheaper countries can record small real expenses without rounding the analysis to zero or forcing a larger fake amount.
+v59.51.4 is a focused UX/mechanics patch on top of confirmed working v59.51.3 stable8. It improves the main Check flow so new users understand what they can paste, what the app detected, what address will be checked, and why an input cannot be checked.
 
 ## Changes
 
-- Track Leak amount input now uses a 0.01 minimum and 0.01 step.
-- Corrected leak editing now accepts values from 0.01 and rejects only values below 0.01.
-- Added a visible Track Leak helper showing the minimum tracked amount.
-- Money formatting now preserves cents for fractional records, so 0.01 displays as 0.01 instead of being rounded to 0.
-- Onboarding starter leak amount no longer clamps to 1; it respects the 0.01 minimum.
+- Universal Check now shows a compact first-use guide before the input flow.
+- Added supported-input chips for Solscan, DEX Screener, Birdeye, Jupiter, Raydium, and plain Solana addresses.
+- Improved resolver output for Token, Wallet, Auto-detect, Unsupported URL, Unknown input, and sensitive/private-key-like input.
+- Resolver now extracts URL context from pasted text, not only when the whole paste is a URL.
+- Resolver shows source host, source label, detected path, address used, and a first-use tip.
+- Multiple Solana-format addresses are explicitly disclosed; the app uses the first detected address.
+- Sensitive/private-key/seed-phrase-like input is blocked with safer copy.
+- Loading copy now explains when the app is auto-detecting vs checking a known token/wallet path.
 
 ## Not changed
 
-No rewards, Admin payout logic, wallet verification, Supabase schema, transaction history, PnL, scam labels, investment advice, bottom-nav, or new screens were changed.
+No rewards, Admin distribution, payout logic, wallet verification, Supabase schema, transaction history, PnL, scam labels, investment advice, bottom-nav, or new manual screen changes.
+
+## Verification
+
+Run:
+
+```bash
+npm run typecheck
+npm run lint:quiet
+NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
+```
+

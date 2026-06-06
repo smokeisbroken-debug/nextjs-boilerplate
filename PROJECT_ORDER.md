@@ -1,22 +1,29 @@
-# Smoke Is Broke — v59.51.3 Small Amount Tracking Minimum
+# Smoke Is Broke — v59.51.4 Input Resolver + First-Use Clarity
 
-## Base
+v59.51.4 is a focused UX/mechanics patch on top of confirmed working v59.51.3 stable8. It improves the main Check flow so new users understand what they can paste, what the app detected, what address will be checked, and why an input cannot be checked.
 
-Built on the confirmed working v59.51.2 stable8 clean/full base.
+## Changes
 
-## Scope
+- Universal Check now shows a compact first-use guide before the input flow.
+- Added supported-input chips for Solscan, DEX Screener, Birdeye, Jupiter, Raydium, and plain Solana addresses.
+- Improved resolver output for Token, Wallet, Auto-detect, Unsupported URL, Unknown input, and sensitive/private-key-like input.
+- Resolver now extracts URL context from pasted text, not only when the whole paste is a URL.
+- Resolver shows source host, source label, detected path, address used, and a first-use tip.
+- Multiple Solana-format addresses are explicitly disclosed; the app uses the first detected address.
+- Sensitive/private-key/seed-phrase-like input is blocked with safer copy.
+- Loading copy now explains when the app is auto-detecting vs checking a known token/wallet path.
 
-Lower the practical minimum tracked leak amount to 0.01 and preserve fractional display for very small expenses.
+## Not changed
 
-## Implementation
+No rewards, Admin distribution, payout logic, wallet verification, Supabase schema, transaction history, PnL, scam labels, investment advice, bottom-nav, or new manual screen changes.
 
-- Added `MIN_TRACKED_MONEY_AMOUNT = 0.01`.
-- Added tracked-money normalization/validation helpers.
-- Updated Track Leak amount input min and placeholder.
-- Updated edit amount validation to accept 0.01+.
-- Updated money formatting so cents are visible for fractional values.
-- Updated onboarding starter expense clamp from 1 to 0.01.
+## Verification
 
-## Exclusions
+Run:
 
-No database migration, no reward/admin changes, no wallet verification changes, no PnL/history/indexer logic, no scam labels, and no investment advice changes.
+```bash
+npm run typecheck
+npm run lint:quiet
+NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
+```
+

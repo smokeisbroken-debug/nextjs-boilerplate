@@ -26,6 +26,10 @@ export type UniversalLeakCheckInput = {
   kind: UniversalLeakCheckKind;
   sourceLabel: string;
   helper: string;
+  detectedLabel: string;
+  sourceHost: string;
+  addressCount: number;
+  firstUseTip: string;
 };
 
 export type UniversalLeakSignal = {
@@ -106,6 +110,99 @@ function cleanText(input: unknown, maxLength = 140) {
     .slice(0, maxLength);
 }
 
+
+function tryDecodeText(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function extractFirstUrl(value: string) {
+  const direct = value.trim();
+  try {
+    return new URL(direct).toString();
+  } catch {
+    // Continue with text extraction.
+  }
+
+  const match = value.match(/https?:\/\/[^\s"'<>]+/i);
+  if (!match) return "";
+
+  try {
+    return new URL(match[0].replace(/[),.;]+$/g, "")).toString();
+  } catch {
+    return "";
+  }
+}
+
+function getSolanaAddressCandidates(value: string) {
+  const matches = value.match(SOLANA_BASE58_ADDRESS_PATTERN) || [];
+  return Array.from(new Set(matches.filter((candidate) => isLikelySolanaMintAddress(candidate) || isLikelySolanaWalletAddress(candidate))));
+}
+
+function looksLikeSensitiveSecret(value: string) {
+  const lower = value.toLowerCase();
+  if (/private\s*key|seed\s*phrase|secret\s*key|mnemonic/.test(lower)) return true;
+  if (/https?:\/\//i.test(value) || SOLANA_BASE58_ADDRESS_PATTERN.test(value)) {
+    SOLANA_BASE58_ADDRESS_PATTERN.lastIndex = 0;
+    return false;
+  }
+  SOLANA_BASE58_ADDRESS_PATTERN.lastIndex = 0;
+  const words = lower.split(/\s+/).filter((word) => /^[a-z]+$/.test(word));
+  return words.length >= 12 && words.length <= 30;
+}
+
+function getUrlContext(value: string) {
+  const urlText = extractFirstUrl(value);
+  if (!urlText) {
+    return { urlText: "", host: "", markers: [] as string[], sourceHint: "" as UniversalLeakCheckKind };
+  }
+
+  try {
+    const parsed = new URL(urlText);
+    const host = parsed.hostname.toLowerCase().replace(/^www\./, "");
+    const pathParts = parsed.pathname.split("/").filter(Boolean);
+    const pieces = [host, ...pathParts, ...Array.from(parsed.searchParams.keys())];
+    const markers = pieces
+      .map((piece) => piece.toLowerCase().replace(/[^a-z]/g, ""))
+      .filter(Boolean);
+
+    const tokenHost = /dexscreener|birdeye|jup\.ag|jupiter|raydium|geckoterminal|dexlab|meteora/.test(host);
+    const explorerHost = /solscan|solanafm|explorer\.solana|xray/.test(host);
+    const path = pathParts.map((part) => part.toLowerCase()).join("/");
+
+    const sourceHint: UniversalLeakCheckKind = tokenHost || /token|tokens|mint|pair|pairs|swap/.test(path)
+      ? "token"
+      : explorerHost && /account|address|wallet|owner|holder/.test(path)
+        ? "wallet"
+        : "unknown";
+
+    return { urlText, host, markers, sourceHint };
+  } catch {
+    return { urlText: "", host: "", markers: [] as string[], sourceHint: "" as UniversalLeakCheckKind };
+  }
+}
+
+function getUniversalInputTip(kind: UniversalLeakCheckKind, sourceHost: string, addressCount: number) {
+  if (kind === "token") {
+    const hostCopy = sourceHost ? ` from ${sourceHost}` : "";
+    return `Token-like input${hostCopy} detected. The app checks liquidity, pair context, supply, concentration, and volume signals.`;
+  }
+
+  if (kind === "wallet") {
+    const hostCopy = sourceHost ? ` from ${sourceHost}` : "";
+    return `Wallet-like input${hostCopy} detected. The app checks read-only public wallet context only.`;
+  }
+
+  if (addressCount > 1) {
+    return "Multiple Solana-format addresses were found. The app uses the first detected address and checks the strongest matching path.";
+  }
+
+  return "Raw Solana address detected. It can be a token mint, wallet, or pair address, so the app will auto-detect the useful path.";
+}
+
 function normalizePressure(value: number) {
   return Math.max(0, Math.min(100, Math.round(value)));
 }
@@ -182,61 +279,111 @@ function getUrlMarkers(value: string) {
 
 export function normalizeUniversalLeakCheckInput(value: unknown): UniversalLeakCheckInput {
   const original = String(value || "");
-  const cleanedOriginal = cleanText(original, 400);
+  const cleanedOriginal = cleanText(original, 1200);
+  const decodedInput = tryDecodeText(cleanedOriginal);
 
-  if (!cleanedOriginal) {
+  const baseEmpty = {
+    original,
+    cleanedAddress: "",
+    kind: "unknown" as UniversalLeakCheckKind,
+    sourceLabel: "Empty input",
+    helper: "Paste a token mint, public wallet, DEX Screener/Birdeye/Jupiter/Raydium URL, Solscan URL, or text containing a Solana address.",
+    detectedLabel: "Waiting for input",
+    sourceHost: "",
+    addressCount: 0,
+    firstUseTip: "Start with a token mint, wallet address, or supported URL. Do not paste private keys or seed phrases.",
+  };
+
+  if (!cleanedOriginal) return baseEmpty;
+
+  if (looksLikeSensitiveSecret(decodedInput)) {
     return {
+      ...baseEmpty,
       original,
-      cleanedAddress: "",
-      kind: "unknown",
-      sourceLabel: "Empty input",
-      helper: "Paste a token mint, public wallet address, Solscan URL, DEX token URL, or text containing a Solana address.",
+      sourceLabel: "Sensitive input blocked",
+      helper: "Never paste seed phrases, private keys, or secret keys. Universal Check only needs public token, wallet, or URL input.",
+      detectedLabel: "Blocked for safety",
+      firstUseTip: "Use public context only: token mint, public wallet, or public token/wallet URL.",
     };
   }
 
-  const tokenCleanup = cleanupLeakScoreTokenAddressInput(cleanedOriginal);
-  const walletCleanup = cleanupWalletLeakAddressInput(cleanedOriginal);
-  const markers = getUrlMarkers(cleanedOriginal);
-  const looksTokenUrl = markers.some((marker) => TOKEN_URL_MARKERS.has(marker)) || /dexscreener|birdeye|jup\.ag|raydium|geckoterminal/i.test(cleanedOriginal);
-  const looksWalletUrl = markers.some((marker) => WALLET_URL_MARKERS.has(marker)) || /wallet|holder|owner/i.test(cleanedOriginal);
-  const address = tokenCleanup.cleanedAddress || walletCleanup.cleanedAddress || getFirstSolanaAddress(cleanedOriginal);
+  const tokenCleanup = cleanupLeakScoreTokenAddressInput(decodedInput);
+  const walletCleanup = cleanupWalletLeakAddressInput(decodedInput);
+  const urlContext = getUrlContext(decodedInput);
+  const markers = urlContext.markers.length ? urlContext.markers : getUrlMarkers(decodedInput);
+  const addressCandidates = getSolanaAddressCandidates(decodedInput);
+  const looksTokenUrl = urlContext.sourceHint === "token"
+    || markers.some((marker) => TOKEN_URL_MARKERS.has(marker))
+    || /dexscreener|birdeye|jup\.ag|jupiter|raydium|geckoterminal|dexlab|meteora/i.test(decodedInput);
+  const looksWalletUrl = urlContext.sourceHint === "wallet"
+    || markers.some((marker) => WALLET_URL_MARKERS.has(marker))
+    || /wallet|holder|owner|account/i.test(decodedInput);
+  const address = tokenCleanup.cleanedAddress || walletCleanup.cleanedAddress || getFirstSolanaAddress(decodedInput);
+  const addressCount = addressCandidates.length || (address ? 1 : 0);
 
   if (!address) {
+    const isUrlLike = Boolean(urlContext.urlText) || /^https?:\/\//i.test(decodedInput);
     return {
       original,
       cleanedAddress: cleanedOriginal,
       kind: "unknown",
-      sourceLabel: "No Solana address extracted",
-      helper: "The app could not extract a Solana-format address. Use a mint, public wallet, or supported explorer URL.",
+      sourceLabel: isUrlLike ? "URL detected, no Solana address found" : "No Solana address extracted",
+      helper: isUrlLike
+        ? "The URL was recognized, but no Solana-format address was found. Paste a token/wallet page URL that includes the address, or paste the address directly."
+        : "The app could not extract a Solana-format address. Use a mint, public wallet, supported explorer URL, or text that includes the address.",
+      detectedLabel: isUrlLike ? "Unsupported URL format" : "Unknown input",
+      sourceHost: urlContext.host,
+      addressCount: 0,
+      firstUseTip: "Use the full token/wallet address or a supported URL from Solscan, DEX Screener, Birdeye, Jupiter, or Raydium.",
     };
   }
 
   if (looksTokenUrl && !looksWalletUrl) {
+    const cleanedAddress = tokenCleanup.cleanedAddress || address;
     return {
       original,
-      cleanedAddress: tokenCleanup.cleanedAddress || address,
+      cleanedAddress,
       kind: "token",
-      sourceLabel: tokenCleanup.sourceLabel || "Token-like input detected",
-      helper: "Token-style URL/input detected. The check will fetch token liquidity, pair, supply, and concentration context.",
+      sourceLabel: tokenCleanup.sourceLabel || (urlContext.host ? `Token URL · ${urlContext.host}` : "Token-like input detected"),
+      helper: getUniversalInputTip("token", urlContext.host, addressCount),
+      detectedLabel: "Token / pair input",
+      sourceHost: urlContext.host,
+      addressCount,
+      firstUseTip: "The token path will explain liquidity pressure, holder concentration, fresh-pair risk, volume/liquidity imbalance, and source blind spots.",
     };
   }
 
   if (looksWalletUrl && !looksTokenUrl) {
+    const cleanedAddress = walletCleanup.cleanedAddress || address;
     return {
       original,
-      cleanedAddress: walletCleanup.cleanedAddress || address,
+      cleanedAddress,
       kind: "wallet",
-      sourceLabel: walletCleanup.sourceLabel || "Wallet-like input detected",
-      helper: "Wallet-style URL/input detected. The check will fetch read-only public wallet context.",
+      sourceLabel: walletCleanup.sourceLabel || (urlContext.host ? `Wallet URL · ${urlContext.host}` : "Wallet-like input detected"),
+      helper: getUniversalInputTip("wallet", urlContext.host, addressCount),
+      detectedLabel: "Public wallet input",
+      sourceHost: urlContext.host,
+      addressCount,
+      firstUseTip: "The wallet path uses public RPC context only: SOL balance, token-account count, visible exposure, gas runway, and clutter prompts.",
     };
   }
+
+  const sourceLabel = addressCount > 1
+    ? "Multiple Solana addresses detected"
+    : urlContext.host
+      ? `Solana address extracted from ${urlContext.host}`
+      : "Solana address detected";
 
   return {
     original,
     cleanedAddress: address,
     kind: "unknown",
-    sourceLabel: "Solana address detected",
-    helper: "Raw Solana addresses can be token mints or wallets. The app will check both and use the stronger evidence path.",
+    sourceLabel,
+    helper: getUniversalInputTip("unknown", urlContext.host, addressCount),
+    detectedLabel: "Auto-detect path",
+    sourceHost: urlContext.host,
+    addressCount,
+    firstUseTip: "Auto-detect checks token and wallet routes when the address type is not obvious, then shows the stronger evidence path.",
   };
 }
 
@@ -244,7 +391,7 @@ export function getUniversalLeakCheckInputStatus(input: UniversalLeakCheckInput)
   if (!input.cleanedAddress) {
     return {
       canCheck: false,
-      label: "Paste something to check",
+      label: input.detectedLabel || "Paste something to check",
       helper: input.helper,
     };
   }
@@ -252,7 +399,7 @@ export function getUniversalLeakCheckInputStatus(input: UniversalLeakCheckInput)
   if (!isLikelySolanaMintAddress(input.cleanedAddress) && !isLikelySolanaWalletAddress(input.cleanedAddress)) {
     return {
       canCheck: false,
-      label: "Unsupported input",
+      label: input.detectedLabel || "Unsupported input",
       helper: input.helper,
     };
   }

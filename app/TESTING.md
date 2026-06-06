@@ -1,18 +1,29 @@
-# Smoke Is Broke — v59.51.3 Testing
+# Smoke Is Broke — v59.51.4 Input Resolver + First-Use Clarity
 
-## Checks run
+v59.51.4 is a focused UX/mechanics patch on top of confirmed working v59.51.3 stable8. It improves the main Check flow so new users understand what they can paste, what the app detected, what address will be checked, and why an input cannot be checked.
 
-- `npm ci --ignore-scripts --no-audit --no-fund` passed.
-- `npm run typecheck` passed.
-- `npm run lint:quiet` passed.
-- `NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build` compiled successfully, then timed out in this sandbox during Next.js `Running TypeScript ...` while standalone typecheck had already passed.
+## Changes
 
-## Manual test targets
+- Universal Check now shows a compact first-use guide before the input flow.
+- Added supported-input chips for Solscan, DEX Screener, Birdeye, Jupiter, Raydium, and plain Solana addresses.
+- Improved resolver output for Token, Wallet, Auto-detect, Unsupported URL, Unknown input, and sensitive/private-key-like input.
+- Resolver now extracts URL context from pasted text, not only when the whole paste is a URL.
+- Resolver shows source host, source label, detected path, address used, and a first-use tip.
+- Multiple Solana-format addresses are explicitly disclosed; the app uses the first detected address.
+- Sensitive/private-key/seed-phrase-like input is blocked with safer copy.
+- Loading copy now explains when the app is auto-detecting vs checking a known token/wallet path.
 
-1. Open Track Leak.
-2. Enter `0.01` and save.
-3. Confirm it saves and displays as `0.01`, not `0`.
-4. Edit that leak to `0.02`.
-5. Confirm charts/Wallet HP/recent records update.
-6. Try `0` or blank amount and confirm the app rejects it.
-7. Confirm old whole-number leaks still display normally.
+## Not changed
+
+No rewards, Admin distribution, payout logic, wallet verification, Supabase schema, transaction history, PnL, scam labels, investment advice, bottom-nav, or new manual screen changes.
+
+## Verification
+
+Run:
+
+```bash
+npm run typecheck
+npm run lint:quiet
+NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
+```
+
