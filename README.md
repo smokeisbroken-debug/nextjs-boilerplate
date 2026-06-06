@@ -1,6 +1,6 @@
-# Smoke Is Broke — v59.51.8 Bottom Nav Icon Fill + Leak Hub Close Control
+# Smoke Is Broke — v59.51.9 Bottom Nav Label Removal + Bigger Icon Fill
 
-v59.51.8 is a small UX hotfix on top of confirmed working v59.51.7 stable8. It makes the bottom-nav icons fill more of each button by tightening/cropping their visual framing, and it improves Leak Hub closing by keeping a visible close control, preserving one-open-at-a-time behavior, and auto-scrolling opened cards back to their header.
+v59.51.9 is a small UX hotfix on top of confirmed working v59.51.8 stable8. It removes duplicated text labels from the bottom nav because the new icon artwork already contains labels, and it makes the nav icons render larger so each button feels fuller and easier to read on mobile.
 
 No navigation logic, Check accordion behavior, rewards/Admin payout logic, wallet verification, Supabase schema, token/wallet data logic, scoring formulas, transaction-history scan, PnL, scam labels, or investment-advice behavior changed.
 
@@ -15,7 +15,7 @@ No navigation logic, Check accordion behavior, rewards/Admin payout logic, walle
   - `public/nav-rewards.png`
   - `public/nav-profile.png`
 - Updated visible nav mapping so Check, Rewards, and Profile no longer reuse old generic chart/save/settings icons.
-- Updated build marker to `v59.51.8`.
+- Updated build marker to `v59.51.9`.
 
 ## Test checklist
 

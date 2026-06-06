@@ -29844,9 +29844,10 @@ function BottomNav({
             setActiveTab(item.id);
           }}
           className={activeNavTab === item.id ? "active" : ""}
+          aria-label={item.label}
+          title={item.label}
         >
           <img src={item.icon} alt="" />
-          <span>{item.label}</span>
         </button>
       ))}
     </nav>

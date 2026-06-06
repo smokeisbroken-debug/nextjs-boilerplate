@@ -1,6 +1,6 @@
-# Project Order — v59.51.8 Bottom Nav Icon Fill + Leak Hub Close Control
+# Project Order — v59.51.9 Bottom Nav Label Removal + Bigger Icon Fill
 
-Base: confirmed working `v59.51.7 stable8`.
+Base: confirmed working `v59.51.8 stable8`.
 
 Scope: visual-only bottom navigation asset refresh using the user's generated button artwork.
 
@@ -16,7 +16,7 @@ Scope: visual-only bottom navigation asset refresh using the user's generated bu
   - Rewards → `nav-rewards.png`
   - Profile → `nav-profile.png`
 - Updated `navItems` so visible bottom nav uses the correct matching art.
-- Updated shared build marker to `v59.51.8`.
+- Updated shared build marker to `v59.51.9`.
 
 ## Not included
 

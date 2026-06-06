@@ -1,4 +1,4 @@
-# Testing — v59.51.8 Bottom Nav Icon Fill + Leak Hub Close Control
+# Testing — v59.51.9 Bottom Nav Label Removal + Bigger Icon Fill
 
 ## Automated checks
 
