@@ -1,4 +1,9 @@
-# Smoke Is Broke — v59.52.1 Standard Mode Check Tab Restore
+# Smoke Is Broke — v59.52.2 Automatic Daily Routine Proof Tasks
+
+v59.52.2 updates Daily Routine into seven automatic proof tasks: Open app, Run Check, Track Leak/Clean Day, One Fix, Read Chart, Review Rewards, and Share on X. Manual routine task buttons were removed; progress is now filled only by app actions already performed elsewhere.
+
+No rewards/Admin payout, wallet verification, Supabase schema, Universal Check data logic, token/wallet scoring, transaction history, PnL, scam labels, investment advice, or bottom-nav item count changed.
+
 
 v59.52.0 is a safe refactor patch on top of confirmed working v59.51.10 stable8. It adds a clear Close control on the deep Leak Hub screens opened from Check, returns those screens back to Check instead of Home, renames the in-hub close control to Collapse section, and forces screen navigation to start at the top instead of preserving random scroll positions.
 

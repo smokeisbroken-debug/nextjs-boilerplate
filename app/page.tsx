@@ -10072,6 +10072,7 @@ export default function Home() {
 
     triggerHaptic("medium");
     setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+    markDailyRoutineAction("reviewedDay");
     showToast("Leak deleted", "Mistaken record removed. Analysis recalculated.", "info");
 
     if (cloudAuthReady) {
@@ -10273,8 +10274,9 @@ export default function Home() {
   }
 
   function completeOneFixProof() {
-    triggerHaptic("light");
-    notifyApp("Daily Routine required", "One Fix remains useful, but the Active Streak is counted only by full Daily Routine completion.", "info");
+    triggerHaptic("success");
+    markDailyRoutineAction("lockedNextMove");
+    notifyApp("One Fix saved", "Next move locked for today.", "info");
     setActiveTab("chart");
   }
 
@@ -15436,8 +15438,6 @@ function DailyRoutinePanel({
   }, [expenses, today]);
 
   useEffect(() => {
-    markDailyRoutineAction("reviewedWallet");
-
     if (todayExpenses.length === 0) {
       markDailyRoutineAction("reviewedDay");
     }
@@ -15451,59 +15451,55 @@ function DailyRoutinePanel({
     body: string;
     icon: string;
     done: boolean;
-    actionLabel?: string;
   }> = [
     {
       id: "openedApp",
-      title: "Open the app",
-      body: "Start the day. The app records this automatically when you open the routine.",
+      title: "Open app",
+      body: "Session started.",
       icon: A.appFrog,
       done: actions.openedApp,
     },
     {
       id: "reviewedWallet",
-      title: "Check wallet state",
-      body: `Real balance: ${money(summary.realBalance, settings.currency)} · Wallet HP ${summary.walletHp}/100. Auto-checked when the routine opens.`,
+      title: "Run Check",
+      body: "Token, wallet, or link.",
       icon: A.walletHp,
       done: actions.reviewedWallet,
-      actionLabel: "Checked",
     },
     {
       id: "reviewedDay",
-      title: todayExpenses.length > 0 ? "Review today’s spend" : "Confirm no extra spend",
+      title: todayExpenses.length > 0 ? "Track leak" : "Clean Day",
       body: todayExpenses.length > 0
-        ? `${todayExpenses.length} record${todayExpenses.length === 1 ? "" : "s"} today. Review the decision instead of forcing another leak.`
-        : "No-spend day counts automatically when there are no records today. No fake leak needed.",
+        ? `${todayExpenses.length} record${todayExpenses.length === 1 ? "" : "s"} today.`
+        : "No extra spend today.",
       icon: todayExpenses.length > 0 ? A.leaks : A.dailyCheck,
       done: actions.reviewedDay,
-      actionLabel: todayExpenses.length > 0 ? "Reviewed" : "No spend",
     },
     {
       id: "lockedNextMove",
-      title: "Lock one next move",
-      body: "Choose one small discipline move for the next 24h. No spending required.",
+      title: "One Fix",
+      body: "Next move locked.",
       icon: A.challengeTrophy,
       done: actions.lockedNextMove,
-      actionLabel: "Locked",
     },
     {
       id: "checkedChart",
-      title: "Check $BROKE Chart",
-      body: "Open the Chart tab and look at today’s wallet signal.",
+      title: "Read Chart",
+      body: "Open Chart once.",
       icon: A.navChart,
       done: actions.checkedChart,
     },
     {
       id: "checkedSave",
-      title: "Check Rewards plan",
-      body: "Open Rewards and review your eligibility state.",
+      title: "Review Rewards",
+      body: "Open Rewards once.",
       icon: A.navWhatIf,
       done: actions.checkedSave,
     },
     {
       id: "sharedProgress",
       title: "Share on X",
-      body: "Use a Share on X button. Copy, Telegram share, or image download does not complete this task.",
+      body: "Final public proof.",
       icon: A.export,
       done: actions.sharedProgress,
     },
@@ -15544,12 +15540,10 @@ function DailyRoutinePanel({
         <small>{routineStatus}</small>
       </div>
 
-      <div className="routine-hero">
+      <div className="routine-hero compact-routine-hero">
         <div>
-          <strong>Daily Routine is the only streak proof.</strong>
-          <p>
-            Finish all 7 actions. A no-spend day can complete the routine; the 7th action must be Share on X, then today’s Active Streak is protected.
-          </p>
+          <strong>{routineComplete ? "Today protected" : "Complete 7 useful actions"}</strong>
+          <p>{routineComplete ? "Active Streak proof saved." : "Progress fills from real app actions."}</p>
         </div>
 
         <div className="routine-score">
@@ -15576,7 +15570,7 @@ function DailyRoutinePanel({
                 }`}
           </strong>
           <span>
-            Active Streak is counted only after full Daily Routine completion. No fake leak is required; the final task must be Share on X.
+            {routineComplete ? "Today is protected." : "Finish the remaining actions to protect today."}
           </span>
         </div>
       </div>
@@ -15592,28 +15586,15 @@ function DailyRoutinePanel({
             </div>
 
             <div className="routine-task-status">
-              {item.actionLabel && !item.done ? (
-                <button
-                  type="button"
-                  className="routine-task-action"
-                  onClick={() => {
-                    markDailyRoutineAction(item.id);
-                    setActions(readDailyRoutineActions(today));
-                  }}
-                >
-                  {item.actionLabel}
-                </button>
-              ) : (
-                <b>{item.done ? "✓" : "—"}</b>
-              )}
+              <b>{item.done ? "✓" : "—"}</b>
             </div>
           </article>
         ))}
       </div>
 
-      <div className="routine-rule">
-        <strong>Discipline rule:</strong>
-        <span>No-spend days are valid. The routine never requires adding a fake leak; only the final public proof task must be completed through Share on X.</span>
+      <div className="routine-rule compact-routine-rule">
+        <strong>Streak rule:</strong>
+        <span>7/7 protects today. No fake expense needed.</span>
       </div>
     </section>
   );
