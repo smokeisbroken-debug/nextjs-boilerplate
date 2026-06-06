@@ -1,26 +1,25 @@
-# Smoke Is Broke — v59.51.6 Leak Hub Accordion UX Hotfix
+# Smoke Is Broke — v59.51.7 Bottom Nav Icon Refresh
 
-v59.51.6 is a small UX hotfix on top of confirmed working v59.51.5 stable8. It keeps the main Check tab as the single leak-tools hub, but makes the hub cards behave like an accordion instead of immediate navigation buttons.
+v59.51.7 is a small visual hotfix on top of confirmed working v59.51.6 stable8. It replaces the visible bottom navigation artwork with the new user-provided button set, mapped by meaning: Home, Check, Add, Chart, Growth, Rewards, and Profile.
 
-## Changes
+No navigation logic, Check accordion behavior, rewards/Admin payout logic, wallet verification, Supabase schema, token/wallet data logic, scoring formulas, transaction-history scan, PnL, scam labels, or investment-advice behavior changed.
 
-- Leak Hub cards now open and close in place with an arrow-style control.
-- Universal Check, Project Research, Wallet Review, and Project vs Project can each expand inside Check.
-- Project Research, Wallet Review, and Project vs Project now reveal a short explanation and an explicit Open button instead of jumping immediately when the card header is tapped.
-- Universal Check expansion includes a direct focus action for the paste input.
-- Users can tap the same arrow/card again to close the expanded section without leaving Check or switching to Home/Add.
-- Check remains the highlighted bottom-nav section for all leak tools.
+## Changed
 
-## Not changed
+- Added new processed nav assets:
+  - `public/nav-home.png`
+  - `public/nav-check.png`
+  - `public/nav-add.png`
+  - `public/nav-chart.png`
+  - `public/nav-growth.png`
+  - `public/nav-rewards.png`
+  - `public/nav-profile.png`
+- Updated visible nav mapping so Check, Rewards, and Profile no longer reuse old generic chart/save/settings icons.
+- Updated build marker to `v59.51.7`.
 
-No token/wallet data logic, scoring formulas, rewards, Admin distribution, payout logic, Daily Routine/Active Streak, wallet verification, Supabase schema, transaction history, PnL, scam labels, investment advice, bottom-nav item count, or new manual screen changes.
+## Test checklist
 
-## Verification
-
-Run:
-
-```bash
-npm run typecheck
-npm run lint:quiet
-NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
-```
+1. Open the app in Telegram mobile view.
+2. Confirm bottom nav shows the new artwork for Home, Check, Add, Chart, Growth, Rewards, and Profile.
+3. Confirm tapping each bottom nav item still opens the same existing screen.
+4. Confirm Check remains the Leak Hub and accordion behavior from v59.51.6 still works.

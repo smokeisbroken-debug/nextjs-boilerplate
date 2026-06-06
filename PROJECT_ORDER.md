@@ -1,23 +1,29 @@
-# Project Order — v59.51.6 Leak Hub Accordion UX Hotfix
+# Project Order — v59.51.7 Bottom Nav Icon Refresh
 
-## Goal
+Base: confirmed working `v59.51.6 stable8`.
 
-Fix the Check tab hub interaction based on community feedback. The hub cards should not feel stuck open or force users to leave the section to reset the view.
+Scope: visual-only bottom navigation asset refresh using the user's generated button artwork.
 
-## Scope
+## Included
 
-- Base: confirmed working v59.51.5 stable8.
-- Patch type: UX-only hotfix.
-- Main files: `app/page.tsx`, `app/globals.css`, `app/lib/brokeAdminRewards.ts`, docs.
+- Processed the uploaded 7-button set into app-ready public nav assets.
+- Mapped by meaning:
+  - Home → `nav-home.png`
+  - Check → `nav-check.png`
+  - Add → `nav-add.png`
+  - Chart → `nav-chart.png`
+  - Growth → `nav-growth.png`
+  - Rewards → `nav-rewards.png`
+  - Profile → `nav-profile.png`
+- Updated `navItems` so visible bottom nav uses the correct matching art.
+- Updated shared build marker to `v59.51.7`.
 
-## Implementation
+## Not included
 
-1. Add local `openHubTool` state inside `UniversalLeakCheckScreen`.
-2. Convert Leak Hub direct navigation cards into expandable cards.
-3. Add close/open arrow indicator on each card.
-4. Move deep-tool navigation into the expanded panel as explicit `Open ...` actions.
-5. Keep Universal Check as the default expanded tool and provide a `Paste / focus input` action.
-
-## Guardrails
-
-Do not change token/wallet signal formulas, rewards, Admin payout logic, wallet verification, Supabase schema, transaction-history scanning, PnL, scam labels, investment advice, or bottom-nav structure.
+- No bottom-nav item count change.
+- No route/screen changes.
+- No token/wallet data logic changes.
+- No scoring formula changes.
+- No rewards/Admin payout changes.
+- No wallet verification or Supabase schema changes.
+- No transaction-history, PnL, scam label, or investment-advice changes.

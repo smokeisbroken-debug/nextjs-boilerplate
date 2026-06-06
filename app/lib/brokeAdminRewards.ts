@@ -1,4 +1,4 @@
-export const BROKE_APP_BUILD_VERSION = "v59.51.6";
+export const BROKE_APP_BUILD_VERSION = "v59.51.7";
 
 export const BROKE_APP_BUILD_NOTE =
   "Leak Hub Accordion UX Hotfix";

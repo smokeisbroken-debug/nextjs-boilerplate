@@ -4807,15 +4807,15 @@ const navItems: {
   hubOnly?: boolean;
 }[] = [
   { id: "home", label: "Home", icon: "/nav-home.png" },
-  { id: "check", label: "Check", icon: "/nav-chart.png" },
+  { id: "check", label: "Check", icon: "/nav-check.png" },
   { id: "add", label: "Add", icon: "/nav-add.png" },
   { id: "chart", label: "Chart", icon: "/nav-chart.png" },
   { id: "growth", label: "Growth", icon: "/nav-growth.png", proOnly: true },
   { id: "leakscore", label: "Project", icon: "/nav-chart.png", proOnly: true, hubOnly: true },
-  { id: "walletleak", label: "Wallet", icon: "/nav-save.png", proOnly: true, hubOnly: true },
+  { id: "walletleak", label: "Wallet", icon: "/nav-profile.png", proOnly: true, hubOnly: true },
   { id: "compare", label: "Vs", icon: "/nav-chart.png", proOnly: true, hubOnly: true },
-  { id: "whatif", label: "Rewards", icon: "/nav-save.png", proOnly: true },
-  { id: "settings", label: "Profile", icon: "/nav-settings.png" },
+  { id: "whatif", label: "Rewards", icon: "/nav-rewards.png", proOnly: true },
+  { id: "settings", label: "Profile", icon: "/nav-profile.png" },
 ];
 
 function uid() {
