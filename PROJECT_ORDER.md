@@ -1,19 +1,21 @@
-# Project Order — v59.52.5 Telegram Reminder Cron Wiring Hotfix
+# Project Order — v59.52.6 Wallet Balance Live Recheck Hotfix
 
-v59.52.5 wires Telegram routine reminders to Vercel Cron with `vercel.json`, keeps the endpoint protected by `CRON_SECRET`/`NOTIFICATIONS_SECRET`, removes the dependency on a separate `broke_notification_logs` table by storing the last successful reminder date in existing app state payload, and adds an authorized `testTelegramId` endpoint parameter for manual bot-send testing. No reminder UI, Daily Routine formula, rewards/admin payout, or Universal Check logic changed.
+v59.52.6 is a targeted hotfix on top of v59.52.5 stable8. It makes the Profile wallet `$BROKE` balance Recheck action force a live RPC balance fetch instead of being overwritten by older verification-status data. The client now sends no-store balance requests with a timestamp, uses the linked wallet as fallback when the draft input is empty, updates the draft after a successful check, and preserves the freshly fetched live balance while silently syncing verified/watched status.
 
-Base: confirmed v59.52.3 stable8.
-
-## Scope
-
-Fix the Supabase `PGRST102` sync error shown in Profile/Notifications by making bulk local-expense import rows use matching keys.
-
-## Files changed
-
-- `app/api/broke/route.ts`
+Changed:
+- `app/page.tsx`
 - `app/lib/brokeAdminRewards.ts`
-- docs
 
-## Constraints
+Not changed:
+- Rewards/Admin payout logic
+- Wallet verification signature flow
+- Supabase schema
+- Universal Check scoring
+- Daily Routine rules
+- Transaction history, PnL, scam labels, or investment advice
 
-No changes to rewards/Admin payout, Daily Routine proof formula, reminders behavior, Universal Check scoring, wallet verification, or schema migrations.
+Checks:
+- `npm run typecheck`
+- `npm run lint:quiet`
+- production build attempted separately
+

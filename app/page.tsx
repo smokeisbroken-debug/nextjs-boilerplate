@@ -27575,7 +27575,7 @@ function SettingsScreen({
     }));
   }
 
-  async function refreshWalletVerificationStatus(silent = false) {
+  async function refreshWalletVerificationStatus(silent = false, options?: { preserveLiveBalance?: boolean }) {
     const walletAddress = (settings.wallet.walletAddress || walletAddressDraft).trim();
 
     if (!isLikelySolanaWalletAddress(walletAddress) || walletStatusRefreshing) return;
@@ -27584,9 +27584,10 @@ function SettingsScreen({
     setWalletStatusRefreshing(true);
 
     try {
-      const response = await fetch("/api/wallet/verify/status", {
+      const response = await fetch(`/api/wallet/verify/status?t=${Date.now()}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+        cache: "no-store",
         body: JSON.stringify({
           walletAddress,
           initData: telegram.isTelegram ? telegram.initData : "",
@@ -27611,10 +27612,18 @@ function SettingsScreen({
       if (data.verified) {
         updateWalletSettings({
           walletAddress: data.walletAddress || walletAddress,
-          brokeBalance: Math.max(0, safeNumber(String(data.balance ?? settings.wallet.brokeBalance))),
-          percentOfSupply: Math.max(0, safeNumber(String(data.percentOfSupply ?? settings.wallet.percentOfSupply))),
-          holderTier: normalizeHolderTier(data.holderTier || settings.wallet.holderTier),
-          lastCheckedAt: data.checkedAt || settings.wallet.lastCheckedAt || new Date().toISOString(),
+          brokeBalance: options?.preserveLiveBalance
+            ? settings.wallet.brokeBalance
+            : Math.max(0, safeNumber(String(data.balance ?? settings.wallet.brokeBalance))),
+          percentOfSupply: options?.preserveLiveBalance
+            ? settings.wallet.percentOfSupply
+            : Math.max(0, safeNumber(String(data.percentOfSupply ?? settings.wallet.percentOfSupply))),
+          holderTier: options?.preserveLiveBalance
+            ? settings.wallet.holderTier
+            : normalizeHolderTier(data.holderTier || settings.wallet.holderTier),
+          lastCheckedAt: options?.preserveLiveBalance
+            ? settings.wallet.lastCheckedAt || new Date().toISOString()
+            : data.checkedAt || settings.wallet.lastCheckedAt || new Date().toISOString(),
           isVerified: true,
           provider: "verified",
           verifiedAt: data.verifiedAt || settings.wallet.verifiedAt || new Date().toISOString(),
@@ -27671,7 +27680,7 @@ function SettingsScreen({
   }
 
   async function checkBrokeWalletBalance() {
-    const walletAddress = walletAddressDraft.trim();
+    const walletAddress = (walletAddressDraft.trim() || settings.wallet.walletAddress).trim();
 
     if (!isLikelySolanaWalletAddress(walletAddress)) {
       setWalletMessage("Paste a valid Solana wallet address first.");
@@ -27684,12 +27693,14 @@ function SettingsScreen({
     setWalletMessage("");
 
     try {
-      const response = await fetch("/api/wallet/balance", {
+      const response = await fetch(`/api/wallet/balance?t=${Date.now()}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
         },
-        body: JSON.stringify({ walletAddress }),
+        cache: "no-store",
+        body: JSON.stringify({ walletAddress, forceRefresh: true }),
       });
       const data = (await response.json()) as {
         ok?: boolean;
@@ -27716,9 +27727,10 @@ function SettingsScreen({
         provider: walletAddress === settings.wallet.walletAddress && settings.wallet.isVerified ? "verified" : data.verified ? "verified" : "watch",
         verifiedAt: walletAddress === settings.wallet.walletAddress ? settings.wallet.verifiedAt : "",
       });
-      void refreshWalletVerificationStatus(true);
-      setWalletMessage("$BROKE balance updated. This is read-only tracking.");
-      notifyApp("Wallet checked", "Read-only $BROKE balance updated.", "info");
+      setWalletAddressDraft(data.walletAddress || walletAddress);
+      void refreshWalletVerificationStatus(true, { preserveLiveBalance: true });
+      setWalletMessage("$BROKE balance refreshed from live RPC. This is read-only tracking.");
+      notifyApp("Wallet refreshed", "Latest read-only $BROKE balance loaded from RPC.", "info");
       triggerHaptic("success");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not check $BROKE balance.";
