@@ -16644,7 +16644,7 @@ async function createShareImageFileFromElement(element: HTMLElement, fileName = 
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : element.scrollWidth;
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : element.scrollHeight;
   const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const captureScale = /Android/i.test(userAgent) ? 1.35 : 2;
+  const captureScale = /Android/i.test(userAgent) ? 1 : 2;
 
   element.setAttribute("data-share-capture-id", captureId);
 
@@ -27235,6 +27235,7 @@ function SettingsScreen({
   const [walletProviderOptions, setWalletProviderOptions] = useState<Array<{ id: string; label: string; ready: boolean }>>([]);
   const [selectedWalletProviderId, setSelectedWalletProviderId] = useState("");
   const [walletStatusRefreshing, setWalletStatusRefreshing] = useState(false);
+  const lastAutoWalletBalanceRefreshRef = useRef(0);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState("");
   const adminAccess = useMemo(
@@ -27256,6 +27257,57 @@ function SettingsScreen({
 
     void refreshWalletVerificationStatus(true);
   }, [settings.wallet.walletAddress, telegram.isTelegram, telegram.initData, webAuth.user?.id]);
+
+  useEffect(() => {
+    const walletAddress = settings.wallet.walletAddress.trim();
+    if (!isLikelySolanaWalletAddress(walletAddress)) return;
+    if (!telegram.isTelegram && !webAuth.user) return;
+
+    const AUTO_REFRESH_INTERVAL_MS = 45_000;
+    const AUTO_REFRESH_MIN_GAP_MS = 25_000;
+
+    function shouldAutoRefreshBalance() {
+      if (walletChecking || walletVerifying || walletStatusRefreshing) return false;
+      const now = Date.now();
+      if (now - lastAutoWalletBalanceRefreshRef.current < AUTO_REFRESH_MIN_GAP_MS) return false;
+      const lastCheckedAt = Date.parse(settings.wallet.lastCheckedAt || "");
+      if (!lastCheckedAt) return true;
+      return now - lastCheckedAt >= AUTO_REFRESH_MIN_GAP_MS;
+    }
+
+    function runAutoRefreshBalance() {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      if (!shouldAutoRefreshBalance()) return;
+      lastAutoWalletBalanceRefreshRef.current = Date.now();
+      void checkBrokeWalletBalance("auto");
+    }
+
+    const initialTimer = window.setTimeout(runAutoRefreshBalance, 1200);
+    const interval = window.setInterval(runAutoRefreshBalance, AUTO_REFRESH_INTERVAL_MS);
+
+    function handleVisibilityOrFocus() {
+      runAutoRefreshBalance();
+    }
+
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    window.addEventListener("visibilitychange", handleVisibilityOrFocus);
+
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      window.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
+  }, [
+    settings.wallet.walletAddress,
+    settings.wallet.lastCheckedAt,
+    telegram.isTelegram,
+    telegram.initData,
+    webAuth.user?.id,
+    walletChecking,
+    walletVerifying,
+    walletStatusRefreshing,
+  ]);
 
   useEffect(() => {
     function syncWalletProviderState() {
@@ -27460,15 +27512,20 @@ function SettingsScreen({
     })
   );
   const normalizedWalletAddressDraft = walletAddressDraft.trim();
+  const linkedWalletAddress = settings.wallet.walletAddress.trim();
+  const effectiveWalletCheckAddress = normalizedWalletAddressDraft || linkedWalletAddress;
   const walletDraftHasValue = normalizedWalletAddressDraft.length > 0;
   const walletDraftLooksValid = isLikelySolanaWalletAddress(normalizedWalletAddressDraft);
+  const walletCheckLooksValid = isLikelySolanaWalletAddress(effectiveWalletCheckAddress);
   const walletDraftIsLinked = Boolean(
-    settings.wallet.walletAddress && settings.wallet.walletAddress === normalizedWalletAddressDraft
+    linkedWalletAddress && effectiveWalletCheckAddress === linkedWalletAddress
   );
   const walletReadyStateLabel = !walletDraftHasValue
-    ? walletProviderDetected
-      ? `${walletProviderName} detected. Verify can connect and fill the address automatically.`
-      : "Paste your public wallet address or open the app inside a Solana wallet browser. Never paste a seed phrase."
+    ? linkedWalletAddress
+      ? "Linked wallet ready. You can recheck the latest $BROKE balance."
+      : walletProviderDetected
+        ? `${walletProviderName} detected. Verify can connect and fill the address automatically.`
+        : "Paste your public wallet address or open the app inside a Solana wallet browser. Never paste a seed phrase."
     : walletDraftLooksValid
       ? walletDraftIsLinked
         ? "Wallet linked. You can recheck the latest $BROKE balance."
@@ -27694,7 +27751,7 @@ function SettingsScreen({
     triggerHaptic("light");
   }
 
-  async function checkBrokeWalletBalance() {
+  async function checkBrokeWalletBalance(source: "manual" | "rescan" | "auto" = "manual") {
     const walletAddress = (walletAddressDraft.trim() || settings.wallet.walletAddress).trim();
 
     if (!isLikelySolanaWalletAddress(walletAddress)) {
@@ -27703,9 +27760,14 @@ function SettingsScreen({
       return;
     }
 
+    const isAutoRefresh = source === "auto";
+    const previousBalance = settings.wallet.brokeBalance;
+
     setWalletChecking(true);
     setWalletProviderHelpOpen(false);
-    setWalletMessage("");
+    if (!isAutoRefresh) {
+      setWalletMessage("");
+    }
 
     try {
       const response = await fetch(`/api/wallet/balance?t=${Date.now()}`, {
@@ -27730,6 +27792,10 @@ function SettingsScreen({
         holderTier?: HolderTier;
         checkedAt?: string;
         verified?: boolean;
+        persisted?: boolean;
+        persistenceMode?: string;
+        balanceSource?: string;
+        tokenAccountCount?: number;
       };
 
       if (!response.ok || !data.ok) {
@@ -27761,13 +27827,30 @@ function SettingsScreen({
           liveBalanceSnapshot,
         });
       }
-      setWalletMessage("$BROKE balance refreshed from live RPC. This is read-only tracking.");
-      notifyApp("Wallet refreshed", "Latest read-only $BROKE balance loaded from RPC.", "info");
-      triggerHaptic("success");
+      const balanceChanged = Math.abs(liveBalanceSnapshot.balance - previousBalance) > 0.000001;
+      if (!isAutoRefresh || balanceChanged) {
+        setWalletMessage(
+          `$BROKE balance ${isAutoRefresh ? "auto-updated" : "refreshed"}: ${formatTokenAmount(liveBalanceSnapshot.balance)} · ${
+            data.persisted ? "cloud saved" : "live RPC loaded"
+          } · ${new Date(liveBalanceSnapshot.checkedAt).toLocaleTimeString()}`
+        );
+      }
+      if (!isAutoRefresh || balanceChanged) {
+        notifyApp(
+          source === "rescan" ? "Rescan refreshed balance" : isAutoRefresh ? "Balance auto-updated" : "Wallet refreshed",
+          `Live RPC balance: ${formatTokenAmount(liveBalanceSnapshot.balance)}.`,
+          "info"
+        );
+      }
+      if (!isAutoRefresh || balanceChanged) {
+        triggerHaptic("success");
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not check $BROKE balance.";
-      setWalletMessage(message);
-      notifyApp("Wallet check failed", message, "info");
+      if (!isAutoRefresh) {
+        setWalletMessage(message);
+        notifyApp("Wallet check failed", message, "info");
+      }
     } finally {
       setWalletChecking(false);
     }
@@ -28138,6 +28221,12 @@ function SettingsScreen({
       detected.ready ? "Message signing should be available now." : "Telegram can show the app, but verification needs a wallet browser.",
       "info"
     );
+
+    const walletAddressForRefresh = (walletAddressDraft.trim() || settings.wallet.walletAddress).trim();
+    if (isLikelySolanaWalletAddress(walletAddressForRefresh) && !walletChecking && !walletVerifying) {
+      void checkBrokeWalletBalance("rescan");
+    }
+
     triggerHaptic("light");
   }
 
@@ -28734,9 +28823,9 @@ function SettingsScreen({
           <div className="wallet-balance-actions wallet-primary-actions">
             <button
               type="button"
-              className={`primary ${walletDraftLooksValid ? "ready" : ""}`}
-              onClick={checkBrokeWalletBalance}
-              disabled={!walletDraftLooksValid || walletChecking || walletVerifying}
+              className={`primary ${walletCheckLooksValid ? "ready" : ""}`}
+              onClick={() => checkBrokeWalletBalance("manual")}
+              disabled={!walletCheckLooksValid || walletChecking || walletVerifying}
             >
               {walletPrimaryCta}
             </button>

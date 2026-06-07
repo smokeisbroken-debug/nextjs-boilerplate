@@ -32902,3 +32902,96 @@ html.embedded-app-view .hero h1 {
   border-color: rgba(183, 255, 25, 0.16) !important;
   box-shadow: none !important;
 }
+
+/* ===== V59.52.9 SHARE CARD SAFE EXPORT HARDENING ===== */
+.share-capture-safe.report-public-share-card,
+.share-capture-safe.mission-public-share-card,
+.share-capture-safe.weekly-review-share-card,
+.share-capture-safe.monthly-history-share-card,
+.share-capture-safe.survival-share-card,
+.share-capture-safe.safe-weekly-share-card,
+.share-capture-safe.growth-share-preview,
+.share-capture-safe.report-public-share-card *,
+.share-capture-safe.mission-public-share-card *,
+.share-capture-safe.weekly-review-share-card *,
+.share-capture-safe.monthly-history-share-card *,
+.share-capture-safe.survival-share-card *,
+.share-capture-safe.safe-weekly-share-card *,
+.share-capture-safe.growth-share-preview * {
+  animation: none !important;
+  transition: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform-style: flat !important;
+}
+
+.share-capture-safe.report-public-share-card::before,
+.share-capture-safe.report-public-share-card::after,
+.share-capture-safe.report-public-share-card *::before,
+.share-capture-safe.report-public-share-card *::after,
+.share-capture-safe.mission-public-share-card::before,
+.share-capture-safe.mission-public-share-card::after,
+.share-capture-safe.mission-public-share-card *::before,
+.share-capture-safe.mission-public-share-card *::after,
+.share-capture-safe.weekly-review-share-card::before,
+.share-capture-safe.weekly-review-share-card::after,
+.share-capture-safe.weekly-review-share-card *::before,
+.share-capture-safe.weekly-review-share-card *::after,
+.share-capture-safe.monthly-history-share-card::before,
+.share-capture-safe.monthly-history-share-card::after,
+.share-capture-safe.monthly-history-share-card *::before,
+.share-capture-safe.monthly-history-share-card *::after,
+.share-capture-safe.survival-share-card::before,
+.share-capture-safe.survival-share-card::after,
+.share-capture-safe.survival-share-card *::before,
+.share-capture-safe.survival-share-card *::after,
+.share-capture-safe.safe-weekly-share-card::before,
+.share-capture-safe.safe-weekly-share-card::after,
+.share-capture-safe.safe-weekly-share-card *::before,
+.share-capture-safe.safe-weekly-share-card *::after {
+  content: none !important;
+  display: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
+.share-capture-safe.report-public-share-card,
+.share-capture-safe.mission-public-share-card,
+.share-capture-safe.weekly-review-share-card,
+.share-capture-safe.monthly-history-share-card,
+.share-capture-safe.survival-share-card,
+.share-capture-safe.safe-weekly-share-card,
+.share-capture-safe.growth-share-preview {
+  overflow: hidden !important;
+  isolation: isolate !important;
+  transform: none !important;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(183, 255, 25, 0.10), transparent 32%),
+    linear-gradient(180deg, #0b1a0d 0%, #050805 100%) !important;
+}
+
+.share-capture-safe.report-public-share-card .premium-share-card-art,
+.share-capture-safe.mission-public-share-card .premium-share-card-art,
+.share-capture-safe.weekly-review-share-card .premium-share-card-art,
+.share-capture-safe.monthly-history-share-card .premium-share-card-art,
+.share-capture-safe.survival-share-card .premium-share-card-art,
+.share-capture-safe.safe-weekly-share-card .premium-share-card-art,
+.share-capture-safe.growth-share-preview .premium-share-card-art {
+  display: none !important;
+}
+
+.share-capture-safe.report-public-share-card .report-public-share-grid > div,
+.share-capture-safe.report-public-share-card .report-public-share-footer,
+.share-capture-safe.mission-public-share-card .mission-public-share-grid > div,
+.share-capture-safe.weekly-review-share-card .weekly-review-share-grid > div,
+.share-capture-safe.monthly-history-share-card .monthly-history-share-grid > div,
+.share-capture-safe.survival-share-card .survival-share-grid > div,
+.share-capture-safe.safe-weekly-share-card .safe-weekly-share-profile-grid > div {
+  background: rgba(6, 13, 7, 0.9) !important;
+  border-color: rgba(183, 255, 25, 0.16) !important;
+  box-shadow: none !important;
+}
