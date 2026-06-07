@@ -16643,13 +16643,15 @@ async function createShareImageFileFromElement(element: HTMLElement, fileName = 
   const scrollOffsetY = typeof window !== "undefined" ? window.scrollY : 0;
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : element.scrollWidth;
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : element.scrollHeight;
+  const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const captureScale = /Android/i.test(userAgent) ? 1.35 : 2;
 
   element.setAttribute("data-share-capture-id", captureId);
 
   try {
     const canvas = await html2canvas(element, {
       backgroundColor: "#020402",
-      scale: 2,
+      scale: captureScale,
       useCORS: true,
       allowTaint: false,
       foreignObjectRendering: false,
@@ -27575,7 +27577,18 @@ function SettingsScreen({
     }));
   }
 
-  async function refreshWalletVerificationStatus(silent = false, options?: { preserveLiveBalance?: boolean }) {
+  async function refreshWalletVerificationStatus(
+    silent = false,
+    options?: {
+      preserveLiveBalance?: boolean;
+      liveBalanceSnapshot?: {
+        balance: number;
+        percentOfSupply: number;
+        holderTier?: HolderTier;
+        checkedAt?: string;
+      };
+    }
+  ) {
     const walletAddress = (settings.wallet.walletAddress || walletAddressDraft).trim();
 
     if (!isLikelySolanaWalletAddress(walletAddress) || walletStatusRefreshing) return;
@@ -27610,19 +27623,21 @@ function SettingsScreen({
       }
 
       if (data.verified) {
+        const liveBalanceSnapshot = options?.liveBalanceSnapshot;
+
         updateWalletSettings({
           walletAddress: data.walletAddress || walletAddress,
           brokeBalance: options?.preserveLiveBalance
-            ? settings.wallet.brokeBalance
+            ? Math.max(0, safeNumber(String(liveBalanceSnapshot?.balance ?? settings.wallet.brokeBalance)))
             : Math.max(0, safeNumber(String(data.balance ?? settings.wallet.brokeBalance))),
           percentOfSupply: options?.preserveLiveBalance
-            ? settings.wallet.percentOfSupply
+            ? Math.max(0, safeNumber(String(liveBalanceSnapshot?.percentOfSupply ?? settings.wallet.percentOfSupply)))
             : Math.max(0, safeNumber(String(data.percentOfSupply ?? settings.wallet.percentOfSupply))),
           holderTier: options?.preserveLiveBalance
-            ? settings.wallet.holderTier
+            ? normalizeHolderTier(liveBalanceSnapshot?.holderTier || settings.wallet.holderTier)
             : normalizeHolderTier(data.holderTier || settings.wallet.holderTier),
           lastCheckedAt: options?.preserveLiveBalance
-            ? settings.wallet.lastCheckedAt || new Date().toISOString()
+            ? liveBalanceSnapshot?.checkedAt || settings.wallet.lastCheckedAt || new Date().toISOString()
             : data.checkedAt || settings.wallet.lastCheckedAt || new Date().toISOString(),
           isVerified: true,
           provider: "verified",
@@ -27700,7 +27715,11 @@ function SettingsScreen({
           "Cache-Control": "no-cache",
         },
         cache: "no-store",
-        body: JSON.stringify({ walletAddress, forceRefresh: true }),
+        body: JSON.stringify({
+          walletAddress,
+          forceRefresh: true,
+          initData: telegram.isTelegram ? telegram.initData : "",
+        }),
       });
       const data = (await response.json()) as {
         ok?: boolean;
@@ -27717,18 +27736,31 @@ function SettingsScreen({
         throw new Error(data.error || "Could not check $BROKE balance.");
       }
 
-      updateWalletSettings({
-        walletAddress: data.walletAddress || walletAddress,
-        brokeBalance: Math.max(0, safeNumber(String(data.balance ?? 0))),
+      const liveBalanceSnapshot = {
+        balance: Math.max(0, safeNumber(String(data.balance ?? 0))),
         percentOfSupply: Math.max(0, safeNumber(String(data.percentOfSupply ?? 0))),
         holderTier: normalizeHolderTier(data.holderTier),
-        lastCheckedAt: data.checkedAt || new Date().toISOString(),
-        isVerified: walletAddress === settings.wallet.walletAddress ? settings.wallet.isVerified : Boolean(data.verified),
-        provider: walletAddress === settings.wallet.walletAddress && settings.wallet.isVerified ? "verified" : data.verified ? "verified" : "watch",
-        verifiedAt: walletAddress === settings.wallet.walletAddress ? settings.wallet.verifiedAt : "",
+        checkedAt: data.checkedAt || new Date().toISOString(),
+      };
+      const matchedLinkedWallet = walletAddress === settings.wallet.walletAddress;
+
+      updateWalletSettings({
+        walletAddress: data.walletAddress || walletAddress,
+        brokeBalance: liveBalanceSnapshot.balance,
+        percentOfSupply: liveBalanceSnapshot.percentOfSupply,
+        holderTier: liveBalanceSnapshot.holderTier,
+        lastCheckedAt: liveBalanceSnapshot.checkedAt,
+        isVerified: matchedLinkedWallet ? settings.wallet.isVerified : Boolean(data.verified),
+        provider: matchedLinkedWallet && settings.wallet.isVerified ? "verified" : data.verified ? "verified" : "watch",
+        verifiedAt: matchedLinkedWallet ? settings.wallet.verifiedAt : "",
       });
       setWalletAddressDraft(data.walletAddress || walletAddress);
-      void refreshWalletVerificationStatus(true, { preserveLiveBalance: true });
+      if (matchedLinkedWallet && settings.wallet.isVerified) {
+        void refreshWalletVerificationStatus(true, {
+          preserveLiveBalance: true,
+          liveBalanceSnapshot,
+        });
+      }
       setWalletMessage("$BROKE balance refreshed from live RPC. This is read-only tracking.");
       notifyApp("Wallet refreshed", "Latest read-only $BROKE balance loaded from RPC.", "info");
       triggerHaptic("success");
