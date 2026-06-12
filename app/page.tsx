@@ -16125,13 +16125,17 @@ function ExpenseImpactCard({
 }) {
   if (!expense) return null;
 
-  const monthlyImpact = expense.amount * 30;
-  const yearlyImpact = expense.amount * 365;
+  const trackedValue = getExpenseTrackedValue(expense);
+  const leakValue = getExpenseLeakValue(expense);
+  const monthlyImpact = leakValue * 30;
+  const yearlyImpact = leakValue * 365;
   const hourlyValue = Math.max(
     getTotalIncome(settings) / Math.max(settings.profile.workHoursPerMonth, 1),
     1
   );
   const hoursLost = Math.round((yearlyImpact / hourlyValue) * 10) / 10;
+  const hasPartialLeak = expense.needType !== "Needed" && leakValue > 0 && leakValue < trackedValue;
+  const hasNoLeakCounted = leakValue <= 0;
 
   return (
     <section className="expense-impact-card">
@@ -16146,8 +16150,11 @@ function ExpenseImpactCard({
         <div>
           <strong>{expense.category} tracked.</strong>
           <p>
-            {money(expense.amount, settings.currency)} looks small once. Repeated
-            daily, it becomes a real wallet leak.
+            {hasNoLeakCounted
+              ? `${money(trackedValue, settings.currency)} tracked. No leak counted from this record.`
+              : hasPartialLeak
+                ? `${money(leakValue, settings.currency)} leak counted from ${money(trackedValue, settings.currency)} tracked. Repeated daily, it becomes a real wallet leak.`
+                : `${money(leakValue, settings.currency)} looks small once. Repeated daily, it becomes a real wallet leak.`}
           </p>
         </div>
       </div>

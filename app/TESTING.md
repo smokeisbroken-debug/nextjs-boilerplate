@@ -1,30 +1,19 @@
-# Testing — v59.52.11 Streak Safe Automatic Actions
+# Testing — v59.52.12 Maybe Leak Impact Uses Counted Leak
 
+v59.52.12 is a targeted accuracy hotfix for the Latest Impact card. When a Maybe/partial record has a necessary baseline, the app now uses the actual counted leak amount for repeated-daily, monthly, yearly, and life-hours impact.
 
-v59.52.11 is a deploy-safety hotfix for Vercel Hobby plans. It disables the built-in Vercel Cron schedule because Hobby projects cannot run cron every 5 minutes. The reminder endpoint remains available for an external scheduler to call every 5–10 minutes with the existing secret key.
+## Changed
 
-## What changed
+- Latest Impact now uses `getExpenseLeakValue(expense)` instead of raw total tracked amount.
+- Partial leaks now show copy like: `leak counted from tracked`.
+- Maybe examples such as `$5 tracked / $3 needed / $2 leak counted` now calculate monthly/yearly impact from `$2`, not `$5`.
+- Build marker updated to `v59.52.12`.
 
-- `vercel.json` now contains no active Vercel cron jobs, so Hobby deployments are not blocked by the 5-minute cron schedule.
-- Telegram reminder endpoint remains unchanged: `/api/notifications/routine-reminders`.
-- External scheduler path remains: `/api/notifications/routine-reminders?key=<CRON_SECRET>`.
-- Build marker updated to `v59.52.11`.
+## Not changed
 
-## What did not change
-
-- Telegram reminder user settings.
-- Wallet balance refresh logic.
-- Share-image hardening.
-- Daily Routine formula.
 - Rewards/Admin payout logic.
+- Wallet verification.
+- Supabase schema.
 - Universal Check scoring.
-
-## Verification
-
-Run:
-
-```bash
-npm run typecheck
-npm run lint:quiet
-NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
-```
+- Daily Routine formula.
+- Transaction history, PnL, scam labels, or investment advice.
