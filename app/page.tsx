@@ -4919,6 +4919,58 @@ function markDailyRoutineAction(action: DailyRoutineActionKey) {
   });
 }
 
+function markDailyRoutineActions(actionsToMark: DailyRoutineActionKey[]) {
+  const date = dayKey(new Date());
+  const actions = readDailyRoutineActions(date);
+  let changed = false;
+  const nextActions = { ...actions, date };
+
+  actionsToMark.forEach((action) => {
+    if (!nextActions[action]) {
+      nextActions[action] = true;
+      changed = true;
+    }
+  });
+
+  if (changed) writeDailyRoutineActions(nextActions);
+}
+
+function markDailyRoutineForTab(tab: Tab) {
+  if (tab === "home") {
+    markDailyRoutineActions(["openedApp", "reviewedDay"]);
+    return;
+  }
+
+  if (tab === "check" || tab === "leakscore" || tab === "walletleak" || tab === "compare") {
+    markDailyRoutineAction("reviewedWallet");
+    return;
+  }
+
+  if (tab === "add") {
+    markDailyRoutineAction("reviewedDay");
+    return;
+  }
+
+  if (tab === "chart") {
+    markDailyRoutineActions(["checkedChart", "lockedNextMove"]);
+    return;
+  }
+
+  if (tab === "growth") {
+    markDailyRoutineAction("lockedNextMove");
+    return;
+  }
+
+  if (tab === "whatif") {
+    markDailyRoutineAction("checkedSave");
+    return;
+  }
+
+  if (tab === "settings") {
+    markDailyRoutineActions(["checkedSave", "sharedProgress"]);
+  }
+}
+
 const RETURN_HOOK_KEY = "broke-return-hook-goal-v1";
 
 function getTomorrowDayKey() {
@@ -9634,6 +9686,12 @@ export default function Home() {
     return () => window.clearTimeout(timeoutId);
   }, [loaded, onboardingCompleted, activeTab]);
 
+
+  useEffect(() => {
+    if (!loaded || !onboardingCompleted) return;
+    markDailyRoutineForTab(activeTab);
+  }, [loaded, onboardingCompleted, activeTab]);
+
   useEffect(() => {
     if (!loaded || cloudStatus !== "cloud" || !cloudAuthReady) return;
 
@@ -10484,6 +10542,7 @@ export default function Home() {
             onBack={goHome}
             onExport={openExportHelp}
             onOpenAdd={() => setActiveTab("add")}
+            onCompleteOneFix={completeOneFixProof}
           />
         )}
 
@@ -15498,45 +15557,45 @@ function DailyRoutinePanel({
     },
     {
       id: "reviewedWallet",
-      title: "Run Check",
+      title: "Open Check",
       body: "Token, wallet, or link.",
       icon: A.walletHp,
       done: actions.reviewedWallet,
     },
     {
       id: "reviewedDay",
-      title: todayExpenses.length > 0 ? "Track leak" : "Clean Day",
+      title: "Review today",
       body: todayExpenses.length > 0
         ? `${todayExpenses.length} record${todayExpenses.length === 1 ? "" : "s"} today.`
-        : "No extra spend today.",
+        : "Home status checked.",
       icon: todayExpenses.length > 0 ? A.leaks : A.dailyCheck,
       done: actions.reviewedDay,
     },
     {
       id: "lockedNextMove",
-      title: "One Fix",
-      body: "Next move locked.",
+      title: "Next move",
+      body: "Chart or Growth opened.",
       icon: A.challengeTrophy,
       done: actions.lockedNextMove,
     },
     {
       id: "checkedChart",
       title: "Read Chart",
-      body: "Open Chart once.",
+      body: "Chart opened.",
       icon: A.navChart,
       done: actions.checkedChart,
     },
     {
       id: "checkedSave",
-      title: "Review Rewards",
-      body: "Open Rewards once.",
+      title: "Review status",
+      body: "Rewards or Profile opened.",
       icon: A.navWhatIf,
       done: actions.checkedSave,
     },
     {
       id: "sharedProgress",
-      title: "Share on X",
-      body: "Final public proof.",
+      title: "Open Profile",
+      body: "Profile reviewed.",
       icon: A.export,
       done: actions.sharedProgress,
     },
@@ -15580,7 +15639,7 @@ function DailyRoutinePanel({
       <div className="routine-hero compact-routine-hero">
         <div>
           <strong>{routineComplete ? "Today protected" : "Complete 7 useful actions"}</strong>
-          <p>{routineComplete ? "Active Streak proof saved." : "Progress fills from real app actions."}</p>
+          <p>{routineComplete ? "Active Streak proof saved." : "Use the app normally. No fake leak needed."}</p>
         </div>
 
         <div className="routine-score">
@@ -15631,7 +15690,7 @@ function DailyRoutinePanel({
 
       <div className="routine-rule compact-routine-rule">
         <strong>Streak rule:</strong>
-        <span>7/7 protects today. No fake expense needed.</span>
+        <span>7/7 protects today through app actions.</span>
       </div>
     </section>
   );
@@ -16644,7 +16703,7 @@ async function createShareImageFileFromElement(element: HTMLElement, fileName = 
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : element.scrollWidth;
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : element.scrollHeight;
   const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const captureScale = /Android/i.test(userAgent) ? 1 : 2;
+  const captureScale = /Android/i.test(userAgent) ? 1.35 : 2;
 
   element.setAttribute("data-share-capture-id", captureId);
 
@@ -18354,6 +18413,7 @@ function ChartScreen({
   onBack,
   onExport,
   onOpenAdd,
+  onCompleteOneFix,
 }: {
   settings: Settings;
   expenses: Expense[];
@@ -18366,6 +18426,7 @@ function ChartScreen({
   onBack: () => void;
   onExport: () => void;
   onOpenAdd: () => void;
+  onCompleteOneFix: () => void;
 }) {
   const [range, setRange] = useState<ChartRange>("week");
   const [historyMonth, setHistoryMonth] = useState(monthKey(new Date()));
@@ -18997,7 +19058,7 @@ function ChartScreen({
         accepted={oneFixAccepted}
         ignored={oneFixIgnored}
         onAccept={() => {
-          triggerHaptic("success");
+          onCompleteOneFix();
           setOneFixAccepted(true);
           setOneFixIgnored(false);
         }}
@@ -23008,6 +23069,7 @@ function UniversalLeakCheckScreen({
 
     try {
       triggerHaptic("light");
+      markDailyRoutineAction("reviewedWallet");
       setLoading(true);
       setError("");
       setCopied(false);
@@ -27235,7 +27297,6 @@ function SettingsScreen({
   const [walletProviderOptions, setWalletProviderOptions] = useState<Array<{ id: string; label: string; ready: boolean }>>([]);
   const [selectedWalletProviderId, setSelectedWalletProviderId] = useState("");
   const [walletStatusRefreshing, setWalletStatusRefreshing] = useState(false);
-  const lastAutoWalletBalanceRefreshRef = useRef(0);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState("");
   const adminAccess = useMemo(
@@ -27257,57 +27318,6 @@ function SettingsScreen({
 
     void refreshWalletVerificationStatus(true);
   }, [settings.wallet.walletAddress, telegram.isTelegram, telegram.initData, webAuth.user?.id]);
-
-  useEffect(() => {
-    const walletAddress = settings.wallet.walletAddress.trim();
-    if (!isLikelySolanaWalletAddress(walletAddress)) return;
-    if (!telegram.isTelegram && !webAuth.user) return;
-
-    const AUTO_REFRESH_INTERVAL_MS = 45_000;
-    const AUTO_REFRESH_MIN_GAP_MS = 25_000;
-
-    function shouldAutoRefreshBalance() {
-      if (walletChecking || walletVerifying || walletStatusRefreshing) return false;
-      const now = Date.now();
-      if (now - lastAutoWalletBalanceRefreshRef.current < AUTO_REFRESH_MIN_GAP_MS) return false;
-      const lastCheckedAt = Date.parse(settings.wallet.lastCheckedAt || "");
-      if (!lastCheckedAt) return true;
-      return now - lastCheckedAt >= AUTO_REFRESH_MIN_GAP_MS;
-    }
-
-    function runAutoRefreshBalance() {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-      if (!shouldAutoRefreshBalance()) return;
-      lastAutoWalletBalanceRefreshRef.current = Date.now();
-      void checkBrokeWalletBalance("auto");
-    }
-
-    const initialTimer = window.setTimeout(runAutoRefreshBalance, 1200);
-    const interval = window.setInterval(runAutoRefreshBalance, AUTO_REFRESH_INTERVAL_MS);
-
-    function handleVisibilityOrFocus() {
-      runAutoRefreshBalance();
-    }
-
-    window.addEventListener("focus", handleVisibilityOrFocus);
-    window.addEventListener("visibilitychange", handleVisibilityOrFocus);
-
-    return () => {
-      window.clearTimeout(initialTimer);
-      window.clearInterval(interval);
-      window.removeEventListener("focus", handleVisibilityOrFocus);
-      window.removeEventListener("visibilitychange", handleVisibilityOrFocus);
-    };
-  }, [
-    settings.wallet.walletAddress,
-    settings.wallet.lastCheckedAt,
-    telegram.isTelegram,
-    telegram.initData,
-    webAuth.user?.id,
-    walletChecking,
-    walletVerifying,
-    walletStatusRefreshing,
-  ]);
 
   useEffect(() => {
     function syncWalletProviderState() {
@@ -27751,7 +27761,7 @@ function SettingsScreen({
     triggerHaptic("light");
   }
 
-  async function checkBrokeWalletBalance(source: "manual" | "rescan" | "auto" = "manual") {
+  async function checkBrokeWalletBalance(source: "manual" | "rescan" = "manual") {
     const walletAddress = (walletAddressDraft.trim() || settings.wallet.walletAddress).trim();
 
     if (!isLikelySolanaWalletAddress(walletAddress)) {
@@ -27760,14 +27770,9 @@ function SettingsScreen({
       return;
     }
 
-    const isAutoRefresh = source === "auto";
-    const previousBalance = settings.wallet.brokeBalance;
-
     setWalletChecking(true);
     setWalletProviderHelpOpen(false);
-    if (!isAutoRefresh) {
-      setWalletMessage("");
-    }
+    setWalletMessage("");
 
     try {
       const response = await fetch(`/api/wallet/balance?t=${Date.now()}`, {
@@ -27827,30 +27832,21 @@ function SettingsScreen({
           liveBalanceSnapshot,
         });
       }
-      const balanceChanged = Math.abs(liveBalanceSnapshot.balance - previousBalance) > 0.000001;
-      if (!isAutoRefresh || balanceChanged) {
-        setWalletMessage(
-          `$BROKE balance ${isAutoRefresh ? "auto-updated" : "refreshed"}: ${formatTokenAmount(liveBalanceSnapshot.balance)} · ${
-            data.persisted ? "cloud saved" : "live RPC loaded"
-          } · ${new Date(liveBalanceSnapshot.checkedAt).toLocaleTimeString()}`
-        );
-      }
-      if (!isAutoRefresh || balanceChanged) {
-        notifyApp(
-          source === "rescan" ? "Rescan refreshed balance" : isAutoRefresh ? "Balance auto-updated" : "Wallet refreshed",
-          `Live RPC balance: ${formatTokenAmount(liveBalanceSnapshot.balance)}.`,
-          "info"
-        );
-      }
-      if (!isAutoRefresh || balanceChanged) {
-        triggerHaptic("success");
-      }
+      setWalletMessage(
+        `$BROKE balance refreshed: ${formatTokenAmount(liveBalanceSnapshot.balance)} · ${
+          data.persisted ? "cloud saved" : "live RPC loaded"
+        } · ${new Date(liveBalanceSnapshot.checkedAt).toLocaleTimeString()}`
+      );
+      notifyApp(
+        source === "rescan" ? "Rescan refreshed balance" : "Wallet refreshed",
+        `Live RPC balance: ${formatTokenAmount(liveBalanceSnapshot.balance)}.`,
+        "info"
+      );
+      triggerHaptic("success");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Could not check $BROKE balance.";
-      if (!isAutoRefresh) {
-        setWalletMessage(message);
-        notifyApp("Wallet check failed", message, "info");
-      }
+      setWalletMessage(message);
+      notifyApp("Wallet check failed", message, "info");
     } finally {
       setWalletChecking(false);
     }

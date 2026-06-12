@@ -1,17 +1,30 @@
-# Testing — v59.52.9 Auto Wallet Balance Refresh + Share Card Safe Export
+# Testing — v59.52.11 Streak Safe Automatic Actions
 
-## Automated checks
 
-- `npm ci --ignore-scripts --no-audit --no-fund`
-- `npm run typecheck`
-- `npm run lint:quiet`
-- `NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build`
+v59.52.11 is a deploy-safety hotfix for Vercel Hobby plans. It disables the built-in Vercel Cron schedule because Hobby projects cannot run cron every 5 minutes. The reminder endpoint remains available for an external scheduler to call every 5–10 minutes with the existing secret key.
 
-## Manual checks
+## What changed
 
-1. Open Profile with a linked wallet.
-2. Confirm balance auto-refreshes shortly after Profile opens.
-3. Buy or sell $BROKE, return to the app/Profile, and confirm the balance updates without requiring app restart.
-4. Press Recheck balance and confirm the displayed message includes the refreshed live balance and time.
-5. Press Rescan and confirm it can also refresh the linked balance.
-6. Generate Daily Report / public profile card on Android Telegram and confirm no white square/glitch artifacts appear.
+- `vercel.json` now contains no active Vercel cron jobs, so Hobby deployments are not blocked by the 5-minute cron schedule.
+- Telegram reminder endpoint remains unchanged: `/api/notifications/routine-reminders`.
+- External scheduler path remains: `/api/notifications/routine-reminders?key=<CRON_SECRET>`.
+- Build marker updated to `v59.52.11`.
+
+## What did not change
+
+- Telegram reminder user settings.
+- Wallet balance refresh logic.
+- Share-image hardening.
+- Daily Routine formula.
+- Rewards/Admin payout logic.
+- Universal Check scoring.
+
+## Verification
+
+Run:
+
+```bash
+npm run typecheck
+npm run lint:quiet
+NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build
+```
