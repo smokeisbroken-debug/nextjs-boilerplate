@@ -16716,7 +16716,8 @@ async function createShareImageFileFromElement(element: HTMLElement, fileName = 
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : element.scrollWidth;
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : element.scrollHeight;
   const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const captureScale = /Android/i.test(userAgent) ? 1.35 : 2;
+  const isAndroidTelegramCapture = /Android/i.test(userAgent) || /Telegram/i.test(userAgent);
+  const captureScale = isAndroidTelegramCapture ? 1 : 2;
 
   element.setAttribute("data-share-capture-id", captureId);
 
@@ -16740,11 +16741,32 @@ async function createShareImageFileFromElement(element: HTMLElement, fileName = 
         );
 
         if (clonedElement instanceof HTMLElement) {
-          clonedElement.classList.add("share-capture-safe");
+          clonedElement.classList.add("share-capture-safe", "share-capture-flat-export");
+          clonedElement.style.background = "#07120a";
+          clonedElement.style.boxShadow = "none";
+          clonedElement.style.filter = "none";
+          clonedElement.style.backdropFilter = "none";
+          clonedElement.style.transform = "none";
+          clonedElement.style.isolation = "auto";
 
           clonedElement
             .querySelectorAll<HTMLElement>("*")
-            .forEach((node) => node.classList.add("share-capture-safe-child"));
+            .forEach((node) => {
+              node.classList.add("share-capture-safe-child");
+              node.style.animation = "none";
+              node.style.transition = "none";
+              node.style.filter = "none";
+              node.style.backdropFilter = "none";
+              node.style.mixBlendMode = "normal";
+              node.style.textShadow = "none";
+              node.style.boxShadow = "none";
+            });
+
+          clonedElement
+            .querySelectorAll<HTMLElement>(".premium-share-card-art, .share-card-noise, .share-card-glitch, .public-share-bg-art")
+            .forEach((node) => {
+              node.style.display = "none";
+            });
         }
       },
     });

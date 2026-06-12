@@ -1,18 +1,25 @@
-# Testing — v59.52.14 Distribution Failed Status Constraint Hotfix
+# Smoke Is Broke — v59.52.15 Share Bot Flat Capture Hardening
 
-## Admin distribution regression
+v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 
-1. Load eligible holders.
-2. Prepare a real distribution.
-3. Run server auto-send.
-4. Confirm the UI shows sent/total and failed count if any recipient fails.
-5. Confirm the endpoint does not return a generic 500 after partial sends.
-6. Confirm already-sent recipients are not retried.
+## Changes
 
-## Commands
+- Bot/share PNG capture now uses a flat export mode.
+- Android/Telegram capture scale is reduced to 1 for stability.
+- Capture clone removes filters, backdrop filters, pseudo-elements, shadows, blend modes, decorative art, and animated layers.
+- UI appearance in the app is unchanged; only the generated PNG export is simplified for reliability.
 
-```bash
-npm run typecheck
-npm run lint:quiet
-npm run build
-```
+## Not changed
+
+- Rewards/admin payout logic.
+- Wallet verification.
+- Supabase schema.
+- Universal Check scoring.
+- Daily Routine formula.
+- Transaction history, PnL, scam labels, or investment advice.
+
+## Verification
+
+- Run `npm run typecheck`.
+- Run `npm run lint:quiet`.
+- Run `NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build` when local dependencies are available.

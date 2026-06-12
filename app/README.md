@@ -1,21 +1,25 @@
-# Smoke Is Broke — v59.52.14 Distribution Failed Status Constraint Hotfix
+# Smoke Is Broke — v59.52.15 Share Bot Flat Capture Hardening
 
-v59.52.14 is a targeted admin reward distribution hotfix on top of v59.52.14 stable8.
+v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 
 ## Changes
 
-- Server payout auto-send no longer fails the whole distribution when one recipient or transaction chunk fails.
-- Each recipient is handled with per-recipient sent/failed status in the API response.
-- Partial sends return a successful response with sent/failed counts instead of a generic 500 after already sending some payouts.
-- Failed rows now stay `prepared` instead of using the unsupported `send_failed` status, so existing Supabase check constraints are respected and failed rows remain retryable.
-- One-click distribution UI now shows partial-send copy: sent count, total count, failed count.
+- Bot/share PNG capture now uses a flat export mode.
+- Android/Telegram capture scale is reduced to 1 for stability.
+- Capture clone removes filters, backdrop filters, pseudo-elements, shadows, blend modes, decorative art, and animated layers.
+- UI appearance in the app is unchanged; only the generated PNG export is simplified for reliability.
 
 ## Not changed
 
-- Rewards eligibility formula.
-- Admin payout amount calculation.
+- Rewards/admin payout logic.
 - Wallet verification.
 - Supabase schema.
-- Universal Check.
-- Daily Routine.
-- Transaction history/PnL/scam labels.
+- Universal Check scoring.
+- Daily Routine formula.
+- Transaction history, PnL, scam labels, or investment advice.
+
+## Verification
+
+- Run `npm run typecheck`.
+- Run `npm run lint:quiet`.
+- Run `NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build` when local dependencies are available.

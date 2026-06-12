@@ -32903,95 +32903,80 @@ html.embedded-app-view .hero h1 {
   box-shadow: none !important;
 }
 
-/* ===== V59.52.9 SHARE CARD SAFE EXPORT HARDENING ===== */
-.share-capture-safe.report-public-share-card,
-.share-capture-safe.mission-public-share-card,
-.share-capture-safe.weekly-review-share-card,
-.share-capture-safe.monthly-history-share-card,
-.share-capture-safe.survival-share-card,
-.share-capture-safe.safe-weekly-share-card,
-.share-capture-safe.growth-share-preview,
-.share-capture-safe.report-public-share-card *,
-.share-capture-safe.mission-public-share-card *,
-.share-capture-safe.weekly-review-share-card *,
-.share-capture-safe.monthly-history-share-card *,
-.share-capture-safe.survival-share-card *,
-.share-capture-safe.safe-weekly-share-card *,
-.share-capture-safe.growth-share-preview * {
+/* ===== V59.52.15 SHARE BOT FLAT CAPTURE HARDENING ===== */
+.share-capture-flat-export,
+.share-capture-flat-export * {
   animation: none !important;
   transition: none !important;
-  text-shadow: none !important;
   filter: none !important;
-  mix-blend-mode: normal !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
-  transform-style: flat !important;
+  mix-blend-mode: normal !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  isolation: auto !important;
+  color-scheme: dark !important;
+  print-color-adjust: exact !important;
+  -webkit-print-color-adjust: exact !important;
 }
 
-.share-capture-safe.report-public-share-card::before,
-.share-capture-safe.report-public-share-card::after,
-.share-capture-safe.report-public-share-card *::before,
-.share-capture-safe.report-public-share-card *::after,
-.share-capture-safe.mission-public-share-card::before,
-.share-capture-safe.mission-public-share-card::after,
-.share-capture-safe.mission-public-share-card *::before,
-.share-capture-safe.mission-public-share-card *::after,
-.share-capture-safe.weekly-review-share-card::before,
-.share-capture-safe.weekly-review-share-card::after,
-.share-capture-safe.weekly-review-share-card *::before,
-.share-capture-safe.weekly-review-share-card *::after,
-.share-capture-safe.monthly-history-share-card::before,
-.share-capture-safe.monthly-history-share-card::after,
-.share-capture-safe.monthly-history-share-card *::before,
-.share-capture-safe.monthly-history-share-card *::after,
-.share-capture-safe.survival-share-card::before,
-.share-capture-safe.survival-share-card::after,
-.share-capture-safe.survival-share-card *::before,
-.share-capture-safe.survival-share-card *::after,
-.share-capture-safe.safe-weekly-share-card::before,
-.share-capture-safe.safe-weekly-share-card::after,
-.share-capture-safe.safe-weekly-share-card *::before,
-.share-capture-safe.safe-weekly-share-card *::after {
+.share-capture-flat-export,
+.share-capture-flat-export.public-share-image-card,
+.share-capture-flat-export.report-public-share-card,
+.share-capture-flat-export.mission-public-share-card,
+.share-capture-flat-export.weekly-review-share-card,
+.share-capture-flat-export.monthly-history-share-card,
+.share-capture-flat-export.survival-share-card,
+.share-capture-flat-export.safe-weekly-share-card {
+  background: #07120a !important;
+  background-image: none !important;
+  border: 1px solid rgba(183, 255, 25, 0.24) !important;
+  overflow: hidden !important;
+}
+
+.share-capture-flat-export::before,
+.share-capture-flat-export::after,
+.share-capture-flat-export *::before,
+.share-capture-flat-export *::after {
   content: none !important;
   display: none !important;
-  box-shadow: none !important;
+  opacity: 0 !important;
   filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   mix-blend-mode: normal !important;
+  box-shadow: none !important;
 }
 
-.share-capture-safe.report-public-share-card,
-.share-capture-safe.mission-public-share-card,
-.share-capture-safe.weekly-review-share-card,
-.share-capture-safe.monthly-history-share-card,
-.share-capture-safe.survival-share-card,
-.share-capture-safe.safe-weekly-share-card,
-.share-capture-safe.growth-share-preview {
-  overflow: hidden !important;
-  isolation: isolate !important;
-  transform: none !important;
-  background:
-    radial-gradient(circle at 92% 0%, rgba(183, 255, 25, 0.10), transparent 32%),
-    linear-gradient(180deg, #0b1a0d 0%, #050805 100%) !important;
-}
-
-.share-capture-safe.report-public-share-card .premium-share-card-art,
-.share-capture-safe.mission-public-share-card .premium-share-card-art,
-.share-capture-safe.weekly-review-share-card .premium-share-card-art,
-.share-capture-safe.monthly-history-share-card .premium-share-card-art,
-.share-capture-safe.survival-share-card .premium-share-card-art,
-.share-capture-safe.safe-weekly-share-card .premium-share-card-art,
-.share-capture-safe.growth-share-preview .premium-share-card-art {
+.share-capture-flat-export .premium-share-card-art,
+.share-capture-flat-export .share-card-noise,
+.share-capture-flat-export .share-card-glitch,
+.share-capture-flat-export .public-share-bg-art {
   display: none !important;
 }
 
-.share-capture-safe.report-public-share-card .report-public-share-grid > div,
-.share-capture-safe.report-public-share-card .report-public-share-footer,
-.share-capture-safe.mission-public-share-card .mission-public-share-grid > div,
-.share-capture-safe.weekly-review-share-card .weekly-review-share-grid > div,
-.share-capture-safe.monthly-history-share-card .monthly-history-share-grid > div,
-.share-capture-safe.survival-share-card .survival-share-grid > div,
-.share-capture-safe.safe-weekly-share-card .safe-weekly-share-profile-grid > div {
-  background: rgba(6, 13, 7, 0.9) !important;
-  border-color: rgba(183, 255, 25, 0.16) !important;
-  box-shadow: none !important;
+.share-capture-flat-export .profile-selected-share-grid .profile-share-metric-card,
+.share-capture-flat-export .report-public-share-grid > div,
+.share-capture-flat-export .mission-public-share-grid > div,
+.share-capture-flat-export .weekly-share-grid > div,
+.share-capture-flat-export .monthly-share-grid > div,
+.share-capture-flat-export .survival-share-grid > div,
+.share-capture-flat-export .safe-weekly-share-grid > article,
+.share-capture-flat-export .public-share-savings,
+.share-capture-flat-export .survival-share-status,
+.share-capture-flat-export .weekly-share-fix,
+.share-capture-flat-export .monthly-share-comment,
+.share-capture-flat-export .safe-weekly-share-main {
+  background: rgba(8, 18, 10, 0.96) !important;
+  border: 1px solid rgba(183, 255, 25, 0.16) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.share-capture-flat-export img {
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+  background: transparent !important;
 }
