@@ -1,4 +1,4 @@
-# Testing — v59.52.13 Distribution Partial Send Audit + Retry Safety
+# Testing — v59.52.14 Distribution Failed Status Constraint Hotfix
 
 ## Admin distribution regression
 

@@ -167,7 +167,7 @@ export async function markAdminPayoutRanksFailed(distributionId: string, records
       method: "PATCH",
       headers: { Prefer: "return=minimal" },
       body: JSON.stringify({
-        status: "send_failed",
+        status: "prepared",
         updated_at: failedAt,
       }),
     });
