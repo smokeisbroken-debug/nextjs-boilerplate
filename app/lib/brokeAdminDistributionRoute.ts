@@ -10,6 +10,7 @@ import {
 import {
   getAdminDistributionById,
   getAdminPayoutRows,
+  markAdminPayoutRanksFailed,
   markAdminPayoutRanksSent,
   updateAdminDistributionStatus,
   type AdminDistributionInsertRow,
@@ -218,6 +219,7 @@ export async function autoSendAdminPreparedDistribution(distributionId: string) 
       return distribution ? [distribution as AdminDistributionRow] : [];
     },
     getPayoutRows: getAdminPayoutRows,
+    markPayoutRowsFailed: markAdminPayoutRanksFailed,
     markPayoutRowsSent: markAdminPayoutRanksSent,
     updateDistributionStatus: updateAdminDistributionStatus,
   });

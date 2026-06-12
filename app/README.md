@@ -1,19 +1,21 @@
-# Smoke Is Broke — v59.52.12 Maybe Leak Impact Uses Counted Leak
+# Smoke Is Broke — v59.52.13 Distribution Partial Send Audit + Retry Safety
 
-v59.52.12 is a targeted accuracy hotfix for the Latest Impact card. When a Maybe/partial record has a necessary baseline, the app now uses the actual counted leak amount for repeated-daily, monthly, yearly, and life-hours impact.
+v59.52.13 is a targeted admin reward distribution hotfix on top of v59.52.12 stable8.
 
-## Changed
+## Changes
 
-- Latest Impact now uses `getExpenseLeakValue(expense)` instead of raw total tracked amount.
-- Partial leaks now show copy like: `leak counted from tracked`.
-- Maybe examples such as `$5 tracked / $3 needed / $2 leak counted` now calculate monthly/yearly impact from `$2`, not `$5`.
-- Build marker updated to `v59.52.12`.
+- Server payout auto-send no longer fails the whole distribution when one recipient or transaction chunk fails.
+- Each recipient is handled with per-recipient sent/failed status in the API response.
+- Partial sends return a successful response with sent/failed counts instead of a generic 500 after already sending some payouts.
+- Failed rows are marked as `send_failed` so retry can focus on not-sent recipients.
+- One-click distribution UI now shows partial-send copy: sent count, total count, failed count.
 
 ## Not changed
 
-- Rewards/Admin payout logic.
+- Rewards eligibility formula.
+- Admin payout amount calculation.
 - Wallet verification.
 - Supabase schema.
-- Universal Check scoring.
-- Daily Routine formula.
-- Transaction history, PnL, scam labels, or investment advice.
+- Universal Check.
+- Daily Routine.
+- Transaction history/PnL/scam labels.

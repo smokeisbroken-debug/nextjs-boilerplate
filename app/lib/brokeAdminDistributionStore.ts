@@ -159,6 +159,21 @@ export async function markAdminPayoutRanksSent(
   }
 }
 
+export async function markAdminPayoutRanksFailed(distributionId: string, records: Array<{ rank: number }>) {
+  const failedAt = new Date().toISOString();
+
+  for (const record of records) {
+    await supabaseFetch(`broke_reward_payouts?distribution_id=eq.${encodeURIComponent(distributionId)}&rank=eq.${record.rank}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify({
+        status: "send_failed",
+        updated_at: failedAt,
+      }),
+    });
+  }
+}
+
 export async function markAdminManualSendRecordsSent(distributionId: string, records: AdminManualSendRecord[]) {
   const sentAt = new Date().toISOString();
   let updated = 0;

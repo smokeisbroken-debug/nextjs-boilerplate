@@ -144,6 +144,9 @@ export async function POST(request: NextRequest) {
         status: autoSend.status,
         payoutWallet: autoSend.payoutWallet,
         records: autoSend.records,
+        failedCount: autoSend.failedCount,
+        failedRecords: autoSend.failedRecords,
+        partial: autoSend.partial,
         safety: {
           noPrivateKey: false,
           noServerTokenTransfers: false,
@@ -235,6 +238,9 @@ export async function PATCH(request: NextRequest) {
         status: autoSend.status,
         payoutWallet: autoSend.payoutWallet,
         records: autoSend.records,
+        failedCount: autoSend.failedCount,
+        failedRecords: autoSend.failedRecords,
+        partial: autoSend.partial,
       });
     }
 

@@ -30,9 +30,16 @@ export type ServerPayoutSentRecord = {
   txSignature: string;
 };
 
+export type ServerPayoutFailedRecord = {
+  rank: number;
+  walletAddress: string;
+  reason: string;
+};
+
 type ServerAutoSendDependencies = {
   getDistributionRows: (distributionId: string) => Promise<ServerPayoutDistributionRow[]>;
   getPayoutRows: (distributionId: string) => Promise<ServerPayoutRow[]>;
+  markPayoutRowsFailed?: (distributionId: string, records: Array<{ rank: number }>) => Promise<void>;
   markPayoutRowsSent: (distributionId: string, records: Array<{ rank: number; txSignature: string }>) => Promise<void>;
   updateDistributionStatus: (distributionId: string, status: "prepared" | "manual_sent") => Promise<void>;
 };
@@ -512,7 +519,7 @@ export async function serverAutoSendPreparedDistribution(distributionId: string,
   if (!distribution) throw new Error("Distribution batch not found.");
   if (distribution.status !== "prepared") throw new Error(`Distribution status must be prepared. Current: ${distribution.status}.`);
 
-  const payouts = (await dependencies.getPayoutRows(distributionId)).filter((row) => row.status !== "manual_sent");
+  const payouts = (await dependencies.getPayoutRows(distributionId)).filter((row) => row.status !== "manual_sent" && row.status !== "cancelled");
   if (payouts.length === 0) throw new Error("No pending payout rows to send.");
 
   const maxRecipients = Math.max(1, Math.min(100, Number(getOptionalEnv("BROKE_PAYOUT_MAX_RECIPIENTS") || 30)));
@@ -533,6 +540,7 @@ export async function serverAutoSendPreparedDistribution(distributionId: string,
   const chunkSize = isSol ? 6 : 2;
   const chunks = serverChunkRows(payouts, chunkSize);
   const sentRecords: ServerPayoutSentRecord[] = [];
+  const failedRecords: ServerPayoutFailedRecord[] = [];
   let sourceTokenAccount = "";
   let decimals = isSol ? 9 : 0;
 
@@ -542,39 +550,74 @@ export async function serverAutoSendPreparedDistribution(distributionId: string,
   }
 
   for (const chunk of chunks) {
-    const recentBlockhash = await serverGetLatestBlockhash();
     const instructions: ServerTransactionInstruction[] = [];
+    const sendableRows: ServerPayoutRow[] = [];
 
     if (isSol) {
-      chunk.forEach((row) => {
-        instructions.push(serverBuildSolTransferInstruction(publicAddress, row.wallet_address, safeNumber(row.reward_amount)));
-      });
+      for (const row of chunk) {
+        try {
+          instructions.push(serverBuildSolTransferInstruction(publicAddress, row.wallet_address, safeNumber(row.reward_amount)));
+          sendableRows.push(row);
+        } catch (error) {
+          failedRecords.push({
+            rank: row.rank,
+            walletAddress: row.wallet_address,
+            reason: error instanceof Error ? error.message : "Could not build SOL transfer.",
+          });
+        }
+      }
     } else {
       for (const row of chunk) {
-        const destinationTokenAccount = await serverFindTokenAccount(row.wallet_address, mint, false);
-        instructions.push(
-          serverBuildTransferCheckedInstruction({
-            sourceTokenAccount,
-            mintAddress: mint,
-            destinationTokenAccount,
-            ownerAddress: publicAddress,
-            amount: safeNumber(row.reward_amount),
-            decimals,
-          })
-        );
+        try {
+          const destinationTokenAccount = await serverFindTokenAccount(row.wallet_address, mint, false);
+          instructions.push(
+            serverBuildTransferCheckedInstruction({
+              sourceTokenAccount,
+              mintAddress: mint,
+              destinationTokenAccount,
+              ownerAddress: publicAddress,
+              amount: safeNumber(row.reward_amount),
+              decimals,
+            })
+          );
+          sendableRows.push(row);
+        } catch (error) {
+          failedRecords.push({
+            rank: row.rank,
+            walletAddress: row.wallet_address,
+            reason: error instanceof Error ? error.message : "Could not prepare token transfer.",
+          });
+        }
       }
     }
 
-    const message = serverBuildLegacyMessage(publicAddress, recentBlockhash, instructions);
-    const txSignature = await serverSendSignedTransaction(message, privateKey);
-    const records = chunk.map((row) => ({ rank: row.rank, walletAddress: row.wallet_address, txSignature }));
-    await dependencies.markPayoutRowsSent(distributionId, records);
-    sentRecords.push(...records);
+    if (instructions.length === 0 || sendableRows.length === 0) continue;
+
+    try {
+      const recentBlockhash = await serverGetLatestBlockhash();
+      const message = serverBuildLegacyMessage(publicAddress, recentBlockhash, instructions);
+      const txSignature = await serverSendSignedTransaction(message, privateKey);
+      const records = sendableRows.map((row) => ({ rank: row.rank, walletAddress: row.wallet_address, txSignature }));
+      await dependencies.markPayoutRowsSent(distributionId, records);
+      sentRecords.push(...records);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Transaction send failed.";
+      failedRecords.push(...sendableRows.map((row) => ({ rank: row.rank, walletAddress: row.wallet_address, reason })));
+      if (dependencies.markPayoutRowsFailed) {
+        await dependencies.markPayoutRowsFailed(distributionId, sendableRows.map((row) => ({ rank: row.rank })));
+      }
+      continue;
+    }
+  }
+
+  if (dependencies.markPayoutRowsFailed && failedRecords.length > 0) {
+    await dependencies.markPayoutRowsFailed(distributionId, failedRecords.map((record) => ({ rank: record.rank })));
   }
 
   const updatedPayouts = await dependencies.getPayoutRows(distributionId);
   const sentCount = updatedPayouts.filter((row) => row.status === "manual_sent" && row.tx_signature).length;
   const totalCount = updatedPayouts.length;
+  const failedCount = failedRecords.length;
   const nextStatus = totalCount > 0 && sentCount >= totalCount ? "manual_sent" : "prepared";
 
   await dependencies.updateDistributionStatus(distributionId, nextStatus);
@@ -584,8 +627,11 @@ export async function serverAutoSendPreparedDistribution(distributionId: string,
     updated: sentRecords.length,
     sentCount,
     totalCount,
+    failedCount,
     status: nextStatus,
     payoutWallet: publicAddress,
     records: sentRecords,
+    failedRecords,
+    partial: failedCount > 0 && sentRecords.length > 0,
   };
 }

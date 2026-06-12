@@ -1,19 +1,26 @@
-# Project Order — v59.52.12 Maybe Leak Impact Uses Counted Leak
+# Project Order — v59.52.13 Distribution Partial Send Audit + Retry Safety
 
-v59.52.12 is a targeted accuracy hotfix for the Latest Impact card. When a Maybe/partial record has a necessary baseline, the app now uses the actual counted leak amount for repeated-daily, monthly, yearly, and life-hours impact.
+Base: v59.52.12 stable8.
 
-## Changed
+## Scope
 
-- Latest Impact now uses `getExpenseLeakValue(expense)` instead of raw total tracked amount.
-- Partial leaks now show copy like: `leak counted from tracked`.
-- Maybe examples such as `$5 tracked / $3 needed / $2 leak counted` now calculate monthly/yearly impact from `$2`, not `$5`.
-- Build marker updated to `v59.52.12`.
+Fix partial admin reward distributions so one failed recipient does not hide already-sent payouts behind a generic 500 response.
 
-## Not changed
+## Changed files
 
-- Rewards/Admin payout logic.
-- Wallet verification.
-- Supabase schema.
-- Universal Check scoring.
-- Daily Routine formula.
-- Transaction history, PnL, scam labels, or investment advice.
+- `app/api/admin/distributions/route.ts`
+- `app/lib/brokeAdminDistributionRoute.ts`
+- `app/lib/brokeAdminDistributionStore.ts`
+- `app/lib/brokeAdminServerPayout.ts`
+- `app/lib/brokeAdminRewards.ts`
+- `app/page.tsx`
+
+## Validation
+
+Run:
+
+```bash
+npm run typecheck
+npm run lint:quiet
+npm run build
+```

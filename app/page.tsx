@@ -1184,6 +1184,9 @@ type AdminDistributionSaveResponse = {
   status?: string;
   payoutWallet?: string;
   records?: Array<{ rank: number; walletAddress: string; txSignature: string }>;
+  failedCount?: number;
+  failedRecords?: Array<{ rank: number; walletAddress: string; reason: string }>;
+  partial?: boolean;
 };
 
 type AdminDistributionUpdateResponse = {
@@ -1196,6 +1199,9 @@ type AdminDistributionUpdateResponse = {
   status?: string;
   payoutWallet?: string;
   records?: Array<{ rank: number; walletAddress: string; txSignature: string }>;
+  failedCount?: number;
+  failedRecords?: Array<{ rank: number; walletAddress: string; reason: string }>;
+  partial?: boolean;
 };
 
 type AdminDistributionSmokeResponse = {
@@ -26950,8 +26956,9 @@ function AdminTreasuryPanel({
       const signatureRows = (data.records || []).map((record) => `${record.rank},${record.txSignature}`);
       if (signatureRows.length > 0) setManualSignatureText(signatureRows.join("\n"));
       setBatchSenderProgress("");
+      const failedSummary = data.failedCount ? ` Failed ${data.failedCount}. Check failed recipients before retry.` : "";
       setSendQueueMessage(
-        `Server auto-send completed ${data.updated || 0} recipient(s) from ${data.payoutWallet ? compactWalletAddress(data.payoutWallet) : "payout wallet"}. Sent ${data.sentCount || 0}/${data.totalCount || 0}. Status: ${data.status || "prepared"}.`
+        `Server auto-send completed ${data.updated || 0} recipient(s) from ${data.payoutWallet ? compactWalletAddress(data.payoutWallet) : "payout wallet"}. Sent ${data.sentCount || 0}/${data.totalCount || 0}.${failedSummary} Status: ${data.status || "prepared"}.`
       );
       triggerHaptic("success");
     } catch (error) {
@@ -27032,7 +27039,14 @@ function AdminTreasuryPanel({
       const signatureRows = (saveData.records || saveData.autoSend?.records || []).map((record) => `${record.rank},${record.txSignature}`);
       setManualSignatureText(signatureRows.join("\n"));
       setBatchSenderProgress("");
-      setDistributionMessage(`Done. Sent ${saveData.sentCount || saveData.updated || saveData.autoSend?.sentCount || saveData.autoSend?.updated || 0}/${saveData.totalCount || saveData.autoSend?.totalCount || rows.length} payout(s).`);
+      const sentCount = saveData.sentCount || saveData.updated || saveData.autoSend?.sentCount || saveData.autoSend?.updated || 0;
+      const totalCount = saveData.totalCount || saveData.autoSend?.totalCount || rows.length;
+      const failedCount = saveData.failedCount || saveData.autoSend?.failedCount || 0;
+      setDistributionMessage(
+        failedCount > 0
+          ? `Partial send. Sent ${sentCount}/${totalCount}. Failed ${failedCount}. Review failed recipients before retry.`
+          : `Done. Sent ${sentCount}/${totalCount} payout(s).`
+      );
       triggerHaptic("success");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Distribution failed.";
