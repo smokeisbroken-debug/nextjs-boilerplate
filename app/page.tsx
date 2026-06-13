@@ -1041,6 +1041,28 @@ type MascotProgressionState = {
   boostPlan: MascotBoostAction[];
 };
 
+type WeeklyBossContribution = {
+  id: string;
+  title: string;
+  detail: string;
+  damage: number;
+  active: boolean;
+};
+
+type WeeklyBossState = {
+  weekKey: string;
+  bossName: string;
+  bossTitle: string;
+  bossHp: number;
+  userDamage: number;
+  progressPercent: number;
+  phaseLabel: string;
+  rankHint: string;
+  nextActionHint: string;
+  contributionCount: number;
+  contributions: WeeklyBossContribution[];
+};
+
 type ActiveStreakProofTimelineDay = {
   date: string;
   label: string;
@@ -6766,6 +6788,134 @@ function buildMascotProgressionState({
       detail: badgeDetails[badge.id],
     })),
     boostPlan,
+  };
+}
+
+function buildWeeklyBossState({
+  mascot,
+  expenses,
+  activeProofStatus,
+  challengeHistory = [],
+}: {
+  mascot: MascotProgressionState;
+  expenses: Expense[];
+  activeProofStatus: ActiveStreakProofStatus;
+  challengeHistory?: ChallengeHistoryItem[];
+}): WeeklyBossState {
+  const now = new Date();
+  const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
+  const pastDaysOfYear = Math.floor((now.getTime() - firstDayOfYear.getTime()) / 86400000);
+  const weekNumber = Math.floor((pastDaysOfYear + firstDayOfYear.getDay()) / 7) + 1;
+  const weekKey = `${now.getFullYear()}-W${String(weekNumber).padStart(2, "0")}`;
+  const todayKeyValue = dayKey(now);
+  const trackedToday = expenses.some((expense) => {
+    const createdAt = new Date(expense.createdAt);
+
+    return !Number.isNaN(createdAt.getTime()) && dayKey(createdAt) === todayKeyValue;
+  });
+  const hasCleanDay = activeProofStatus.todayActions.includes("clean_day");
+  const hasOneFix = activeProofStatus.todayActions.includes("one_fix") || expenses.some((expense) => expense.needType !== "Needed");
+  const hasDailyChallenge = activeProofStatus.todayActions.includes("daily_challenge") || challengeHistory.some((item) => item.status === "completed");
+  const weeklyCompletedChallenges = challengeHistory.filter((item) => {
+    if (item.status !== "completed") return false;
+
+    const completedAt = new Date(item.completedAt || item.endsAt || item.startedAt);
+
+    if (Number.isNaN(completedAt.getTime())) return false;
+
+    const ageDays = Math.floor((now.getTime() - completedAt.getTime()) / 86400000);
+
+    return ageDays >= 0 && ageDays < 7;
+  }).length;
+  const contributions: WeeklyBossContribution[] = [
+    {
+      id: "mascot_power",
+      title: "Mascot Power",
+      detail: "Your current mascot strength becomes base damage.",
+      damage: Math.round(mascot.power * 2.4),
+      active: mascot.power > 0,
+    },
+    {
+      id: "wallet_hp",
+      title: "Wallet HP",
+      detail: "A healthier wallet hits the boss harder.",
+      damage: Math.round(mascot.walletHp * 1.6),
+      active: mascot.walletHp >= 40,
+    },
+    {
+      id: "routine",
+      title: "Daily Routine",
+      detail: activeProofStatus.activeToday ? "Routine protected today." : "Complete today’s routine for a strong hit.",
+      damage: activeProofStatus.activeToday ? 180 : 0,
+      active: activeProofStatus.activeToday,
+    },
+    {
+      id: "streak",
+      title: "Active Streak",
+      detail: `${activeProofStatus.currentStreak} day${activeProofStatus.currentStreak === 1 ? "" : "s"} live streak.`,
+      damage: Math.min(activeProofStatus.currentStreak, 14) * 18,
+      active: activeProofStatus.currentStreak > 0,
+    },
+    {
+      id: "tracking",
+      title: "Real Tracking",
+      detail: trackedToday || hasCleanDay ? "Today has real tracking proof." : "Track one real action or mark Clean Day only if true.",
+      damage: trackedToday || hasCleanDay ? 110 : 0,
+      active: trackedToday || hasCleanDay,
+    },
+    {
+      id: "leak_fix",
+      title: "Leak Fix",
+      detail: hasOneFix ? "Leak-control proof is active." : "Use One Fix or review one leak to add damage.",
+      damage: hasOneFix ? 120 : 0,
+      active: hasOneFix,
+    },
+    {
+      id: "challenge",
+      title: "Challenge Proof",
+      detail: weeklyCompletedChallenges > 0 ? `${weeklyCompletedChallenges} completed this week.` : "Complete a challenge to add weekly damage.",
+      damage: Math.min(weeklyCompletedChallenges, 3) * 90 + (hasDailyChallenge ? 40 : 0),
+      active: hasDailyChallenge,
+    },
+  ];
+  const rawDamage = contributions.reduce((sum, item) => sum + Math.max(0, item.damage), 0);
+  const bossHp = 1000;
+  const userDamage = clamp(rawDamage, 0, bossHp);
+  const progressPercent = clamp(Math.round((userDamage / bossHp) * 100), 0, 100);
+  const contributionCount = contributions.filter((item) => item.active).length;
+  const missingContribution = contributions.find((item) => !item.active && item.id !== "mascot_power" && item.id !== "wallet_hp");
+  const phaseLabel = progressPercent >= 100
+    ? "Defeated"
+    : progressPercent >= 70
+      ? "Final phase"
+      : progressPercent >= 35
+        ? "Pressure phase"
+        : "Opening phase";
+  const rankHint = progressPercent >= 100
+    ? "Weekly boss cleared by your current proof."
+    : progressPercent >= 70
+      ? "Strong contribution. One more real action may finish it."
+      : progressPercent >= 35
+        ? "Solid damage. Routine, leak fixes, and challenges push it further."
+        : "Build proof to deal more damage.";
+  const nextActionHint = missingContribution
+    ? missingContribution.detail
+    : progressPercent >= 100
+      ? "Keep the streak alive until the weekly reset."
+      : "Raise Wallet HP or complete another real app action.";
+
+  return {
+    weekKey,
+    bossName: "Leak Beast",
+    bossTitle: "Weekly Boss MVP",
+    bossHp,
+    userDamage,
+    progressPercent,
+    phaseLabel,
+    rankHint,
+    nextActionHint,
+    contributionCount,
+    contributions,
   };
 }
 
@@ -13801,6 +13951,81 @@ function MascotProgressionCard({
       <div className="mascot-progression-actions">
         <button type="button" onClick={onOpenDailyRoutine}>Boost with Daily Routine</button>
         <button type="button" className="ghost" onClick={onOpenProfile}>Open Profile</button>
+      </div>
+    </section>
+  );
+}
+
+function WeeklyBossMvpCard({
+  state,
+  onOpenDailyRoutine,
+  onOpenChallenges,
+}: {
+  state: WeeklyBossState;
+  onOpenDailyRoutine: () => void;
+  onOpenChallenges: () => void;
+}) {
+  return (
+    <section className={`weekly-boss-card ${state.progressPercent >= 100 ? "defeated" : "active"}`}>
+      <div className="weekly-boss-hero">
+        <div>
+          <span>{state.bossTitle} · {state.weekKey}</span>
+          <h2>{state.bossName}</h2>
+          <p>
+            A light game layer: real Life Tracker actions deal weekly damage. No separate game, no PvP, no reward payout logic yet.
+          </p>
+        </div>
+        <b>{state.phaseLabel}</b>
+      </div>
+
+      <div className="weekly-boss-progress" aria-label={`Weekly boss damage ${state.userDamage} of ${state.bossHp}`}>
+        <i style={{ width: `${state.progressPercent}%` }} />
+      </div>
+
+      <div className="weekly-boss-stats">
+        <article>
+          <span>Your damage</span>
+          <strong>{state.userDamage}/{state.bossHp}</strong>
+        </article>
+        <article>
+          <span>Progress</span>
+          <strong>{state.progressPercent}%</strong>
+        </article>
+        <article>
+          <span>Active proofs</span>
+          <strong>{state.contributionCount}/{state.contributions.length}</strong>
+        </article>
+      </div>
+
+      <p className="weekly-boss-hint">{state.rankHint}</p>
+
+      <details className="weekly-boss-details">
+        <summary>
+          <span>Damage sources</span>
+          <b>{state.contributionCount}/{state.contributions.length}</b>
+        </summary>
+        <div className="weekly-boss-source-list">
+          {state.contributions.map((item) => (
+            <article key={item.id} className={item.active ? "active" : "idle"}>
+              <i>{item.active ? "✓" : "•"}</i>
+              <div>
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+              </div>
+              <b>{item.damage}</b>
+            </article>
+          ))}
+        </div>
+      </details>
+
+      <div className="weekly-boss-next">
+        <span>Next useful action</span>
+        <strong>{state.nextActionHint}</strong>
+      </div>
+
+      <div className="weekly-boss-actions">
+        <button type="button" onClick={onOpenDailyRoutine}>Boost with Routine</button>
+        <button type="button" className="ghost" onClick={onOpenChallenges}>Open Challenges</button>
       </div>
     </section>
   );
@@ -26762,6 +26987,15 @@ function WhatIfScreen({
     }),
     [settings, expenses, badges, activeProofStatus, challengeHistory]
   );
+  const weeklyBossState = useMemo(
+    () => buildWeeklyBossState({
+      mascot: mascotProgressionState,
+      expenses,
+      activeProofStatus,
+      challengeHistory,
+    }),
+    [mascotProgressionState, expenses, activeProofStatus, challengeHistory]
+  );
 
   function openChallengeArea() {
     triggerHaptic("light");
@@ -27002,6 +27236,12 @@ function WhatIfScreen({
         shareInitData={shareInitData}
         onOpenDailyRoutine={openDailyRoutineFromRewards}
         onOpenProfile={onOpenProfile}
+      />
+
+      <WeeklyBossMvpCard
+        state={weeklyBossState}
+        onOpenDailyRoutine={openDailyRoutineFromRewards}
+        onOpenChallenges={openChallengeArea}
       />
 
       <details className="clean-details rewards-core-details">

@@ -34311,3 +34311,261 @@ html.embedded-app-view .hero h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.56.0 — Weekly Boss MVP */
+.weekly-boss-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(134, 239, 172, 0.26);
+  border-radius: 28px;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(34, 197, 94, 0.22), transparent 34%),
+    radial-gradient(circle at 100% 14%, rgba(168, 85, 247, 0.18), transparent 32%),
+    linear-gradient(145deg, rgba(2, 6, 23, 0.96), rgba(9, 20, 17, 0.94));
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.32);
+  color: #f8fafc;
+}
+
+.weekly-boss-card::before {
+  content: "";
+  position: absolute;
+  inset: -35% 45% auto -20%;
+  height: 180px;
+  border-radius: 999px;
+  background: rgba(34, 197, 94, 0.14);
+  filter: blur(34px);
+  pointer-events: none;
+}
+
+.weekly-boss-hero,
+.weekly-boss-stats,
+.weekly-boss-actions {
+  position: relative;
+  z-index: 1;
+}
+
+.weekly-boss-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.weekly-boss-hero span,
+.weekly-boss-stats span,
+.weekly-boss-next span {
+  display: block;
+  color: rgba(187, 247, 208, 0.74);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.weekly-boss-hero h2 {
+  margin: 7px 0 8px;
+  color: #ffffff;
+  font-size: 27px;
+  line-height: 1;
+}
+
+.weekly-boss-hero p,
+.weekly-boss-hint,
+.weekly-boss-source-list small {
+  margin: 0;
+  color: rgba(226, 232, 240, 0.76);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.weekly-boss-hero > b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(134, 239, 172, 0.32);
+  border-radius: 999px;
+  padding: 8px 11px;
+  background: rgba(22, 163, 74, 0.14);
+  color: #bbf7d0;
+  font-size: 12px;
+}
+
+.weekly-boss-progress {
+  position: relative;
+  z-index: 1;
+  height: 12px;
+  margin-top: 18px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.86);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.weekly-boss-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.95), rgba(168, 85, 247, 0.88));
+}
+
+.weekly-boss-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.weekly-boss-stats article,
+.weekly-boss-next,
+.weekly-boss-details {
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  background: rgba(15, 23, 42, 0.62);
+}
+
+.weekly-boss-stats article {
+  padding: 12px;
+}
+
+.weekly-boss-stats strong {
+  display: block;
+  margin-top: 5px;
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.weekly-boss-hint {
+  position: relative;
+  z-index: 1;
+  margin-top: 12px;
+}
+
+.weekly-boss-details {
+  position: relative;
+  z-index: 1;
+  margin-top: 14px;
+  padding: 0;
+}
+
+.weekly-boss-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.weekly-boss-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.weekly-boss-details summary b {
+  color: #bbf7d0;
+  font-size: 12px;
+}
+
+.weekly-boss-source-list {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.weekly-boss-source-list article {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 15px;
+  padding: 10px;
+  background: rgba(2, 6, 23, 0.42);
+}
+
+.weekly-boss-source-list article.active {
+  border-color: rgba(134, 239, 172, 0.28);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.weekly-boss-source-list i {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #bbf7d0;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.weekly-boss-source-list strong {
+  display: block;
+  color: #ffffff;
+  font-size: 13px;
+}
+
+.weekly-boss-source-list b {
+  color: #f8fafc;
+  font-size: 13px;
+}
+
+.weekly-boss-next {
+  position: relative;
+  z-index: 1;
+  margin-top: 12px;
+  padding: 13px 14px;
+}
+
+.weekly-boss-next strong {
+  display: block;
+  margin-top: 5px;
+  color: #ffffff;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.weekly-boss-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.weekly-boss-actions button {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #22c55e, #a855f7);
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.weekly-boss-actions button.ghost {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.72);
+}
+
+@media (max-width: 420px) {
+  .weekly-boss-card {
+    padding: 16px;
+    border-radius: 24px;
+  }
+
+  .weekly-boss-hero {
+    display: block;
+  }
+
+  .weekly-boss-hero > b {
+    display: inline-block;
+    margin-top: 10px;
+  }
+
+  .weekly-boss-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-boss-actions {
+    flex-direction: column;
+  }
+}
