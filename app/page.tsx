@@ -1058,15 +1058,23 @@ type WeeklyBossState = {
   weekKey: string;
   weekRangeLabel: string;
   resetHint: string;
+  resetDetail: string;
   bossName: string;
   bossTitle: string;
   bossHp: number;
   bossSrc: string;
   userDamage: number;
+  bossRemainingHp: number;
+  bossRemainingPercent: number;
   progressPercent: number;
   phaseLabel: string;
+  phaseDetail: string;
+  resultLabel: string;
   rankHint: string;
   nextActionHint: string;
+  nextHitTitle: string;
+  nextHitDetail: string;
+  nextHitDamage: number;
   contributionCount: number;
   mascotStage: number;
   mascotStageLabel: string;
@@ -5052,12 +5060,16 @@ function isDateInsideRange(value: string | null | undefined, start: Date, end: D
   return date >= start && date < end;
 }
 
+function formatShortDate(date: Date) {
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function formatShortDateRange(start: Date, endExclusive: Date) {
   const end = new Date(endExclusive);
 
   end.setDate(end.getDate() - 1);
 
-  return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} → ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  return `${formatShortDate(start)} → ${formatShortDate(end)}`;
 }
 
 
@@ -5733,6 +5745,21 @@ function getWeeklyBossMascotStageLabel(stage: number) {
   if (stage >= 3) return "Focused";
   if (stage >= 2) return "Recovering";
   return "Weak";
+}
+
+const WEEKLY_BOSS_IDENTITIES = [
+  { name: "Subscription Leech", title: "Weekly Leak Boss" },
+  { name: "Impulse Goblin", title: "Weekly Leak Boss" },
+  { name: "Weekend Drain", title: "Weekly Leak Boss" },
+  { name: "Phantom Fee", title: "Weekly Leak Boss" },
+  { name: "Delivery Demon", title: "Weekly Leak Boss" },
+  { name: "FOMO Hydra", title: "Weekly Leak Boss" },
+];
+
+function getWeeklyBossIdentity(weekKey: string) {
+  const hash = weekKey.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+
+  return WEEKLY_BOSS_IDENTITIES[hash % WEEKLY_BOSS_IDENTITIES.length];
 }
 
 function buildWeeklyBossShareText(settings: Settings, state: WeeklyBossState) {
@@ -7092,44 +7119,90 @@ function buildWeeklyBossState({
   const rawDamage = contributions.reduce((sum, item) => sum + Math.max(0, item.damage), 0);
   const bossHp = 1000;
   const userDamage = clamp(rawDamage, 0, bossHp);
+  const bossRemainingHp = clamp(bossHp - userDamage, 0, bossHp);
+  const bossRemainingPercent = clamp(Math.round((bossRemainingHp / bossHp) * 100), 0, 100);
   const progressPercent = clamp(Math.round((userDamage / bossHp) * 100), 0, 100);
   const contributionCount = contributions.filter((item) => item.active).length;
   const missingContribution = contributions.find((item) => !item.active && item.id !== "mascot_power" && item.id !== "wallet_hp");
-  const daysUntilReset = Math.max(1, Math.ceil((weekEnd.getTime() - now.getTime()) / 86400000));
-  const resetHint = `Resets in ${daysUntilReset} day${daysUntilReset === 1 ? "" : "s"}`;
+  const nextLockedHit = missingContribution || contributions.find((item) => item.damage <= 0);
+  const resetMs = Math.max(0, weekEnd.getTime() - now.getTime());
+  const resetDays = Math.floor(resetMs / 86400000);
+  const resetHours = Math.max(0, Math.ceil((resetMs % 86400000) / 3600000));
+  const resetHint = resetDays > 0
+    ? `Resets in ${resetDays}d ${resetHours}h`
+    : `Resets in ${Math.max(1, resetHours)}h`;
+  const resetDetail = `Next boss starts after ${formatShortDate(weekEnd)}.`;
   const phaseLabel = progressPercent >= 100
     ? "Defeated"
     : progressPercent >= 70
-      ? "Final phase"
+      ? "Breaking leak"
       : progressPercent >= 35
-        ? "Pressure phase"
-        : "Opening phase";
+        ? "Cracked leak"
+        : "Stable leak";
+  const phaseDetail = progressPercent >= 100
+    ? "This week’s proof has fully drained the boss HP."
+    : progressPercent >= 70
+      ? "The boss is almost down. One more real proof can finish the fight."
+      : progressPercent >= 35
+        ? "The leak is cracked. Keep stacking real app actions this week."
+        : userDamage > 0
+          ? "The boss is still stable. More weekly proof is needed."
+          : "No hit landed yet. Complete one real app action to start the fight.";
+  const resultLabel = progressPercent >= 100
+    ? "Boss defeated"
+    : progressPercent >= 70
+      ? "Boss breaking"
+      : progressPercent >= 35
+        ? "Boss cracked"
+        : userDamage > 0
+          ? "Boss weakened"
+          : "No hit yet";
   const rankHint = progressPercent >= 100
     ? "Weekly boss cleared by your current proof."
     : progressPercent >= 70
       ? "Strong contribution. One more real action may finish it."
       : progressPercent >= 35
         ? "Solid damage. Routine, weekly leak fixes, and challenges push it further."
-        : "Build this week’s proof to deal more damage.";
+        : userDamage > 0
+          ? "Build this week’s proof to deal more damage."
+          : "Your mascot has not hit this boss yet. Start with one real action.";
   const nextActionHint = missingContribution
     ? missingContribution.detail
     : progressPercent >= 100
       ? "Keep the streak alive until the weekly reset."
       : "Raise Wallet HP or complete another real app action this week.";
+  const bossIdentity = getWeeklyBossIdentity(weekKey);
+  const nextHitTitle = progressPercent >= 100
+    ? "Keep streak alive"
+    : nextLockedHit?.title || "Stack real proof";
+  const nextHitDetail = progressPercent >= 100
+    ? "Boss cleared. Keep routine and tracking alive for next week."
+    : nextLockedHit?.detail || nextActionHint;
+  const nextHitDamage = progressPercent >= 100
+    ? 0
+    : Math.max(0, nextLockedHit?.damage || 0);
 
   return {
     weekKey,
     weekRangeLabel,
     resetHint,
-    bossName: "Leak Beast",
-    bossTitle: "Social Weekly Boss",
+    resetDetail,
+    bossName: bossIdentity.name,
+    bossTitle: bossIdentity.title,
     bossHp,
     bossSrc: A.leaks,
     userDamage,
+    bossRemainingHp,
+    bossRemainingPercent,
     progressPercent,
     phaseLabel,
+    phaseDetail,
+    resultLabel,
     rankHint,
     nextActionHint,
+    nextHitTitle,
+    nextHitDetail,
+    nextHitDamage,
     contributionCount,
     mascotStage: mascot.stage,
     mascotStageLabel: getWeeklyBossMascotStageLabel(mascot.stage),
@@ -14427,6 +14500,9 @@ function WeeklyBossMvpCard({
         : "opening";
   const activeProofLabels = state.contributions.filter((item) => item.active).map((item) => item.title);
   const activeDamageSteps = state.contributions.filter((item) => item.damage > 0);
+  const currentBattleStep = activeBattleStepId
+    ? state.contributions.find((item) => item.id === activeBattleStepId)
+    : null;
 
   useEffect(() => {
     try {
@@ -14556,7 +14632,7 @@ function WeeklyBossMvpCard({
           <span>{state.bossTitle} · {state.weekKey} · {state.weekRangeLabel}</span>
           <h2>{state.bossName}</h2>
           <p>
-            Social game layer over real Life Tracker activity. Animation is feedback only; damage still comes from this week’s real proof.
+            Social game layer over real Life Tracker activity. Boss phases, HP, and replay are visual feedback only; damage still comes from this week’s real proof.
           </p>
         </div>
         <b>{state.phaseLabel}</b>
@@ -14570,13 +14646,25 @@ function WeeklyBossMvpCard({
         </div>
         <div className="weekly-boss-impact" aria-hidden="true">
           <i />
-          <b>{state.userDamage}</b>
+          <b>{currentBattleStep ? `+${currentBattleStep.damage}` : state.userDamage}</b>
+          <small>{currentBattleStep ? currentBattleStep.title : state.resultLabel}</small>
         </div>
         <div className="weekly-boss-monster">
           <img src={state.bossSrc} alt="Weekly leak boss" loading="lazy" decoding="async" />
           <span>{state.bossName}</span>
-          <small>{state.phaseLabel}</small>
+          <small>{state.bossRemainingHp}/{state.bossHp} HP</small>
         </div>
+      </div>
+
+      <div className="weekly-boss-hp-panel" aria-label={`Boss HP ${state.bossRemainingHp} of ${state.bossHp}`}>
+        <div className="weekly-boss-hp-top">
+          <span>Boss HP · {state.phaseLabel}</span>
+          <b>{state.bossRemainingHp}/{state.bossHp}</b>
+        </div>
+        <div className="weekly-boss-hp-bar">
+          <i style={{ width: `${state.bossRemainingPercent}%` }} />
+        </div>
+        <p>{state.phaseDetail}</p>
       </div>
 
       <div className="weekly-boss-progress" aria-label={`Weekly boss damage ${state.userDamage} of ${state.bossHp}`}>
@@ -14600,9 +14688,15 @@ function WeeklyBossMvpCard({
 
       <div className="weekly-boss-step-log" aria-label="Step-by-step boss damage">
         <div className="weekly-boss-step-log-head">
-          <span>Step damage</span>
+          <span>Step damage · {state.resultLabel}</span>
           <b>{state.userDamage}/{state.bossHp}</b>
         </div>
+        {state.userDamage <= 0 && (
+          <div className="weekly-boss-empty-hit">
+            <strong>Your mascot has not hit this boss yet.</strong>
+            <small>Complete one real app action to start the fight: Daily Routine, tracking, One Fix, or a weekly challenge.</small>
+          </div>
+        )}
         {state.contributions.map((item) => (
           <article key={item.id} className={`${item.damage > 0 ? "active" : "locked"} ${activeBattleStepId === item.id ? "current" : ""}`.trim()}>
             <i>{item.step}</i>
@@ -14615,7 +14709,7 @@ function WeeklyBossMvpCard({
         ))}
       </div>
 
-      <p className="weekly-boss-reset">{state.resetHint} · step-by-step weekly proof · no payout logic</p>
+      <p className="weekly-boss-reset">{state.resetHint} · {state.resetDetail} · no payout logic</p>
       <p className="weekly-boss-hint">{state.rankHint}</p>
 
       <div className="weekly-boss-social-copy" aria-label="Weekly Boss social copy">
@@ -14649,8 +14743,9 @@ function WeeklyBossMvpCard({
       </details>
 
       <div className="weekly-boss-next">
-        <span>Next useful action</span>
-        <strong>{state.nextActionHint}</strong>
+        <span>Next best hit</span>
+        <strong>{state.nextHitTitle}{state.nextHitDamage > 0 ? ` · +${state.nextHitDamage} potential damage` : ""}</strong>
+        <small>{state.nextHitDetail}</small>
       </div>
 
       <div className="weekly-boss-share-card" ref={bossShareCardRef}>

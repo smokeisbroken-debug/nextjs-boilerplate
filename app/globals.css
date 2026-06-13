@@ -34703,6 +34703,14 @@ html.embedded-app-view .hero h1 {
   line-height: 1.35;
 }
 
+.weekly-boss-next small {
+  display: block;
+  margin-top: 4px;
+  color: rgba(226, 232, 240, 0.68);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .weekly-boss-actions {
   display: flex;
   gap: 10px;
@@ -34837,6 +34845,13 @@ html.embedded-app-view .hero h1 {
 
 .weekly-boss-impact b {
   font-size: 12px;
+}
+
+.weekly-boss-impact small {
+  max-width: 72px;
+  color: rgba(226, 232, 240, 0.68);
+  font-size: 10px;
+  line-height: 1.15;
 }
 
 .weekly-boss-monster i {
@@ -35199,6 +35214,90 @@ html.embedded-app-view .hero h1 {
   filter: grayscale(0.36) brightness(0.88);
 }
 
+/* v59.58.2 — Weekly Boss Battle Polish */
+.weekly-boss-hp-panel {
+  position: relative;
+  z-index: 1;
+  margin-top: 13px;
+  border: 1px solid rgba(250, 204, 21, 0.16);
+  border-radius: 18px;
+  padding: 12px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(250, 204, 21, 0.1), transparent 30%),
+    rgba(15, 23, 42, 0.56);
+}
+
+.weekly-boss-hp-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.weekly-boss-hp-top span {
+  min-width: 0;
+  color: rgba(254, 240, 138, 0.78);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.weekly-boss-hp-top b {
+  flex: 0 0 auto;
+  color: #fef3c7;
+  font-size: 12px;
+}
+
+.weekly-boss-hp-bar {
+  height: 10px;
+  margin-top: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  background: rgba(2, 6, 23, 0.72);
+}
+
+.weekly-boss-hp-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(250, 204, 21, 0.92), rgba(239, 68, 68, 0.86));
+  transition: width 220ms ease;
+}
+
+.weekly-boss-hp-panel p {
+  margin: 8px 0 0;
+  color: rgba(226, 232, 240, 0.74);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.weekly-boss-empty-hit {
+  border: 1px dashed rgba(250, 204, 21, 0.28);
+  border-radius: 15px;
+  padding: 10px;
+  background: rgba(250, 204, 21, 0.08);
+}
+
+.weekly-boss-empty-hit strong,
+.weekly-boss-empty-hit small {
+  display: block;
+}
+
+.weekly-boss-empty-hit strong {
+  color: #fef3c7;
+  font-size: 13px;
+}
+
+.weekly-boss-empty-hit small {
+  margin-top: 4px;
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 @media (max-width: 420px) {
   .weekly-boss-arena {
     grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr);
@@ -35238,6 +35337,12 @@ html.embedded-app-view .hero h1 {
 
   .weekly-boss-step-log article > b {
     grid-column: 2;
+  }
+
+  .weekly-boss-hp-top {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
   }
 }
 
