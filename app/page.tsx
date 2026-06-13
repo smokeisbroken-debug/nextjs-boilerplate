@@ -1078,6 +1078,28 @@ type WeeklyBossState = {
   contributions: WeeklyBossContribution[];
 };
 
+type CommunityBossPrepLane = {
+  id: string;
+  title: string;
+  detail: string;
+  value: string;
+  ready: boolean;
+};
+
+type CommunityBossPrepState = {
+  weekKey: string;
+  weekRangeLabel: string;
+  bossName: string;
+  prepLabel: string;
+  syncLabel: string;
+  localDamage: number;
+  safeSocialPoints: number;
+  projectedCommunityProgress: number;
+  proofCount: number;
+  nextPrepAction: string;
+  lanes: CommunityBossPrepLane[];
+};
+
 type WeeklyBossBattlePulse = "idle" | "attack" | "hit" | "victory";
 
 type ActiveStreakProofTimelineDay = {
@@ -7099,6 +7121,76 @@ function buildWeeklyBossState({
       "BROKE is not just tracking. It fights your leaks.",
     ],
     contributions,
+  };
+}
+
+function buildCommunityBossPrepState({
+  weeklyBoss,
+  mascot,
+  activeProofStatus,
+}: {
+  weeklyBoss: WeeklyBossState;
+  mascot: MascotProgressionState;
+  activeProofStatus: ActiveStreakProofStatus;
+}): CommunityBossPrepState {
+  const proofCount = weeklyBoss.contributionCount;
+  const safeSocialPoints = clamp(
+    Math.round(weeklyBoss.userDamage * 0.16 + mascot.power * 1.4 + proofCount * 12),
+    0,
+    300
+  );
+  const projectedCommunityProgress = clamp(Math.round((safeSocialPoints / 300) * 100), 0, 100);
+  const prepLabel = projectedCommunityProgress >= 80
+    ? "Ready layer"
+    : projectedCommunityProgress >= 45
+      ? "Warming up"
+      : "Prep only";
+  const nextPrepAction = activeProofStatus.activeToday
+    ? weeklyBoss.nextActionHint
+    : "Complete today’s Daily Routine before any community boss sync is considered.";
+  const lanes: CommunityBossPrepLane[] = [
+    {
+      id: "personal_boss",
+      title: "Personal boss proof",
+      detail: `${weeklyBoss.userDamage}/${weeklyBoss.bossHp} weekly damage from real app actions.`,
+      value: `${weeklyBoss.progressPercent}%`,
+      ready: weeklyBoss.userDamage > 0,
+    },
+    {
+      id: "mascot_power",
+      title: "Mascot strength",
+      detail: "Community contribution will be based on mascot power, not wallet value.",
+      value: `${mascot.power}/100`,
+      ready: mascot.power >= 30,
+    },
+    {
+      id: "routine_gate",
+      title: "Routine gate",
+      detail: activeProofStatus.activeToday ? "Today’s proof is active." : "Needs today’s full Daily Routine proof.",
+      value: activeProofStatus.activeToday ? "Live" : "Open",
+      ready: activeProofStatus.activeToday,
+    },
+    {
+      id: "safe_points",
+      title: "Safe social points",
+      detail: "Preview points are local and public-safe. No balances, income, or payout math.",
+      value: `${safeSocialPoints}`,
+      ready: safeSocialPoints > 0,
+    },
+  ];
+
+  return {
+    weekKey: weeklyBoss.weekKey,
+    weekRangeLabel: weeklyBoss.weekRangeLabel,
+    bossName: "Community Leak Boss",
+    prepLabel,
+    syncLabel: "Backend sync later",
+    localDamage: weeklyBoss.userDamage,
+    safeSocialPoints,
+    projectedCommunityProgress,
+    proofCount,
+    nextPrepAction,
+    lanes,
   };
 }
 
@@ -14467,6 +14559,66 @@ function WeeklyBossMvpCard({
         <button type="button" onClick={onOpenDailyRoutine}>Boost with Routine</button>
         <button type="button" className="ghost" onClick={onOpenChallenges}>Open Challenges</button>
       </div>
+    </section>
+  );
+}
+
+function CommunityBossPrepCard({
+  state,
+}: {
+  state: CommunityBossPrepState;
+}) {
+  return (
+    <section className="community-boss-prep-card">
+      <div className="community-boss-prep-head">
+        <div>
+          <span>Community Boss Prep · {state.weekKey}</span>
+          <strong>{state.bossName}</strong>
+          <small>Shared boss concept UI only. Personal proof can be converted into safe public points later, after backend design is ready.</small>
+        </div>
+        <b>{state.prepLabel}</b>
+      </div>
+
+      <div className="community-boss-preview-arena" aria-label="Community boss preview">
+        <div>
+          <span>Local proof</span>
+          <strong>{state.localDamage}</strong>
+          <small>Current Weekly Boss damage</small>
+        </div>
+        <i aria-hidden="true" />
+        <div>
+          <span>Community shadow</span>
+          <strong>{state.projectedCommunityProgress}%</strong>
+          <small>Preview only · not synced</small>
+        </div>
+      </div>
+
+      <div className="community-boss-meter" aria-label={`Community boss prep ${state.projectedCommunityProgress}%`}>
+        <i style={{ width: `${state.projectedCommunityProgress}%` }} />
+      </div>
+
+      <div className="community-boss-prep-grid">
+        {state.lanes.map((lane) => (
+          <article key={lane.id} className={lane.ready ? "ready" : "locked"}>
+            <div>
+              <span>{lane.title}</span>
+              <strong>{lane.value}</strong>
+              <small>{lane.detail}</small>
+            </div>
+            <b>{lane.ready ? "Ready" : "Next"}</b>
+          </article>
+        ))}
+      </div>
+
+      <div className="community-boss-next">
+        <span>Next prep action</span>
+        <strong>{state.nextPrepAction}</strong>
+      </div>
+
+      <footer className="community-boss-guardrail">
+        <span>{state.weekRangeLabel} · {state.syncLabel}</span>
+        <b>No PvP · No payout · No wallet value · No backend sync yet</b>
+      </footer>
     </section>
   );
 }
@@ -27436,6 +27588,14 @@ function WhatIfScreen({
     }),
     [mascotProgressionState, expenses, activeProofStatus, challengeHistory]
   );
+  const communityBossPrepState = useMemo(
+    () => buildCommunityBossPrepState({
+      weeklyBoss: weeklyBossState,
+      mascot: mascotProgressionState,
+      activeProofStatus,
+    }),
+    [weeklyBossState, mascotProgressionState, activeProofStatus]
+  );
 
   function openChallengeArea() {
     triggerHaptic("light");
@@ -27670,21 +27830,50 @@ function WhatIfScreen({
         onOpenProfile={onOpenProfile}
       />
 
-      <MascotProgressionCard
-        state={mascotProgressionState}
-        settings={settings}
-        shareInitData={shareInitData}
-        onOpenDailyRoutine={openDailyRoutineFromRewards}
-        onOpenProfile={onOpenProfile}
-      />
+      <details className="clean-details rewards-social-details mascot-rewards-details">
+        <summary>
+          <div>
+            <span>Mascot Progression</span>
+            <small>Visual mascot growth, badges, boost plan, and share proof.</small>
+          </div>
+          <b>Stage {mascotProgressionState.stage}/5</b>
+        </summary>
+        <MascotProgressionCard
+          state={mascotProgressionState}
+          settings={settings}
+          shareInitData={shareInitData}
+          onOpenDailyRoutine={openDailyRoutineFromRewards}
+          onOpenProfile={onOpenProfile}
+        />
+      </details>
 
-      <WeeklyBossMvpCard
-        state={weeklyBossState}
-        settings={settings}
-        shareInitData={shareInitData}
-        onOpenDailyRoutine={openDailyRoutineFromRewards}
-        onOpenChallenges={openChallengeArea}
-      />
+      <details className="clean-details rewards-social-details weekly-boss-rewards-details">
+        <summary>
+          <div>
+            <span>Weekly Boss</span>
+            <small>Step-by-step damage from this week’s real app actions.</small>
+          </div>
+          <b>{weeklyBossState.progressPercent}%</b>
+        </summary>
+        <WeeklyBossMvpCard
+          state={weeklyBossState}
+          settings={settings}
+          shareInitData={shareInitData}
+          onOpenDailyRoutine={openDailyRoutineFromRewards}
+          onOpenChallenges={openChallengeArea}
+        />
+      </details>
+
+      <details className="clean-details rewards-social-details community-boss-rewards-details">
+        <summary>
+          <div>
+            <span>Community Boss Prep</span>
+            <small>Shared boss preview using safe social points. Backend sync comes later.</small>
+          </div>
+          <b>{communityBossPrepState.prepLabel}</b>
+        </summary>
+        <CommunityBossPrepCard state={communityBossPrepState} />
+      </details>
 
       <details className="clean-details rewards-core-details">
         <summary>

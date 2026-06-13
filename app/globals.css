@@ -35240,3 +35240,262 @@ html.embedded-app-view .hero h1 {
     grid-column: 2;
   }
 }
+
+/* v59.57.0 — Community Boss Prep + collapsed social rewards sections */
+.rewards-social-details > summary small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 750;
+}
+
+.rewards-social-details > .mascot-progression-card,
+.rewards-social-details > .weekly-boss-card,
+.rewards-social-details > .community-boss-prep-card {
+  margin: 0 12px 12px;
+}
+
+.community-boss-prep-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 16px;
+  border: 1px solid rgba(183, 255, 25, 0.14);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(183, 255, 25, 0.12), transparent 34%),
+    radial-gradient(circle at 100% 18%, rgba(60, 255, 190, 0.1), transparent 30%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.046), rgba(255, 255, 255, 0.012));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.community-boss-prep-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(183, 255, 25, 0.06), transparent 35%, rgba(255, 255, 255, 0.035));
+}
+
+.community-boss-prep-head,
+.community-boss-preview-arena,
+.community-boss-prep-grid,
+.community-boss-next,
+.community-boss-guardrail {
+  position: relative;
+  z-index: 1;
+}
+
+.community-boss-prep-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.community-boss-prep-head span,
+.community-boss-preview-arena span,
+.community-boss-prep-grid span,
+.community-boss-next span,
+.community-boss-guardrail span {
+  color: rgba(237, 255, 219, 0.64);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.community-boss-prep-head strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 1000;
+  letter-spacing: -0.7px;
+}
+
+.community-boss-prep-head small,
+.community-boss-preview-arena small,
+.community-boss-prep-grid small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.28;
+  font-weight: 750;
+}
+
+.community-boss-prep-head b {
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(183, 255, 25, 0.2);
+  background: rgba(183, 255, 25, 0.1);
+  color: var(--green);
+  font-size: 11px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.community-boss-preview-arena {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+}
+
+.community-boss-preview-arena > div {
+  min-width: 0;
+  border-radius: 18px;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.community-boss-preview-arena strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--green);
+  font-size: 26px;
+  line-height: 1;
+  font-weight: 1000;
+  letter-spacing: -0.8px;
+}
+
+.community-boss-preview-arena > i {
+  align-self: center;
+  justify-self: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(183, 255, 25, 0.22);
+  background:
+    radial-gradient(circle, rgba(183, 255, 25, 0.28), rgba(183, 255, 25, 0.08) 45%, transparent 70%);
+  box-shadow: 0 0 18px rgba(183, 255, 25, 0.16);
+}
+
+.community-boss-meter {
+  position: relative;
+  z-index: 1;
+  margin-top: 12px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.community-boss-meter i {
+  display: block;
+  height: 100%;
+  min-width: 8px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(183, 255, 25, 0.45), rgba(183, 255, 25, 0.92));
+  box-shadow: 0 0 16px rgba(183, 255, 25, 0.18);
+}
+
+.community-boss-prep-grid {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.community-boss-prep-grid article {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border-radius: 17px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.community-boss-prep-grid article.ready {
+  border-color: rgba(183, 255, 25, 0.19);
+  background: rgba(183, 255, 25, 0.065);
+}
+
+.community-boss-prep-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.05;
+  font-weight: 1000;
+}
+
+.community-boss-prep-grid b {
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: var(--green);
+  background: rgba(183, 255, 25, 0.09);
+  font-size: 10px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.community-boss-prep-grid article.locked b {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.community-boss-next {
+  margin-top: 12px;
+  border-radius: 18px;
+  padding: 13px;
+  border: 1px solid rgba(183, 255, 25, 0.13);
+  background: rgba(183, 255, 25, 0.055);
+}
+
+.community-boss-next strong {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 900;
+}
+
+.community-boss-guardrail {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.community-boss-guardrail b {
+  color: rgba(237, 255, 219, 0.72);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+@media (max-width: 430px) {
+  .community-boss-prep-card {
+    padding: 13px;
+    border-radius: 20px;
+  }
+
+  .community-boss-preview-arena {
+    grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .community-boss-preview-arena > i {
+    width: 32px;
+    height: 32px;
+  }
+
+  .community-boss-preview-arena > div,
+  .community-boss-prep-grid article {
+    padding: 10px;
+  }
+
+  .community-boss-preview-arena strong {
+    font-size: 22px;
+  }
+}
