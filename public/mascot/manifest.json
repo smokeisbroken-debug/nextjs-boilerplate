@@ -1,0 +1,63 @@
+{
+  "version": "v59.53.0",
+  "type": "broke-mascot-assets-foundation",
+  "stages": [
+    {
+      "id": "tired_frog",
+      "stage": 1,
+      "title": "Tired Frog",
+      "src": "/mascot/stages/stage-1-tired-frog.png"
+    },
+    {
+      "id": "awake_frog",
+      "stage": 2,
+      "title": "Awake Frog",
+      "src": "/mascot/stages/stage-2-awake-frog.png"
+    },
+    {
+      "id": "leak_fixer",
+      "stage": 3,
+      "title": "Leak Fixer",
+      "src": "/mascot/stages/stage-3-leak-fixer.png"
+    },
+    {
+      "id": "wallet_guardian",
+      "stage": 4,
+      "title": "Wallet Guardian",
+      "src": "/mascot/stages/stage-4-wallet-guardian.png"
+    },
+    {
+      "id": "broke_legend",
+      "stage": 5,
+      "title": "BROKE Legend",
+      "src": "/mascot/stages/stage-5-broke-legend.png"
+    }
+  ],
+  "badges": [
+    {
+      "id": "wallet_hp",
+      "title": "Wallet HP",
+      "src": "/mascot/badges/wallet-hp.png"
+    },
+    {
+      "id": "streak",
+      "title": "Streak",
+      "src": "/mascot/badges/streak.png"
+    },
+    {
+      "id": "daily_routine",
+      "title": "Daily Routine",
+      "src": "/mascot/badges/daily-routine.png"
+    },
+    {
+      "id": "leak_fixed",
+      "title": "Leak Fixed",
+      "src": "/mascot/badges/leak-fixed.png"
+    },
+    {
+      "id": "clean_day",
+      "title": "Clean Day",
+      "src": "/mascot/badges/clean-day.png"
+    }
+  ]
+}
