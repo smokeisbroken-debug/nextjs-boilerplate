@@ -36273,3 +36273,298 @@ html.embedded-app-view .hero h1 {
     font-size: 0.76rem;
   }
 }
+
+/* v59.59.0 — My BROKE Proof Center */
+.broke-proof-center-details > .broke-proof-center-card {
+  margin: 12px 0 0;
+}
+
+.broke-proof-center-card,
+.broke-proof-center-card * {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.broke-proof-center-card {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(140, 255, 157, 0.16);
+  border-radius: 26px;
+  background: linear-gradient(145deg, rgba(4, 18, 8, 0.96), rgba(2, 8, 4, 0.98));
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.broke-proof-center-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.broke-proof-center-head div {
+  display: grid;
+  gap: 3px;
+}
+
+.broke-proof-center-head span,
+.broke-proof-text-preview span,
+.broke-proof-share-top span,
+.broke-proof-share-main span,
+.broke-proof-metric-grid span,
+.broke-proof-center-note {
+  color: rgba(206, 255, 214, 0.68);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.broke-proof-center-head strong {
+  color: #f0fff3;
+  font-size: 18px;
+  line-height: 1.05;
+}
+
+.broke-proof-center-head small,
+.broke-proof-share-top small,
+.broke-proof-share-main small,
+.broke-proof-text-preview p {
+  color: rgba(230, 255, 235, 0.72);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.broke-proof-center-head b {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid rgba(140, 255, 157, 0.24);
+  background: rgba(12, 45, 18, 0.72);
+  color: #caffd0;
+  padding: 8px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.broke-proof-tabs,
+.broke-proof-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+}
+
+.broke-proof-tabs button,
+.broke-proof-actions button {
+  min-width: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(140, 255, 157, 0.18);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(239, 255, 242, 0.78);
+  padding: 9px 11px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.broke-proof-tabs button.active,
+.broke-proof-actions button:not(.ghost) {
+  background: linear-gradient(135deg, rgba(126, 255, 142, 0.92), rgba(75, 210, 104, 0.9));
+  color: #041106;
+  border-color: rgba(126, 255, 142, 0.72);
+}
+
+.broke-proof-share-card {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 28px;
+  border: 1px solid rgba(160, 255, 172, 0.20);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(107, 255, 137, 0.20), transparent 32%),
+    radial-gradient(circle at 86% 12%, rgba(255, 214, 87, 0.14), transparent 28%),
+    linear-gradient(145deg, #061107, #020402 72%);
+  padding: 16px;
+  color: #f3fff4;
+  display: grid;
+  gap: 14px;
+}
+
+.broke-proof-share-card.tone-boss {
+  background:
+    radial-gradient(circle at 18% 10%, rgba(255, 90, 60, 0.20), transparent 30%),
+    radial-gradient(circle at 84% 12%, rgba(103, 255, 134, 0.16), transparent 28%),
+    linear-gradient(145deg, #0f0805, #020402 76%);
+}
+
+.broke-proof-share-card.tone-social {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(118, 174, 255, 0.18), transparent 30%),
+    radial-gradient(circle at 86% 12%, rgba(124, 255, 139, 0.16), transparent 28%),
+    linear-gradient(145deg, #061018, #020402 76%);
+}
+
+.broke-proof-share-card.tone-routine {
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 223, 112, 0.18), transparent 30%),
+    radial-gradient(circle at 86% 12%, rgba(124, 255, 139, 0.16), transparent 28%),
+    linear-gradient(145deg, #141005, #020402 76%);
+}
+
+.broke-proof-share-top,
+.broke-proof-share-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.broke-proof-share-top div,
+.broke-proof-share-main div {
+  display: grid;
+  gap: 3px;
+}
+
+.broke-proof-share-top strong,
+.broke-proof-share-main strong {
+  color: #f6fff7;
+  font-size: 20px;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.broke-proof-share-top b {
+  flex: 0 0 auto;
+  border-radius: 16px;
+  background: rgba(139, 255, 158, 0.14);
+  color: #caffd2;
+  padding: 10px 12px;
+  font-size: 13px;
+  border: 1px solid rgba(139, 255, 158, 0.22);
+  max-width: 42%;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.broke-proof-share-main img {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 16px 26px rgba(0, 0, 0, 0.42));
+}
+
+.broke-proof-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.broke-proof-metric-grid article {
+  min-width: 0;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.055);
+  padding: 9px;
+  display: grid;
+  gap: 3px;
+}
+
+.broke-proof-metric-grid strong {
+  color: #f7fff8;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.broke-proof-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.broke-proof-chip-row span {
+  border-radius: 999px;
+  background: rgba(126, 255, 142, 0.11);
+  color: rgba(233, 255, 237, 0.82);
+  border: 1px solid rgba(126, 255, 142, 0.14);
+  padding: 6px 8px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.broke-proof-share-card footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.10);
+  padding-top: 10px;
+}
+
+.broke-proof-share-card footer b {
+  color: rgba(236, 255, 239, 0.82);
+  font-size: 11px;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.broke-proof-text-preview {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.broke-proof-text-preview p {
+  margin: 0;
+}
+
+.broke-proof-center-note {
+  text-transform: none;
+  letter-spacing: 0;
+  line-height: 1.35;
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .broke-proof-center-card {
+    padding: 11px;
+    border-radius: 22px;
+  }
+
+  .broke-proof-center-head,
+  .broke-proof-share-top,
+  .broke-proof-share-main,
+  .broke-proof-share-card footer {
+    align-items: flex-start;
+  }
+
+  .broke-proof-center-head strong,
+  .broke-proof-share-top strong,
+  .broke-proof-share-main strong {
+    font-size: 16px;
+  }
+
+  .broke-proof-share-card {
+    padding: 12px;
+    border-radius: 22px;
+  }
+
+  .broke-proof-share-main img {
+    width: 72px;
+    height: 72px;
+  }
+
+  .broke-proof-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .broke-proof-actions button,
+  .broke-proof-tabs button {
+    flex: 1 1 calc(50% - 8px);
+  }
+}

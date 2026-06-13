@@ -1146,6 +1146,35 @@ type SocialLeaderboardState = {
   lanes: SocialLeaderboardLane[];
 };
 
+type BrokeProofCardId = "mascot" | "boss" | "social" | "routine" | "challenge";
+
+type BrokeProofMetric = {
+  label: string;
+  value: string;
+};
+
+type BrokeProofCard = {
+  id: BrokeProofCardId;
+  label: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  badge: string;
+  primary: string;
+  secondary: string;
+  artSrc: string;
+  tone: string;
+  fileName: string;
+  text: string;
+  metrics: BrokeProofMetric[];
+  chips: string[];
+};
+
+type BrokeProofCenterState = {
+  defaultCardId: BrokeProofCardId;
+  cards: BrokeProofCard[];
+};
+
 type WeeklyBossBattlePulse = "idle" | "attack" | "hit" | "victory";
 
 type ActiveStreakProofTimelineDay = {
@@ -7532,6 +7561,184 @@ function buildSocialLeaderboardState({
     privacyLabel: "Safe points only · no wallet value · no payout",
     shareText,
     lanes,
+  };
+}
+
+
+function buildRoutineProofCenterText(status: ActiveStreakProofStatus) {
+  return [
+    "$BROKE Routine Proof",
+    "",
+    `Today: ${status.activeToday ? "Protected" : status.recoveryAvailable ? "Recovery open" : "Open"}`,
+    `Active streak: ${status.currentStreak}d`,
+    `Progress: ${status.progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} routine days`,
+    `Actions today: ${status.todayActions.length}`,
+    "",
+    "Daily Routine proof comes from real app actions, not farming taps.",
+    "No income. No wallet value. No payout promise.",
+    "Smoke is broke.",
+  ].join("\n");
+}
+
+function buildChallengeProofCenterText(history: ChallengeHistoryItem[]) {
+  if (history.length > 0) return buildChallengeHistoryProofText(history);
+
+  return [
+    "$BROKE Challenge Proof",
+    "",
+    "No completed challenge history yet.",
+    "Start a leak-control mission when you are ready.",
+    "",
+    "Challenges are habit proof, not payout promises.",
+    "No income. No wallet value. No private balance.",
+    "Smoke is broke.",
+  ].join("\n");
+}
+
+function buildBrokeProofCenterState({
+  settings,
+  mascot,
+  weeklyBoss,
+  social,
+  activeProofStatus,
+  challengeHistory,
+}: {
+  settings: Settings;
+  mascot: MascotProgressionState;
+  weeklyBoss: WeeklyBossState;
+  social: SocialLeaderboardState;
+  activeProofStatus: ActiveStreakProofStatus;
+  challengeHistory: ChallengeHistoryItem[];
+}): BrokeProofCenterState {
+  const activeBossProofs = weeklyBoss.contributions.filter((item) => item.active).map((item) => item.title);
+  const completedChallenges = challengeHistory.filter((item) => item.status === "completed").length;
+  const activeChallenges = challengeHistory.filter((item) => item.status === "active").length;
+  const latestChallenge = challengeHistory[0] ?? null;
+  const unlockedBadgeCount = mascot.badges.filter((badge) => badge.unlocked).length;
+  const routineLabel = activeProofStatus.activeToday
+    ? "Protected today"
+    : activeProofStatus.recoveryAvailable
+      ? "Recovery open"
+      : "Routine open";
+  const routineBadge = activeProofStatus.activeToday
+    ? "Protected"
+    : activeProofStatus.recoveryAvailable
+      ? "Recovery"
+      : "Open";
+
+  const cards: BrokeProofCard[] = [
+    {
+      id: "mascot",
+      label: "Mascot",
+      eyebrow: "$BROKE MASCOT PROOF",
+      title: mascot.stageTitle,
+      subtitle: `Stage ${mascot.stage}/5 · Level ${mascot.level} · ${mascot.power}/100 power`,
+      badge: `Stage ${mascot.stage}`,
+      primary: `${mascot.power}/100 power`,
+      secondary: `${unlockedBadgeCount}/${mascot.badges.length} badges unlocked`,
+      artSrc: mascot.stageSrc,
+      tone: "mascot",
+      fileName: "broke-mascot-proof.png",
+      text: buildMascotProgressionShareText(settings, mascot),
+      metrics: [
+        { label: "Power", value: `${mascot.power}/100` },
+        { label: "Wallet HP", value: `${mascot.walletHp}/100` },
+        { label: "Level", value: `${mascot.level}` },
+        { label: "Badges", value: `${unlockedBadgeCount}/${mascot.badges.length}` },
+      ],
+      chips: ["Real app activity", "No income", "No balance", "No payout promise"],
+    },
+    {
+      id: "boss",
+      label: "Boss",
+      eyebrow: "$BROKE WEEKLY BOSS PROOF",
+      title: weeklyBoss.bossName,
+      subtitle: `${weeklyBoss.weekRangeLabel} · ${weeklyBoss.phaseLabel}`,
+      badge: `${weeklyBoss.progressPercent}%`,
+      primary: `${weeklyBoss.userDamage}/${weeklyBoss.bossHp} damage`,
+      secondary: weeklyBoss.battleResultTitle,
+      artSrc: weeklyBoss.mascotStageSrc,
+      tone: "boss",
+      fileName: "broke-weekly-boss-proof.png",
+      text: buildWeeklyBossShareText(settings, weeklyBoss),
+      metrics: [
+        { label: "Damage", value: `${weeklyBoss.userDamage}/${weeklyBoss.bossHp}` },
+        { label: "Boss HP", value: `${weeklyBoss.bossRemainingHp}` },
+        { label: "Proofs", value: `${weeklyBoss.contributionCount}/${weeklyBoss.contributions.length}` },
+        { label: "Weakness", value: weeklyBoss.weaknessMatched ? "Hit" : "Open" },
+      ],
+      chips: (activeBossProofs.length ? activeBossProofs : ["Build proof this week"]).slice(0, 4),
+    },
+    {
+      id: "social",
+      label: "Social",
+      eyebrow: "$BROKE SOCIAL PROOF",
+      title: social.rankTier,
+      subtitle: `${social.weekRangeLabel} · public-safe social progress`,
+      badge: "Safe pts",
+      primary: `${social.localSafePoints}/650 pts`,
+      secondary: social.privacyLabel,
+      artSrc: A.challengeTrophy,
+      tone: "social",
+      fileName: "broke-social-proof.png",
+      text: social.shareText,
+      metrics: [
+        { label: "Safe points", value: `${social.localSafePoints}` },
+        { label: "Lane", value: social.rankTier.replace(" lane", "") },
+        { label: "Proofs", value: `${social.publicProofCount}` },
+        { label: "Week", value: social.weekKey },
+      ],
+      chips: ["Safe Points only", "No wallet value", "No payout tier", "Optional public proof"],
+    },
+    {
+      id: "routine",
+      label: "Routine",
+      eyebrow: "$BROKE ROUTINE PROOF",
+      title: routineLabel,
+      subtitle: `${activeProofStatus.currentStreak}d active streak · ${activeProofStatus.progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS} routine days`,
+      badge: routineBadge,
+      primary: `${activeProofStatus.currentStreak}d streak`,
+      secondary: activeProofStatus.activeToday ? "Daily Routine protected today" : "Complete Daily Routine to protect today",
+      artSrc: A.dailyCheck,
+      tone: "routine",
+      fileName: "broke-routine-proof.png",
+      text: buildRoutineProofCenterText(activeProofStatus),
+      metrics: [
+        { label: "Today", value: activeProofStatus.activeToday ? "Protected" : "Open" },
+        { label: "Streak", value: `${activeProofStatus.currentStreak}d` },
+        { label: "Progress", value: `${activeProofStatus.progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS}` },
+        { label: "Actions", value: `${activeProofStatus.todayActions.length}` },
+      ],
+      chips: ["Daily Routine", "Real actions only", "Streak proof", "No fake completion"],
+    },
+    {
+      id: "challenge",
+      label: "Challenge",
+      eyebrow: "$BROKE CHALLENGE PROOF",
+      title: latestChallenge ? latestChallenge.title : "Challenge proof",
+      subtitle: latestChallenge
+        ? `${getChallengeHistoryStatusLabel(latestChallenge.status)} · ${formatChallengeHistoryDate(latestChallenge.startedAt)}-${formatChallengeHistoryDate(latestChallenge.endsAt)}`
+        : "Start a leak-control mission when ready",
+      badge: completedChallenges > 0 ? `${completedChallenges} done` : activeChallenges > 0 ? `${activeChallenges} active` : "Open",
+      primary: `${completedChallenges} completed`,
+      secondary: `${activeChallenges} active · ${challengeHistory.length} recent missions`,
+      artSrc: A.challengeTrophy,
+      tone: "challenge",
+      fileName: "broke-challenge-proof.png",
+      text: buildChallengeProofCenterText(challengeHistory),
+      metrics: [
+        { label: "Completed", value: `${completedChallenges}` },
+        { label: "Active", value: `${activeChallenges}` },
+        { label: "Recent", value: `${challengeHistory.length}` },
+        { label: "Status", value: latestChallenge ? getChallengeHistoryStatusLabel(latestChallenge.status) : "Open" },
+      ],
+      chips: ["Leak-control mission", "Public-safe", "No rewards promise", "Habit proof"],
+    },
+  ];
+
+  return {
+    defaultCardId: weeklyBoss.userDamage > 0 ? "boss" : "mascot",
+    cards,
   };
 }
 
@@ -14338,6 +14545,215 @@ function DashboardScreen({
   );
 }
 
+
+
+function MyBrokeProofCenter({
+  state,
+  shareInitData,
+}: {
+  state: BrokeProofCenterState;
+  shareInitData: string;
+}) {
+  const [activeCardId, setActiveCardId] = useState<BrokeProofCardId>(state.defaultCardId);
+  const [copied, setCopied] = useState(false);
+  const [busyAction, setBusyAction] = useState<"image" | "x" | "bot" | null>(null);
+  const shareCardRef = useRef<HTMLDivElement | null>(null);
+  const activeCard = state.cards.find((card) => card.id === activeCardId) ?? state.cards[0];
+
+  useEffect(() => {
+    if (!state.cards.some((card) => card.id === activeCardId)) {
+      setActiveCardId(state.defaultCardId);
+    }
+  }, [activeCardId, state.cards, state.defaultCardId]);
+
+  async function copyProofText() {
+    try {
+      await navigator.clipboard.writeText(activeCard.text);
+      triggerHaptic("success");
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      notifyApp("Copy unavailable", "Your browser blocked clipboard access.", "info");
+    }
+  }
+
+  async function createActiveProofImage() {
+    if (!shareCardRef.current) throw new Error("Proof card is not ready.");
+
+    return createShareImageFileFromElement(shareCardRef.current, activeCard.fileName);
+  }
+
+  async function shareProofImage() {
+    if (busyAction) return;
+
+    triggerHaptic("light");
+    setBusyAction("image");
+
+    try {
+      const imageFile = await createActiveProofImage();
+      const nativeShared = await tryNativeImageShare(imageFile, {
+        title: `$BROKE Proof · ${activeCard.label}`,
+        text: activeCard.text,
+      });
+
+      if (nativeShared) {
+        markDailyRoutineAction("sharedProgress");
+        return;
+      }
+
+      downloadImageFile(imageFile);
+      notifyApp("Proof card downloaded", "Native image share is not available here, so the PNG was saved.");
+    } catch {
+      notifyApp("Sharing unavailable", "Could not create this BROKE proof image here.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function shareProofToX() {
+    if (busyAction) return;
+
+    triggerHaptic("light");
+    setBusyAction("x");
+
+    try {
+      const imageFile = await createActiveProofImage();
+      const nativeShared = await tryNativeImageShare(imageFile, {
+        title: `$BROKE Proof · ${activeCard.label}`,
+        text: activeCard.text,
+      });
+
+      if (nativeShared) {
+        markDailyRoutineAction("sharedProgress");
+        notifyApp("Proof card ready", "Choose X in the share sheet to post the image card.");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(activeCard.text);
+      } catch {
+        // Clipboard access is optional in fallback mode.
+      }
+
+      downloadImageFile(imageFile);
+      openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(activeCard.text)}`);
+      markDailyRoutineAction("sharedProgress");
+      notifyApp("X opened", "The proof card was downloaded. Attach the PNG in X if it was not added automatically.");
+    } catch {
+      openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(activeCard.text)}`);
+      notifyApp("X text share opened", "Could not prepare the image card here, so text share was opened instead.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function sendProofToBot() {
+    if (busyAction) return;
+
+    triggerHaptic("light");
+    setBusyAction("bot");
+
+    try {
+      const imageFile = await createActiveProofImage();
+
+      if (!shareInitData) {
+        downloadImageFile(imageFile);
+        notifyApp("Telegram data missing", "Open the app inside Telegram to send the card to the bot. The PNG was downloaded instead.");
+        return;
+      }
+
+      await sendShareImageViaBot(imageFile, shareInitData, activeCard.text);
+      markDailyRoutineAction("sharedProgress");
+      notifyApp("Proof sent", "Open your Telegram bot chat and forward it anywhere.");
+    } catch {
+      notifyApp("Bot share failed", "Could not send this proof card to the bot from here.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  return (
+    <section className="broke-proof-center-card">
+      <div className="broke-proof-center-head">
+        <div>
+          <span>My BROKE Proof</span>
+          <strong>One public-safe share center</strong>
+          <small>Pick a proof card, then share the same way: text, PNG, bot, or X image flow.</small>
+        </div>
+        <b>{activeCard.label}</b>
+      </div>
+
+      <div className="broke-proof-tabs" role="tablist" aria-label="BROKE proof card types">
+        {state.cards.map((card) => (
+          <button
+            key={card.id}
+            type="button"
+            className={card.id === activeCard.id ? "active" : ""}
+            onClick={() => setActiveCardId(card.id)}
+          >
+            {card.label}
+          </button>
+        ))}
+      </div>
+
+      <div className={`broke-proof-share-card tone-${activeCard.tone}`} ref={shareCardRef}>
+        <div className="broke-proof-share-top">
+          <div>
+            <span>{activeCard.eyebrow}</span>
+            <strong>{activeCard.title}</strong>
+            <small>{activeCard.subtitle}</small>
+          </div>
+          <b>{activeCard.badge}</b>
+        </div>
+
+        <div className="broke-proof-share-main">
+          <img src={activeCard.artSrc} alt="" loading="lazy" decoding="async" onError={handleMascotAssetError} />
+          <div>
+            <span>{activeCard.label} card</span>
+            <strong>{activeCard.primary}</strong>
+            <small>{activeCard.secondary}</small>
+          </div>
+        </div>
+
+        <div className="broke-proof-metric-grid">
+          {activeCard.metrics.map((metric) => (
+            <article key={metric.label}>
+              <span>{metric.label}</span>
+              <strong>{metric.value}</strong>
+            </article>
+          ))}
+        </div>
+
+        <div className="broke-proof-chip-row">
+          {activeCard.chips.slice(0, 4).map((chip) => (
+            <span key={chip}>{chip}</span>
+          ))}
+        </div>
+
+        <footer>
+          <span>Real app proof only</span>
+          <b>No income · No balance · No wallet value · No payout promise</b>
+        </footer>
+      </div>
+
+      <div className="broke-proof-text-preview" aria-label="Selected public proof text">
+        <span>Text proof</span>
+        <p>{activeCard.text.split("\n").filter(Boolean).slice(0, 4).join(" · ")}</p>
+      </div>
+
+      <div className="broke-proof-actions">
+        <button type="button" onClick={copyProofText}>{copied ? "Copied" : "Copy text"}</button>
+        <button type="button" className="ghost" onClick={shareProofImage}>{busyAction === "image" ? "Preparing..." : "Share image"}</button>
+        <button type="button" className="ghost" onClick={shareProofToX}>{busyAction === "x" ? "Preparing..." : "Share to X"}</button>
+        <button type="button" className="ghost" onClick={sendProofToBot}>{busyAction === "bot" ? "Sending..." : "Send to bot"}</button>
+      </div>
+
+      <p className="broke-proof-center-note">
+        All cards use the same public-safe layout. X image sharing depends on native file share support; otherwise the PNG downloads and text opens in X.
+      </p>
+    </section>
+  );
+}
 
 function MascotProgressionCard({
   state,
@@ -28163,6 +28579,17 @@ function WhatIfScreen({
     }),
     [weeklyBossState, mascotProgressionState, communityBossPrepState, activeProofStatus]
   );
+  const brokeProofCenterState = useMemo(
+    () => buildBrokeProofCenterState({
+      settings,
+      mascot: mascotProgressionState,
+      weeklyBoss: weeklyBossState,
+      social: socialLeaderboardState,
+      activeProofStatus,
+      challengeHistory,
+    }),
+    [settings, mascotProgressionState, weeklyBossState, socialLeaderboardState, activeProofStatus, challengeHistory]
+  );
 
   function openChallengeArea() {
     triggerHaptic("light");
@@ -28396,6 +28823,20 @@ function WhatIfScreen({
         onTrackLeak={openDailyRoutineFromRewards}
         onOpenProfile={onOpenProfile}
       />
+
+      <details className="clean-details rewards-social-details broke-proof-center-details">
+        <summary>
+          <div>
+            <span>My BROKE Proof</span>
+            <small>One place for text, image, bot, and X proof cards.</small>
+          </div>
+          <b>{brokeProofCenterState.cards.length} cards</b>
+        </summary>
+        <MyBrokeProofCenter
+          state={brokeProofCenterState}
+          shareInitData={shareInitData}
+        />
+      </details>
 
       <details className="clean-details rewards-social-details mascot-rewards-details">
         <summary>

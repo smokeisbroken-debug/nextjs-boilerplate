@@ -43,3 +43,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Adds compact in-app guide strips to Weekly Boss, Community Boss Prep, and Social Leaderboard so users understand the social game layer.
 - Reinforces that BROKE remains a Life Tracker: real habits make mascot/boss/social proof stronger.
 - No Supabase schema, payout logic, PvP, wallet verification, Universal Check scoring, Daily Routine formula, transaction history/PnL/scam labels, wallet value exposure, token reward promises, or game economy changed.
+
+
+## v59.59.0 — My BROKE Proof Center
+
+- Adds one collapsed My BROKE Proof center in Rewards.
+- Unifies Mascot, Weekly Boss, Social Leaderboard, Routine, and Challenge proof cards into one public-safe card layout.
+- Each card supports Copy text, Share image, Share to X image-first flow, and Send to bot.
+- No wallet value, income, balance, debt detail, payout promise, Supabase schema, PvP, backend community sync, or reward/admin payout logic changed.
