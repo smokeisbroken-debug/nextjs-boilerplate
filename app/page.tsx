@@ -5552,6 +5552,32 @@ function buildActiveStreakProofShareText(settings: Settings, status: ActiveStrea
   ].filter(Boolean).join("\n");
 }
 
+function buildMascotProgressionShareText(settings: Settings, state: MascotProgressionState) {
+  const identityName = getPublicIdentityName(settings);
+  const identityStatus = getPublicIdentityStatus(settings);
+  const unlockedBadges = state.badges.filter((badge) => badge.unlocked).length;
+  const nextStageLine = state.nextStagePower === null
+    ? "Maximum evolution stage unlocked"
+    : `${state.powerToNextStage} power to next stage`;
+
+  return [
+    `${identityName} on $BROKE`,
+    identityStatus,
+    "",
+    "My BROKE mascot progression:",
+    `${state.stageTitle} · Stage ${state.stage}/5`,
+    `Power: ${state.power}/100`,
+    `Level: ${state.level}`,
+    `Wallet HP: ${state.walletHp}/100`,
+    `Badges: ${unlockedBadges}/${state.badges.length}`,
+    nextStageLine,
+    "",
+    "Real app activity makes the mascot stronger.",
+    "No income or real balance shown.",
+    "Smoke is broke.",
+  ].filter(Boolean).join("\n");
+}
+
 const REWARD_NOTIFICATION_PREFS_KEY = "broke-reward-notification-prefs-v1";
 const REWARD_NOTIFICATION_TIME_OPTIONS = ["09:00", "18:00", "21:00"];
 
@@ -13261,15 +13287,27 @@ function DashboardScreen({
 
 function MascotProgressionCard({
   state,
+  settings,
+  shareInitData,
   onOpenDailyRoutine,
   onOpenProfile,
 }: {
   state: MascotProgressionState;
+  settings: Settings;
+  shareInitData: string;
   onOpenDailyRoutine: () => void;
   onOpenProfile: () => void;
 }) {
+  const [mascotShareCopied, setMascotShareCopied] = useState(false);
+  const [mascotImageSharing, setMascotImageSharing] = useState(false);
+  const mascotShareCardRef = useRef<HTMLDivElement | null>(null);
   const unlockedCount = state.badges.filter((badge) => badge.unlocked).length;
   const boostDoneCount = state.boostPlan.filter((item) => item.done).length;
+  const publicIdentityName = getPublicIdentityName(settings);
+  const publicIdentityStatus = getPublicIdentityStatus(settings);
+  const publicIdentityStyle = getIdentityStyleMeta(settings.identity.identityStyle);
+  const publicIdentityAvatar = getPublicProfileAvatarImage(settings);
+  const shareText = buildMascotProgressionShareText(settings, state);
   const statItems = [
     { label: "Power", value: `${state.power}/100`, detail: "Real app activity" },
     { label: "Wallet HP", value: `${state.walletHp}/100`, detail: "Wallet pressure" },
@@ -13282,6 +13320,60 @@ function MascotProgressionCard({
     { label: "Complete Routine", value: `${state.routineEnergy}%`, detail: "Routine actions push the mascot forward without fake leaks." },
     { label: "Track consistently", value: `${state.trackingEnergy}%`, detail: "Expense tracking history increases Training Energy." },
   ];
+
+  async function copyMascotShareText() {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      triggerHaptic("success");
+      setMascotShareCopied(true);
+      window.setTimeout(() => setMascotShareCopied(false), 1600);
+    } catch {
+      setMascotShareCopied(false);
+      notifyApp("Copy unavailable", "Your browser blocked clipboard access.", "info");
+    }
+  }
+
+  function openMascotXShare() {
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+    openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`);
+  }
+
+  async function shareMascotImage() {
+    if (!mascotShareCardRef.current || mascotImageSharing) return;
+
+    triggerHaptic("light");
+    setMascotImageSharing(true);
+
+    try {
+      const imageFile = await createShareImageFileFromElement(mascotShareCardRef.current, "broke-mascot-progress.png");
+      const nativeShared = await tryNativeImageShare(imageFile);
+
+      if (nativeShared) {
+        markDailyRoutineAction("sharedProgress");
+        return;
+      }
+
+      if (!shareInitData) {
+        downloadImageFile(imageFile);
+        notifyApp("Mascot card downloaded", "Open inside Telegram to send it directly to the bot.");
+        return;
+      }
+
+      try {
+        await sendShareImageViaBot(imageFile, shareInitData, shareText);
+        markDailyRoutineAction("sharedProgress");
+        notifyApp("Mascot card sent", "Open your Telegram bot chat and forward it anywhere.");
+      } catch {
+        downloadImageFile(imageFile);
+        notifyApp("PNG downloaded", "Bot delivery failed, so the mascot card was saved as a file.");
+      }
+    } catch {
+      notifyApp("Sharing unavailable", "Mascot image sharing was cancelled or is not supported here.");
+    } finally {
+      setMascotImageSharing(false);
+    }
+  }
 
   return (
     <section className={`mascot-progression-card stage-${state.stage}`}>
@@ -13402,6 +13494,53 @@ function MascotProgressionCard({
             </div>
           </article>
         ))}
+      </div>
+
+      <div className={`mascot-share-proof-card identity-share-style-${settings.identity.identityStyle || "classic"}`} ref={mascotShareCardRef}>
+        <div className="mascot-share-proof-top">
+          <img src={publicIdentityAvatar} alt="" />
+          <div>
+            <span>$BROKE MASCOT</span>
+            <strong>{publicIdentityName}</strong>
+            <small>{publicIdentityStatus}</small>
+          </div>
+          <b>{publicIdentityStyle.badge}</b>
+        </div>
+
+        <div className="mascot-share-proof-main">
+          <img src={state.stageSrc} alt="" />
+          <div>
+            <span>Current evolution</span>
+            <strong>{state.stageTitle}</strong>
+            <small>Stage {state.stage}/5 · Level {state.level}</small>
+          </div>
+        </div>
+
+        <div className="mascot-share-proof-grid">
+          <article>
+            <span>Power</span>
+            <strong>{state.power}/100</strong>
+          </article>
+          <article>
+            <span>Wallet HP</span>
+            <strong>{state.walletHp}/100</strong>
+          </article>
+          <article>
+            <span>Badges</span>
+            <strong>{unlockedCount}/{state.badges.length}</strong>
+          </article>
+        </div>
+
+        <footer>
+          <span>No income · No real balance · App activity only</span>
+          <b>{state.nextStagePower === null ? "Max stage unlocked" : `${state.powerToNextStage} power to next stage`}</b>
+        </footer>
+      </div>
+
+      <div className="mascot-share-actions">
+        <button type="button" onClick={openMascotXShare}>Share mascot</button>
+        <button type="button" onClick={copyMascotShareText}>{mascotShareCopied ? "Copied" : "Copy text"}</button>
+        <button type="button" onClick={shareMascotImage}>{mascotImageSharing ? "Preparing..." : "Share image"}</button>
       </div>
 
       <div className="mascot-progression-actions">
@@ -26480,6 +26619,8 @@ function WhatIfScreen({
 
       <MascotProgressionCard
         state={mascotProgressionState}
+        settings={settings}
+        shareInitData={shareInitData}
         onOpenDailyRoutine={openDailyRoutineFromRewards}
         onOpenProfile={onOpenProfile}
       />
