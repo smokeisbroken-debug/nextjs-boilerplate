@@ -1051,6 +1051,8 @@ type WeeklyBossContribution = {
 
 type WeeklyBossState = {
   weekKey: string;
+  weekRangeLabel: string;
+  resetHint: string;
   bossName: string;
   bossTitle: string;
   bossHp: number;
@@ -4948,6 +4950,57 @@ function dayKey(date: Date) {
   return `${y}-${m}-${d}`;
 }
 
+function getWeekStartDate(date: Date) {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const day = start.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+
+  start.setDate(start.getDate() + diff);
+
+  return start;
+}
+
+function getWeekEndDate(date: Date) {
+  const end = getWeekStartDate(date);
+
+  end.setDate(end.getDate() + 7);
+
+  return end;
+}
+
+function getIsoWeekKey(date: Date) {
+  const target = new Date(date);
+
+  target.setHours(0, 0, 0, 0);
+  target.setDate(target.getDate() + 3 - ((target.getDay() + 6) % 7));
+
+  const weekOne = new Date(target.getFullYear(), 0, 4);
+  const weekNumber = 1 + Math.round(
+    ((target.getTime() - weekOne.getTime()) / 86400000 - 3 + ((weekOne.getDay() + 6) % 7)) / 7
+  );
+
+  return `${target.getFullYear()}-W${String(weekNumber).padStart(2, "0")}`;
+}
+
+function isDateInsideRange(value: string | null | undefined, start: Date, end: Date) {
+  if (!value) return false;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return false;
+
+  return date >= start && date < end;
+}
+
+function formatShortDateRange(start: Date, endExclusive: Date) {
+  const end = new Date(endExclusive);
+
+  end.setDate(end.getDate() - 1);
+
+  return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })} → ${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+}
+
 
 const DAILY_ROUTINE_ACTIONS_KEY = "broke-daily-routine-actions-v1";
 
@@ -6803,30 +6856,37 @@ function buildWeeklyBossState({
   challengeHistory?: ChallengeHistoryItem[];
 }): WeeklyBossState {
   const now = new Date();
-  const firstDayOfYear = new Date(now.getFullYear(), 0, 1);
-  const pastDaysOfYear = Math.floor((now.getTime() - firstDayOfYear.getTime()) / 86400000);
-  const weekNumber = Math.floor((pastDaysOfYear + firstDayOfYear.getDay()) / 7) + 1;
-  const weekKey = `${now.getFullYear()}-W${String(weekNumber).padStart(2, "0")}`;
+  const weekStart = getWeekStartDate(now);
+  const weekEnd = getWeekEndDate(now);
+  const weekKey = getIsoWeekKey(now);
+  const weekRangeLabel = formatShortDateRange(weekStart, weekEnd);
   const todayKeyValue = dayKey(now);
-  const trackedToday = expenses.some((expense) => {
+  const weeklyExpenses = expenses.filter((expense) => isDateInsideRange(expense.createdAt, weekStart, weekEnd));
+  const trackedToday = weeklyExpenses.some((expense) => {
     const createdAt = new Date(expense.createdAt);
 
     return !Number.isNaN(createdAt.getTime()) && dayKey(createdAt) === todayKeyValue;
   });
+  const weeklyTrackingDates = new Set<string>();
+
+  for (const expense of weeklyExpenses) {
+    const createdAt = new Date(expense.createdAt);
+
+    if (!Number.isNaN(createdAt.getTime())) weeklyTrackingDates.add(dayKey(createdAt));
+  }
+
   const hasCleanDay = activeProofStatus.todayActions.includes("clean_day");
-  const hasOneFix = activeProofStatus.todayActions.includes("one_fix") || expenses.some((expense) => expense.needType !== "Needed");
-  const hasDailyChallenge = activeProofStatus.todayActions.includes("daily_challenge") || challengeHistory.some((item) => item.status === "completed");
+  const hasOneFix = activeProofStatus.todayActions.includes("one_fix") || weeklyExpenses.some((expense) => expense.needType !== "Needed");
   const weeklyCompletedChallenges = challengeHistory.filter((item) => {
     if (item.status !== "completed") return false;
 
-    const completedAt = new Date(item.completedAt || item.endsAt || item.startedAt);
-
-    if (Number.isNaN(completedAt.getTime())) return false;
-
-    const ageDays = Math.floor((now.getTime() - completedAt.getTime()) / 86400000);
-
-    return ageDays >= 0 && ageDays < 7;
+    return isDateInsideRange(item.completedAt || item.endsAt || item.startedAt, weekStart, weekEnd);
   }).length;
+  const hasDailyChallenge = activeProofStatus.todayActions.includes("daily_challenge") || weeklyCompletedChallenges > 0;
+
+  if (hasCleanDay) weeklyTrackingDates.add(todayKeyValue);
+
+  const weeklyTrackingDays = weeklyTrackingDates.size;
   const contributions: WeeklyBossContribution[] = [
     {
       id: "mascot_power",
@@ -6858,23 +6918,23 @@ function buildWeeklyBossState({
     },
     {
       id: "tracking",
-      title: "Real Tracking",
-      detail: trackedToday || hasCleanDay ? "Today has real tracking proof." : "Track one real action or mark Clean Day only if true.",
-      damage: trackedToday || hasCleanDay ? 110 : 0,
-      active: trackedToday || hasCleanDay,
+      title: "Weekly Tracking",
+      detail: weeklyTrackingDays > 0 ? `${weeklyTrackingDays}/7 days with real weekly proof.` : "Track one real action or mark Clean Day only if true.",
+      damage: Math.min(weeklyTrackingDays, 5) * 24 + (trackedToday || hasCleanDay ? 30 : 0),
+      active: weeklyTrackingDays > 0,
     },
     {
       id: "leak_fix",
       title: "Leak Fix",
-      detail: hasOneFix ? "Leak-control proof is active." : "Use One Fix or review one leak to add damage.",
+      detail: hasOneFix ? "Leak-control proof is active this week." : "Use One Fix or review one weekly leak to add damage.",
       damage: hasOneFix ? 120 : 0,
       active: hasOneFix,
     },
     {
       id: "challenge",
       title: "Challenge Proof",
-      detail: weeklyCompletedChallenges > 0 ? `${weeklyCompletedChallenges} completed this week.` : "Complete a challenge to add weekly damage.",
-      damage: Math.min(weeklyCompletedChallenges, 3) * 90 + (hasDailyChallenge ? 40 : 0),
+      detail: weeklyCompletedChallenges > 0 ? `${weeklyCompletedChallenges} completed this week.` : "Complete a challenge this week to add damage.",
+      damage: Math.min(weeklyCompletedChallenges, 3) * 90 + (activeProofStatus.todayActions.includes("daily_challenge") ? 40 : 0),
       active: hasDailyChallenge,
     },
   ];
@@ -6884,6 +6944,8 @@ function buildWeeklyBossState({
   const progressPercent = clamp(Math.round((userDamage / bossHp) * 100), 0, 100);
   const contributionCount = contributions.filter((item) => item.active).length;
   const missingContribution = contributions.find((item) => !item.active && item.id !== "mascot_power" && item.id !== "wallet_hp");
+  const daysUntilReset = Math.max(1, Math.ceil((weekEnd.getTime() - now.getTime()) / 86400000));
+  const resetHint = `Resets in ${daysUntilReset} day${daysUntilReset === 1 ? "" : "s"}`;
   const phaseLabel = progressPercent >= 100
     ? "Defeated"
     : progressPercent >= 70
@@ -6896,16 +6958,18 @@ function buildWeeklyBossState({
     : progressPercent >= 70
       ? "Strong contribution. One more real action may finish it."
       : progressPercent >= 35
-        ? "Solid damage. Routine, leak fixes, and challenges push it further."
-        : "Build proof to deal more damage.";
+        ? "Solid damage. Routine, weekly leak fixes, and challenges push it further."
+        : "Build this week’s proof to deal more damage.";
   const nextActionHint = missingContribution
     ? missingContribution.detail
     : progressPercent >= 100
       ? "Keep the streak alive until the weekly reset."
-      : "Raise Wallet HP or complete another real app action.";
+      : "Raise Wallet HP or complete another real app action this week.";
 
   return {
     weekKey,
+    weekRangeLabel,
+    resetHint,
     bossName: "Leak Beast",
     bossTitle: "Weekly Boss MVP",
     bossHp,
@@ -13969,10 +14033,10 @@ function WeeklyBossMvpCard({
     <section className={`weekly-boss-card ${state.progressPercent >= 100 ? "defeated" : "active"}`}>
       <div className="weekly-boss-hero">
         <div>
-          <span>{state.bossTitle} · {state.weekKey}</span>
+          <span>{state.bossTitle} · {state.weekKey} · {state.weekRangeLabel}</span>
           <h2>{state.bossName}</h2>
           <p>
-            A light game layer: real Life Tracker actions deal weekly damage. No separate game, no PvP, no reward payout logic yet.
+            A light game layer: this week’s real Life Tracker actions deal damage. No separate game, no PvP, no reward payout logic yet.
           </p>
         </div>
         <b>{state.phaseLabel}</b>
@@ -13997,6 +14061,7 @@ function WeeklyBossMvpCard({
         </article>
       </div>
 
+      <p className="weekly-boss-reset">{state.resetHint} · weekly proof only</p>
       <p className="weekly-boss-hint">{state.rankHint}</p>
 
       <details className="weekly-boss-details">

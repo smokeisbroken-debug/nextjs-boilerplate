@@ -34372,6 +34372,7 @@ html.embedded-app-view .hero h1 {
 
 .weekly-boss-hero p,
 .weekly-boss-hint,
+.weekly-boss-reset,
 .weekly-boss-source-list small {
   margin: 0;
   color: rgba(226, 232, 240, 0.76);
@@ -34433,10 +34434,25 @@ html.embedded-app-view .hero h1 {
   font-size: 18px;
 }
 
+.weekly-boss-reset,
 .weekly-boss-hint {
   position: relative;
   z-index: 1;
   margin-top: 12px;
+}
+
+.weekly-boss-reset {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid rgba(134, 239, 172, 0.2);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: rgba(15, 23, 42, 0.58);
+  color: #bbf7d0;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .weekly-boss-details {
