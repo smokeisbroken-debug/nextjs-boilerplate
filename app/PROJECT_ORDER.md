@@ -28,3 +28,10 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 
 - Added boss weakness, today battle status, stronger hit labels, battle result, and improved next best hit.
 - Visual/social polish only: no payouts, no PvP, no schema changes, no game economy.
+
+
+## v59.58.4 — Weekly Boss Image Share Polish
+
+- Weekly Boss `Share to X` now tries to generate the PNG card first and open the native share sheet with the image + text.
+- If native file share is unavailable, the app downloads the PNG, copies the proof text when possible, opens X text share, and tells the user to attach the downloaded card manually.
+- No payout logic, schema, PvP, wallet verification, or reward promises changed.

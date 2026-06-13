@@ -14719,10 +14719,46 @@ function WeeklyBossMvpCard({
     }
   }
 
-  function openBossXShare() {
+  async function openBossXShare() {
+    if (!bossShareCardRef.current || bossImageSharing) {
+      triggerHaptic("light");
+      markDailyRoutineAction("sharedProgress");
+      openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`);
+      return;
+    }
+
     triggerHaptic("light");
-    markDailyRoutineAction("sharedProgress");
-    openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`);
+    setBossImageSharing(true);
+
+    try {
+      const imageFile = await createShareImageFileFromElement(bossShareCardRef.current, "broke-weekly-boss-proof.png");
+      const nativeShared = await tryNativeImageShare(imageFile, {
+        title: `$BROKE Weekly Boss · ${state.bossName}`,
+        text: shareText,
+      });
+
+      if (nativeShared) {
+        markDailyRoutineAction("sharedProgress");
+        notifyApp("Boss card ready", "Choose X in the share sheet to post the Weekly Boss card.");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(shareText);
+      } catch {
+        // Clipboard access is optional in fallback mode.
+      }
+
+      downloadImageFile(imageFile);
+      openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`);
+      markDailyRoutineAction("sharedProgress");
+      notifyApp("X opened", "The Weekly Boss card was downloaded. Attach the PNG in X if it was not added automatically.");
+    } catch {
+      openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`);
+      notifyApp("X text share opened", "Could not prepare the Weekly Boss card image here, so text share was opened instead.");
+    } finally {
+      setBossImageSharing(false);
+    }
   }
 
   async function shareBossImage() {
@@ -14947,7 +14983,7 @@ function WeeklyBossMvpCard({
       </div>
 
       <div className="weekly-boss-actions">
-        <button type="button" onClick={openBossXShare}>Share boss</button>
+        <button type="button" onClick={openBossXShare}>{bossImageSharing ? "Preparing..." : "Share to X"}</button>
         <button type="button" className="ghost" onClick={copyBossProofText}>{bossProofCopied ? "Copied" : "Copy proof"}</button>
         <button type="button" className="ghost" onClick={shareBossImage}>{bossImageSharing ? "Preparing..." : "Share image"}</button>
       </div>
@@ -18758,7 +18794,13 @@ async function createShareImageFileFromElement(element: HTMLElement, fileName = 
   }
 }
 
-async function tryNativeImageShare(imageFile: File) {
+async function tryNativeImageShare(
+  imageFile: File,
+  options?: {
+    title?: string;
+    text?: string;
+  }
+) {
   if (
     typeof navigator !== "undefined" &&
     typeof navigator.canShare === "function" &&
@@ -18767,6 +18809,8 @@ async function tryNativeImageShare(imageFile: File) {
   ) {
     await navigator.share({
       files: [imageFile],
+      title: options?.title,
+      text: options?.text,
     });
 
     return true;
