@@ -32980,3 +32980,253 @@ html.embedded-app-view .hero h1 {
   mix-blend-mode: normal !important;
   background: transparent !important;
 }
+
+/* v59.53.1 — Mascot Progression UI */
+.mascot-progression-card {
+  position: relative;
+  overflow: hidden;
+  margin: 16px 0;
+  padding: 18px;
+  border: 1px solid rgba(183, 255, 25, 0.22);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 82% 8%, rgba(183, 255, 25, 0.24), transparent 30%),
+    radial-gradient(circle at 12% 86%, rgba(121, 50, 255, 0.18), transparent 32%),
+    linear-gradient(145deg, rgba(11, 30, 12, 0.96), rgba(3, 9, 5, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 18px 42px rgba(0, 0, 0, 0.35);
+}
+
+.mascot-progression-card::before {
+  content: "";
+  position: absolute;
+  inset: -40% -10% auto auto;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(183, 255, 25, 0.2), transparent 68%);
+  pointer-events: none;
+}
+
+.mascot-progression-hero {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 12px;
+  align-items: center;
+}
+
+.mascot-progression-copy span,
+.mascot-progression-stats span,
+.mascot-energy-grid span {
+  color: rgba(218, 255, 188, 0.72);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.mascot-progression-copy h2 {
+  margin: 6px 0 8px;
+  color: #f4ffe8;
+  font-size: 28px;
+  line-height: 0.96;
+  letter-spacing: -0.04em;
+}
+
+.mascot-progression-copy p,
+.mascot-progression-copy small {
+  display: block;
+  margin: 0;
+  color: rgba(244, 255, 232, 0.72);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.mascot-progression-meter {
+  overflow: hidden;
+  height: 10px;
+  margin: 14px 0 8px;
+  border: 1px solid rgba(183, 255, 25, 0.18);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.mascot-progression-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #9cff20, #42ff71, #8a5cff);
+  box-shadow: 0 0 18px rgba(183, 255, 25, 0.45);
+}
+
+.mascot-progression-art {
+  position: relative;
+  min-height: 150px;
+  border: 1px solid rgba(183, 255, 25, 0.15);
+  border-radius: 26px;
+  background: radial-gradient(circle at 50% 32%, rgba(183, 255, 25, 0.18), rgba(2, 7, 3, 0.54) 62%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.mascot-progression-art img {
+  width: 124px;
+  max-height: 150px;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 22px rgba(0, 0, 0, 0.5));
+}
+
+.mascot-progression-art b {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 6px 9px;
+  border-radius: 999px;
+  background: rgba(7, 18, 9, 0.88);
+  color: #b7ff19;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+}
+
+.mascot-progression-stats,
+.mascot-energy-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.mascot-progression-stats article,
+.mascot-energy-grid article {
+  padding: 12px;
+  border: 1px solid rgba(183, 255, 25, 0.13);
+  border-radius: 18px;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.mascot-progression-stats strong,
+.mascot-energy-grid b {
+  display: block;
+  margin-top: 5px;
+  color: #b7ff19;
+  font-size: 21px;
+  line-height: 1;
+}
+
+.mascot-progression-stats small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(244, 255, 232, 0.55);
+  font-size: 11px;
+}
+
+.mascot-energy-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mascot-energy-grid article {
+  padding: 10px;
+}
+
+.mascot-energy-grid b {
+  font-size: 16px;
+}
+
+.mascot-badge-row {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mascot-badge-row article {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 9px 10px;
+  border: 1px solid rgba(183, 255, 25, 0.13);
+  border-radius: 18px;
+  background: rgba(1, 8, 4, 0.55);
+}
+
+.mascot-badge-row article.locked {
+  opacity: 0.48;
+}
+
+.mascot-badge-row img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 12px;
+}
+
+.mascot-badge-row strong {
+  display: block;
+  color: #f4ffe8;
+  font-size: 13px;
+}
+
+.mascot-badge-row small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(244, 255, 232, 0.56);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.mascot-progression-actions {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 0.72fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.mascot-progression-actions button {
+  min-height: 48px;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #d7ff6b, #76ff19);
+  color: #071004;
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 0.02em;
+}
+
+.mascot-progression-actions button.ghost {
+  border: 1px solid rgba(183, 255, 25, 0.18);
+  background: rgba(183, 255, 25, 0.08);
+  color: #e7ffd1;
+}
+
+@media (max-width: 430px) {
+  .mascot-progression-card {
+    padding: 14px;
+    border-radius: 24px;
+  }
+
+  .mascot-progression-hero {
+    grid-template-columns: minmax(0, 1fr) 112px;
+  }
+
+  .mascot-progression-copy h2 {
+    font-size: 24px;
+  }
+
+  .mascot-progression-art {
+    min-height: 136px;
+  }
+
+  .mascot-progression-art img {
+    width: 108px;
+    max-height: 136px;
+  }
+}

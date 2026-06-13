@@ -118,6 +118,8 @@ import {
 } from "./lib/brokeUniversalLeakCheck";
 
 import { BottomNav } from "./components/BottomNav";
+import { BROKE_MASCOT_BADGE_ASSETS, getBrokeMascotStageAsset } from "./lib/brokeMascotAssets";
+import type { BrokeMascotBadgeId } from "./lib/brokeMascotAssets";
 import type { AppMode, Tab } from "./lib/brokeNavigation";
 
 type NeedType = "Needed" | "Not needed" | "Maybe";
@@ -976,6 +978,31 @@ type ActiveStreakProofStatus = {
   lastProofDate: string | null;
   label: string;
   detail: string;
+};
+
+type MascotProgressionBadgeState = {
+  id: BrokeMascotBadgeId;
+  title: string;
+  description: string;
+  src: string;
+  unlocked: boolean;
+  detail: string;
+};
+
+type MascotProgressionState = {
+  stage: number;
+  level: number;
+  power: number;
+  walletHp: number;
+  streakEnergy: number;
+  routineEnergy: number;
+  trackingEnergy: number;
+  badgeEnergy: number;
+  stageTitle: string;
+  stageDescription: string;
+  stageSrc: string;
+  nextStageHint: string;
+  badges: MascotProgressionBadgeState[];
 };
 
 type ActiveStreakProofTimelineDay = {
@@ -6447,6 +6474,85 @@ function buildWalletSummary(settings: Settings, expenses: Expense[]) {
   };
 }
 
+function buildMascotProgressionState({
+  settings,
+  expenses,
+  badges,
+  activeProofStatus,
+}: {
+  settings: Settings;
+  expenses: Expense[];
+  badges: BadgeItem[];
+  activeProofStatus: ActiveStreakProofStatus;
+}): MascotProgressionState {
+  const walletSummary = buildWalletSummary(settings, expenses);
+  const walletHp = walletSummary.walletHp;
+  const streakEnergy = clamp(Math.round((Math.min(activeProofStatus.currentStreak, 30) / 30) * 100), 0, 100);
+  const routineEnergy = activeProofStatus.activeToday
+    ? 100
+    : activeProofStatus.eligible
+      ? 84
+      : clamp(Math.round((activeProofStatus.progressDays / ACTIVE_STREAK_ELIGIBILITY_DAYS) * 100), 0, 100);
+  const trackingEnergy = clamp(Math.round((Math.min(expenses.length, 30) / 30) * 100), 0, 100);
+  const earnedBadgeCount = badges.filter((badge) => badge.earned).length;
+  const badgeEnergy = clamp(Math.round((Math.min(earnedBadgeCount, 8) / 8) * 100), 0, 100);
+  const power = clamp(Math.round(
+    walletHp * 0.38
+    + streakEnergy * 0.22
+    + routineEnergy * 0.20
+    + trackingEnergy * 0.12
+    + badgeEnergy * 0.08
+  ), 1, 100);
+  const stage = power >= 88 ? 5 : power >= 72 ? 4 : power >= 48 ? 3 : power >= 25 ? 2 : 1;
+  const level = clamp(Math.floor(power / 10) + Math.floor(Math.min(activeProofStatus.currentStreak, 60) / 10) + 1, 1, 20);
+  const stageAsset = getBrokeMascotStageAsset(stage);
+  const hasFixedLeak = activeProofStatus.todayActions.includes("one_fix") || expenses.some((expense) => expense.needType !== "Needed");
+  const hasCleanDay = activeProofStatus.todayActions.includes("clean_day");
+  const badgeUnlocked: Record<BrokeMascotBadgeId, boolean> = {
+    wallet_hp: walletHp >= 70,
+    streak: activeProofStatus.currentStreak >= 3,
+    daily_routine: activeProofStatus.activeToday,
+    leak_fixed: hasFixedLeak,
+    clean_day: hasCleanDay,
+  };
+  const badgeDetails: Record<BrokeMascotBadgeId, string> = {
+    wallet_hp: walletHp >= 70 ? `${walletHp}/100 Wallet HP` : `Reach 70+ Wallet HP. Current: ${walletHp}/100`,
+    streak: activeProofStatus.currentStreak >= 3 ? `${activeProofStatus.currentStreak}d streak` : "Build a 3+ day Active Streak",
+    daily_routine: activeProofStatus.activeToday ? "Daily Routine protected today" : "Complete today’s Daily Routine",
+    leak_fixed: hasFixedLeak ? "Leak-control proof exists" : "Fix one leak or review one non-needed expense",
+    clean_day: hasCleanDay ? "Clean Day proof marked" : "Mark a Clean Day when no leak happens",
+  };
+  const nextStageHint = stage >= 5
+    ? "Top stage unlocked. Keep routine and Wallet HP stable."
+    : stage === 4
+      ? "Reach 88+ power for BROKE Legend."
+      : stage === 3
+        ? "Raise Wallet HP, streak, and routine consistency for Wallet Guardian."
+        : stage === 2
+          ? "Complete Daily Routine and keep tracking to become Leak Fixer."
+          : "Open Check, complete Daily Routine, and start tracking to wake the mascot.";
+
+  return {
+    stage,
+    level,
+    power,
+    walletHp,
+    streakEnergy,
+    routineEnergy,
+    trackingEnergy,
+    badgeEnergy,
+    stageTitle: stageAsset.title,
+    stageDescription: stageAsset.description,
+    stageSrc: stageAsset.src,
+    nextStageHint,
+    badges: BROKE_MASCOT_BADGE_ASSETS.map((badge) => ({
+      ...badge,
+      unlocked: badgeUnlocked[badge.id],
+      detail: badgeDetails[badge.id],
+    })),
+  };
+}
+
 function getCategorySummaries(expenses: Expense[]): CategorySummary[] {
   const map = new Map<string, { trackedAmount: number; leakAmount: number; count: number }>();
 
@@ -10610,6 +10716,7 @@ export default function Home() {
             weeklyPatternSummary={currentWeeklyPatternSummary}
             leaderboard={leaderboard}
             leaderboardLoading={leaderboardLoading}
+            badges={badges}
             shareInitData={telegram.isTelegram ? telegram.initData : ""}
             onToggleLeaderboard={toggleLeaderboardPublic}
             onStartChallenge={startChallenge}
@@ -13048,6 +13155,88 @@ function DashboardScreen({
   );
 }
 
+
+function MascotProgressionCard({
+  state,
+  onOpenDailyRoutine,
+  onOpenProfile,
+}: {
+  state: MascotProgressionState;
+  onOpenDailyRoutine: () => void;
+  onOpenProfile: () => void;
+}) {
+  const unlockedCount = state.badges.filter((badge) => badge.unlocked).length;
+  const statItems = [
+    { label: "Power", value: `${state.power}/100`, detail: "Real app activity" },
+    { label: "Wallet HP", value: `${state.walletHp}/100`, detail: "Wallet pressure" },
+    { label: "Level", value: `${state.level}`, detail: "Mascot growth" },
+    { label: "Badges", value: `${unlockedCount}/${state.badges.length}`, detail: "Proof boosts" },
+  ];
+
+  return (
+    <section className={`mascot-progression-card stage-${state.stage}`}>
+      <div className="mascot-progression-hero">
+        <div className="mascot-progression-copy">
+          <span>Mascot Progression</span>
+          <h2>{state.stageTitle}</h2>
+          <p>
+            Your mascot grows from real Life Tracker activity: Wallet HP, Daily Routine, streaks, leak fixes, clean days, and consistent tracking.
+          </p>
+          <div className="mascot-progression-meter" aria-label={`Mascot power ${state.power} out of 100`}>
+            <i style={{ width: `${state.power}%` }} />
+          </div>
+          <small>{state.nextStageHint}</small>
+        </div>
+        <div className="mascot-progression-art">
+          <img src={state.stageSrc} alt={state.stageTitle} />
+          <b>Stage {state.stage}/5</b>
+        </div>
+      </div>
+
+      <div className="mascot-progression-stats">
+        {statItems.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+            <small>{item.detail}</small>
+          </article>
+        ))}
+      </div>
+
+      <div className="mascot-energy-grid">
+        <article>
+          <span>Streak Energy</span>
+          <b>{state.streakEnergy}%</b>
+        </article>
+        <article>
+          <span>Routine Energy</span>
+          <b>{state.routineEnergy}%</b>
+        </article>
+        <article>
+          <span>Tracking Energy</span>
+          <b>{state.trackingEnergy}%</b>
+        </article>
+      </div>
+
+      <div className="mascot-badge-row">
+        {state.badges.map((badge) => (
+          <article key={badge.id} className={badge.unlocked ? "unlocked" : "locked"}>
+            <img src={badge.src} alt="" />
+            <div>
+              <strong>{badge.title}</strong>
+              <small>{badge.detail}</small>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <div className="mascot-progression-actions">
+        <button type="button" onClick={onOpenDailyRoutine}>Boost with Daily Routine</button>
+        <button type="button" className="ghost" onClick={onOpenProfile}>Open Profile</button>
+      </div>
+    </section>
+  );
+}
 
 function ActiveStreakProofCard({
   status,
@@ -25679,6 +25868,7 @@ function WhatIfScreen({
   weeklyPatternSummary,
   leaderboard,
   leaderboardLoading,
+  badges,
   shareInitData,
   onToggleLeaderboard,
   onStartChallenge,
@@ -25703,6 +25893,7 @@ function WhatIfScreen({
   weeklyPatternSummary: WeeklyPatternSummary;
   leaderboard: LeaderboardState | null;
   leaderboardLoading: boolean;
+  badges: BadgeItem[];
   shareInitData: string;
   onToggleLeaderboard: (nextValue: boolean) => void;
   onStartChallenge: (challengeId: string) => void;
@@ -25869,6 +26060,16 @@ function WhatIfScreen({
       done: false,
     },
   ];
+
+  const mascotProgressionState = useMemo(
+    () => buildMascotProgressionState({
+      settings,
+      expenses,
+      badges,
+      activeProofStatus,
+    }),
+    [settings, expenses, badges, activeProofStatus]
+  );
 
   function openChallengeArea() {
     triggerHaptic("light");
@@ -26100,6 +26301,12 @@ function WhatIfScreen({
         status={activeProofStatus}
         settings={settings}
         onTrackLeak={openDailyRoutineFromRewards}
+        onOpenProfile={onOpenProfile}
+      />
+
+      <MascotProgressionCard
+        state={mascotProgressionState}
+        onOpenDailyRoutine={openDailyRoutineFromRewards}
         onOpenProfile={onOpenProfile}
       />
 
