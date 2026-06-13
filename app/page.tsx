@@ -1048,10 +1048,20 @@ type WeeklyBossContribution = {
   id: string;
   title: string;
   detail: string;
+  icon: string;
   damage: number;
   active: boolean;
   step: number;
   afterDamage: number;
+  hitLabel: string;
+  weaknessHit: boolean;
+};
+
+type WeeklyBossTodayStatus = {
+  id: string;
+  title: string;
+  detail: string;
+  ready: boolean;
 };
 
 type WeeklyBossState = {
@@ -1071,6 +1081,11 @@ type WeeklyBossState = {
   phaseDetail: string;
   resultLabel: string;
   rankHint: string;
+  weaknessTitle: string;
+  weaknessDetail: string;
+  weaknessMatched: boolean;
+  battleResultTitle: string;
+  battleResultDetail: string;
   nextActionHint: string;
   nextHitTitle: string;
   nextHitDetail: string;
@@ -1083,6 +1098,7 @@ type WeeklyBossState = {
   mascotLevel: number;
   mascotPower: number;
   socialCopy: string[];
+  todayStatus: WeeklyBossTodayStatus[];
   contributions: WeeklyBossContribution[];
 };
 
@@ -5748,18 +5764,64 @@ function getWeeklyBossMascotStageLabel(stage: number) {
 }
 
 const WEEKLY_BOSS_IDENTITIES = [
-  { name: "Subscription Leech", title: "Weekly Leak Boss" },
-  { name: "Impulse Goblin", title: "Weekly Leak Boss" },
-  { name: "Weekend Drain", title: "Weekly Leak Boss" },
-  { name: "Phantom Fee", title: "Weekly Leak Boss" },
-  { name: "Delivery Demon", title: "Weekly Leak Boss" },
-  { name: "FOMO Hydra", title: "Weekly Leak Boss" },
+  {
+    name: "Subscription Leech",
+    title: "Weekly Leak Boss",
+    weaknessId: "leak_fix",
+    weaknessTitle: "Weakness: cancelled leaks",
+    weaknessDetail: "One Fix or a reviewed non-needed leak marks a weakness hit. No extra payout logic.",
+  },
+  {
+    name: "Impulse Goblin",
+    title: "Weekly Leak Boss",
+    weaknessId: "routine",
+    weaknessTitle: "Weakness: Daily Routine",
+    weaknessDetail: "Complete today’s routine to land the clean habit hit.",
+  },
+  {
+    name: "Weekend Drain",
+    title: "Weekly Leak Boss",
+    weaknessId: "tracking",
+    weaknessTitle: "Weakness: tracking consistency",
+    weaknessDetail: "Track a real action this week, or mark Clean Day only when it is true.",
+  },
+  {
+    name: "Phantom Fee",
+    title: "Weekly Leak Boss",
+    weaknessId: "wallet_hp",
+    weaknessTitle: "Weakness: stronger Wallet HP",
+    weaknessDetail: "Higher Wallet HP helps weaken recurring pressure without exposing wallet value.",
+  },
+  {
+    name: "Delivery Demon",
+    title: "Weekly Leak Boss",
+    weaknessId: "tracking",
+    weaknessTitle: "Weakness: real expense tracking",
+    weaknessDetail: "Tracking shows where the delivery leak appears before it becomes invisible.",
+  },
+  {
+    name: "FOMO Hydra",
+    title: "Weekly Leak Boss",
+    weaknessId: "challenge",
+    weaknessTitle: "Weakness: challenge proof",
+    weaknessDetail: "Complete one weekly challenge to land a focused anti-FOMO hit.",
+  },
 ];
 
 function getWeeklyBossIdentity(weekKey: string) {
   const hash = weekKey.split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
 
   return WEEKLY_BOSS_IDENTITIES[hash % WEEKLY_BOSS_IDENTITIES.length];
+}
+
+function getWeeklyBossHitLabel(damage: number, weaknessHit: boolean) {
+  if (damage <= 0) return "Locked hit";
+  if (weaknessHit) return "Weakness hit";
+  if (damage >= 180) return "Critical habit hit";
+  if (damage >= 120) return "Heavy hit";
+  if (damage >= 60) return "Clean hit";
+
+  return "Small hit";
 }
 
 function buildWeeklyBossShareText(settings: Settings, state: WeeklyBossState) {
@@ -5778,11 +5840,13 @@ function buildWeeklyBossShareText(settings: Settings, state: WeeklyBossState) {
     "Weekly Boss proof:",
     `${state.bossName} · ${state.weekRangeLabel}`,
     `Damage: ${state.userDamage}/${state.bossHp} (${state.progressPercent}%)`,
+    `Battle result: ${state.battleResultTitle}`,
+    `Weakness: ${state.weaknessMatched ? "hit" : "not hit yet"}`,
     `Mascot: ${state.mascotStageLabel} · Stage ${state.mascotStage}/5 · Level ${state.mascotLevel}`,
     activeProofs ? `Active proofs: ${activeProofs}` : "Active proofs: building this week",
     state.progressPercent >= 100 ? "Boss defeated by this week’s app proof." : state.nextActionHint,
     "",
-    "Real app activity makes the mascot stronger.",
+    "No fake points. Real habits only.",
     "No income, wallet value, or private budget numbers shown.",
     "Smoke is broke.",
   ].filter(Boolean).join("\n");
@@ -7028,6 +7092,7 @@ function buildWeeklyBossState({
   const weekKey = getIsoWeekKey(now);
   const weekRangeLabel = formatShortDateRange(weekStart, weekEnd);
   const todayKeyValue = dayKey(now);
+  const bossIdentity = getWeeklyBossIdentity(weekKey);
   const weeklyExpenses = expenses.filter((expense) => isDateInsideRange(expense.createdAt, weekStart, weekEnd));
   const trackedToday = weeklyExpenses.some((expense) => {
     const createdAt = new Date(expense.createdAt);
@@ -7043,22 +7108,64 @@ function buildWeeklyBossState({
   }
 
   const hasCleanDay = activeProofStatus.todayActions.includes("clean_day");
-  const hasOneFix = activeProofStatus.todayActions.includes("one_fix") || weeklyExpenses.some((expense) => expense.needType !== "Needed");
+  const hasTodayOneFix = activeProofStatus.todayActions.includes("one_fix");
+  const hasOneFix = hasTodayOneFix || weeklyExpenses.some((expense) => expense.needType !== "Needed");
   const weeklyCompletedChallenges = challengeHistory.filter((item) => {
     if (item.status !== "completed") return false;
 
     return isDateInsideRange(item.completedAt || item.endsAt || item.startedAt, weekStart, weekEnd);
   }).length;
-  const hasDailyChallenge = activeProofStatus.todayActions.includes("daily_challenge") || weeklyCompletedChallenges > 0;
+  const completedChallengesToday = challengeHistory.filter((item) => {
+    if (item.status !== "completed") return false;
+    const sourceDate = new Date(item.completedAt || item.endsAt || item.startedAt);
+
+    return !Number.isNaN(sourceDate.getTime()) && dayKey(sourceDate) === todayKeyValue;
+  }).length;
+  const hasTodayChallenge = activeProofStatus.todayActions.includes("daily_challenge") || completedChallengesToday > 0;
+  const hasDailyChallenge = hasTodayChallenge || weeklyCompletedChallenges > 0;
 
   if (hasCleanDay) weeklyTrackingDates.add(todayKeyValue);
 
   const weeklyTrackingDays = weeklyTrackingDates.size;
-  const baseContributions: Omit<WeeklyBossContribution, "step" | "afterDamage">[] = [
+  const todayStatus: WeeklyBossTodayStatus[] = [
+    {
+      id: "routine",
+      title: "Routine hit",
+      detail: activeProofStatus.activeToday ? "Today’s routine already hit the boss." : "Complete Daily Routine to unlock today’s clean hit.",
+      ready: activeProofStatus.activeToday,
+    },
+    {
+      id: "tracking",
+      title: "Tracking hit",
+      detail: trackedToday || hasCleanDay ? "Today has real tracking or Clean Day proof." : "Track one real action, or mark Clean Day only if it is true.",
+      ready: trackedToday || hasCleanDay,
+    },
+    {
+      id: "leak_fix",
+      title: "Leak fix hit",
+      detail: hasTodayOneFix ? "One Fix proof landed today." : hasOneFix ? "Weekly leak proof is active; today’s One Fix can still be stronger." : "Use One Fix or review one leak to land this hit.",
+      ready: hasTodayOneFix || hasOneFix,
+    },
+    {
+      id: "challenge",
+      title: "Challenge hit",
+      detail: hasTodayChallenge ? "Challenge proof landed today." : weeklyCompletedChallenges > 0 ? "Challenge proof is active this week." : "Complete a weekly challenge to unlock this hit.",
+      ready: hasTodayChallenge || weeklyCompletedChallenges > 0,
+    },
+    {
+      id: "streak",
+      title: "Streak chain",
+      detail: activeProofStatus.currentStreak > 0 ? `${activeProofStatus.currentStreak} day streak keeps chain pressure active.` : "Start a streak to add chain pressure.",
+      ready: activeProofStatus.currentStreak > 0,
+    },
+  ];
+
+  const baseContributions: Omit<WeeklyBossContribution, "step" | "afterDamage" | "hitLabel" | "weaknessHit">[] = [
     {
       id: "mascot_power",
       title: "Mascot Power",
       detail: "Base hit from current mascot strength.",
+      icon: "🐸",
       damage: Math.round(mascot.power * 2.4),
       active: mascot.power > 0,
     },
@@ -7066,6 +7173,7 @@ function buildWeeklyBossState({
       id: "wallet_hp",
       title: "Wallet HP",
       detail: "Healthier wallet pressure adds the second hit.",
+      icon: "🛡️",
       damage: Math.round(mascot.walletHp * 1.6),
       active: mascot.walletHp >= 40,
     },
@@ -7073,6 +7181,7 @@ function buildWeeklyBossState({
       id: "routine",
       title: "Daily Routine",
       detail: activeProofStatus.activeToday ? "Today’s routine lands a confirmed hit." : "Complete today’s routine to unlock this hit.",
+      icon: "✅",
       damage: activeProofStatus.activeToday ? 180 : 0,
       active: activeProofStatus.activeToday,
     },
@@ -7080,6 +7189,7 @@ function buildWeeklyBossState({
       id: "streak",
       title: "Active Streak",
       detail: `${activeProofStatus.currentStreak} day${activeProofStatus.currentStreak === 1 ? "" : "s"} live streak adds chain damage.`,
+      icon: "🔥",
       damage: Math.min(activeProofStatus.currentStreak, 14) * 18,
       active: activeProofStatus.currentStreak > 0,
     },
@@ -7087,6 +7197,7 @@ function buildWeeklyBossState({
       id: "tracking",
       title: "Weekly Tracking",
       detail: weeklyTrackingDays > 0 ? `${weeklyTrackingDays}/7 weekly proof day${weeklyTrackingDays === 1 ? "" : "s"} tracked.` : "Track one real action or mark Clean Day only if true.",
+      icon: "📍",
       damage: Math.min(weeklyTrackingDays, 5) * 24 + (trackedToday || hasCleanDay ? 30 : 0),
       active: weeklyTrackingDays > 0,
     },
@@ -7094,6 +7205,7 @@ function buildWeeklyBossState({
       id: "leak_fix",
       title: "Leak Fix",
       detail: hasOneFix ? "Leak-control proof lands the anti-leak hit." : "Use One Fix or review one weekly leak to unlock this hit.",
+      icon: "🔧",
       damage: hasOneFix ? 120 : 0,
       active: hasOneFix,
     },
@@ -7101,18 +7213,23 @@ function buildWeeklyBossState({
       id: "challenge",
       title: "Challenge Proof",
       detail: weeklyCompletedChallenges > 0 ? `${weeklyCompletedChallenges} completed challenge${weeklyCompletedChallenges === 1 ? "" : "s"} this week.` : "Complete a challenge this week to unlock the finisher.",
+      icon: "🎯",
       damage: Math.min(weeklyCompletedChallenges, 3) * 90 + (activeProofStatus.todayActions.includes("daily_challenge") ? 40 : 0),
       active: hasDailyChallenge,
     },
   ];
   let runningDamage = 0;
   const contributions: WeeklyBossContribution[] = baseContributions.map((item, index) => {
+    const weaknessHit = item.id === bossIdentity.weaknessId && item.active && item.damage > 0;
+
     runningDamage = clamp(runningDamage + Math.max(0, item.damage), 0, 1000);
 
     return {
       ...item,
       step: index + 1,
       afterDamage: runningDamage,
+      hitLabel: getWeeklyBossHitLabel(item.damage, weaknessHit),
+      weaknessHit,
     };
   });
 
@@ -7123,8 +7240,8 @@ function buildWeeklyBossState({
   const bossRemainingPercent = clamp(Math.round((bossRemainingHp / bossHp) * 100), 0, 100);
   const progressPercent = clamp(Math.round((userDamage / bossHp) * 100), 0, 100);
   const contributionCount = contributions.filter((item) => item.active).length;
+  const weaknessMatched = contributions.some((item) => item.weaknessHit);
   const missingContribution = contributions.find((item) => !item.active && item.id !== "mascot_power" && item.id !== "wallet_hp");
-  const nextLockedHit = missingContribution || contributions.find((item) => item.damage <= 0);
   const resetMs = Math.max(0, weekEnd.getTime() - now.getTime());
   const resetDays = Math.floor(resetMs / 86400000);
   const resetHours = Math.max(0, Math.ceil((resetMs % 86400000) / 3600000));
@@ -7171,16 +7288,29 @@ function buildWeeklyBossState({
     : progressPercent >= 100
       ? "Keep the streak alive until the weekly reset."
       : "Raise Wallet HP or complete another real app action this week.";
-  const bossIdentity = getWeeklyBossIdentity(weekKey);
-  const nextHitTitle = progressPercent >= 100
-    ? "Keep streak alive"
-    : nextLockedHit?.title || "Stack real proof";
-  const nextHitDetail = progressPercent >= 100
-    ? "Boss cleared. Keep routine and tracking alive for next week."
-    : nextLockedHit?.detail || nextActionHint;
-  const nextHitDamage = progressPercent >= 100
-    ? 0
-    : Math.max(0, nextLockedHit?.damage || 0);
+  const nextHitCandidate = !activeProofStatus.activeToday
+    ? { title: "Daily Routine", detail: "Complete today’s routine to land the strongest clean hit.", damage: 180 }
+    : !(trackedToday || hasCleanDay)
+      ? { title: "Tracking proof", detail: "Track one real action, or mark Clean Day only if true.", damage: 54 }
+      : !hasOneFix
+        ? { title: "Leak Fix", detail: "Use One Fix or review one weekly leak to land the anti-leak hit.", damage: 120 }
+        : !hasDailyChallenge
+          ? { title: "Challenge Proof", detail: "Complete a weekly challenge to unlock the finisher hit.", damage: 90 }
+          : progressPercent >= 100
+            ? { title: "Keep streak alive", detail: "Boss cleared. Keep routine and tracking alive for next week.", damage: 0 }
+            : { title: "All major hits active", detail: "You used the main weekly hits. Keep stacking honest tracking and streak proof.", damage: 0 };
+  const battleResultTitle = progressPercent >= 100
+    ? "Boss defeated"
+    : userDamage <= 0
+      ? "No actions landed yet"
+      : `${contributionCount} real action${contributionCount === 1 ? "" : "s"} landed`;
+  const battleResultDetail = progressPercent >= 100
+    ? "This week’s boss is fully drained by real app proof. Keep the streak alive until reset."
+    : userDamage <= 0
+      ? "Start with Daily Routine, tracking, One Fix, or a challenge to make the first hit."
+      : weaknessMatched
+        ? `${resultLabel}. Weakness hit landed: ${bossIdentity.weaknessTitle.replace("Weakness: ", "")}.`
+        : `${resultLabel}. Next useful hit: ${nextHitCandidate.title}.`;
 
   return {
     weekKey,
@@ -7199,10 +7329,15 @@ function buildWeeklyBossState({
     phaseDetail,
     resultLabel,
     rankHint,
+    weaknessTitle: bossIdentity.weaknessTitle,
+    weaknessDetail: bossIdentity.weaknessDetail,
+    weaknessMatched,
+    battleResultTitle,
+    battleResultDetail,
     nextActionHint,
-    nextHitTitle,
-    nextHitDetail,
-    nextHitDamage,
+    nextHitTitle: nextHitCandidate.title,
+    nextHitDetail: nextHitCandidate.detail,
+    nextHitDamage: nextHitCandidate.damage,
     contributionCount,
     mascotStage: mascot.stage,
     mascotStageLabel: getWeeklyBossMascotStageLabel(mascot.stage),
@@ -7211,10 +7346,11 @@ function buildWeeklyBossState({
     mascotLevel: mascot.level,
     mascotPower: mascot.power,
     socialCopy: [
-      `I dealt ${userDamage} damage to this week’s leak boss.`,
-      `My ${getWeeklyBossMascotStageLabel(mascot.stage)} mascot gets stronger from real app activity.`,
-      "BROKE is not just tracking. It fights your leaks.",
+      `My BROKE mascot hit ${bossIdentity.name} with ${contributionCount} real proof source${contributionCount === 1 ? "" : "s"}.`,
+      weaknessMatched ? `Weakness hit landed: ${bossIdentity.weaknessTitle.replace("Weakness: ", "")}.` : `${bossIdentity.weaknessTitle} is still open.`,
+      "No fake points. Real habits only.",
     ],
+    todayStatus,
     contributions,
   };
 }
@@ -14647,7 +14783,7 @@ function WeeklyBossMvpCard({
         <div className="weekly-boss-impact" aria-hidden="true">
           <i />
           <b>{currentBattleStep ? `+${currentBattleStep.damage}` : state.userDamage}</b>
-          <small>{currentBattleStep ? currentBattleStep.title : state.resultLabel}</small>
+          <small>{currentBattleStep ? `${currentBattleStep.hitLabel} · ${currentBattleStep.title}` : state.resultLabel}</small>
         </div>
         <div className="weekly-boss-monster">
           <img src={state.bossSrc} alt="Weekly leak boss" loading="lazy" decoding="async" />
@@ -14686,6 +14822,30 @@ function WeeklyBossMvpCard({
         </article>
       </div>
 
+      <div className={`weekly-boss-weakness ${state.weaknessMatched ? "matched" : "open"}`}>
+        <span>{state.weaknessTitle}</span>
+        <strong>{state.weaknessMatched ? "Weakness hit landed" : "Weakness still open"}</strong>
+        <small>{state.weaknessDetail}</small>
+      </div>
+
+      <div className="weekly-boss-today-status" aria-label="Today battle status">
+        <div className="weekly-boss-today-status-head">
+          <span>Today’s battle status</span>
+          <b>{state.todayStatus.filter((item) => item.ready).length}/{state.todayStatus.length}</b>
+        </div>
+        <div className="weekly-boss-today-status-grid">
+          {state.todayStatus.map((item) => (
+            <article key={item.id} className={item.ready ? "ready" : "open"}>
+              <i>{item.ready ? "✓" : "•"}</i>
+              <div>
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+
       <div className="weekly-boss-step-log" aria-label="Step-by-step boss damage">
         <div className="weekly-boss-step-log-head">
           <span>Step damage · {state.resultLabel}</span>
@@ -14698,15 +14858,24 @@ function WeeklyBossMvpCard({
           </div>
         )}
         {state.contributions.map((item) => (
-          <article key={item.id} className={`${item.damage > 0 ? "active" : "locked"} ${activeBattleStepId === item.id ? "current" : ""}`.trim()}>
-            <i>{item.step}</i>
+          <article
+            key={item.id}
+            className={`${item.damage > 0 ? "active" : "locked"} ${activeBattleStepId === item.id ? "current" : ""} ${item.weaknessHit ? "weakness" : ""}`.trim()}
+          >
+            <i>{item.icon}</i>
             <div>
               <strong>{item.title}</strong>
-              <small>{item.detail}</small>
+              <small>{item.hitLabel} · {item.detail}</small>
             </div>
             <b>{item.damage > 0 ? `+${item.damage} → ${item.afterDamage}` : "Next"}</b>
           </article>
         ))}
+      </div>
+
+      <div className="weekly-boss-result">
+        <span>Battle result</span>
+        <strong>{state.battleResultTitle}</strong>
+        <small>{state.battleResultDetail}</small>
       </div>
 
       <p className="weekly-boss-reset">{state.resetHint} · {state.resetDetail} · no payout logic</p>
@@ -14730,11 +14899,11 @@ function WeeklyBossMvpCard({
         </summary>
         <div className="weekly-boss-source-list">
           {state.contributions.map((item) => (
-            <article key={item.id} className={item.active ? "active" : "idle"}>
+            <article key={item.id} className={`${item.active ? "active" : "idle"} ${item.weaknessHit ? "weakness" : ""}`.trim()}>
               <i>{item.active ? "✓" : "•"}</i>
               <div>
                 <strong>{item.title}</strong>
-                <small>{item.detail}</small>
+                <small>{item.hitLabel} · {item.detail}</small>
               </div>
               <b>{item.damage}</b>
             </article>
@@ -14763,6 +14932,7 @@ function WeeklyBossMvpCard({
             <span>{state.mascotStageLabel} mascot</span>
             <strong>{state.userDamage}/{state.bossHp} damage</strong>
             <small>Stage {state.mascotStage}/5 · Level {state.mascotLevel} · {state.mascotPower}/100 power</small>
+            <small>{state.battleResultTitle} · {state.weaknessMatched ? "weakness hit" : "weakness open"}</small>
           </div>
         </div>
         <div className="weekly-boss-share-proof-row">

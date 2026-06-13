@@ -36063,3 +36063,151 @@ html.embedded-app-view .hero h1 {
     text-align: left;
   }
 }
+
+/* v59.58.3 — Weekly Boss Action Polish */
+.weekly-boss-weakness,
+.weekly-boss-today-status,
+.weekly-boss-result {
+  position: relative;
+  z-index: 1;
+  margin-top: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+.weekly-boss-weakness.matched {
+  border-color: rgba(250, 204, 21, 0.32);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(250, 204, 21, 0.12), transparent 30%),
+    rgba(15, 23, 42, 0.58);
+}
+
+.weekly-boss-weakness span,
+.weekly-boss-today-status-head span,
+.weekly-boss-result span {
+  display: block;
+  color: rgba(187, 247, 208, 0.74);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.weekly-boss-weakness strong,
+.weekly-boss-result strong {
+  display: block;
+  margin-top: 5px;
+  color: #ffffff;
+  font-size: 14px;
+  line-height: 1.22;
+}
+
+.weekly-boss-weakness small,
+.weekly-boss-result small {
+  display: block;
+  margin-top: 5px;
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 11px;
+  line-height: 1.36;
+}
+
+.weekly-boss-today-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.weekly-boss-today-status-head b {
+  flex: 0 0 auto;
+  color: #bbf7d0;
+  font-size: 12px;
+}
+
+.weekly-boss-today-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.weekly-boss-today-status-grid article {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 14px;
+  padding: 9px;
+  background: rgba(2, 6, 23, 0.36);
+}
+
+.weekly-boss-today-status-grid article.ready {
+  border-color: rgba(134, 239, 172, 0.24);
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.weekly-boss-today-status-grid i {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #bbf7d0;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.weekly-boss-today-status-grid strong {
+  display: block;
+  color: #ffffff;
+  font-size: 12px;
+  line-height: 1.18;
+}
+
+.weekly-boss-today-status-grid small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(226, 232, 240, 0.66);
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.weekly-boss-step-log article.weakness,
+.weekly-boss-source-list article.weakness {
+  border-color: rgba(250, 204, 21, 0.42);
+  background:
+    linear-gradient(135deg, rgba(250, 204, 21, 0.12), rgba(34, 197, 94, 0.07)),
+    rgba(15, 23, 42, 0.58);
+}
+
+.weekly-boss-step-log article.weakness i {
+  background: rgba(250, 204, 21, 0.14);
+  color: #fef3c7;
+}
+
+.weekly-boss-result {
+  border-color: rgba(134, 239, 172, 0.2);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(34, 197, 94, 0.1), transparent 30%),
+    rgba(15, 23, 42, 0.56);
+}
+
+.weekly-boss-impact small {
+  word-break: break-word;
+}
+
+@media (max-width: 420px) {
+  .weekly-boss-today-status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .weekly-boss-weakness,
+  .weekly-boss-today-status,
+  .weekly-boss-result {
+    padding: 10px;
+  }
+}
