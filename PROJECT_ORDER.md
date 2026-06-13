@@ -23,3 +23,7 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Run `npm run typecheck`.
 - Run `npm run lint:quiet`.
 - Run `NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build` when local dependencies are available.
+
+## v59.53.2 — Mascot Evolution Details
+- Added evolution path, stage thresholds, growth rules, and next-stage power hints.
+- No payout, wallet verification, Supabase schema, or game logic changes.

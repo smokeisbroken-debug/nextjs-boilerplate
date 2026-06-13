@@ -118,7 +118,7 @@ import {
 } from "./lib/brokeUniversalLeakCheck";
 
 import { BottomNav } from "./components/BottomNav";
-import { BROKE_MASCOT_BADGE_ASSETS, getBrokeMascotStageAsset } from "./lib/brokeMascotAssets";
+import { BROKE_MASCOT_BADGE_ASSETS, BROKE_MASCOT_STAGE_ASSETS, getBrokeMascotStageAsset } from "./lib/brokeMascotAssets";
 import type { BrokeMascotBadgeId } from "./lib/brokeMascotAssets";
 import type { AppMode, Tab } from "./lib/brokeNavigation";
 
@@ -989,6 +989,17 @@ type MascotProgressionBadgeState = {
   detail: string;
 };
 
+type MascotEvolutionMilestone = {
+  stage: number;
+  title: string;
+  description: string;
+  threshold: number;
+  src: string;
+  unlocked: boolean;
+  active: boolean;
+  detail: string;
+};
+
 type MascotProgressionState = {
   stage: number;
   level: number;
@@ -1002,6 +1013,9 @@ type MascotProgressionState = {
   stageDescription: string;
   stageSrc: string;
   nextStageHint: string;
+  nextStagePower: number | null;
+  powerToNextStage: number;
+  stageMilestones: MascotEvolutionMilestone[];
   badges: MascotProgressionBadgeState[];
 };
 
@@ -6522,6 +6536,9 @@ function buildMascotProgressionState({
     leak_fixed: hasFixedLeak ? "Leak-control proof exists" : "Fix one leak or review one non-needed expense",
     clean_day: hasCleanDay ? "Clean Day proof marked" : "Mark a Clean Day when no leak happens",
   };
+  const stageThresholds = [1, 25, 48, 72, 88];
+  const nextStagePower = stage >= 5 ? null : stageThresholds[stage] ?? null;
+  const powerToNextStage = nextStagePower === null ? 0 : Math.max(0, nextStagePower - power);
   const nextStageHint = stage >= 5
     ? "Top stage unlocked. Keep routine and Wallet HP stable."
     : stage === 4
@@ -6531,6 +6548,21 @@ function buildMascotProgressionState({
         : stage === 2
           ? "Complete Daily Routine and keep tracking to become Leak Fixer."
           : "Open Check, complete Daily Routine, and start tracking to wake the mascot.";
+  const stageMilestones = BROKE_MASCOT_STAGE_ASSETS.map((asset, index) => {
+    const threshold = stageThresholds[index] ?? 1;
+    const unlocked = power >= threshold;
+
+    return {
+      stage: asset.stage,
+      title: asset.title,
+      description: asset.description,
+      threshold,
+      src: asset.src,
+      unlocked,
+      active: asset.stage === stage,
+      detail: unlocked ? "Unlocked" : `${Math.max(0, threshold - power)} power needed`,
+    };
+  });
 
   return {
     stage,
@@ -6545,6 +6577,9 @@ function buildMascotProgressionState({
     stageDescription: stageAsset.description,
     stageSrc: stageAsset.src,
     nextStageHint,
+    nextStagePower,
+    powerToNextStage,
+    stageMilestones,
     badges: BROKE_MASCOT_BADGE_ASSETS.map((badge) => ({
       ...badge,
       unlocked: badgeUnlocked[badge.id],
@@ -13172,6 +13207,12 @@ function MascotProgressionCard({
     { label: "Level", value: `${state.level}`, detail: "Mascot growth" },
     { label: "Badges", value: `${unlockedCount}/${state.badges.length}`, detail: "Proof boosts" },
   ];
+  const growthRules = [
+    { label: "Protect Wallet HP", value: `${state.walletHp}%`, detail: "Higher Wallet HP gives the biggest power boost." },
+    { label: "Keep the streak alive", value: `${state.streakEnergy}%`, detail: "Daily consistency increases Streak Energy." },
+    { label: "Complete Routine", value: `${state.routineEnergy}%`, detail: "Routine actions push the mascot forward without fake leaks." },
+    { label: "Track consistently", value: `${state.trackingEnergy}%`, detail: "Expense tracking history increases Training Energy." },
+  ];
 
   return (
     <section className={`mascot-progression-card stage-${state.stage}`}>
@@ -13186,6 +13227,11 @@ function MascotProgressionCard({
             <i style={{ width: `${state.power}%` }} />
           </div>
           <small>{state.nextStageHint}</small>
+          {state.nextStagePower !== null ? (
+            <em>{state.powerToNextStage} power to next stage</em>
+          ) : (
+            <em>Maximum evolution stage unlocked</em>
+          )}
         </div>
         <div className="mascot-progression-art">
           <img src={state.stageSrc} alt={state.stageTitle} />
@@ -13217,6 +13263,46 @@ function MascotProgressionCard({
           <b>{state.trackingEnergy}%</b>
         </article>
       </div>
+
+      <details className="mascot-evolution-details">
+        <summary>
+          <span>Evolution path</span>
+          <b>{state.stage}/5</b>
+        </summary>
+        <div className="mascot-stage-track">
+          {state.stageMilestones.map((milestone) => (
+            <article
+              key={milestone.stage}
+              className={`${milestone.unlocked ? "unlocked" : "locked"} ${milestone.active ? "active" : ""}`.trim()}
+            >
+              <img src={milestone.src} alt="" />
+              <div>
+                <span>Stage {milestone.stage} · {milestone.threshold}+ power</span>
+                <strong>{milestone.title}</strong>
+                <small>{milestone.detail}</small>
+              </div>
+            </article>
+          ))}
+        </div>
+      </details>
+
+      <details className="mascot-evolution-details">
+        <summary>
+          <span>How to grow</span>
+          <b>Rules</b>
+        </summary>
+        <div className="mascot-growth-rules">
+          {growthRules.map((rule) => (
+            <article key={rule.label}>
+              <div>
+                <strong>{rule.label}</strong>
+                <small>{rule.detail}</small>
+              </div>
+              <b>{rule.value}</b>
+            </article>
+          ))}
+        </div>
+      </details>
 
       <div className="mascot-badge-row">
         {state.badges.map((badge) => (
