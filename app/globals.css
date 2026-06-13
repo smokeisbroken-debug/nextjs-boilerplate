@@ -33125,7 +33125,7 @@ html.embedded-app-view .hero h1 {
 }
 
 .mascot-energy-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .mascot-energy-grid article {
@@ -34297,5 +34297,17 @@ html.embedded-app-view .hero h1 {
 
   .challenge-history-item-top strong {
     white-space: normal;
+  }
+}
+
+
+/* ===== V59.55.0 MASCOT ACTIVITY LOGIC HARDENING ===== */
+.mascot-share-proof-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 420px) {
+  .mascot-share-proof-grid {
+    grid-template-columns: 1fr;
   }
 }

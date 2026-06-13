@@ -1,4 +1,4 @@
-export const BROKE_APP_BUILD_VERSION = "v59.54.1";
+export const BROKE_APP_BUILD_VERSION = "v59.55.0";
 
 export const BROKE_APP_BUILD_NOTE =
   "Challenge History";

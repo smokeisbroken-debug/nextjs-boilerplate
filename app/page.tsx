@@ -1024,7 +1024,12 @@ type MascotProgressionState = {
   streakEnergy: number;
   routineEnergy: number;
   trackingEnergy: number;
+  challengeEnergy: number;
   badgeEnergy: number;
+  realTrackingDays: number;
+  completedChallenges: number;
+  activeChallenges: number;
+  missedChallenges: number;
   stageTitle: string;
   stageDescription: string;
   stageSrc: string;
@@ -5579,6 +5584,7 @@ function buildMascotProgressionShareText(settings: Settings, state: MascotProgre
     `Level: ${state.level}`,
     `Wallet HP: ${state.walletHp}/100`,
     `Badges: ${unlockedBadges}/${state.badges.length}`,
+    `Challenge proof: ${state.completedChallenges} completed`,
     nextStageLine,
     "",
     "Real app activity makes the mascot stronger.",
@@ -6547,35 +6553,83 @@ function buildMascotProgressionState({
   expenses,
   badges,
   activeProofStatus,
+  challengeHistory = [],
 }: {
   settings: Settings;
   expenses: Expense[];
   badges: BadgeItem[];
   activeProofStatus: ActiveStreakProofStatus;
+  challengeHistory?: ChallengeHistoryItem[];
 }): MascotProgressionState {
   const walletSummary = buildWalletSummary(settings, expenses);
   const walletHp = walletSummary.walletHp;
-  const streakEnergy = clamp(Math.round((Math.min(activeProofStatus.currentStreak, 30) / 30) * 100), 0, 100);
+  const now = new Date();
+  const todayKeyValue = dayKey(now);
+  const recentTrackingDates = new Set<string>();
+
+  for (const expense of expenses) {
+    const expenseDate = new Date(expense.createdAt);
+
+    if (Number.isNaN(expenseDate.getTime())) continue;
+
+    const ageDays = Math.floor((now.getTime() - expenseDate.getTime()) / 86400000);
+
+    if (ageDays >= 0 && ageDays < 14) {
+      recentTrackingDates.add(dayKey(expenseDate));
+    }
+  }
+
+  const hasCleanDayProofToday = activeProofStatus.todayActions.includes("clean_day");
+
+  if (hasCleanDayProofToday) recentTrackingDates.add(todayKeyValue);
+
+  const realTrackingDays = recentTrackingDates.size;
+  const completedChallenges = challengeHistory.filter((item) => item.status === "completed").length;
+  const activeChallenges = challengeHistory.filter((item) => item.status === "active").length;
+  const missedChallenges = challengeHistory.filter((item) => item.status === "failed").length;
+  const recentCompletedChallenges = challengeHistory.filter((item) => {
+    if (item.status !== "completed") return false;
+
+    const completedAt = new Date(item.completedAt || item.endsAt || item.startedAt);
+
+    if (Number.isNaN(completedAt.getTime())) return false;
+
+    const ageDays = Math.floor((now.getTime() - completedAt.getTime()) / 86400000);
+
+    return ageDays >= 0 && ageDays < 30;
+  }).length;
+  const streakEnergy = clamp(Math.round((Math.min(activeProofStatus.currentStreak, 21) / 21) * 100), 0, 100);
   const routineEnergy = activeProofStatus.activeToday
     ? 100
     : activeProofStatus.eligible
       ? 84
       : clamp(Math.round((activeProofStatus.progressDays / ACTIVE_STREAK_ELIGIBILITY_DAYS) * 100), 0, 100);
-  const trackingEnergy = clamp(Math.round((Math.min(expenses.length, 30) / 30) * 100), 0, 100);
+  const trackingEnergy = clamp(Math.round((Math.min(realTrackingDays, 7) / 7) * 100), 0, 100);
+  const challengeEnergy = clamp(
+    Math.round(
+      Math.min(recentCompletedChallenges, 5) * 18
+      + Math.min(completedChallenges, 10) * 3
+      + Math.min(activeChallenges, 2) * 8
+      - Math.min(missedChallenges, 5) * 4
+    ),
+    0,
+    100
+  );
   const earnedBadgeCount = badges.filter((badge) => badge.earned).length;
   const badgeEnergy = clamp(Math.round((Math.min(earnedBadgeCount, 8) / 8) * 100), 0, 100);
   const power = clamp(Math.round(
-    walletHp * 0.38
-    + streakEnergy * 0.22
-    + routineEnergy * 0.20
-    + trackingEnergy * 0.12
-    + badgeEnergy * 0.08
+    walletHp * 0.34
+    + streakEnergy * 0.20
+    + routineEnergy * 0.18
+    + trackingEnergy * 0.14
+    + challengeEnergy * 0.08
+    + badgeEnergy * 0.06
   ), 1, 100);
   const stage = power >= 88 ? 5 : power >= 72 ? 4 : power >= 48 ? 3 : power >= 25 ? 2 : 1;
   const level = clamp(Math.floor(power / 10) + Math.floor(Math.min(activeProofStatus.currentStreak, 60) / 10) + 1, 1, 20);
   const stageAsset = getBrokeMascotStageAsset(stage);
   const hasFixedLeak = activeProofStatus.todayActions.includes("one_fix") || expenses.some((expense) => expense.needType !== "Needed");
-  const hasCleanDay = activeProofStatus.todayActions.includes("clean_day");
+  const hasCleanDay = hasCleanDayProofToday;
   const badgeUnlocked: Record<BrokeMascotBadgeId, boolean> = {
     wallet_hp: walletHp >= 70,
     streak: activeProofStatus.currentStreak >= 3,
@@ -6617,8 +6671,8 @@ function buildMascotProgressionState({
       detail: unlocked ? "Unlocked" : `${Math.max(0, threshold - power)} power needed`,
     };
   });
-  const todayKeyValue = dayKey(new Date());
-  const hasTrackedToday = expenses.some((expense) => dayKey(new Date(expense.createdAt)) === todayKeyValue);
+  const hasTrackedToday = recentTrackingDates.has(todayKeyValue);
+  const latestCompletedChallenge = challengeHistory.find((item) => item.status === "completed");
   const boostPlan: MascotBoostAction[] = [
     {
       id: "routine",
@@ -6653,8 +6707,17 @@ function buildMascotProgressionState({
       detail: hasTrackedToday
         ? "Today has real tracking proof."
         : "Add a real expense or mark a clean day only if it is true.",
-      value: hasTrackedToday ? "today" : "proof",
+      value: hasTrackedToday ? `${realTrackingDays}/7d` : "proof",
       done: hasTrackedToday,
+    },
+    {
+      id: "challenge_history",
+      title: completedChallenges > 0 ? "Challenge proof active" : "Complete one challenge",
+      detail: completedChallenges > 0
+        ? `${completedChallenges} completed challenge${completedChallenges === 1 ? "" : "s"} now support mascot growth.`
+        : "Start a real challenge and finish it naturally. Missed challenges do not boost power.",
+      value: latestCompletedChallenge ? "history" : "+challenge",
+      done: completedChallenges > 0,
     },
     {
       id: "leak_fixed",
@@ -6684,7 +6747,12 @@ function buildMascotProgressionState({
     streakEnergy,
     routineEnergy,
     trackingEnergy,
+    challengeEnergy,
     badgeEnergy,
+    realTrackingDays,
+    completedChallenges,
+    activeChallenges,
+    missedChallenges,
     stageTitle: stageAsset.title,
     stageDescription: stageAsset.description,
     stageSrc: stageAsset.src,
@@ -10915,6 +10983,7 @@ export default function Home() {
             cloudError={cloudError}
             streak={activeStreak}
             activeProofStatus={activeProofStatus}
+            challengeHistory={challengeHistory}
             badges={badges}
             leaderboard={leaderboard}
             leaderboardLoading={leaderboardLoading}
@@ -13478,13 +13547,14 @@ function MascotProgressionCard({
     { label: "Power", value: `${state.power}/100`, detail: "Real app activity" },
     { label: "Wallet HP", value: `${state.walletHp}/100`, detail: "Wallet pressure" },
     { label: "Level", value: `${state.level}`, detail: "Mascot growth" },
-    { label: "Badges", value: `${unlockedCount}/${state.badges.length}`, detail: "Proof boosts" },
+    { label: "Challenges", value: `${state.completedChallenges}`, detail: "Completed proof" },
   ];
   const growthRules = [
     { label: "Protect Wallet HP", value: `${state.walletHp}%`, detail: "Higher Wallet HP gives the biggest power boost." },
     { label: "Keep the streak alive", value: `${state.streakEnergy}%`, detail: "Daily consistency increases Streak Energy." },
     { label: "Complete Routine", value: `${state.routineEnergy}%`, detail: "Routine actions push the mascot forward without fake leaks." },
-    { label: "Track consistently", value: `${state.trackingEnergy}%`, detail: "Expense tracking history increases Training Energy." },
+    { label: "Track consistently", value: `${state.realTrackingDays}/7d`, detail: "Recent real tracking days matter more than raw entry count." },
+    { label: "Complete challenges", value: `${state.challengeEnergy}%`, detail: "Completed challenge history gives a controlled mascot boost." },
   ];
 
   async function copyMascotShareText() {
@@ -13600,6 +13670,10 @@ function MascotProgressionCard({
           <span>Tracking Energy</span>
           <b>{state.trackingEnergy}%</b>
         </article>
+        <article>
+          <span>Challenge Energy</span>
+          <b>{state.challengeEnergy}%</b>
+        </article>
       </div>
 
       <details className="mascot-evolution-details">
@@ -13705,6 +13779,10 @@ function MascotProgressionCard({
           <article>
             <span>Badges</span>
             <strong>{unlockedCount}/{state.badges.length}</strong>
+          </article>
+          <article>
+            <span>Challenges</span>
+            <strong>{state.completedChallenges}</strong>
           </article>
         </div>
 
@@ -26680,8 +26758,9 @@ function WhatIfScreen({
       expenses,
       badges,
       activeProofStatus,
+      challengeHistory,
     }),
-    [settings, expenses, badges, activeProofStatus]
+    [settings, expenses, badges, activeProofStatus, challengeHistory]
   );
 
   function openChallengeArea() {
@@ -28103,6 +28182,7 @@ function SettingsScreen({
   cloudError,
   streak,
   activeProofStatus,
+  challengeHistory,
   badges,
   leaderboard,
   leaderboardLoading,
@@ -28130,6 +28210,7 @@ function SettingsScreen({
   cloudError: string;
   streak: Streak;
   activeProofStatus: ActiveStreakProofStatus;
+  challengeHistory: ChallengeHistoryItem[];
   badges: BadgeItem[];
   leaderboard: LeaderboardState | null;
   leaderboardLoading: boolean;
@@ -28395,8 +28476,9 @@ function SettingsScreen({
       expenses: rawExpenses,
       badges,
       activeProofStatus,
+      challengeHistory,
     }),
-    [settings, rawExpenses, badges, activeProofStatus]
+    [settings, rawExpenses, badges, activeProofStatus, challengeHistory]
   );
   const profileMascotBadgeCount = profileMascotProgression.badges.filter((badge) => badge.unlocked).length;
   const profileMascotNextLabel = profileMascotProgression.nextStagePower === null
