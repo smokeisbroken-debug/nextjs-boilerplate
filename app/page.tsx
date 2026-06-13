@@ -1100,6 +1100,28 @@ type CommunityBossPrepState = {
   lanes: CommunityBossPrepLane[];
 };
 
+type SocialLeaderboardLane = {
+  id: string;
+  title: string;
+  detail: string;
+  value: string;
+  points: number;
+  ready: boolean;
+};
+
+type SocialLeaderboardState = {
+  weekKey: string;
+  weekRangeLabel: string;
+  localSafePoints: number;
+  publicProofCount: number;
+  rankTier: string;
+  rankHint: string;
+  nextRankHint: string;
+  privacyLabel: string;
+  shareText: string;
+  lanes: SocialLeaderboardLane[];
+};
+
 type WeeklyBossBattlePulse = "idle" | "attack" | "hit" | "victory";
 
 type ActiveStreakProofTimelineDay = {
@@ -7194,6 +7216,116 @@ function buildCommunityBossPrepState({
   };
 }
 
+function buildSocialLeaderboardState({
+  weeklyBoss,
+  mascot,
+  communityBoss,
+  activeProofStatus,
+}: {
+  weeklyBoss: WeeklyBossState;
+  mascot: MascotProgressionState;
+  communityBoss: CommunityBossPrepState;
+  activeProofStatus: ActiveStreakProofStatus;
+}): SocialLeaderboardState {
+  const weeklyBossPoints = Math.round(weeklyBoss.userDamage * 0.1);
+  const mascotPoints = Math.round(mascot.power * 1.8);
+  const proofPoints = weeklyBoss.contributionCount * 18;
+  const routineGatePoints = activeProofStatus.activeToday ? 35 : 0;
+  const communityPrepPoints = Math.round(communityBoss.safeSocialPoints * 0.8);
+
+  const localSafePoints = clamp(
+    weeklyBossPoints + mascotPoints + proofPoints + routineGatePoints + communityPrepPoints,
+    0,
+    650
+  );
+  const rankTier = localSafePoints >= 520
+    ? "Legend lane"
+    : localSafePoints >= 390
+      ? "Guardian lane"
+      : localSafePoints >= 260
+        ? "Fighter lane"
+        : localSafePoints >= 120
+          ? "Builder lane"
+          : "Starter lane";
+  const nextRankHint = localSafePoints >= 520
+    ? "Hold the streak and keep weekly proof live until reset."
+    : !activeProofStatus.activeToday
+      ? "Complete today’s Daily Routine to unlock the routine gate points."
+      : weeklyBoss.progressPercent < 100
+        ? weeklyBoss.nextActionHint
+        : "Add another real tracking day or complete a challenge to raise social points.";
+  const rankHint = `${rankTier} · ${localSafePoints}/650 safe points this week.`;
+  const lanes: SocialLeaderboardLane[] = [
+    {
+      id: "weekly_boss",
+      title: "Weekly Boss proof",
+      detail: `${weeklyBoss.userDamage}/${weeklyBoss.bossHp} damage from this week’s real app actions.`,
+      value: `+${weeklyBossPoints}`,
+      points: weeklyBossPoints,
+      ready: weeklyBoss.userDamage > 0,
+    },
+    {
+      id: "mascot_power",
+      title: "Mascot strength",
+      detail: `${mascot.stageTitle} · level ${mascot.level}. Power comes from Wallet HP, streak, routine, tracking, and badges.`,
+      value: `+${mascotPoints}`,
+      points: mascotPoints,
+      ready: mascot.power > 0,
+    },
+    {
+      id: "proof_count",
+      title: "Proof count",
+      detail: `${weeklyBoss.contributionCount} active proof source${weeklyBoss.contributionCount === 1 ? "" : "s"} this week.`,
+      value: `+${proofPoints}`,
+      points: proofPoints,
+      ready: weeklyBoss.contributionCount > 0,
+    },
+    {
+      id: "routine_gate",
+      title: "Routine gate",
+      detail: activeProofStatus.activeToday ? "Today’s Daily Routine proof is active." : "Daily Routine is the safe gate before public ranking pressure.",
+      value: `+${routineGatePoints}`,
+      points: routineGatePoints,
+      ready: activeProofStatus.activeToday,
+    },
+    {
+      id: "community_prep",
+      title: "Community prep",
+      detail: `${communityBoss.safeSocialPoints} local prep points. Backend sync is not live yet.`,
+      value: `+${communityPrepPoints}`,
+      points: communityPrepPoints,
+      ready: communityBoss.safeSocialPoints > 0,
+    },
+  ];
+  const shareText = [
+    "$BROKE Social Leaderboard proof",
+    "",
+    `Week: ${weeklyBoss.weekRangeLabel}`,
+    `Safe points: ${localSafePoints}/650`,
+    `Lane: ${rankTier}`,
+    `Weekly Boss damage: ${weeklyBoss.userDamage}/${weeklyBoss.bossHp}`,
+    `Mascot: ${mascot.stageTitle} · Level ${mascot.level}`,
+    `Active proof sources: ${weeklyBoss.contributionCount}`,
+    "",
+    "No income. No wallet value. No private balance. No payout promise.",
+    "Real habits make the mascot stronger.",
+    "Smoke is broke.",
+  ].join("\n");
+
+  return {
+    weekKey: weeklyBoss.weekKey,
+    weekRangeLabel: weeklyBoss.weekRangeLabel,
+    localSafePoints,
+    publicProofCount: weeklyBoss.contributionCount,
+    rankTier,
+    rankHint,
+    nextRankHint,
+    privacyLabel: "Safe points only · no wallet value · no payout",
+    shareText,
+    lanes,
+  };
+}
+
 function getCategorySummaries(expenses: Expense[]): CategorySummary[] {
   const map = new Map<string, { trackedAmount: number; leakAmount: number; count: number }>();
 
@@ -12048,12 +12180,12 @@ function HelpGuideModal({
           icon: A.walletMascot,
         },
         {
-          title: "Public Leaderboard",
+          title: "Social Leaderboard MVP",
           body: [
-            "Public Leaderboard is optional public proof. Users can stay private or opt in when they want rank visibility.",
-            "Leaderboard visibility should respect Public Proof Mode and avoid exposing income, exact balance, payday, or private debt details.",
-            "Daily, weekly, and all-time ranks can help show consistency, but the app should still reward real routine activity over empty button taps.",
-            "If a user cannot find leaderboard settings, open Profile privacy/public proof controls and Rewards proof sections.",
+            "Social Leaderboard MVP is optional public proof. Users can stay private or opt in when they want rank visibility.",
+            "Safe points come from mascot strength, Weekly Boss damage, routine proof, proof count, badges, challenges, and streaks.",
+            "Leaderboard visibility must avoid income, wallet value, exact balance, payday, debt details, payout math, and reward promises.",
+            "The local preview can be used without joining public ranking. Public rows use existing safe leaderboard sync when available.",
           ],
           icon: A.challengeTrophy,
         },
@@ -20773,13 +20905,16 @@ function ChartScreen({
 function LeaderboardPanel({
   leaderboard,
   loading,
+  social,
   onToggleLeaderboard,
 }: {
   leaderboard: LeaderboardState | null;
   loading: boolean;
+  social: SocialLeaderboardState;
   onToggleLeaderboard: (nextValue: boolean) => void;
 }) {
   const [board, setBoard] = useState<"daily" | "weekly" | "allTime">("daily");
+  const [copied, setCopied] = useState(false);
   const me = leaderboard?.me ?? null;
   const rows =
     board === "daily"
@@ -20789,22 +20924,64 @@ function LeaderboardPanel({
         : leaderboard?.allTime ?? [];
 
   const isPublic = Boolean(me?.publicLeaderboard);
+  const boardLabel = board === "daily" ? "Today" : board === "weekly" ? "This week" : "All time";
+
+  async function copySocialProof() {
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(social.shareText);
+        setCopied(true);
+        triggerHaptic("success");
+        window.setTimeout(() => setCopied(false), 1400);
+      }
+    } catch {
+      triggerHaptic("light");
+    }
+  }
 
   return (
-    <section className="leaderboard-panel">
+    <section className="leaderboard-panel social-leaderboard-panel">
       <div className="section-title">
-        <span>$BROKE Score</span>
-        <small>{isPublic ? "Public progress" : "Private mode"}</small>
+        <span>Social Leaderboard MVP</span>
+        <small>{isPublic ? "Public ranking enabled" : "Private preview"}</small>
       </div>
 
-      <div className="leaderboard-me-card">
+      <div className="social-leaderboard-hero">
+        <div>
+          <span>{social.weekRangeLabel}</span>
+          <strong>{social.localSafePoints.toLocaleString("en-US")} pts</strong>
+          <small>{social.rankHint}</small>
+        </div>
+        <b>{social.rankTier}</b>
+      </div>
+
+      <div className="social-leaderboard-lanes" aria-label="Safe social points breakdown">
+        {social.lanes.map((lane) => (
+          <article key={lane.id} className={lane.ready ? "ready" : "locked"}>
+            <div>
+              <span>{lane.title}</span>
+              <strong>{lane.value}</strong>
+              <small>{lane.detail}</small>
+            </div>
+            <b>{lane.ready ? "Live" : "Open"}</b>
+          </article>
+        ))}
+      </div>
+
+      <div className="social-leaderboard-next">
+        <span>Next safe push</span>
+        <strong>{social.nextRankHint}</strong>
+        <small>{social.privacyLabel}</small>
+      </div>
+
+      <div className="leaderboard-me-card social-leaderboard-me-card">
         <img src={A.challengeTrophy} alt="" />
         <div>
-          <span>Your score</span>
-          <strong>{me ? me.brokeScore.toLocaleString("en-US") : "0"} XP</strong>
+          <span>{isPublic ? "Public board" : "Private mode"}</span>
+          <strong>{me ? me.brokeScore.toLocaleString("en-US") : "0"} synced pts</strong>
           <small>
             Trust L{me?.trustLevel ?? 0} · {me?.currentStreak ?? 0}d streak ·{" "}
-            {me?.badgeCount ?? 0} badges
+            {me?.badgeCount ?? 0} badges · safe public fields only
           </small>
         </div>
         <button
@@ -20816,20 +20993,25 @@ function LeaderboardPanel({
         </button>
       </div>
 
+      <div className="social-leaderboard-actions">
+        <button type="button" onClick={copySocialProof}>{copied ? "Copied" : "Copy proof"}</button>
+        <span>{boardLabel} ranking uses existing safe leaderboard sync when available.</span>
+      </div>
+
       <div className="leaderboard-tabs">
         <button
           type="button"
           className={board === "daily" ? "active" : ""}
           onClick={() => setBoard("daily")}
         >
-          Daily
+          Today
         </button>
         <button
           type="button"
           className={board === "weekly" ? "active" : ""}
           onClick={() => setBoard("weekly")}
         >
-          Weekly
+          Week
         </button>
         <button
           type="button"
@@ -20843,7 +21025,7 @@ function LeaderboardPanel({
       <div className="leaderboard-list">
         {rows.length === 0 ? (
           <div className="leaderboard-empty">
-            No public players yet. Join the board to make the first move.
+            No public social ranking rows yet. Join only when you want public-safe progress visibility.
           </div>
         ) : (
           rows.slice(0, 10).map((row, index) => (
@@ -20860,20 +21042,19 @@ function LeaderboardPanel({
       <details className="leaderboard-faq">
         <summary>
           <img src={A.help} alt="" />
-          <span>How does this leaderboard work?</span>
+          <span>How does this social leaderboard work?</span>
         </summary>
         <div>
           <p>
-            Leaderboard is not based on income, private expenses, or claimed savings.
-            Those numbers are private and easy to fake.
+            Social points are public-safe proof points from real app activity: mascot strength,
+            Weekly Boss damage, routine proof, active proof count, badges, challenges, and streaks.
           </p>
           <p>
-            $BROKE Score is based on consistency: tracking activity, streaks,
-            challenges, badges, and trust level.
+            The leaderboard is not based on income, private expenses, wallet value, debt,
+            claimed savings, or token payout math.
           </p>
           <p>
-            Public ranking shows only score, streak, badges, completed challenges,
-            and trust level. Financial details stay private.
+            Ranking is optional. Private users can keep the local preview without joining public visibility.
           </p>
         </div>
       </details>
@@ -20903,7 +21084,7 @@ function LeaderboardRow({
           {row.challengesCompleted} challenges
         </span>
       </div>
-      <em>{score.toLocaleString("en-US")} XP</em>
+      <em>{score.toLocaleString("en-US")} pts</em>
     </article>
   );
 }
@@ -27596,6 +27777,15 @@ function WhatIfScreen({
     }),
     [weeklyBossState, mascotProgressionState, activeProofStatus]
   );
+  const socialLeaderboardState = useMemo(
+    () => buildSocialLeaderboardState({
+      weeklyBoss: weeklyBossState,
+      mascot: mascotProgressionState,
+      communityBoss: communityBossPrepState,
+      activeProofStatus,
+    }),
+    [weeklyBossState, mascotProgressionState, communityBossPrepState, activeProofStatus]
+  );
 
   function openChallengeArea() {
     triggerHaptic("light");
@@ -28111,14 +28301,15 @@ function WhatIfScreen({
       <details className="clean-details rewards-tool-details">
         <summary>
           <div>
-            <span>Public Leaderboard</span>
-            <small>Only public progress. No income or balance exposed.</small>
+            <span>Social Leaderboard MVP</span>
+            <small>Safe points from mascot, Weekly Boss, routine, and proof count. No balances.</small>
           </div>
-          <b>Optional</b>
+          <b>{socialLeaderboardState.rankTier}</b>
         </summary>
         <LeaderboardPanel
           leaderboard={leaderboard}
           loading={leaderboardLoading}
+          social={socialLeaderboardState}
           onToggleLeaderboard={onToggleLeaderboard}
         />
       </details>
