@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ClipboardEvent, Dispatch, ReactNode, SetStateAction } from "react";
+import type { ClipboardEvent, Dispatch, ReactNode, SetStateAction, SyntheticEvent } from "react";
 import {
   BROKE_APP_BUILD_NOTE,
   BROKE_APP_BUILD_VERSION,
@@ -5576,6 +5576,16 @@ function buildMascotProgressionShareText(settings: Settings, state: MascotProgre
     "No income or real balance shown.",
     "Smoke is broke.",
   ].filter(Boolean).join("\n");
+}
+
+function handleMascotAssetError(event: SyntheticEvent<HTMLImageElement>) {
+  const image = event.currentTarget;
+
+  if (image.dataset.mascotFallbackApplied === "1") return;
+
+  image.dataset.mascotFallbackApplied = "1";
+  image.src = A.walletMascot;
+  image.classList.add("mascot-asset-fallback");
 }
 
 const REWARD_NOTIFICATION_PREFS_KEY = "broke-reward-notification-prefs-v1";
@@ -13377,7 +13387,7 @@ function MascotProgressionCard({
   }
 
   return (
-    <section className={`mascot-progression-card stage-${state.stage}`}>
+    <section id="broke-mascot-progression" className={`mascot-progression-card stage-${state.stage}`}>
       <div className="mascot-progression-hero">
         <div className="mascot-progression-copy">
           <span>Mascot Progression</span>
@@ -13396,9 +13406,20 @@ function MascotProgressionCard({
           )}
         </div>
         <div className="mascot-progression-art">
-          <img src={state.stageSrc} alt={state.stageTitle} />
+          <img
+            src={state.stageSrc}
+            alt={state.stageTitle}
+            decoding="async"
+            onError={handleMascotAssetError}
+          />
           <b>Stage {state.stage}/5</b>
         </div>
+      </div>
+
+      <div className="mascot-polish-summary" aria-label="Mascot progress summary">
+        <span>{unlockedCount}/{state.badges.length} badges</span>
+        <span>{boostDoneCount}/{state.boostPlan.length} boosts ready</span>
+        <span>{state.nextStagePower === null ? "Max stage" : `${state.powerToNextStage} power left`}</span>
       </div>
 
       <div className="mascot-progression-stats">
@@ -13437,7 +13458,7 @@ function MascotProgressionCard({
               key={milestone.stage}
               className={`${milestone.unlocked ? "unlocked" : "locked"} ${milestone.active ? "active" : ""}`.trim()}
             >
-              <img src={milestone.src} alt="" />
+              <img src={milestone.src} alt="" loading="lazy" decoding="async" onError={handleMascotAssetError} />
               <div>
                 <span>Stage {milestone.stage} · {milestone.threshold}+ power</span>
                 <strong>{milestone.title}</strong>
@@ -13488,7 +13509,7 @@ function MascotProgressionCard({
       <div className="mascot-badge-row">
         {state.badges.map((badge) => (
           <article key={badge.id} className={badge.unlocked ? "unlocked" : "locked"}>
-            <img src={badge.src} alt="" />
+            <img src={badge.src} alt="" loading="lazy" decoding="async" onError={handleMascotAssetError} />
             <div>
               <strong>{badge.title}</strong>
               <small>{badge.detail}</small>
@@ -13499,7 +13520,7 @@ function MascotProgressionCard({
 
       <div className={`mascot-share-proof-card identity-share-style-${settings.identity.identityStyle || "classic"}`} ref={mascotShareCardRef}>
         <div className="mascot-share-proof-top">
-          <img src={publicIdentityAvatar} alt="" />
+          <img src={publicIdentityAvatar} alt="" loading="lazy" decoding="async" />
           <div>
             <span>$BROKE MASCOT</span>
             <strong>{publicIdentityName}</strong>
@@ -13509,7 +13530,7 @@ function MascotProgressionCard({
         </div>
 
         <div className="mascot-share-proof-main">
-          <img src={state.stageSrc} alt="" />
+          <img src={state.stageSrc} alt="" loading="lazy" decoding="async" onError={handleMascotAssetError} />
           <div>
             <span>Current evolution</span>
             <strong>{state.stageTitle}</strong>
@@ -29327,7 +29348,13 @@ function SettingsScreen({
 
         <section className={`profile-mascot-snapshot-card stage-${profileMascotProgression.stage}`}>
           <div className="profile-mascot-snapshot-art">
-            <img src={profileMascotProgression.stageSrc} alt={profileMascotProgression.stageTitle} />
+            <img
+              src={profileMascotProgression.stageSrc}
+              alt={profileMascotProgression.stageTitle}
+              loading="lazy"
+              decoding="async"
+              onError={handleMascotAssetError}
+            />
             <b>Stage {profileMascotProgression.stage}/5</b>
           </div>
           <div className="profile-mascot-snapshot-copy">
