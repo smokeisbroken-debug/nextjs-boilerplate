@@ -989,6 +989,14 @@ type MascotProgressionBadgeState = {
   detail: string;
 };
 
+type MascotBoostAction = {
+  id: string;
+  title: string;
+  detail: string;
+  value: string;
+  done: boolean;
+};
+
 type MascotEvolutionMilestone = {
   stage: number;
   title: string;
@@ -1017,6 +1025,7 @@ type MascotProgressionState = {
   powerToNextStage: number;
   stageMilestones: MascotEvolutionMilestone[];
   badges: MascotProgressionBadgeState[];
+  boostPlan: MascotBoostAction[];
 };
 
 type ActiveStreakProofTimelineDay = {
@@ -6563,6 +6572,64 @@ function buildMascotProgressionState({
       detail: unlocked ? "Unlocked" : `${Math.max(0, threshold - power)} power needed`,
     };
   });
+  const todayKeyValue = dayKey(new Date());
+  const hasTrackedToday = expenses.some((expense) => dayKey(new Date(expense.createdAt)) === todayKeyValue);
+  const boostPlan: MascotBoostAction[] = [
+    {
+      id: "routine",
+      title: activeProofStatus.activeToday ? "Routine protected" : "Complete today’s Routine",
+      detail: activeProofStatus.activeToday
+        ? "Daily Routine already boosts the mascot today."
+        : "Open Routine and complete real app actions. No fake leak needed.",
+      value: activeProofStatus.activeToday ? "+100 routine" : "+routine power",
+      done: activeProofStatus.activeToday,
+    },
+    {
+      id: "wallet_hp",
+      title: walletHp >= 70 ? "Wallet HP badge active" : "Raise Wallet HP",
+      detail: walletHp >= 70
+        ? "Wallet HP is strong enough for the badge."
+        : "Review spend pressure and reduce leak damage to reach 70+ Wallet HP.",
+      value: `${walletHp}/100 HP`,
+      done: walletHp >= 70,
+    },
+    {
+      id: "streak",
+      title: activeProofStatus.currentStreak >= 3 ? "Streak badge active" : "Build 3-day streak",
+      detail: activeProofStatus.currentStreak >= 3
+        ? "Consistency is already powering the mascot."
+        : "Protect each day with routine actions to unlock Streak Energy.",
+      value: `${activeProofStatus.currentStreak}d`,
+      done: activeProofStatus.currentStreak >= 3,
+    },
+    {
+      id: "tracking",
+      title: hasTrackedToday ? "Tracked today" : "Track one real action",
+      detail: hasTrackedToday
+        ? "Today has real tracking proof."
+        : "Add a real expense or mark a clean day only if it is true.",
+      value: hasTrackedToday ? "today" : "proof",
+      done: hasTrackedToday,
+    },
+    {
+      id: "leak_fixed",
+      title: hasFixedLeak ? "Leak Fixer proof active" : "Fix or review one leak",
+      detail: hasFixedLeak
+        ? "Leak control is already counted in progression."
+        : "Use One Fix or review a non-needed expense to unlock this badge.",
+      value: hasFixedLeak ? "active" : "+badge",
+      done: hasFixedLeak,
+    },
+    {
+      id: "clean_day",
+      title: hasCleanDay ? "Clean Day proof active" : "Mark Clean Day when true",
+      detail: hasCleanDay
+        ? "No-leak proof is active for today."
+        : "If no leak happened today, mark Clean Day for extra proof.",
+      value: hasCleanDay ? "active" : "+badge",
+      done: hasCleanDay,
+    },
+  ];
 
   return {
     stage,
@@ -6585,6 +6652,7 @@ function buildMascotProgressionState({
       unlocked: badgeUnlocked[badge.id],
       detail: badgeDetails[badge.id],
     })),
+    boostPlan,
   };
 }
 
@@ -13201,6 +13269,7 @@ function MascotProgressionCard({
   onOpenProfile: () => void;
 }) {
   const unlockedCount = state.badges.filter((badge) => badge.unlocked).length;
+  const boostDoneCount = state.boostPlan.filter((item) => item.done).length;
   const statItems = [
     { label: "Power", value: `${state.power}/100`, detail: "Real app activity" },
     { label: "Wallet HP", value: `${state.walletHp}/100`, detail: "Wallet pressure" },
@@ -13299,6 +13368,25 @@ function MascotProgressionCard({
                 <small>{rule.detail}</small>
               </div>
               <b>{rule.value}</b>
+            </article>
+          ))}
+        </div>
+      </details>
+
+      <details className="mascot-evolution-details">
+        <summary>
+          <span>Boost plan</span>
+          <b>{boostDoneCount}/{state.boostPlan.length}</b>
+        </summary>
+        <div className="mascot-boost-plan">
+          {state.boostPlan.map((item) => (
+            <article key={item.id} className={item.done ? "done" : "open"}>
+              <i>{item.done ? "✓" : "•"}</i>
+              <div>
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+              </div>
+              <b>{item.value}</b>
             </article>
           ))}
         </div>
