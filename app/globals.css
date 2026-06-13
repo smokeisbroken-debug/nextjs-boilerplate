@@ -33910,3 +33910,173 @@ html.embedded-app-view .hero h1 {
     white-space: normal;
   }
 }
+
+/* v59.54.0 — Guide Search */
+.tab-guide-search-panel {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 10px;
+  padding: 10px;
+  border: 1px solid rgba(183, 255, 25, 0.12);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(183, 255, 25, 0.1), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.014));
+}
+
+.tab-guide-search-label {
+  color: rgba(238, 255, 210, 0.82);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tab-guide-search-box {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 8px 0 10px;
+  border: 1px solid rgba(183, 255, 25, 0.16);
+  border-radius: 15px;
+  background: rgba(2, 8, 5, 0.58);
+}
+
+.tab-guide-search-box > span {
+  color: rgba(183, 255, 25, 0.78);
+  font-size: 18px;
+  line-height: 1;
+  text-align: center;
+}
+
+.tab-guide-search-box input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f8ffe9;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tab-guide-search-box input::placeholder {
+  color: rgba(244, 247, 240, 0.38);
+  font-weight: 700;
+}
+
+.tab-guide-search-box button,
+.tab-guide-quick-tags button,
+.tab-guide-result-open {
+  border: 1px solid rgba(183, 255, 25, 0.16);
+  border-radius: 999px;
+  background: rgba(183, 255, 25, 0.08);
+  color: rgba(238, 255, 210, 0.86);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+}
+
+.tab-guide-search-box button {
+  padding: 7px 9px;
+}
+
+.tab-guide-quick-tags {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tab-guide-quick-tags::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-guide-quick-tags button {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  white-space: nowrap;
+}
+
+.tab-guide-quick-tags button.active {
+  color: #0b1208;
+  background: linear-gradient(135deg, #b7ff19, #6eff8b);
+  border-color: rgba(183, 255, 25, 0.76);
+  box-shadow: 0 0 20px rgba(183, 255, 25, 0.16);
+}
+
+.tab-guide-search-status {
+  color: rgba(244, 247, 240, 0.54);
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.tab-guide-results-list article {
+  border-color: rgba(183, 255, 25, 0.16);
+}
+
+.tab-guide-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.tab-guide-result-head small {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  border: 1px solid rgba(183, 255, 25, 0.16);
+  border-radius: 999px;
+  color: rgba(183, 255, 25, 0.82);
+  background: rgba(183, 255, 25, 0.07);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tab-guide-result-open {
+  width: fit-content;
+  margin-top: 9px;
+  padding: 8px 10px;
+  color: #f8ffe9;
+  background: rgba(183, 255, 25, 0.11);
+}
+
+.tab-guide-empty-state {
+  min-height: 110px;
+  align-items: center;
+}
+
+@media (max-width: 430px) {
+  .tab-guide-search-panel {
+    margin-top: 8px;
+    padding: 9px;
+    border-radius: 16px;
+  }
+
+  .tab-guide-search-box {
+    grid-template-columns: 20px minmax(0, 1fr) auto;
+    min-height: 42px;
+  }
+
+  .tab-guide-search-box input {
+    font-size: 12px;
+  }
+
+  .tab-guide-quick-tags button {
+    padding: 7px 9px;
+    font-size: 9.5px;
+  }
+
+  .tab-guide-result-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+}

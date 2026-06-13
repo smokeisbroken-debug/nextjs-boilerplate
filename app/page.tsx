@@ -10955,6 +10955,8 @@ function HelpGuideModal({
   onClose: () => void;
 }) {
   const [selectedGuide, setSelectedGuide] = useState<Tab>(activeTab);
+  const [guideSearch, setGuideSearch] = useState("");
+  const [activeGuideTag, setActiveGuideTag] = useState("all");
 
   const tabGuides: Record<
     Tab,
@@ -11525,6 +11527,26 @@ function HelpGuideModal({
           icon: A.bell,
         },
         {
+          title: "Mascot Progression",
+          body: [
+            "Mascot Progression turns real Life Tracker activity into a visual character stage, level, power, and badges.",
+            "Wallet HP, Daily Routine, streaks, tracking consistency, fixed leaks, clean days, and badge progress can make the mascot stronger.",
+            "The mascot share card is public-safe and avoids private income, real balance, debt details, and sensitive budget numbers.",
+            "This is a progression layer, not a separate game and not a reward claim button.",
+          ],
+          icon: A.walletMascot,
+        },
+        {
+          title: "Public Leaderboard",
+          body: [
+            "Public Leaderboard is optional public proof. Users can stay private or opt in when they want rank visibility.",
+            "Leaderboard visibility should respect Public Proof Mode and avoid exposing income, exact balance, payday, or private debt details.",
+            "Daily, weekly, and all-time ranks can help show consistency, but the app should still reward real routine activity over empty button taps.",
+            "If a user cannot find leaderboard settings, open Profile privacy/public proof controls and Rewards proof sections.",
+          ],
+          icon: A.challengeTrophy,
+        },
+        {
           title: "Share Active Streak Card",
           body: [
             "This card is public proof for streak activity and holder-readiness status.",
@@ -11841,8 +11863,43 @@ function HelpGuideModal({
     },
   };
 
-  const guideTabs: Tab[] = ["home", "add", "chart", "growth", "leakscore", "walletleak", "compare", "whatif", "settings"];
+  const guideTabs: Tab[] = ["home", "check", "add", "chart", "growth", "leakscore", "walletleak", "compare", "whatif", "settings"];
   const guide = tabGuides[selectedGuide] ?? tabGuides.home;
+  const guideQuickTags = [
+    { id: "all", label: "All", terms: [] as string[] },
+    { id: "rewards", label: "Rewards", terms: ["rewards", "holder", "payout", "snapshot", "proof", "epoch"] },
+    { id: "wallet", label: "Wallet", terms: ["wallet", "balance", "wallet hp", "verify", "holder", "solana"] },
+    { id: "routine", label: "Routine", terms: ["routine", "streak", "daily", "proof", "recovery"] },
+    { id: "mascot", label: "Mascot", terms: ["mascot", "level", "power", "stage", "badge", "evolution"] },
+    { id: "leaderboard", label: "Leaderboard", terms: ["leaderboard", "rank", "public", "proof"] },
+    { id: "check", label: "Check", terms: ["check", "token", "wallet result", "signal", "leak research"] },
+  ];
+  const normalizedGuideSearch = guideSearch.trim().toLowerCase();
+  const activeGuideTagConfig = guideQuickTags.find((tag) => tag.id === activeGuideTag) ?? guideQuickTags[0];
+  const guideSearchActive = Boolean(normalizedGuideSearch) || activeGuideTagConfig.id !== "all";
+  const guideSearchTokens = normalizedGuideSearch.split(/\s+/).filter(Boolean);
+  const guideSearchResults = guideSearchActive
+    ? guideTabs.flatMap((tab) => {
+        const sourceGuide = tabGuides[tab] ?? tabGuides.home;
+        return sourceGuide.sections
+          .filter((section) => {
+            const haystack = [
+              sourceGuide.label,
+              sourceGuide.eyebrow,
+              sourceGuide.title,
+              sourceGuide.intro,
+              section.title,
+              ...section.body,
+            ]
+              .join(" ")
+              .toLowerCase();
+            const queryMatch = guideSearchTokens.length === 0 || guideSearchTokens.every((token) => haystack.includes(token));
+            const tagMatch = activeGuideTagConfig.terms.length === 0 || activeGuideTagConfig.terms.some((term) => haystack.includes(term));
+            return queryMatch && tagMatch;
+          })
+          .map((section) => ({ tab, sourceGuide, section }));
+      })
+    : [];
 
   return (
     <div
@@ -11863,6 +11920,44 @@ function HelpGuideModal({
           </button>
         </div>
 
+        <div className="tab-guide-search-panel" aria-label="Search guide content">
+          <label className="tab-guide-search-label" htmlFor="tab-guide-search-input">
+            Search guide
+          </label>
+          <div className="tab-guide-search-box">
+            <span aria-hidden="true">⌕</span>
+            <input
+              id="tab-guide-search-input"
+              type="search"
+              value={guideSearch}
+              onChange={(event) => setGuideSearch(event.target.value)}
+              placeholder="Search: leaderboard, mascot, wallet, routine..."
+            />
+            {guideSearch ? (
+              <button type="button" onClick={() => setGuideSearch("")}>
+                Clear
+              </button>
+            ) : null}
+          </div>
+          <div className="tab-guide-quick-tags" aria-label="Guide quick filters">
+            {guideQuickTags.map((tag) => (
+              <button
+                key={tag.id}
+                type="button"
+                className={activeGuideTagConfig.id === tag.id ? "active" : ""}
+                onClick={() => setActiveGuideTag(tag.id)}
+              >
+                {tag.label}
+              </button>
+            ))}
+          </div>
+          {guideSearchActive ? (
+            <small className="tab-guide-search-status">
+              {guideSearchResults.length} result{guideSearchResults.length === 1 ? "" : "s"} found across the app guide.
+            </small>
+          ) : null}
+        </div>
+
         <div className="tab-guide-tabs" role="tablist" aria-label="Guide tabs">
           {guideTabs.map((tab) => (
             <button
@@ -11877,28 +11972,71 @@ function HelpGuideModal({
           ))}
         </div>
 
-        <section className="tab-guide-hero">
-          <img src={guide.icon} alt="" />
-          <p>{guide.intro}</p>
-        </section>
+        {guideSearchActive ? (
+          <div className="help-modal-list tab-guide-list tab-guide-results-list">
+            {guideSearchResults.length > 0 ? (
+              guideSearchResults.map(({ tab, sourceGuide, section }) => (
+                <article key={`${tab}-${section.title}`}>
+                  <img src={section.icon} alt="" />
+                  <div>
+                    <div className="tab-guide-result-head">
+                      <strong>{section.title}</strong>
+                      <small>{sourceGuide.label}</small>
+                    </div>
+                    {section.body.slice(0, 4).map((line) => (
+                      <span key={line}>{line}</span>
+                    ))}
+                    <button
+                      type="button"
+                      className="tab-guide-result-open"
+                      onClick={() => {
+                        setSelectedGuide(tab);
+                        setGuideSearch("");
+                        setActiveGuideTag("all");
+                      }}
+                    >
+                      Open this guide
+                    </button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <article className="tab-guide-empty-state">
+                <img src={A.help} alt="" />
+                <div>
+                  <strong>No guide result found</strong>
+                  <span>Try a simpler keyword such as wallet, streak, routine, mascot, leaderboard, rewards, check, or share.</span>
+                </div>
+              </article>
+            )}
+          </div>
+        ) : (
+          <>
+            <section className="tab-guide-hero">
+              <img src={guide.icon} alt="" />
+              <p>{guide.intro}</p>
+            </section>
 
-        <div className="help-modal-list tab-guide-list">
-          {guide.sections.map((section) => (
-            <article key={section.title}>
-              <img src={section.icon} alt="" />
-              <div>
-                <strong>{section.title}</strong>
-                {section.body.map((line) => (
-                  <span key={line}>{line}</span>
-                ))}
-              </div>            </article>
-          ))}
-        </div>
+            <div className="help-modal-list tab-guide-list">
+              {guide.sections.map((section) => (
+                <article key={section.title}>
+                  <img src={section.icon} alt="" />
+                  <div>
+                    <strong>{section.title}</strong>
+                    {section.body.map((line) => (
+                      <span key={line}>{line}</span>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
 
-        <div className="help-modal-footer">
-          <strong>{guide.footerTitle}</strong>
-          <span>{guide.footerBody}</span>
-        </div>
+            <div className="help-modal-footer">
+              <strong>{guide.footerTitle}</strong>
+              <span>{guide.footerBody}</span>
+            </div>
+          </>
+        )}
 
         <button type="button" className="help-modal-close" onClick={onClose}>
           Got it
