@@ -35663,3 +35663,298 @@ html.embedded-app-view .hero h1 {
     justify-self: start;
   }
 }
+
+
+/* v59.58.1 — Social Leaderboard Mobile Polish */
+.rewards-core-details .social-leaderboard-panel,
+.social-leaderboard-panel,
+.social-leaderboard-panel * {
+  box-sizing: border-box;
+}
+
+.clean-details > .social-leaderboard-panel,
+.social-leaderboard-panel {
+  width: auto;
+  max-width: calc(100% - 24px);
+  min-width: 0;
+  overflow: hidden;
+}
+
+.social-leaderboard-panel .section-title,
+.social-leaderboard-panel .section-title > div,
+.social-leaderboard-panel .section-title span,
+.social-leaderboard-panel .section-title small,
+.social-leaderboard-hero,
+.social-leaderboard-hero > div,
+.social-leaderboard-lanes,
+.social-leaderboard-lanes article,
+.social-leaderboard-lanes article > div,
+.social-leaderboard-next,
+.social-leaderboard-actions,
+.social-leaderboard-actions span,
+.social-leaderboard-me-card,
+.social-leaderboard-me-card > div,
+.social-leaderboard-panel .leaderboard-tabs,
+.social-leaderboard-panel .leaderboard-list,
+.social-leaderboard-panel .leaderboard-row,
+.social-leaderboard-panel .leaderboard-row > div,
+.social-leaderboard-panel .leaderboard-faq,
+.social-leaderboard-panel .leaderboard-faq summary,
+.social-leaderboard-panel .leaderboard-faq div {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.social-leaderboard-panel strong,
+.social-leaderboard-panel small,
+.social-leaderboard-panel span,
+.social-leaderboard-panel b,
+.social-leaderboard-panel em,
+.social-leaderboard-panel p {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+.social-leaderboard-hero {
+  grid-template-columns: minmax(0, 1fr) minmax(0, auto);
+}
+
+.social-leaderboard-hero b {
+  max-width: 124px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.12;
+}
+
+.social-leaderboard-lanes article {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.social-leaderboard-lanes b {
+  justify-self: end;
+  white-space: nowrap;
+}
+
+.social-leaderboard-next strong {
+  max-width: 100%;
+}
+
+.social-leaderboard-actions {
+  grid-template-columns: minmax(112px, auto) minmax(0, 1fr);
+}
+
+.social-leaderboard-actions button,
+.social-leaderboard-me-card button,
+.social-leaderboard-panel .leaderboard-tabs button {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.social-leaderboard-me-card {
+  grid-template-columns: 40px minmax(0, 1fr) auto !important;
+}
+
+.social-leaderboard-me-card small,
+.social-leaderboard-panel .leaderboard-row span {
+  white-space: normal !important;
+}
+
+.social-leaderboard-panel .leaderboard-row {
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+}
+
+.social-leaderboard-panel .leaderboard-row strong,
+.social-leaderboard-panel .leaderboard-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.social-leaderboard-panel .leaderboard-row em {
+  max-width: 82px;
+  text-align: right;
+  white-space: normal;
+  line-height: 1.05;
+}
+
+.social-leaderboard-panel .leaderboard-empty {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 430px) {
+  .clean-details > .social-leaderboard-panel,
+  .social-leaderboard-panel {
+    max-width: calc(100% - 16px);
+    margin-left: 8px !important;
+    margin-right: 8px !important;
+    padding: 10px !important;
+    border-radius: 16px !important;
+  }
+
+  .social-leaderboard-panel .section-title {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
+  }
+
+  .social-leaderboard-panel .section-title span {
+    font-size: 14px;
+    line-height: 1.1;
+  }
+
+  .social-leaderboard-panel .section-title small {
+    font-size: 10.5px;
+    line-height: 1.18;
+  }
+
+  .social-leaderboard-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 11px;
+    border-radius: 16px;
+  }
+
+  .social-leaderboard-hero strong {
+    font-size: 23px;
+    letter-spacing: -0.6px;
+  }
+
+  .social-leaderboard-hero b {
+    justify-self: start;
+    max-width: 100%;
+    padding: 7px 9px;
+  }
+
+  .social-leaderboard-lanes article {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+    padding: 9px;
+    border-radius: 14px;
+  }
+
+  .social-leaderboard-lanes strong {
+    font-size: 15px;
+  }
+
+  .social-leaderboard-lanes small,
+  .social-leaderboard-next small {
+    font-size: 10.5px;
+    line-height: 1.22;
+  }
+
+  .social-leaderboard-lanes b {
+    justify-self: start;
+    width: fit-content;
+  }
+
+  .social-leaderboard-next {
+    padding: 10px;
+    border-radius: 15px;
+  }
+
+  .social-leaderboard-next strong {
+    font-size: 12px;
+    line-height: 1.22;
+  }
+
+  .social-leaderboard-actions {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .social-leaderboard-actions button {
+    width: 100%;
+  }
+
+  .social-leaderboard-actions span {
+    font-size: 9.5px;
+    line-height: 1.2;
+  }
+
+  .social-leaderboard-me-card {
+    grid-template-columns: 36px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .social-leaderboard-me-card img {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .social-leaderboard-me-card button {
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 31px !important;
+  }
+
+  .social-leaderboard-me-card strong {
+    font-size: 15px !important;
+    line-height: 1.05;
+  }
+
+  .social-leaderboard-panel .leaderboard-tabs {
+    gap: 5px;
+  }
+
+  .social-leaderboard-panel .leaderboard-tabs button {
+    min-height: 30px !important;
+    padding-inline: 6px;
+    font-size: 10px !important;
+  }
+
+  .social-leaderboard-panel .leaderboard-row {
+    grid-template-columns: 28px minmax(0, 1fr) minmax(48px, auto);
+    gap: 6px;
+    padding: 7px !important;
+  }
+
+  .social-leaderboard-panel .leaderboard-row > b {
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 9px !important;
+  }
+
+  .social-leaderboard-panel .leaderboard-row em {
+    max-width: 58px;
+    font-size: 9.5px !important;
+  }
+
+  .social-leaderboard-panel .leaderboard-faq summary {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .social-leaderboard-panel .leaderboard-faq summary img {
+    width: 20px;
+    height: 20px;
+  }
+
+  .social-leaderboard-panel .leaderboard-faq summary span {
+    font-size: 10.5px;
+    line-height: 1.2;
+  }
+}
+
+@media (max-width: 360px) {
+  .clean-details > .social-leaderboard-panel,
+  .social-leaderboard-panel {
+    max-width: calc(100% - 12px);
+    margin-left: 6px !important;
+    margin-right: 6px !important;
+    padding: 8px !important;
+  }
+
+  .social-leaderboard-hero strong {
+    font-size: 21px;
+  }
+
+  .social-leaderboard-panel .leaderboard-row {
+    grid-template-columns: 26px minmax(0, 1fr);
+  }
+
+  .social-leaderboard-panel .leaderboard-row em {
+    grid-column: 2;
+    justify-self: start;
+    max-width: 100%;
+    text-align: left;
+  }
+}
