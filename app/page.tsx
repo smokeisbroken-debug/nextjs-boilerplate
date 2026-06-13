@@ -1062,8 +1062,17 @@ type WeeklyBossState = {
   rankHint: string;
   nextActionHint: string;
   contributionCount: number;
+  mascotStage: number;
+  mascotStageLabel: string;
+  mascotStageTitle: string;
+  mascotStageSrc: string;
+  mascotLevel: number;
+  mascotPower: number;
+  socialCopy: string[];
   contributions: WeeklyBossContribution[];
 };
+
+type WeeklyBossBattlePulse = "idle" | "attack" | "hit" | "victory";
 
 type ActiveStreakProofTimelineDay = {
   date: string;
@@ -5668,6 +5677,82 @@ function buildMascotProgressionShareText(settings: Settings, state: MascotProgre
   ].filter(Boolean).join("\n");
 }
 
+function getWeeklyBossMascotStageLabel(stage: number) {
+  if (stage >= 5) return "Unbreakable";
+  if (stage >= 4) return "Strong";
+  if (stage >= 3) return "Focused";
+  if (stage >= 2) return "Recovering";
+  return "Weak";
+}
+
+function buildWeeklyBossShareText(settings: Settings, state: WeeklyBossState) {
+  const identityName = getPublicIdentityName(settings);
+  const identityStatus = getPublicIdentityStatus(settings);
+  const activeProofs = state.contributions
+    .filter((item) => item.active)
+    .map((item) => item.title)
+    .slice(0, 4)
+    .join(", ");
+
+  return [
+    `${identityName} on $BROKE`,
+    identityStatus,
+    "",
+    "Weekly Boss proof:",
+    `${state.bossName} · ${state.weekRangeLabel}`,
+    `Damage: ${state.userDamage}/${state.bossHp} (${state.progressPercent}%)`,
+    `Mascot: ${state.mascotStageLabel} · Stage ${state.mascotStage}/5 · Level ${state.mascotLevel}`,
+    activeProofs ? `Active proofs: ${activeProofs}` : "Active proofs: building this week",
+    state.progressPercent >= 100 ? "Boss defeated by this week’s app proof." : state.nextActionHint,
+    "",
+    "Real app activity makes the mascot stronger.",
+    "No income, wallet value, or private budget numbers shown.",
+    "Smoke is broke.",
+  ].filter(Boolean).join("\n");
+}
+
+const WEEKLY_BOSS_SOUND_PREF_KEY = "broke-weekly-boss-sound-enabled-v1";
+
+function playWeeklyBossSound(kind: "hit" | "victory" | "toggle") {
+  if (typeof window === "undefined") return;
+
+  const AudioContextCtor = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextCtor) return;
+
+  try {
+    const audio = new AudioContextCtor();
+    const now = audio.currentTime;
+    const tones = kind === "victory"
+      ? [392, 523, 659]
+      : kind === "toggle"
+        ? [330, 440]
+        : [164, 220];
+
+    tones.forEach((frequency, index) => {
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+      const start = now + index * 0.055;
+      const end = start + 0.12;
+
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.055, start + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, end);
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+      oscillator.start(start);
+      oscillator.stop(end);
+    });
+
+    window.setTimeout(() => {
+      void audio.close().catch(() => undefined);
+    }, 520);
+  } catch {
+    // Sound is optional and must never block Telegram/WebView usage.
+  }
+}
+
 function handleMascotAssetError(event: SyntheticEvent<HTMLImageElement>) {
   const image = event.currentTarget;
 
@@ -6971,7 +7056,7 @@ function buildWeeklyBossState({
     weekRangeLabel,
     resetHint,
     bossName: "Leak Beast",
-    bossTitle: "Weekly Boss MVP",
+    bossTitle: "Social Weekly Boss",
     bossHp,
     userDamage,
     progressPercent,
@@ -6979,6 +7064,17 @@ function buildWeeklyBossState({
     rankHint,
     nextActionHint,
     contributionCount,
+    mascotStage: mascot.stage,
+    mascotStageLabel: getWeeklyBossMascotStageLabel(mascot.stage),
+    mascotStageTitle: mascot.stageTitle,
+    mascotStageSrc: mascot.stageSrc,
+    mascotLevel: mascot.level,
+    mascotPower: mascot.power,
+    socialCopy: [
+      `I dealt ${userDamage} damage to this week’s leak boss.`,
+      `My ${getWeeklyBossMascotStageLabel(mascot.stage)} mascot gets stronger from real app activity.`,
+      "BROKE is not just tracking. It fights your leaks.",
+    ],
     contributions,
   };
 }
@@ -14022,24 +14118,155 @@ function MascotProgressionCard({
 
 function WeeklyBossMvpCard({
   state,
+  settings,
+  shareInitData,
   onOpenDailyRoutine,
   onOpenChallenges,
 }: {
   state: WeeklyBossState;
+  settings: Settings;
+  shareInitData: string;
   onOpenDailyRoutine: () => void;
   onOpenChallenges: () => void;
 }) {
+  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [battlePulse, setBattlePulse] = useState<WeeklyBossBattlePulse>(state.progressPercent >= 100 ? "victory" : "idle");
+  const [bossProofCopied, setBossProofCopied] = useState(false);
+  const [bossImageSharing, setBossImageSharing] = useState(false);
+  const bossShareCardRef = useRef<HTMLDivElement | null>(null);
+  const shareText = buildWeeklyBossShareText(settings, state);
+  const battleTone = state.progressPercent >= 100
+    ? "victory"
+    : state.progressPercent >= 70
+      ? "surge"
+      : state.progressPercent >= 35
+        ? "pressure"
+        : "opening";
+  const activeProofLabels = state.contributions.filter((item) => item.active).map((item) => item.title);
+
+  useEffect(() => {
+    try {
+      setSoundEnabled(window.localStorage.getItem(WEEKLY_BOSS_SOUND_PREF_KEY) === "on");
+    } catch {
+      setSoundEnabled(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (state.progressPercent >= 100) setBattlePulse("victory");
+  }, [state.progressPercent]);
+
+  function setStoredSoundEnabled(value: boolean) {
+    setSoundEnabled(value);
+
+    try {
+      window.localStorage.setItem(WEEKLY_BOSS_SOUND_PREF_KEY, value ? "on" : "off");
+    } catch {
+      // Local sound preference is optional.
+    }
+  }
+
+  function toggleBossSound() {
+    const next = !soundEnabled;
+    setStoredSoundEnabled(next);
+    triggerHaptic("light");
+    if (next) playWeeklyBossSound("toggle");
+  }
+
+  function previewBossHit() {
+    triggerHaptic(state.progressPercent >= 100 ? "success" : "medium");
+    setBattlePulse(state.progressPercent >= 100 ? "victory" : "attack");
+    if (soundEnabled) playWeeklyBossSound(state.progressPercent >= 100 ? "victory" : "hit");
+
+    window.setTimeout(() => {
+      setBattlePulse(state.progressPercent >= 100 ? "victory" : "hit");
+    }, 180);
+    window.setTimeout(() => {
+      setBattlePulse(state.progressPercent >= 100 ? "victory" : "idle");
+    }, 760);
+  }
+
+  async function copyBossProofText() {
+    try {
+      await navigator.clipboard.writeText(shareText);
+      triggerHaptic("success");
+      setBossProofCopied(true);
+      window.setTimeout(() => setBossProofCopied(false), 1600);
+    } catch {
+      setBossProofCopied(false);
+      notifyApp("Copy unavailable", "Your browser blocked clipboard access.", "info");
+    }
+  }
+
+  function openBossXShare() {
+    triggerHaptic("light");
+    markDailyRoutineAction("sharedProgress");
+    openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`);
+  }
+
+  async function shareBossImage() {
+    if (!bossShareCardRef.current || bossImageSharing) return;
+
+    triggerHaptic("light");
+    setBossImageSharing(true);
+
+    try {
+      const imageFile = await createShareImageFileFromElement(bossShareCardRef.current, "broke-weekly-boss-proof.png");
+      const nativeShared = await tryNativeImageShare(imageFile);
+
+      if (nativeShared) {
+        markDailyRoutineAction("sharedProgress");
+        return;
+      }
+
+      if (!shareInitData) {
+        downloadImageFile(imageFile);
+        notifyApp("Boss proof downloaded", "Open inside Telegram to send it directly to the bot.");
+        return;
+      }
+
+      try {
+        await sendShareImageViaBot(imageFile, shareInitData, shareText);
+        markDailyRoutineAction("sharedProgress");
+        notifyApp("Boss proof sent", "Open your Telegram bot chat and forward it anywhere.");
+      } catch {
+        downloadImageFile(imageFile);
+        notifyApp("PNG downloaded", "Bot delivery failed, so the Weekly Boss card was saved as a file.");
+      }
+    } catch {
+      notifyApp("Sharing unavailable", "Weekly Boss image sharing was cancelled or is not supported here.");
+    } finally {
+      setBossImageSharing(false);
+    }
+  }
+
   return (
-    <section className={`weekly-boss-card ${state.progressPercent >= 100 ? "defeated" : "active"}`}>
+    <section className={`weekly-boss-card ${state.progressPercent >= 100 ? "defeated" : "active"} tone-${battleTone} pulse-${battlePulse}`}>
       <div className="weekly-boss-hero">
         <div>
           <span>{state.bossTitle} · {state.weekKey} · {state.weekRangeLabel}</span>
           <h2>{state.bossName}</h2>
           <p>
-            A light game layer: this week’s real Life Tracker actions deal damage. No separate game, no PvP, no reward payout logic yet.
+            Social game layer over real Life Tracker activity. Animation is feedback only; damage still comes from this week’s real proof.
           </p>
         </div>
         <b>{state.phaseLabel}</b>
+      </div>
+
+      <div className="weekly-boss-arena" aria-label="Weekly Boss battle preview">
+        <div className="weekly-boss-fighter">
+          <img src={state.mascotStageSrc} alt={state.mascotStageTitle} loading="lazy" decoding="async" onError={handleMascotAssetError} />
+          <span>{state.mascotStageLabel}</span>
+          <small>Lvl {state.mascotLevel} · {state.mascotPower}/100 power</small>
+        </div>
+        <div className="weekly-boss-impact" aria-hidden="true">
+          <i />
+          <b>{state.userDamage}</b>
+        </div>
+        <div className="weekly-boss-monster" aria-hidden="true">
+          <i />
+          <span>Leak Boss</span>
+        </div>
       </div>
 
       <div className="weekly-boss-progress" aria-label={`Weekly boss damage ${state.userDamage} of ${state.bossHp}`}>
@@ -14061,8 +14288,19 @@ function WeeklyBossMvpCard({
         </article>
       </div>
 
-      <p className="weekly-boss-reset">{state.resetHint} · weekly proof only</p>
+      <p className="weekly-boss-reset">{state.resetHint} · weekly proof only · no payout logic</p>
       <p className="weekly-boss-hint">{state.rankHint}</p>
+
+      <div className="weekly-boss-social-copy" aria-label="Weekly Boss social copy">
+        {state.socialCopy.map((line) => (
+          <span key={line}>{line}</span>
+        ))}
+      </div>
+
+      <div className="weekly-boss-battle-actions">
+        <button type="button" onClick={previewBossHit}>Animate hit</button>
+        <button type="button" className="ghost" onClick={toggleBossSound}>Sound {soundEnabled ? "on" : "off"}</button>
+      </div>
 
       <details className="weekly-boss-details">
         <summary>
@@ -14088,7 +14326,41 @@ function WeeklyBossMvpCard({
         <strong>{state.nextActionHint}</strong>
       </div>
 
+      <div className="weekly-boss-share-card" ref={bossShareCardRef}>
+        <div className="weekly-boss-share-top">
+          <div>
+            <span>$BROKE WEEKLY BOSS</span>
+            <strong>{state.bossName}</strong>
+            <small>{state.weekRangeLabel}</small>
+          </div>
+          <b>{state.progressPercent}%</b>
+        </div>
+        <div className="weekly-boss-share-main">
+          <img src={state.mascotStageSrc} alt="" loading="lazy" decoding="async" onError={handleMascotAssetError} />
+          <div>
+            <span>{state.mascotStageLabel} mascot</span>
+            <strong>{state.userDamage}/{state.bossHp} damage</strong>
+            <small>Stage {state.mascotStage}/5 · Level {state.mascotLevel} · {state.mascotPower}/100 power</small>
+          </div>
+        </div>
+        <div className="weekly-boss-share-proof-row">
+          {(activeProofLabels.length > 0 ? activeProofLabels.slice(0, 3) : ["Build proof this week"]).map((label) => (
+            <span key={label}>{label}</span>
+          ))}
+        </div>
+        <footer>
+          <span>Real app proof only</span>
+          <b>No income · No balance · No payout promise</b>
+        </footer>
+      </div>
+
       <div className="weekly-boss-actions">
+        <button type="button" onClick={openBossXShare}>Share boss</button>
+        <button type="button" className="ghost" onClick={copyBossProofText}>{bossProofCopied ? "Copied" : "Copy proof"}</button>
+        <button type="button" className="ghost" onClick={shareBossImage}>{bossImageSharing ? "Preparing..." : "Share image"}</button>
+      </div>
+
+      <div className="weekly-boss-actions secondary">
         <button type="button" onClick={onOpenDailyRoutine}>Boost with Routine</button>
         <button type="button" className="ghost" onClick={onOpenChallenges}>Open Challenges</button>
       </div>
@@ -27305,6 +27577,8 @@ function WhatIfScreen({
 
       <WeeklyBossMvpCard
         state={weeklyBossState}
+        settings={settings}
+        shareInitData={shareInitData}
         onOpenDailyRoutine={openDailyRoutineFromRewards}
         onOpenChallenges={openChallengeArea}
       />
