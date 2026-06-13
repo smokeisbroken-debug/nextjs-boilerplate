@@ -1050,6 +1050,8 @@ type WeeklyBossContribution = {
   detail: string;
   damage: number;
   active: boolean;
+  step: number;
+  afterDamage: number;
 };
 
 type WeeklyBossState = {
@@ -1059,6 +1061,7 @@ type WeeklyBossState = {
   bossName: string;
   bossTitle: string;
   bossHp: number;
+  bossSrc: string;
   userDamage: number;
   progressPercent: number;
   phaseLabel: string;
@@ -6980,57 +6983,68 @@ function buildWeeklyBossState({
   if (hasCleanDay) weeklyTrackingDates.add(todayKeyValue);
 
   const weeklyTrackingDays = weeklyTrackingDates.size;
-  const contributions: WeeklyBossContribution[] = [
+  const baseContributions: Omit<WeeklyBossContribution, "step" | "afterDamage">[] = [
     {
       id: "mascot_power",
       title: "Mascot Power",
-      detail: "Your current mascot strength becomes base damage.",
+      detail: "Base hit from current mascot strength.",
       damage: Math.round(mascot.power * 2.4),
       active: mascot.power > 0,
     },
     {
       id: "wallet_hp",
       title: "Wallet HP",
-      detail: "A healthier wallet hits the boss harder.",
+      detail: "Healthier wallet pressure adds the second hit.",
       damage: Math.round(mascot.walletHp * 1.6),
       active: mascot.walletHp >= 40,
     },
     {
       id: "routine",
       title: "Daily Routine",
-      detail: activeProofStatus.activeToday ? "Routine protected today." : "Complete today’s routine for a strong hit.",
+      detail: activeProofStatus.activeToday ? "Today’s routine lands a confirmed hit." : "Complete today’s routine to unlock this hit.",
       damage: activeProofStatus.activeToday ? 180 : 0,
       active: activeProofStatus.activeToday,
     },
     {
       id: "streak",
       title: "Active Streak",
-      detail: `${activeProofStatus.currentStreak} day${activeProofStatus.currentStreak === 1 ? "" : "s"} live streak.`,
+      detail: `${activeProofStatus.currentStreak} day${activeProofStatus.currentStreak === 1 ? "" : "s"} live streak adds chain damage.`,
       damage: Math.min(activeProofStatus.currentStreak, 14) * 18,
       active: activeProofStatus.currentStreak > 0,
     },
     {
       id: "tracking",
       title: "Weekly Tracking",
-      detail: weeklyTrackingDays > 0 ? `${weeklyTrackingDays}/7 days with real weekly proof.` : "Track one real action or mark Clean Day only if true.",
+      detail: weeklyTrackingDays > 0 ? `${weeklyTrackingDays}/7 weekly proof day${weeklyTrackingDays === 1 ? "" : "s"} tracked.` : "Track one real action or mark Clean Day only if true.",
       damage: Math.min(weeklyTrackingDays, 5) * 24 + (trackedToday || hasCleanDay ? 30 : 0),
       active: weeklyTrackingDays > 0,
     },
     {
       id: "leak_fix",
       title: "Leak Fix",
-      detail: hasOneFix ? "Leak-control proof is active this week." : "Use One Fix or review one weekly leak to add damage.",
+      detail: hasOneFix ? "Leak-control proof lands the anti-leak hit." : "Use One Fix or review one weekly leak to unlock this hit.",
       damage: hasOneFix ? 120 : 0,
       active: hasOneFix,
     },
     {
       id: "challenge",
       title: "Challenge Proof",
-      detail: weeklyCompletedChallenges > 0 ? `${weeklyCompletedChallenges} completed this week.` : "Complete a challenge this week to add damage.",
+      detail: weeklyCompletedChallenges > 0 ? `${weeklyCompletedChallenges} completed challenge${weeklyCompletedChallenges === 1 ? "" : "s"} this week.` : "Complete a challenge this week to unlock the finisher.",
       damage: Math.min(weeklyCompletedChallenges, 3) * 90 + (activeProofStatus.todayActions.includes("daily_challenge") ? 40 : 0),
       active: hasDailyChallenge,
     },
   ];
+  let runningDamage = 0;
+  const contributions: WeeklyBossContribution[] = baseContributions.map((item, index) => {
+    runningDamage = clamp(runningDamage + Math.max(0, item.damage), 0, 1000);
+
+    return {
+      ...item,
+      step: index + 1,
+      afterDamage: runningDamage,
+    };
+  });
+
   const rawDamage = contributions.reduce((sum, item) => sum + Math.max(0, item.damage), 0);
   const bossHp = 1000;
   const userDamage = clamp(rawDamage, 0, bossHp);
@@ -7066,6 +7080,7 @@ function buildWeeklyBossState({
     bossName: "Leak Beast",
     bossTitle: "Social Weekly Boss",
     bossHp,
+    bossSrc: A.leaks,
     userDamage,
     progressPercent,
     phaseLabel,
@@ -14173,6 +14188,8 @@ function WeeklyBossMvpCard({
 }) {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [battlePulse, setBattlePulse] = useState<WeeklyBossBattlePulse>(state.progressPercent >= 100 ? "victory" : "idle");
+  const [activeBattleStepId, setActiveBattleStepId] = useState<string | null>(null);
+  const battleTimersRef = useRef<number[]>([]);
   const [bossProofCopied, setBossProofCopied] = useState(false);
   const [bossImageSharing, setBossImageSharing] = useState(false);
   const bossShareCardRef = useRef<HTMLDivElement | null>(null);
@@ -14185,6 +14202,7 @@ function WeeklyBossMvpCard({
         ? "pressure"
         : "opening";
   const activeProofLabels = state.contributions.filter((item) => item.active).map((item) => item.title);
+  const activeDamageSteps = state.contributions.filter((item) => item.damage > 0);
 
   useEffect(() => {
     try {
@@ -14197,6 +14215,15 @@ function WeeklyBossMvpCard({
   useEffect(() => {
     if (state.progressPercent >= 100) setBattlePulse("victory");
   }, [state.progressPercent]);
+
+  useEffect(() => () => {
+    battleTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+  }, []);
+
+  function clearBattleTimers() {
+    battleTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    battleTimersRef.current = [];
+  }
 
   function setStoredSoundEnabled(value: boolean) {
     setSoundEnabled(value);
@@ -14216,16 +14243,32 @@ function WeeklyBossMvpCard({
   }
 
   function previewBossHit() {
+    clearBattleTimers();
     triggerHaptic(state.progressPercent >= 100 ? "success" : "medium");
-    setBattlePulse(state.progressPercent >= 100 ? "victory" : "attack");
-    if (soundEnabled) playWeeklyBossSound(state.progressPercent >= 100 ? "victory" : "hit");
 
-    window.setTimeout(() => {
-      setBattlePulse(state.progressPercent >= 100 ? "victory" : "hit");
-    }, 180);
-    window.setTimeout(() => {
+    const steps = activeDamageSteps.length > 0 ? activeDamageSteps : state.contributions.slice(0, 1);
+
+    steps.forEach((step, index) => {
+      const startAt = index * 520;
+      const hitAt = startAt + 180;
+
+      battleTimersRef.current.push(window.setTimeout(() => {
+        setActiveBattleStepId(step.id);
+        setBattlePulse(state.progressPercent >= 100 ? "victory" : "attack");
+        if (soundEnabled) playWeeklyBossSound(state.progressPercent >= 100 ? "victory" : "hit");
+      }, startAt));
+
+      battleTimersRef.current.push(window.setTimeout(() => {
+        setBattlePulse(state.progressPercent >= 100 ? "victory" : "hit");
+      }, hitAt));
+    });
+
+    const finishAt = Math.max(760, steps.length * 520 + 180);
+
+    battleTimersRef.current.push(window.setTimeout(() => {
+      setActiveBattleStepId(null);
       setBattlePulse(state.progressPercent >= 100 ? "victory" : "idle");
-    }, 760);
+    }, finishAt));
   }
 
   async function copyBossProofText() {
@@ -14305,9 +14348,10 @@ function WeeklyBossMvpCard({
           <i />
           <b>{state.userDamage}</b>
         </div>
-        <div className="weekly-boss-monster" aria-hidden="true">
-          <i />
-          <span>Leak Boss</span>
+        <div className="weekly-boss-monster">
+          <img src={state.bossSrc} alt="Weekly leak boss" loading="lazy" decoding="async" />
+          <span>{state.bossName}</span>
+          <small>{state.phaseLabel}</small>
         </div>
       </div>
 
@@ -14330,7 +14374,24 @@ function WeeklyBossMvpCard({
         </article>
       </div>
 
-      <p className="weekly-boss-reset">{state.resetHint} · weekly proof only · no payout logic</p>
+      <div className="weekly-boss-step-log" aria-label="Step-by-step boss damage">
+        <div className="weekly-boss-step-log-head">
+          <span>Step damage</span>
+          <b>{state.userDamage}/{state.bossHp}</b>
+        </div>
+        {state.contributions.map((item) => (
+          <article key={item.id} className={`${item.damage > 0 ? "active" : "locked"} ${activeBattleStepId === item.id ? "current" : ""}`.trim()}>
+            <i>{item.step}</i>
+            <div>
+              <strong>{item.title}</strong>
+              <small>{item.detail}</small>
+            </div>
+            <b>{item.damage > 0 ? `+${item.damage} → ${item.afterDamage}` : "Next"}</b>
+          </article>
+        ))}
+      </div>
+
+      <p className="weekly-boss-reset">{state.resetHint} · step-by-step weekly proof · no payout logic</p>
       <p className="weekly-boss-hint">{state.rankHint}</p>
 
       <div className="weekly-boss-social-copy" aria-label="Weekly Boss social copy">
@@ -14340,7 +14401,7 @@ function WeeklyBossMvpCard({
       </div>
 
       <div className="weekly-boss-battle-actions">
-        <button type="button" onClick={previewBossHit}>Animate hit</button>
+        <button type="button" onClick={previewBossHit}>Replay steps</button>
         <button type="button" className="ghost" onClick={toggleBossSound}>Sound {soundEnabled ? "on" : "off"}</button>
       </div>
 
