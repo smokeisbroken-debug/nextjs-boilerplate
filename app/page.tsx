@@ -1014,6 +1014,9 @@ type MascotEvolutionMilestone = {
   unlocked: boolean;
   active: boolean;
   detail: string;
+  activityHint: string;
+  roleLabel: string;
+  previewStatus: string;
 };
 
 type MascotProgressionState = {
@@ -6816,9 +6819,11 @@ function buildMascotProgressionState({
         : stage === 2
           ? "Complete Daily Routine and keep tracking to become Leak Fixer."
           : "Open Check, complete Daily Routine, and start tracking to wake the mascot.";
+  const stageRoleLabels = ["Survivor", "Awakening", "Leak Fixer", "Guardian", "Legend"];
   const stageMilestones = BROKE_MASCOT_STAGE_ASSETS.map((asset, index) => {
     const threshold = stageThresholds[index] ?? 1;
     const unlocked = power >= threshold;
+    const active = asset.stage === stage;
 
     return {
       stage: asset.stage,
@@ -6827,8 +6832,11 @@ function buildMascotProgressionState({
       threshold,
       src: asset.src,
       unlocked,
-      active: asset.stage === stage,
+      active,
       detail: unlocked ? "Unlocked" : `${Math.max(0, threshold - power)} power needed`,
+      activityHint: asset.activityHint,
+      roleLabel: stageRoleLabels[index] ?? "Progress",
+      previewStatus: active ? "Current form" : unlocked ? "Unlocked" : "Locked preview",
     };
   });
   const hasTrackedToday = recentTrackingDates.has(todayKeyValue);
@@ -13866,6 +13874,11 @@ function MascotProgressionCard({
     { label: "Track consistently", value: `${state.realTrackingDays}/7d`, detail: "Recent real tracking days matter more than raw entry count." },
     { label: "Complete challenges", value: `${state.challengeEnergy}%`, detail: "Completed challenge history gives a controlled mascot boost." },
   ];
+  const lockedEvolutionCount = state.stageMilestones.filter((milestone) => !milestone.unlocked).length;
+  const nextLockedEvolution = state.stageMilestones.find((milestone) => !milestone.unlocked) ?? null;
+  const previewMilestones = lockedEvolutionCount > 0
+    ? state.stageMilestones.filter((milestone) => milestone.active || !milestone.unlocked).slice(0, 4)
+    : state.stageMilestones.slice(-3);
 
   async function copyMascotShareText() {
     try {
@@ -13956,6 +13969,35 @@ function MascotProgressionCard({
         <span>{boostDoneCount}/{state.boostPlan.length} boosts ready</span>
         <span>{state.nextStagePower === null ? "Max stage" : `${state.powerToNextStage} power left`}</span>
       </div>
+
+      <section className="mascot-evolution-preview-card" aria-label="Mascot evolution preview">
+        <div className="mascot-evolution-preview-head">
+          <div>
+            <span>Evolution Preview</span>
+            <strong>{nextLockedEvolution ? `Next form: ${nextLockedEvolution.title}` : "All forms visible"}</strong>
+            <small>Visual roadmap only. Stronger real habits unlock stronger mascot forms; no payout logic is attached here.</small>
+          </div>
+          <b>{nextLockedEvolution ? `${state.powerToNextStage} power left` : "Max stage"}</b>
+        </div>
+
+        <div className="mascot-evolution-preview-strip">
+          {previewMilestones.map((milestone) => (
+            <article
+              key={milestone.stage}
+              className={`${milestone.unlocked ? "unlocked" : "locked"} ${milestone.active ? "active" : ""}`.trim()}
+            >
+              <img src={milestone.src} alt="" loading="lazy" decoding="async" onError={handleMascotAssetError} />
+              <div>
+                <span>{milestone.previewStatus} · {milestone.roleLabel}</span>
+                <strong>{milestone.title}</strong>
+                <small>{milestone.description}</small>
+                <em>{milestone.unlocked ? "Requirement met" : `Requires ${milestone.threshold}+ power`}</em>
+                <small>{milestone.activityHint}</small>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
 
       <div className="mascot-progression-stats">
         {statItems.map((item) => (
