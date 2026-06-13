@@ -10892,6 +10892,7 @@ export default function Home() {
             leaderboard={leaderboard}
             leaderboardLoading={leaderboardLoading}
             onToggleLeaderboard={toggleLeaderboardPublic}
+            onOpenRewards={() => setActiveTab("whatif")}
             onBack={goHome}
             onHelp={openHelp}
           />
@@ -27806,6 +27807,7 @@ function SettingsScreen({
   leaderboard,
   leaderboardLoading,
   onToggleLeaderboard,
+  onOpenRewards,
   onBack,
   onHelp,
 }: {
@@ -27832,6 +27834,7 @@ function SettingsScreen({
   leaderboard: LeaderboardState | null;
   leaderboardLoading: boolean;
   onToggleLeaderboard: (nextValue: boolean) => void;
+  onOpenRewards: () => void;
   onBack: () => void;
   onHelp: () => void;
 }) {
@@ -28086,6 +28089,19 @@ function SettingsScreen({
       badgeCount: earnedBadgeCount,
     })
   );
+  const profileMascotProgression = useMemo(
+    () => buildMascotProgressionState({
+      settings,
+      expenses: rawExpenses,
+      badges,
+      activeProofStatus,
+    }),
+    [settings, rawExpenses, badges, activeProofStatus]
+  );
+  const profileMascotBadgeCount = profileMascotProgression.badges.filter((badge) => badge.unlocked).length;
+  const profileMascotNextLabel = profileMascotProgression.nextStagePower === null
+    ? "Max stage"
+    : `${profileMascotProgression.powerToNextStage} power left`;
   const normalizedWalletAddressDraft = walletAddressDraft.trim();
   const linkedWalletAddress = settings.wallet.walletAddress.trim();
   const effectiveWalletCheckAddress = normalizedWalletAddressDraft || linkedWalletAddress;
@@ -29308,6 +29324,29 @@ function SettingsScreen({
         </div>
 
         <ActiveHolderEligibilityStrip status={activeProofStatus} wallet={settings.wallet} />
+
+        <section className={`profile-mascot-snapshot-card stage-${profileMascotProgression.stage}`}>
+          <div className="profile-mascot-snapshot-art">
+            <img src={profileMascotProgression.stageSrc} alt={profileMascotProgression.stageTitle} />
+            <b>Stage {profileMascotProgression.stage}/5</b>
+          </div>
+          <div className="profile-mascot-snapshot-copy">
+            <span>Mascot status</span>
+            <strong>{profileMascotProgression.stageTitle}</strong>
+            <small>
+              Level {profileMascotProgression.level} · Power {profileMascotProgression.power}/100 · {profileMascotNextLabel}
+            </small>
+            <div className="profile-mascot-snapshot-meter" aria-label={`Mascot power ${profileMascotProgression.power} out of 100`}>
+              <i style={{ width: `${profileMascotProgression.power}%` }} />
+            </div>
+            <p>{profileMascotProgression.nextStageHint}</p>
+          </div>
+          <div className="profile-mascot-snapshot-side">
+            <b>{profileMascotBadgeCount}/{profileMascotProgression.badges.length}</b>
+            <span>badges</span>
+            <button type="button" onClick={onOpenRewards}>Open Mascot</button>
+          </div>
+        </section>
 
         <div className="profile-public-preview profile-share-identity-preview">
           <img className="profile-public-preview-avatar" src={selectedProfileAvatarImage} alt="Public identity avatar" />
