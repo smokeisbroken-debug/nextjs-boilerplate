@@ -420,6 +420,14 @@ type ChallengeProgress = {
   percentUsed: number;
 };
 
+type ChallengeHistoryItem = ChallengeProgress & {
+  id: string;
+  challengeId: string;
+  startedAt: string;
+  endsAt: string;
+  completedAt?: string | null;
+};
+
 type BadgeDefinition = {
   id: string;
   title: string;
@@ -3425,6 +3433,14 @@ async function getLatestUserChallenge(telegramId: number) {
   return rows.length ? dbToUserChallenge(rows[0]) : null;
 }
 
+async function getUserChallengeRows(telegramId: number, limit = 12) {
+  const safeLimit = Math.min(25, Math.max(1, Math.floor(limit)));
+
+  return (await supabaseFetch(
+    `broke_user_challenges?telegram_id=eq.${telegramId}&select=*&order=started_at.desc&limit=${safeLimit}`
+  )) as Record<string, unknown>[];
+}
+
 function getChallengeSpent(
   template: ChallengeTemplate,
   challenge: UserChallenge,
@@ -3488,15 +3504,56 @@ async function updateChallengeStatus(id: string, status: ChallengeStatus) {
   });
 }
 
+function buildChallengeHistoryItem(
+  template: ChallengeTemplate,
+  challenge: UserChallenge,
+  expenses: Expense[]
+): ChallengeHistoryItem {
+  const progress = buildChallengeProgress(template, challenge, expenses);
+
+  return {
+    ...progress,
+    id: challenge.id,
+    challengeId: challenge.challengeId,
+    startedAt: challenge.startedAt,
+    endsAt: challenge.endsAt,
+    completedAt:
+      progress.status === "active"
+        ? challenge.completedAt
+        : challenge.completedAt ?? challenge.endsAt,
+  };
+}
+
+async function getChallengeHistory(
+  telegramId: number,
+  challengeTemplates: ChallengeTemplate[],
+  expenses: Expense[]
+): Promise<ChallengeHistoryItem[]> {
+  const rows = await getUserChallengeRows(telegramId, 12);
+
+  return rows
+    .map(dbToUserChallenge)
+    .map((challenge) => {
+      const template =
+        challengeTemplates.find((item) => item.id === challenge.challengeId) ??
+        defaultChallengeTemplates.find((item) => item.id === challenge.challengeId);
+
+      return template ? buildChallengeHistoryItem(template, challenge, expenses) : null;
+    })
+    .filter((item): item is ChallengeHistoryItem => Boolean(item));
+}
+
 async function getChallengeState(telegramId: number, expenses?: Expense[]) {
   const challengeTemplates = await getChallengeTemplates();
   const activeChallenge = await getLatestUserChallenge(telegramId);
+  const allExpenses = expenses ?? (await getExpenses(telegramId));
 
   if (!activeChallenge) {
     return {
       challengeTemplates,
       activeChallenge: null,
       challengeProgress: null,
+      challengeHistory: await getChallengeHistory(telegramId, challengeTemplates, allExpenses),
     };
   }
 
@@ -3509,27 +3566,30 @@ async function getChallengeState(telegramId: number, expenses?: Expense[]) {
       challengeTemplates,
       activeChallenge: null,
       challengeProgress: null,
+      challengeHistory: await getChallengeHistory(telegramId, challengeTemplates, allExpenses),
     };
   }
 
-  const allExpenses = expenses ?? (await getExpenses(telegramId));
   const challengeProgress = buildChallengeProgress(template, activeChallenge, allExpenses);
 
   if (activeChallenge.status === "active" && challengeProgress.status !== "active") {
     await updateChallengeStatus(activeChallenge.id, challengeProgress.status);
   }
 
+  const normalizedActiveChallenge = {
+    ...activeChallenge,
+    status: challengeProgress.status,
+    completedAt:
+      challengeProgress.status === "active"
+        ? activeChallenge.completedAt
+        : activeChallenge.completedAt ?? new Date().toISOString(),
+  };
+
   return {
     challengeTemplates,
-    activeChallenge: {
-      ...activeChallenge,
-      status: challengeProgress.status,
-      completedAt:
-        challengeProgress.status === "active"
-          ? activeChallenge.completedAt
-          : activeChallenge.completedAt ?? new Date().toISOString(),
-    },
+    activeChallenge: normalizedActiveChallenge,
     challengeProgress,
+    challengeHistory: await getChallengeHistory(telegramId, challengeTemplates, allExpenses),
   };
 }
 

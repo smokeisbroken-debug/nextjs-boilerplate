@@ -840,6 +840,14 @@ type ChallengeProgress = {
   percentUsed: number;
 };
 
+type ChallengeHistoryItem = ChallengeProgress & {
+  id: string;
+  challengeId: string;
+  startedAt: string;
+  endsAt: string;
+  completedAt?: string | null;
+};
+
 type LocalLeakMission = {
   id: string;
   category: string;
@@ -1280,6 +1288,7 @@ type BrokeApiResponse = {
   challengeTemplates?: ChallengeTemplate[];
   activeChallenge?: UserChallenge | null;
   challengeProgress?: ChallengeProgress | null;
+  challengeHistory?: ChallengeHistoryItem[];
   badges?: BadgeItem[];
   leaderboard?: LeaderboardState;
   appState?: CloudAppState;
@@ -9530,6 +9539,7 @@ export default function Home() {
   const [challengeTemplates, setChallengeTemplates] = useState<ChallengeTemplate[]>([]);
   const [activeChallenge, setActiveChallenge] = useState<UserChallenge | null>(null);
   const [challengeProgress, setChallengeProgress] = useState<ChallengeProgress | null>(null);
+  const [challengeHistory, setChallengeHistory] = useState<ChallengeHistoryItem[]>([]);
   const [challengeLoading, setChallengeLoading] = useState(false);
   const [badges, setBadges] = useState<BadgeItem[]>(defaultBadges);
   const [leaderboard, setLeaderboard] = useState<LeaderboardState | null>(null);
@@ -9876,6 +9886,7 @@ export default function Home() {
         if (data.challengeTemplates) setChallengeTemplates(data.challengeTemplates);
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
+        if ("challengeHistory" in data) setChallengeHistory(data.challengeHistory ?? []);
         if (data.leaderboard) setLeaderboard(data.leaderboard);
         if (data.badges) applyBadges(data.badges, true);
         if (data.appState) writeLocalCloudAppState(data.appState);
@@ -10188,6 +10199,7 @@ export default function Home() {
           if (data.streak) setStreak(data.streak);
           if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
           if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
+        if ("challengeHistory" in data) setChallengeHistory(data.challengeHistory ?? []);
           applyApiFeedback(data, "Expense tracked");
           setCloudStatus("cloud");
         }
@@ -10252,6 +10264,7 @@ export default function Home() {
           if (data.streak) setStreak(data.streak);
           if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
           if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
+        if ("challengeHistory" in data) setChallengeHistory(data.challengeHistory ?? []);
           applyApiFeedback(data, "First leak tracked");
           setCloudStatus("cloud");
         }
@@ -10400,6 +10413,7 @@ export default function Home() {
         if (data.streak) setStreak(data.streak);
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
+        if ("challengeHistory" in data) setChallengeHistory(data.challengeHistory ?? []);
         applyApiFeedback(data, "Leak edited");
         setCloudStatus("cloud");
       } catch (error) {
@@ -10427,6 +10441,7 @@ export default function Home() {
         if (data.streak) setStreak(data.streak);
         if ("activeChallenge" in data) setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data) setChallengeProgress(data.challengeProgress ?? null);
+        if ("challengeHistory" in data) setChallengeHistory(data.challengeHistory ?? []);
         applyApiFeedback(data, "Record updated");
         setCloudStatus("cloud");
       } catch (error) {
@@ -10452,6 +10467,7 @@ export default function Home() {
         setStreak(data.streak ?? emptyStreak);
         setActiveChallenge(data.activeChallenge ?? null);
         setChallengeProgress(data.challengeProgress ?? null);
+        if ("challengeHistory" in data) setChallengeHistory(data.challengeHistory ?? []);
         if (data.badges) applyBadges(data.badges, true);
         if (data.leaderboard) setLeaderboard(data.leaderboard);
         setCloudStatus("cloud");
@@ -10851,6 +10867,7 @@ export default function Home() {
             challengeTemplates={challengeTemplates}
             activeChallenge={activeChallenge}
             challengeProgress={challengeProgress}
+            challengeHistory={challengeHistory}
             challengeLoading={challengeLoading}
             weeklyPatternSummary={currentWeeklyPatternSummary}
             leaderboard={leaderboard}
@@ -20069,10 +20086,48 @@ function PatternChallengeCoachCard({
   );
 }
 
+function formatChallengeHistoryDate(value?: string | null) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function getChallengeHistoryStatusLabel(status: ChallengeStatus) {
+  if (status === "completed") return "Completed";
+  if (status === "failed") return "Missed";
+  return "Active";
+}
+
+function buildChallengeHistoryProofText(history: ChallengeHistoryItem[]) {
+  const completed = history.filter((item) => item.status === "completed").length;
+  const active = history.filter((item) => item.status === "active").length;
+  const latest = history.slice(0, 5);
+
+  return [
+    "$BROKE Challenge History",
+    "",
+    `${completed} completed challenge${completed === 1 ? "" : "s"}`,
+    `${active} active challenge${active === 1 ? "" : "s"}`,
+    `Recent missions: ${history.length}`,
+    "",
+    ...latest.map((item) =>
+      `${getChallengeHistoryStatusLabel(item.status)} · ${item.title} · ${formatChallengeHistoryDate(item.startedAt)}-${formatChallengeHistoryDate(item.endsAt)}`
+    ),
+    "",
+    "Tracking leaks is boring until the progress becomes visible.",
+    "Smoke is broke.",
+  ].join("\n");
+}
+
 function ChallengesPanel({
   templates,
   activeChallenge,
   progress,
+  history,
   loading,
   currency,
   onStartChallenge,
@@ -20080,11 +20135,28 @@ function ChallengesPanel({
   templates: ChallengeTemplate[];
   activeChallenge: UserChallenge | null;
   progress: ChallengeProgress | null;
+  history: ChallengeHistoryItem[];
   loading: boolean;
   currency: Currency;
   onStartChallenge: (challengeId: string) => void;
 }) {
   const availableTemplates = templates.slice(0, 6);
+  const completedCount = history.filter((item) => item.status === "completed").length;
+  const missedCount = history.filter((item) => item.status === "failed").length;
+  const activeCount = history.filter((item) => item.status === "active").length;
+  const [historyCopied, setHistoryCopied] = useState(false);
+
+  async function copyHistoryProof() {
+    if (!history.length) return;
+
+    try {
+      await navigator.clipboard.writeText(buildChallengeHistoryProofText(history));
+      setHistoryCopied(true);
+      window.setTimeout(() => setHistoryCopied(false), 1600);
+    } catch {
+      setHistoryCopied(false);
+    }
+  }
 
   return (
     <section className="challenges-panel">
@@ -20123,6 +20195,72 @@ function ChallengesPanel({
           Challenge data is syncing. Reopen the app if this stays visible.
         </div>
       )}
+
+      <section className="challenge-history-panel">
+        <div className="challenge-history-head">
+          <div>
+            <span>Challenge History</span>
+            <strong>{history.length ? `${history.length} saved mission${history.length === 1 ? "" : "s"}` : "No past challenges yet"}</strong>
+            <p>Completed and expired missions stay visible as progress proof.</p>
+          </div>
+          <button type="button" disabled={!history.length} onClick={copyHistoryProof}>
+            {historyCopied ? "Copied" : "Copy proof"}
+          </button>
+        </div>
+
+        <div className="challenge-history-stats">
+          <article>
+            <span>Completed</span>
+            <strong>{completedCount}</strong>
+          </article>
+          <article>
+            <span>Active</span>
+            <strong>{activeCount}</strong>
+          </article>
+          <article>
+            <span>Missed</span>
+            <strong>{missedCount}</strong>
+          </article>
+        </div>
+
+        {history.length ? (
+          <div className="challenge-history-list">
+            {history.slice(0, 8).map((item) => {
+              const icon =
+                item.status === "completed"
+                  ? A.challengeCompleted
+                  : item.status === "failed"
+                    ? A.challengeFailed
+                    : item.icon;
+
+              return (
+                <article key={item.id} className={`challenge-history-item ${item.status}`}>
+                  <img src={icon} alt="" />
+                  <div>
+                    <div className="challenge-history-item-top">
+                      <strong>{item.title}</strong>
+                      <b>{getChallengeHistoryStatusLabel(item.status)}</b>
+                    </div>
+                    <span>
+                      {formatChallengeHistoryDate(item.startedAt)} → {formatChallengeHistoryDate(item.endsAt)} · {item.category === "All" ? "All leaks" : item.category}
+                    </span>
+                    <div className="challenge-history-progress">
+                      <div style={{ width: `${Math.min(100, Math.max(0, item.percentUsed))}%` }} />
+                    </div>
+                    <small>
+                      {money(item.spent, currency)} / {money(item.maxSpend, currency)} · +{item.rewardHp} HP target
+                    </small>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="challenge-history-empty">
+            Start a challenge and finish it naturally. History will appear here instead of disappearing after the next mission.
+          </div>
+        )}
+      </section>
     </section>
   );
 }
@@ -26337,6 +26475,7 @@ function WhatIfScreen({
   challengeTemplates,
   activeChallenge,
   challengeProgress,
+  challengeHistory,
   challengeLoading,
   weeklyPatternSummary,
   leaderboard,
@@ -26362,6 +26501,7 @@ function WhatIfScreen({
   challengeTemplates: ChallengeTemplate[];
   activeChallenge: UserChallenge | null;
   challengeProgress: ChallengeProgress | null;
+  challengeHistory: ChallengeHistoryItem[];
   challengeLoading: boolean;
   weeklyPatternSummary: WeeklyPatternSummary;
   leaderboard: LeaderboardState | null;
@@ -27011,6 +27151,7 @@ function WhatIfScreen({
           templates={challengeTemplates.length ? challengeTemplates : defaultChallengeTemplates}
           activeChallenge={activeChallenge}
           progress={challengeProgress}
+          history={challengeHistory}
           loading={challengeLoading}
           currency={settings.currency}
           onStartChallenge={onStartChallenge}
