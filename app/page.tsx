@@ -12389,12 +12389,63 @@ function HelpGuideModal({
           icon: A.walletMascot,
         },
         {
+          title: "Weekly Boss",
+          body: [
+            "Weekly Boss is the first social game layer inside Rewards.",
+            "The boss does not take taps as fake damage. Damage comes from real weekly app proof: Mascot Power, Wallet HP, Daily Routine, streak, tracking, Leak Fix, and Challenge History.",
+            "Replay steps, phases, HP, sound, and boss weakness are visual feedback that make habit tracking more alive.",
+            "Weekly Boss does not create payouts, loot, staking, PvP, or a separate game economy.",
+          ],
+          icon: A.walletMascot,
+        },
+        {
+          title: "Boss damage and weakness",
+          body: [
+            "Boss damage explains which real actions helped this week and how much each proof source added.",
+            "Boss weakness is a visual/social hint tied to the weekly boss theme, such as routine, tracking, Wallet HP, Leak Fix, or challenge proof.",
+            "A weakness hit can make the battle result feel stronger, but it is not extra payout math and not a guaranteed reward trigger.",
+            "Use Next best hit to return to one real action instead of farming fake points.",
+          ],
+          icon: A.progressFlame,
+        },
+        {
+          title: "Safe Points",
+          body: [
+            "Safe Points are social progress points, not token value and not money.",
+            "They can come from Weekly Boss proof, mascot strength, proof count, routine gate, community prep, badges, challenges, and streaks.",
+            "Safe Points must not expose income, wallet balance, wallet value, debt details, exact private spending, or payout value.",
+            "Use Safe Points to compare public progress without turning BROKE into a gambling or play-to-earn screen.",
+          ],
+          icon: A.challengeTrophy,
+        },
+        {
+          title: "Community Boss Prep",
+          body: [
+            "Community Boss Prep is a preview of how personal Weekly Boss proof could later contribute to shared community progress.",
+            "Right now it is local-only UI and logic prep. There is no backend community boss sync yet.",
+            "The block uses safe social points and proof readiness, not wallet value or payout math.",
+            "Backend design should come later only after the public-safe data shape is clear.",
+          ],
+          icon: A.challengeTrophy,
+        },
+        {
+          title: "Why no wallet value or payout promises",
+          body: [
+            "Social game blocks should motivate better habits, not promise income.",
+            "Public proof should avoid income, real balance, wallet value, payday, debt details, and exact private budgets.",
+            "Points, damage, rank lanes, and boss phases are progress language, not claim language.",
+            "BROKE stays a Life Tracker first: real habits make the mascot stronger, and sharing stays public-safe.",
+          ],
+          icon: A.help,
+        },
+        {
           title: "Social Leaderboard MVP",
           body: [
             "Social Leaderboard MVP is optional public proof. Users can stay private or opt in when they want rank visibility.",
             "Safe points come from mascot strength, Weekly Boss damage, routine proof, proof count, badges, challenges, and streaks.",
             "Leaderboard visibility must avoid income, wallet value, exact balance, payday, debt details, payout math, and reward promises.",
             "The local preview can be used without joining public ranking. Public rows use existing safe leaderboard sync when available.",
+            "Rank lanes are social progress labels only and do not represent a payout tier.",
           ],
           icon: A.challengeTrophy,
         },
@@ -12723,7 +12774,9 @@ function HelpGuideModal({
     { id: "wallet", label: "Wallet", terms: ["wallet", "balance", "wallet hp", "verify", "holder", "solana"] },
     { id: "routine", label: "Routine", terms: ["routine", "streak", "daily", "proof", "recovery"] },
     { id: "mascot", label: "Mascot", terms: ["mascot", "level", "power", "stage", "badge", "evolution"] },
-    { id: "leaderboard", label: "Leaderboard", terms: ["leaderboard", "rank", "public", "proof"] },
+    { id: "boss", label: "Boss", terms: ["boss", "weekly boss", "damage", "weakness", "hp", "community boss"] },
+    { id: "leaderboard", label: "Leaderboard", terms: ["leaderboard", "rank", "public", "proof", "safe points", "social points"] },
+    { id: "social", label: "Social", terms: ["social", "safe points", "community", "share", "public", "no payout", "no wallet value"] },
     { id: "check", label: "Check", terms: ["check", "token", "wallet result", "signal", "leak research"] },
   ];
   const normalizedGuideSearch = guideSearch.trim().toLowerCase();
@@ -14810,6 +14863,11 @@ function WeeklyBossMvpCard({
         <b>{state.phaseLabel}</b>
       </div>
 
+      <div className="social-game-guide-strip">
+        <strong>How this works</strong>
+        <span>Real habits → mascot strength → boss damage → public-safe proof. No fake taps, no wallet value, no payout promise.</span>
+      </div>
+
       <div className="weekly-boss-arena" aria-label="Weekly Boss battle preview">
         <div className="weekly-boss-fighter">
           <img src={state.mascotStageSrc} alt={state.mascotStageTitle} loading="lazy" decoding="async" onError={handleMascotAssetError} />
@@ -15010,6 +15068,11 @@ function CommunityBossPrepCard({
           <small>Shared boss concept UI only. Personal proof can be converted into safe public points later, after backend design is ready.</small>
         </div>
         <b>{state.prepLabel}</b>
+      </div>
+
+      <div className="social-game-guide-strip compact">
+        <strong>Prep only</strong>
+        <span>Local safe points preview. No backend sync, no PvP, no wallet value, no payout math.</span>
       </div>
 
       <div className="community-boss-preview-arena" aria-label="Community boss preview">
@@ -21253,6 +21316,11 @@ function LeaderboardPanel({
       <div className="section-title">
         <span>Social Leaderboard MVP</span>
         <small>{isPublic ? "Public ranking enabled" : "Private preview"}</small>
+      </div>
+
+      <div className="social-game-guide-strip compact">
+        <strong>Safe Points only</strong>
+        <span>Rank lanes show social progress. They do not show balance, income, debt, wallet value, or payout value.</span>
       </div>
 
       <div className="social-leaderboard-hero">
@@ -28350,7 +28418,7 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Weekly Boss</span>
-            <small>Step-by-step damage from this week’s real app actions.</small>
+            <small>Real habits become boss damage. Visual battle only, no fake taps.</small>
           </div>
           <b>{weeklyBossState.progressPercent}%</b>
         </summary>
@@ -28367,7 +28435,7 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Community Boss Prep</span>
-            <small>Shared boss preview using safe social points. Backend sync comes later.</small>
+            <small>Local-only shared boss preview. No backend sync or payout math.</small>
           </div>
           <b>{communityBossPrepState.prepLabel}</b>
         </summary>
@@ -28611,7 +28679,7 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Social Leaderboard MVP</span>
-            <small>Safe points from mascot, Weekly Boss, routine, and proof count. No balances.</small>
+            <small>Safe Points from proof. No wallet value, balances, or payout tiers.</small>
           </div>
           <b>{socialLeaderboardState.rankTier}</b>
         </summary>

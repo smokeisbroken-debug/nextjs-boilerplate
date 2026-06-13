@@ -36211,3 +36211,65 @@ html.embedded-app-view .hero h1 {
     padding: 10px;
   }
 }
+
+/* v59.58.5 — Social Game Guide Polish */
+.social-game-guide-strip {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(138, 255, 167, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(29, 67, 36, 0.48), rgba(7, 16, 10, 0.86));
+  color: rgba(236, 255, 241, 0.92);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+}
+
+.social-game-guide-strip.compact {
+  padding: 9px 10px;
+  border-radius: 14px;
+  background: rgba(8, 19, 11, 0.78);
+}
+
+.social-game-guide-strip strong {
+  display: block;
+  max-width: 100%;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(161, 255, 183, 0.96);
+  overflow-wrap: anywhere;
+}
+
+.social-game-guide-strip span {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  color: rgba(236, 255, 241, 0.76);
+  overflow-wrap: anywhere;
+}
+
+.weekly-boss-card .social-game-guide-strip,
+.community-boss-prep-card .social-game-guide-strip,
+.social-leaderboard-panel .social-game-guide-strip {
+  margin: 10px 0 12px;
+}
+
+@media (max-width: 520px) {
+  .social-game-guide-strip {
+    padding: 9px 10px;
+    border-radius: 14px;
+  }
+
+  .social-game-guide-strip strong {
+    font-size: 0.72rem;
+  }
+
+  .social-game-guide-strip span {
+    font-size: 0.76rem;
+  }
+}

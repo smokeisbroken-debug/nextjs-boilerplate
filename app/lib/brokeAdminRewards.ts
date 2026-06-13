@@ -1,7 +1,7 @@
-export const BROKE_APP_BUILD_VERSION = "v59.58.4";
+export const BROKE_APP_BUILD_VERSION = "v59.58.5";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Weekly Boss Image Share Polish";
+  "Social Game Guide Polish";
 
 export const DEFAULT_TREASURY_WALLET_ADDRESS = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
 export const DEFAULT_BROKE_TOKEN_MINT_ADDRESS = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";

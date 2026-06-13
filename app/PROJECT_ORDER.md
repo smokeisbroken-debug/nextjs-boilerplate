@@ -35,3 +35,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Weekly Boss `Share to X` now tries to generate the PNG card first and open the native share sheet with the image + text.
 - If native file share is unavailable, the app downloads the PNG, copies the proof text when possible, opens X text share, and tells the user to attach the downloaded card manually.
 - No payout logic, schema, PvP, wallet verification, or reward promises changed.
+
+
+## v59.58.5 — Social Game Guide Polish
+
+- Adds Guide Search coverage for Weekly Boss, boss damage, boss weakness, Safe Points, Community Boss Prep, and why social progress avoids wallet value/payout promises.
+- Adds compact in-app guide strips to Weekly Boss, Community Boss Prep, and Social Leaderboard so users understand the social game layer.
+- Reinforces that BROKE remains a Life Tracker: real habits make mascot/boss/social proof stronger.
+- No Supabase schema, payout logic, PvP, wallet verification, Universal Check scoring, Daily Routine formula, transaction history/PnL/scam labels, wallet value exposure, token reward promises, or game economy changed.

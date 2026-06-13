@@ -1,20 +1,9 @@
-# $BROKE v59.56.1 — Weekly Boss Proof Hardening Patch
 
-Apply these files over the current v59.56.0 Weekly Boss MVP build.
 
-## Files
 
-- `app/page.tsx`
-- `app/globals.css`
-- `docs/v59-56-1-weekly-boss-proof-hardening.md`
+## v59.58.5 — Social Game Guide Polish
 
-## Verification passed in sandbox
-
-- `npm ci --ignore-scripts --no-audit --no-fund`
-- `npm run typecheck`
-- `npm run lint:quiet`
-- `NEXT_PRIVATE_BUILD_WORKER_COUNT=1 NEXT_TELEMETRY_DISABLED=1 npm run build`
-
-## Scope
-
-Weekly Boss proof logic only. No rewards/admin payout, wallet verification, Supabase schema, Universal Check scoring, Daily Routine formula, transaction history/PnL/scam labels, or separate game mode changes.
+- Adds Guide Search coverage for Weekly Boss, boss damage, boss weakness, Safe Points, Community Boss Prep, and why social progress avoids wallet value/payout promises.
+- Adds compact in-app guide strips to Weekly Boss, Community Boss Prep, and Social Leaderboard so users understand the social game layer.
+- Reinforces that BROKE remains a Life Tracker: real habits make mascot/boss/social proof stronger.
+- No Supabase schema, payout logic, PvP, wallet verification, Universal Check scoring, Daily Routine formula, transaction history/PnL/scam labels, wallet value exposure, token reward promises, or game economy changed.
