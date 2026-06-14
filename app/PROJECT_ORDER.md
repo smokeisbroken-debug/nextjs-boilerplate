@@ -191,3 +191,10 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - After a persisted proof, UI triggers a public aggregate read refresh.
 - Refresh reads only public-safe aggregate data and performs no writes.
 - No payout, wallet value, PvP, reward promise, or game economy changes.
+
+## v59.61.3 — Community Boss Post-Proof Recalculate Admin Flow
+
+- Adds Community Boss aggregate recalculation controls inside the existing Rewards admin modal.
+- Admin button calls `POST /api/community-boss/recalculate` with the existing admin key.
+- Shows status, proof rows read, public aggregate damage, and participant count.
+- Does not add payout math, wallet value, PvP, reward promises, or game economy.

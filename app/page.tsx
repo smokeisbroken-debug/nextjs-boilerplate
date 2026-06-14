@@ -1845,6 +1845,42 @@ type AdminDistributionSmokeResponse = {
 
 type AdminDistributionSmokeStatus = "idle" | "checking" | "passed" | "failed";
 
+type AdminCommunityBossRecalculateResponse = {
+  ok: boolean;
+  error?: string;
+  buildVersion?: string;
+  persisted?: boolean;
+  recalculated?: boolean;
+  aggregateRecalculate?: {
+    status?: string;
+    weekKey?: string;
+    proofRowsRead?: number;
+    persisted?: boolean;
+    recalculated?: boolean;
+    error?: string | null;
+    blockedReasons?: string[];
+    guardrails?: string[];
+    aggregateRow?: {
+      total_damage?: number;
+      total_safe_points?: number;
+      participant_count?: number;
+      routine_count?: number;
+      challenge_count?: number;
+      weakness_hit_count?: number;
+      tracking_day_total?: number;
+      updated_at?: string;
+    } | null;
+  };
+  backendReadiness?: {
+    canRecalculateAggregate?: boolean;
+    aggregateRecalcReviewed?: boolean;
+    aggregateWriteEnabled?: boolean;
+    aggregateManualWriteEnabled?: boolean;
+    aggregateWriteImplemented?: boolean;
+    missing?: string[];
+  };
+};
+
 type CloudStatus = "local" | "syncing" | "cloud" | "error";
 
 type BrokeApiResponse = {
@@ -36264,6 +36300,14 @@ function AdminTreasuryPanel({
   const [distributionSmokeMessage, setDistributionSmokeMessage] = useState("");
   const [distributionSmokeCheckedAt, setDistributionSmokeCheckedAt] =
     useState("");
+  const [communityBossRecalcLoading, setCommunityBossRecalcLoading] =
+    useState(false);
+  const [communityBossRecalcMessage, setCommunityBossRecalcMessage] =
+    useState("");
+  const [communityBossRecalcCheckedAt, setCommunityBossRecalcCheckedAt] =
+    useState("");
+  const [communityBossRecalcResult, setCommunityBossRecalcResult] =
+    useState<AdminCommunityBossRecalculateResponse | null>(null);
 
   useEffect(() => {
     setAdminEmbeddedView(isEmbeddedAppView());
@@ -36407,6 +36451,83 @@ function AdminTreasuryPanel({
         error instanceof Error ? error.message : "Smoke-check failed.",
       );
       triggerHaptic("error");
+    }
+  }
+
+  async function runCommunityBossAggregateRecalculate() {
+    const key = adminReadKey.trim();
+
+    if (!key) {
+      setCommunityBossRecalcMessage(
+        "Enter the Admin key first, then recalculate Community Boss aggregate.",
+      );
+      setCommunityBossRecalcResult(null);
+      triggerHaptic("error");
+      return;
+    }
+
+    setCommunityBossRecalcLoading(true);
+    setCommunityBossRecalcMessage("Recalculating Community Boss aggregate...");
+    setCommunityBossRecalcCheckedAt("");
+
+    try {
+      const response = await fetch("/api/community-boss/recalculate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${key}`,
+        },
+        cache: "no-store",
+        body: JSON.stringify({ source: "admin_panel" }),
+      });
+      const data =
+        (await response.json()) as AdminCommunityBossRecalculateResponse;
+      const recalculation = data.aggregateRecalculate;
+      const status = recalculation?.status || "unknown";
+      const proofRows = Number(recalculation?.proofRowsRead || 0);
+      const blockedReasons = Array.isArray(recalculation?.blockedReasons)
+        ? recalculation.blockedReasons.filter(Boolean).slice(0, 2)
+        : [];
+      const aggregateRow = recalculation?.aggregateRow;
+
+      setCommunityBossRecalcResult(data);
+      setCommunityBossRecalcCheckedAt(
+        new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      );
+
+      if (!response.ok || data.ok === false) {
+        throw new Error(
+          data.error ||
+            recalculation?.error ||
+            "Community Boss aggregate recalculation failed.",
+        );
+      }
+
+      if (data.recalculated || recalculation?.recalculated) {
+        setCommunityBossRecalcMessage(
+          `Aggregate recalculated for ${recalculation?.weekKey || "current week"}: ${proofRows} safe proof row(s), ${aggregateRow?.total_damage || 0} total damage, ${aggregateRow?.participant_count || 0} participant(s).`,
+        );
+        triggerHaptic("success");
+      } else {
+        setCommunityBossRecalcMessage(
+          blockedReasons.length > 0
+            ? `Aggregate write locked: ${blockedReasons.join(" · ")}.`
+            : `Aggregate route checked. Status: ${status}. No aggregate write was performed.`,
+        );
+        triggerHaptic("light");
+      }
+    } catch (error) {
+      setCommunityBossRecalcMessage(
+        error instanceof Error
+          ? error.message
+          : "Community Boss aggregate recalculation failed.",
+      );
+      triggerHaptic("error");
+    } finally {
+      setCommunityBossRecalcLoading(false);
     }
   }
 
@@ -37064,10 +37185,80 @@ function AdminTreasuryPanel({
             setDistributionSmokeStatus("idle");
             setDistributionSmokeMessage("");
             setDistributionSmokeCheckedAt("");
+            setCommunityBossRecalcMessage("");
+            setCommunityBossRecalcCheckedAt("");
+            setCommunityBossRecalcResult(null);
           }}
           placeholder="REWARDS_ADMIN_SECRET"
         />
       </label>
+
+      <section
+        className={`admin-community-boss-panel ${communityBossRecalcResult?.recalculated ? "success" : communityBossRecalcResult ? "checked" : ""}`}
+      >
+        <div className="admin-community-boss-head">
+          <div>
+            <span>Community Boss admin</span>
+            <strong>Post-proof aggregate recalculation</strong>
+            <small>
+              Admin-only recalculation for public aggregate totals. Uses safe
+              proof rows only; no payouts, balances, wallet value, or PvP.
+            </small>
+          </div>
+          <button
+            type="button"
+            onClick={runCommunityBossAggregateRecalculate}
+            disabled={communityBossRecalcLoading || distributionSaving || serverAutoSending}
+          >
+            {communityBossRecalcLoading ? "Recalculating..." : "Recalculate aggregate"}
+          </button>
+        </div>
+
+        <div className="admin-community-boss-grid">
+          <article>
+            <span>Status</span>
+            <strong>
+              {communityBossRecalcResult?.recalculated
+                ? "Recalculated"
+                : communityBossRecalcResult
+                  ? communityBossRecalcResult.aggregateRecalculate?.status || "Checked"
+                  : "Not run"}
+            </strong>
+            <small>
+              {communityBossRecalcCheckedAt
+                ? `Last check ${communityBossRecalcCheckedAt}`
+                : "Run after safe proof writes are enabled and tested."}
+            </small>
+          </article>
+          <article>
+            <span>Proof rows</span>
+            <strong>
+              {communityBossRecalcResult?.aggregateRecalculate?.proofRowsRead ?? "—"}
+            </strong>
+            <small>Reads only Community Boss safe proof rows.</small>
+          </article>
+          <article>
+            <span>Total damage</span>
+            <strong>
+              {communityBossRecalcResult?.aggregateRecalculate?.aggregateRow?.total_damage ?? "—"}
+            </strong>
+            <small>Public aggregate damage only.</small>
+          </article>
+          <article>
+            <span>Participants</span>
+            <strong>
+              {communityBossRecalcResult?.aggregateRecalculate?.aggregateRow?.participant_count ?? "—"}
+            </strong>
+            <small>No wallet value or balances included.</small>
+          </article>
+        </div>
+
+        {communityBossRecalcMessage && (
+          <p className="admin-community-boss-message">
+            {communityBossRecalcMessage}
+          </p>
+        )}
+      </section>
 
       <div className="admin-clean-grid">
         <label>

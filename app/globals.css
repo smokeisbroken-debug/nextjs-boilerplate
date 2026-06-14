@@ -37299,3 +37299,132 @@ html.embedded-app-view .hero h1 {
     white-space: normal;
   }
 }
+
+/* v59.61.3 — Community Boss Post-Proof Recalculate Admin Flow */
+.admin-community-boss-panel {
+  border: 1px solid rgba(124, 255, 149, 0.16);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(124, 255, 149, 0.12), transparent 34%),
+    rgba(5, 18, 8, 0.84);
+  padding: 13px;
+  display: grid;
+  gap: 11px;
+  overflow: hidden;
+}
+
+.admin-community-boss-panel,
+.admin-community-boss-panel * {
+  box-sizing: border-box;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-community-boss-panel.checked {
+  border-color: rgba(255, 220, 124, 0.22);
+}
+
+.admin-community-boss-panel.success {
+  border-color: rgba(124, 255, 149, 0.34);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(124, 255, 149, 0.18), transparent 34%),
+    rgba(5, 22, 9, 0.90);
+}
+
+.admin-community-boss-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.admin-community-boss-head div {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-community-boss-head span,
+.admin-community-boss-grid span {
+  color: rgba(203, 255, 213, 0.72);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-community-boss-head strong {
+  color: #f1fff4;
+  font-size: 16px;
+  line-height: 1.15;
+}
+
+.admin-community-boss-head small,
+.admin-community-boss-grid small,
+.admin-community-boss-message {
+  color: rgba(231, 255, 236, 0.72);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-community-boss-head button {
+  flex: 0 0 auto;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(126, 255, 142, 0.92), rgba(72, 210, 104, 0.9));
+  color: #041106;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 10px 12px;
+}
+
+.admin-community-boss-head button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.admin-community-boss-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-community-boss-grid article {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 9px;
+  display: grid;
+  gap: 3px;
+}
+
+.admin-community-boss-grid strong {
+  color: #f7fff8;
+  font-size: 14px;
+}
+
+.admin-community-boss-message {
+  margin: 0;
+  border-radius: 14px;
+  border: 1px solid rgba(124, 255, 149, 0.12);
+  background: rgba(124, 255, 149, 0.075);
+  padding: 9px 10px;
+}
+
+@media (max-width: 620px) {
+  .admin-community-boss-head {
+    display: grid;
+  }
+
+  .admin-community-boss-head button {
+    width: 100%;
+  }
+
+  .admin-community-boss-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 390px) {
+  .admin-community-boss-grid {
+    grid-template-columns: 1fr;
+  }
+}
