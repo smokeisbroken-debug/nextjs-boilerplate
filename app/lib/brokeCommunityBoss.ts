@@ -63,9 +63,12 @@ export const COMMUNITY_BOSS_PROOF_WRITE_ENABLED =
 export const COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED =
   process.env.COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED === "true";
 
+export const COMMUNITY_BOSS_PROOF_MANUAL_WRITE_ENABLED =
+  process.env.COMMUNITY_BOSS_PROOF_MANUAL_WRITE_ENABLED === "true";
+
 export const COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED = false;
 export const COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED = false;
-export const COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED = false;
+export const COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED = true;
 
 const COMMUNITY_BOSS_ROTATION = [
   { code: "subscription-leech", name: "Subscription Leech" },
@@ -100,7 +103,9 @@ function toDateOnly(value: Date) {
 }
 
 function getMondayUtc(date: Date) {
-  const result = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const result = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
   const day = result.getUTCDay() || 7;
   result.setUTCDate(result.getUTCDate() - day + 1);
   result.setUTCHours(0, 0, 0, 0);
@@ -108,12 +113,16 @@ function getMondayUtc(date: Date) {
 }
 
 function getIsoWeekYearAndNumber(date: Date) {
-  const normalized = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const normalized = new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
   const day = normalized.getUTCDay() || 7;
   normalized.setUTCDate(normalized.getUTCDate() + 4 - day);
   const weekYear = normalized.getUTCFullYear();
   const yearStart = new Date(Date.UTC(weekYear, 0, 1));
-  const weekNumber = Math.ceil((((normalized.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  const weekNumber = Math.ceil(
+    ((normalized.getTime() - yearStart.getTime()) / 86400000 + 1) / 7,
+  );
   return { weekYear, weekNumber };
 }
 
@@ -132,11 +141,14 @@ export function getCommunityBossWeekWindow(date = new Date()) {
   };
 }
 
-export function getCurrentCommunityBossWeek(date = new Date()): CommunityBossWeek {
+export function getCurrentCommunityBossWeek(
+  date = new Date(),
+): CommunityBossWeek {
   const weekKey = getCommunityBossWeekKey(date);
   const { weekStartDate, weekEndDate } = getCommunityBossWeekWindow(date);
   const { weekNumber } = getIsoWeekYearAndNumber(date);
-  const boss = COMMUNITY_BOSS_ROTATION[weekNumber % COMMUNITY_BOSS_ROTATION.length];
+  const boss =
+    COMMUNITY_BOSS_ROTATION[weekNumber % COMMUNITY_BOSS_ROTATION.length];
 
   return {
     weekKey,
@@ -150,7 +162,9 @@ export function getCurrentCommunityBossWeek(date = new Date()): CommunityBossWee
   };
 }
 
-export function getDryRunCommunityBossAggregate(week: CommunityBossWeek): CommunityBossAggregate {
+export function getDryRunCommunityBossAggregate(
+  week: CommunityBossWeek,
+): CommunityBossAggregate {
   return {
     totalDamage: 0,
     totalSafePoints: 0,
@@ -183,7 +197,11 @@ function cleanPublicHandle(value: unknown) {
 
 function normalizePowerBucket(value: unknown): CommunityBossPowerBucket {
   const normalized = String(value ?? "").toLowerCase();
-  if (normalized === "medium" || normalized === "high" || normalized === "legend") {
+  if (
+    normalized === "medium" ||
+    normalized === "high" ||
+    normalized === "legend"
+  ) {
     return normalized;
   }
   return "low";
@@ -193,7 +211,10 @@ function toBoolean(value: unknown) {
   return value === true || value === "true" || value === 1 || value === "1";
 }
 
-export function findForbiddenCommunityBossFields(value: unknown, path: string[] = []): string[] {
+export function findForbiddenCommunityBossFields(
+  value: unknown,
+  path: string[] = [],
+): string[] {
   if (!value || typeof value !== "object") return [];
 
   const found: string[] = [];
@@ -212,8 +233,14 @@ export function findForbiddenCommunityBossFields(value: unknown, path: string[] 
   return Array.from(new Set(found)).slice(0, 12);
 }
 
-export function sanitizeCommunityBossProof(input: unknown, currentWeek = getCurrentCommunityBossWeek()): CommunityBossSafeProof {
-  const data = input && typeof input === "object" ? input as Record<string, unknown> : {};
+export function sanitizeCommunityBossProof(
+  input: unknown,
+  currentWeek = getCurrentCommunityBossWeek(),
+): CommunityBossSafeProof {
+  const data =
+    input && typeof input === "object"
+      ? (input as Record<string, unknown>)
+      : {};
   const requestedWeekKey = cleanString(data.weekKey, 12);
 
   return {
@@ -233,11 +260,14 @@ export function sanitizeCommunityBossProof(input: unknown, currentWeek = getCurr
   };
 }
 
-export function getCommunityBossProgressPercent(totalDamage: number, bossHp: number) {
-  if (!Number.isFinite(totalDamage) || !Number.isFinite(bossHp) || bossHp <= 0) return 0;
+export function getCommunityBossProgressPercent(
+  totalDamage: number,
+  bossHp: number,
+) {
+  if (!Number.isFinite(totalDamage) || !Number.isFinite(bossHp) || bossHp <= 0)
+    return 0;
   return Math.min(100, Math.max(0, Math.round((totalDamage / bossHp) * 100)));
 }
-
 
 function getOptionalCommunityBossEnv(name: string) {
   return process.env[name] || "";
@@ -245,7 +275,10 @@ function getOptionalCommunityBossEnv(name: string) {
 
 function getCommunityBossSupabaseBaseUrl() {
   const raw = getOptionalCommunityBossEnv("SUPABASE_URL");
-  return raw.trim().replace(/\/+$/, "").replace(/\/rest\/v1$/, "");
+  return raw
+    .trim()
+    .replace(/\/+$/, "")
+    .replace(/\/rest\/v1$/, "");
 }
 
 function getCommunityBossSupabaseServiceKey() {
@@ -253,31 +286,51 @@ function getCommunityBossSupabaseServiceKey() {
 }
 
 function hasCommunityBossSupabaseReadEnv() {
-  return Boolean(getCommunityBossSupabaseBaseUrl() && getCommunityBossSupabaseServiceKey());
+  return Boolean(
+    getCommunityBossSupabaseBaseUrl() && getCommunityBossSupabaseServiceKey(),
+  );
 }
 
 export function getCommunityBossBackendReadiness() {
   const missing: string[] = [];
   const supabaseReadEnvReady = hasCommunityBossSupabaseReadEnv();
 
-  if (!COMMUNITY_BOSS_SYNC_ENABLED) missing.push("COMMUNITY_BOSS_SYNC_ENABLED is not true");
-  if (!COMMUNITY_BOSS_MIGRATION_REVIEWED) missing.push("COMMUNITY_BOSS_MIGRATION_REVIEWED is not true");
-  if (!COMMUNITY_BOSS_DB_READ_ENABLED) missing.push("COMMUNITY_BOSS_DB_READ_ENABLED is not true");
-  if (!supabaseReadEnvReady) missing.push("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing for DB read");
-  if (!COMMUNITY_BOSS_WRITE_PATH_ENABLED) missing.push("COMMUNITY_BOSS_WRITE_PATH_ENABLED is not true");
-  if (!COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED) missing.push("write path is intentionally not implemented in this patch");
-  if (!COMMUNITY_BOSS_SEED_WRITE_ENABLED) missing.push("COMMUNITY_BOSS_SEED_WRITE_ENABLED is not true");
-  if (!COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED) missing.push("seed write is intentionally not implemented in this patch");
-  if (!COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED) missing.push("COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED is not true");
-  if (!COMMUNITY_BOSS_PROOF_WRITE_ENABLED) missing.push("COMMUNITY_BOSS_PROOF_WRITE_ENABLED is not true");
-  if (!COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED) missing.push("COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED is not true");
-  if (!COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED) missing.push("proof write is intentionally not implemented in this patch");
+  if (!COMMUNITY_BOSS_SYNC_ENABLED)
+    missing.push("COMMUNITY_BOSS_SYNC_ENABLED is not true");
+  if (!COMMUNITY_BOSS_MIGRATION_REVIEWED)
+    missing.push("COMMUNITY_BOSS_MIGRATION_REVIEWED is not true");
+  if (!COMMUNITY_BOSS_DB_READ_ENABLED)
+    missing.push("COMMUNITY_BOSS_DB_READ_ENABLED is not true");
+  if (!supabaseReadEnvReady)
+    missing.push(
+      "SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing for DB read",
+    );
+  if (!COMMUNITY_BOSS_WRITE_PATH_ENABLED)
+    missing.push("COMMUNITY_BOSS_WRITE_PATH_ENABLED is not true");
+  if (!COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED)
+    missing.push("write path is intentionally not implemented in this patch");
+  if (!COMMUNITY_BOSS_SEED_WRITE_ENABLED)
+    missing.push("COMMUNITY_BOSS_SEED_WRITE_ENABLED is not true");
+  if (!COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED)
+    missing.push("seed write is intentionally not implemented in this patch");
+  if (!COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED)
+    missing.push("COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED is not true");
+  if (!COMMUNITY_BOSS_PROOF_WRITE_ENABLED)
+    missing.push("COMMUNITY_BOSS_PROOF_WRITE_ENABLED is not true");
+  if (!COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED)
+    missing.push(
+      "COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED is not true",
+    );
+  if (!COMMUNITY_BOSS_PROOF_MANUAL_WRITE_ENABLED)
+    missing.push("COMMUNITY_BOSS_PROOF_MANUAL_WRITE_ENABLED is not true");
+  if (!COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED)
+    missing.push("proof write implementation is disabled");
 
   const canRead = Boolean(
     COMMUNITY_BOSS_SYNC_ENABLED &&
     COMMUNITY_BOSS_MIGRATION_REVIEWED &&
     COMMUNITY_BOSS_DB_READ_ENABLED &&
-    supabaseReadEnvReady
+    supabaseReadEnvReady,
   );
 
   const proofPersistenceDryRunReady = Boolean(
@@ -285,7 +338,16 @@ export function getCommunityBossBackendReadiness() {
     COMMUNITY_BOSS_MIGRATION_REVIEWED &&
     COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED &&
     COMMUNITY_BOSS_PROOF_WRITE_ENABLED &&
-    COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED
+    COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED,
+  );
+
+  const proofManualWriteReady = Boolean(
+    proofPersistenceDryRunReady &&
+    COMMUNITY_BOSS_DB_READ_ENABLED &&
+    supabaseReadEnvReady &&
+    COMMUNITY_BOSS_WRITE_PATH_ENABLED &&
+    COMMUNITY_BOSS_PROOF_MANUAL_WRITE_ENABLED &&
+    COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED,
   );
 
   return {
@@ -300,12 +362,15 @@ export function getCommunityBossBackendReadiness() {
     seedWriteImplemented: COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED,
     proofPersistenceReviewed: COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED,
     proofWriteEnabled: COMMUNITY_BOSS_PROOF_WRITE_ENABLED,
-    proofPersistenceDryRunEnabled: COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED,
+    proofPersistenceDryRunEnabled:
+      COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED,
     proofPersistenceDryRunReady,
+    proofManualWriteEnabled: COMMUNITY_BOSS_PROOF_MANUAL_WRITE_ENABLED,
+    proofManualWriteReady,
     proofWriteImplemented: COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED,
     canSeedWrite: false,
-    canPersistProof: false,
-    canWrite: false,
+    canPersistProof: proofManualWriteReady,
+    canWrite: proofManualWriteReady,
     missing,
   };
 }
@@ -319,23 +384,35 @@ export function getCommunityBossProofPersistenceGate() {
     proofPersistenceReviewed: COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED,
     writePathEnabled: COMMUNITY_BOSS_WRITE_PATH_ENABLED,
     proofWriteEnabled: COMMUNITY_BOSS_PROOF_WRITE_ENABLED,
-    proofPersistenceDryRunEnabled: COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED,
+    proofPersistenceDryRunEnabled:
+      COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED,
+    proofManualWriteEnabled: COMMUNITY_BOSS_PROOF_MANUAL_WRITE_ENABLED,
   };
 
   const dryRunReady = Boolean(readiness.proofPersistenceDryRunReady);
+  const canPersist = Boolean(readiness.canPersistProof);
 
   return {
-    status: dryRunReady ? "dry_run_ready" as const : "locked" as const,
+    status: canPersist
+      ? ("manual_write_ready" as const)
+      : dryRunReady
+        ? ("dry_run_ready" as const)
+        : ("locked" as const),
     persisted: false,
-    wouldPersist: false,
-    canPersist: false,
+    wouldPersist: canPersist,
+    canPersist,
     dryRunReady,
+    manualWriteReady: canPersist,
     implemented: COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED,
     requiredFlags,
-    reason: dryRunReady
-      ? "Proof persistence dry-run server path is ready, but real Supabase writes remain disabled."
-      : "Proof persistence is still locked until migration review, write flags, and dry-run flag are enabled.",
-    nextStep: "A later patch may switch the prepared Supabase upsert from dry-run to real write only after manual migration apply and explicit production approval.",
+    reason: canPersist
+      ? "Proof persistence manual write gate is open. Authenticated safe proofs can be upserted to Supabase."
+      : dryRunReady
+        ? "Proof persistence dry-run server path is ready, but manual write gate is still closed."
+        : "Proof persistence is still locked until migration review, write flags, and dry-run flag are enabled.",
+    nextStep: canPersist
+      ? "Submit authenticated safe proof to persist one Community Boss user proof row."
+      : "Open the manual write gate only after migration apply, seeded week row, auth validation, and production approval.",
     backendReadiness: readiness,
   };
 }
@@ -356,9 +433,11 @@ export function buildCommunityBossProofPersistenceRow({
 }) {
   return {
     week_key: proof.weekKey,
-    telegram_user_id: cleanCommunityBossDbText(publicUserKey, 80) || "dry-run-unverified",
+    telegram_user_id:
+      cleanCommunityBossDbText(publicUserKey, 80) || "dry-run-unverified",
     public_handle: proof.publicHandle,
-    public_display_name: cleanCommunityBossDbText(proof.publicDisplayName, 48) || null,
+    public_display_name:
+      cleanCommunityBossDbText(proof.publicDisplayName, 48) || null,
     weekly_damage: proof.weeklyDamage,
     safe_points: proof.safePoints,
     proof_count: proof.proofCount,
@@ -386,14 +465,18 @@ export function buildCommunityBossProofPersistenceDryRun({
   const blockedReasons: string[] = [];
 
   if (!authenticated) blockedReasons.push("server auth is not verified");
-  if (!gate.dryRunReady) blockedReasons.push("proof persistence dry-run gate is not ready");
-  if (!COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED) blockedReasons.push("real proof write implementation is disabled");
+  if (!gate.dryRunReady)
+    blockedReasons.push("proof persistence dry-run gate is not ready");
+  if (!COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED)
+    blockedReasons.push("real proof write implementation is disabled");
+  if (gate.canPersist && !authenticated)
+    blockedReasons.push("manual write gate requires server auth");
 
   const row = buildCommunityBossProofPersistenceRow({ proof, publicUserKey });
   const dryRunPrepared = Boolean(authenticated && gate.dryRunReady);
 
   return {
-    status: dryRunPrepared ? "prepared" as const : "blocked" as const,
+    status: dryRunPrepared ? ("prepared" as const) : ("blocked" as const),
     dryRun: true,
     dryRunPrepared,
     persisted: false,
@@ -415,6 +498,146 @@ export function buildCommunityBossProofPersistenceDryRun({
   };
 }
 
+export async function persistCommunityBossProofToSupabase({
+  proof,
+  publicUserKey,
+  authenticated,
+}: {
+  proof: CommunityBossSafeProof;
+  publicUserKey: string | null;
+  authenticated: boolean;
+}) {
+  const gate = getCommunityBossProofPersistenceGate();
+  const row = buildCommunityBossProofPersistenceRow({ proof, publicUserKey });
+  const blockedReasons: string[] = [];
+
+  if (!gate.canPersist) blockedReasons.push("manual write gate is closed");
+  if (!authenticated) blockedReasons.push("server auth is not verified");
+  if (!publicUserKey) blockedReasons.push("public user key is missing");
+  if (!hasCommunityBossSupabaseReadEnv())
+    blockedReasons.push("Supabase service env is missing");
+
+  if (blockedReasons.length > 0) {
+    return {
+      status: "blocked" as const,
+      attempted: false,
+      persisted: false,
+      canPersist: gate.canPersist,
+      targetTable: "broke_community_boss_user_proofs",
+      conflictTarget: "week_key, telegram_user_id",
+      upsertMode: "manual_write_gate",
+      rowPreview: row,
+      blockedReasons,
+      error: null,
+      returnedRow: null,
+      gate,
+      guardrails: [
+        "No write without auth",
+        "No write without manual gate",
+        "No wallet value",
+        "No payout math",
+      ],
+    };
+  }
+
+  try {
+    const baseUrl = getCommunityBossSupabaseBaseUrl();
+    const serviceKey = getCommunityBossSupabaseServiceKey();
+    const response = await fetch(
+      `${baseUrl}/rest/v1/broke_community_boss_user_proofs?on_conflict=week_key,telegram_user_id`,
+      {
+        method: "POST",
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates,return=representation",
+        },
+        body: JSON.stringify(row),
+        cache: "no-store",
+      },
+    );
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      return {
+        status: "failed" as const,
+        attempted: true,
+        persisted: false,
+        canPersist: gate.canPersist,
+        targetTable: "broke_community_boss_user_proofs",
+        conflictTarget: "week_key, telegram_user_id",
+        upsertMode: "manual_write_gate",
+        rowPreview: row,
+        blockedReasons: [],
+        error: `Supabase proof upsert ${response.status}: ${responseText.slice(0, 260)}`,
+        returnedRow: null,
+        gate,
+        guardrails: [
+          "Supabase write attempted behind manual gate",
+          "Write failed safely",
+          "No wallet value",
+          "No payout math",
+        ],
+      };
+    }
+
+    const returnedRows = responseText
+      ? (JSON.parse(responseText) as unknown)
+      : null;
+    const returnedRow = Array.isArray(returnedRows)
+      ? (returnedRows[0] ?? null)
+      : returnedRows;
+
+    return {
+      status: "persisted" as const,
+      attempted: true,
+      persisted: true,
+      canPersist: gate.canPersist,
+      targetTable: "broke_community_boss_user_proofs",
+      conflictTarget: "week_key, telegram_user_id",
+      upsertMode: "manual_write_gate",
+      rowPreview: row,
+      blockedReasons: [],
+      error: null,
+      returnedRow,
+      gate,
+      guardrails: [
+        "Authenticated safe proof persisted",
+        "Server-side sanitized row only",
+        "No raw Telegram ID returned",
+        "No wallet value",
+        "No payout math",
+      ],
+    };
+  } catch (error) {
+    return {
+      status: "failed" as const,
+      attempted: true,
+      persisted: false,
+      canPersist: gate.canPersist,
+      targetTable: "broke_community_boss_user_proofs",
+      conflictTarget: "week_key, telegram_user_id",
+      upsertMode: "manual_write_gate",
+      rowPreview: row,
+      blockedReasons: [],
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown Community Boss proof upsert error.",
+      returnedRow: null,
+      gate,
+      guardrails: [
+        "Supabase write attempted behind manual gate",
+        "Write failed safely",
+        "No wallet value",
+        "No payout math",
+      ],
+    };
+  }
+}
+
 function safeCommunityBossNumber(value: unknown, fallback = 0) {
   const parsed = Number(value ?? fallback);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -425,7 +648,10 @@ function safeCommunityBossString(value: unknown, fallback = "") {
   return text || fallback;
 }
 
-function mapCommunityBossPublicWeekRow(row: Record<string, unknown>, fallbackWeek: CommunityBossWeek) {
+function mapCommunityBossPublicWeekRow(
+  row: Record<string, unknown>,
+  fallbackWeek: CommunityBossWeek,
+) {
   const bossHp = safeCommunityBossNumber(row.boss_hp, fallbackWeek.bossHp);
   const totalDamage = safeCommunityBossNumber(row.total_damage, 0);
 
@@ -433,11 +659,23 @@ function mapCommunityBossPublicWeekRow(row: Record<string, unknown>, fallbackWee
     weekKey: safeCommunityBossString(row.week_key, fallbackWeek.weekKey),
     bossCode: safeCommunityBossString(row.boss_code, fallbackWeek.bossCode),
     bossName: safeCommunityBossString(row.boss_name, fallbackWeek.bossName),
-    weekStartDate: safeCommunityBossString(row.week_start_date, fallbackWeek.weekStartDate),
-    weekEndDate: safeCommunityBossString(row.week_end_date, fallbackWeek.weekEndDate),
-    status: safeCommunityBossString(row.status, fallbackWeek.status) as CommunityBossStatus,
+    weekStartDate: safeCommunityBossString(
+      row.week_start_date,
+      fallbackWeek.weekStartDate,
+    ),
+    weekEndDate: safeCommunityBossString(
+      row.week_end_date,
+      fallbackWeek.weekEndDate,
+    ),
+    status: safeCommunityBossString(
+      row.status,
+      fallbackWeek.status,
+    ) as CommunityBossStatus,
     bossHp,
-    phaseLabel: safeCommunityBossString(row.phase_label, fallbackWeek.phaseLabel),
+    phaseLabel: safeCommunityBossString(
+      row.phase_label,
+      fallbackWeek.phaseLabel,
+    ),
   };
 
   const aggregate: CommunityBossAggregate = {
@@ -448,13 +686,17 @@ function mapCommunityBossPublicWeekRow(row: Record<string, unknown>, fallbackWee
     challengeCount: safeCommunityBossNumber(row.challenge_count, 0),
     weaknessHitCount: safeCommunityBossNumber(row.weakness_hit_count, 0),
     progressPercent: getCommunityBossProgressPercent(totalDamage, bossHp),
-    updatedAt: row.aggregate_updated_at ? String(row.aggregate_updated_at) : null,
+    updatedAt: row.aggregate_updated_at
+      ? String(row.aggregate_updated_at)
+      : null,
   };
 
   return { week, aggregate };
 }
 
-export async function readCommunityBossPublicSnapshotFromSupabase(fallbackWeek = getCurrentCommunityBossWeek()) {
+export async function readCommunityBossPublicSnapshotFromSupabase(
+  fallbackWeek = getCurrentCommunityBossWeek(),
+) {
   const readiness = getCommunityBossBackendReadiness();
 
   if (!readiness.canRead) {
@@ -494,14 +736,17 @@ export async function readCommunityBossPublicSnapshotFromSupabase(fallbackWeek =
       limit: "1",
     });
 
-    const response = await fetch(`${baseUrl}/rest/v1/broke_community_boss_public_weeks?${params.toString()}`, {
-      headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${serviceKey}`,
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${baseUrl}/rest/v1/broke_community_boss_public_weeks?${params.toString()}`,
+      {
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
       },
-      cache: "no-store",
-    });
+    );
 
     if (!response.ok) {
       const detail = await response.text();
@@ -516,7 +761,7 @@ export async function readCommunityBossPublicSnapshotFromSupabase(fallbackWeek =
       };
     }
 
-    const rows = await response.json() as Record<string, unknown>[];
+    const rows = (await response.json()) as Record<string, unknown>[];
     const firstRow = rows[0];
 
     if (!firstRow) {
@@ -546,7 +791,10 @@ export async function readCommunityBossPublicSnapshotFromSupabase(fallbackWeek =
       source: "dry_run" as const,
       persisted: false,
       readAttempted: true,
-      readError: error instanceof Error ? error.message : "Unknown Community Boss DB read error.",
+      readError:
+        error instanceof Error
+          ? error.message
+          : "Unknown Community Boss DB read error.",
       week: fallbackWeek,
       aggregate: getDryRunCommunityBossAggregate(fallbackWeek),
       backendReadiness: readiness,
@@ -554,12 +802,13 @@ export async function readCommunityBossPublicSnapshotFromSupabase(fallbackWeek =
   }
 }
 
-
 function escapeCommunityBossSqlString(value: string) {
   return value.replace(/'/g, "''");
 }
 
-export function buildCommunityBossSeedWeekSql(week = getCurrentCommunityBossWeek()) {
+export function buildCommunityBossSeedWeekSql(
+  week = getCurrentCommunityBossWeek(),
+) {
   const values = {
     weekKey: escapeCommunityBossSqlString(week.weekKey),
     bossCode: escapeCommunityBossSqlString(week.bossCode),
@@ -625,7 +874,9 @@ insert into public.broke_community_boss_aggregates (
 on conflict (week_key) do nothing;`;
 }
 
-export function getCommunityBossSeedWeekPlan(week = getCurrentCommunityBossWeek()) {
+export function getCommunityBossSeedWeekPlan(
+  week = getCurrentCommunityBossWeek(),
+) {
   const readiness = getCommunityBossBackendReadiness();
 
   return {

@@ -5,6 +5,7 @@ import { BROKE_APP_BUILD_VERSION } from "@/app/lib/brokeAdminRewards";
 import {
   COMMUNITY_BOSS_SYNC_ENABLED,
   buildCommunityBossProofPersistenceDryRun,
+  persistCommunityBossProofToSupabase,
   findForbiddenCommunityBossFields,
   getCommunityBossBackendReadiness,
   getCommunityBossNoStoreHeaders,
@@ -58,7 +59,9 @@ function getOptionalEnv(name: string) {
 }
 
 function getWebAuthSecret() {
-  return getOptionalEnv("WEB_AUTH_SECRET") || getOptionalEnv("TELEGRAM_BOT_TOKEN");
+  return (
+    getOptionalEnv("WEB_AUTH_SECRET") || getOptionalEnv("TELEGRAM_BOT_TOKEN")
+  );
 }
 
 function safeCompare(a: string, b: string) {
@@ -89,7 +92,10 @@ function publicUserKey(userId: number | string) {
 }
 
 function cleanPublicHandle(value: unknown) {
-  const handle = String(value ?? "").replace(/^@+/, "").trim().slice(0, 32);
+  const handle = String(value ?? "")
+    .replace(/^@+/, "")
+    .trim()
+    .slice(0, 32);
   return /^[A-Za-z0-9_.-]{2,32}$/.test(handle) ? handle : null;
 }
 
@@ -106,7 +112,7 @@ function cleanPublicDisplayName(user: TelegramUser) {
 
 function authStateFromUser(
   user: TelegramUser,
-  source: CommunityBossProofAuthState["source"]
+  source: CommunityBossProofAuthState["source"],
 ): CommunityBossProofAuthState {
   return {
     checked: true,
@@ -171,11 +177,12 @@ function parseWebAuthCookie(request: NextRequest): TelegramUser | null {
   if (!payloadBase64 || !signature) return null;
 
   const expectedSignature = signWebAuthPayload(payloadBase64);
-  if (!expectedSignature || !safeCompare(signature, expectedSignature)) return null;
+  if (!expectedSignature || !safeCompare(signature, expectedSignature))
+    return null;
 
   try {
     const session = JSON.parse(
-      Buffer.from(payloadBase64, "base64url").toString("utf8")
+      Buffer.from(payloadBase64, "base64url").toString("utf8"),
     ) as WebAuthSession;
 
     if (!session.user?.id || Date.now() > session.expiresAt) return null;
@@ -187,7 +194,8 @@ function parseWebAuthCookie(request: NextRequest): TelegramUser | null {
 }
 
 function extractInitData(request: NextRequest, body: unknown) {
-  const data = body && typeof body === "object" ? body as Record<string, unknown> : {};
+  const data =
+    body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   const bodyInitData = typeof data.initData === "string" ? data.initData : "";
   const headerInitData = request.headers.get("x-telegram-init-data") || "";
   return bodyInitData || headerInitData;
@@ -195,10 +203,11 @@ function extractInitData(request: NextRequest, body: unknown) {
 
 function getCommunityBossProofAuthState(
   request: NextRequest,
-  body: unknown
+  body: unknown,
 ): CommunityBossProofAuthState {
   const initDataUser = verifyTelegramInitData(extractInitData(request, body));
-  if (initDataUser) return authStateFromUser(initDataUser, "telegram_init_data");
+  if (initDataUser)
+    return authStateFromUser(initDataUser, "telegram_init_data");
 
   const cookieUser = parseWebAuthCookie(request);
   if (cookieUser) return authStateFromUser(cookieUser, "web_session");
@@ -211,9 +220,10 @@ function getCommunityBossProofAuthState(
     publicUserKey: null,
     publicDisplayName: null,
     publicHandle: null,
-    reason: getOptionalEnv("TELEGRAM_BOT_TOKEN") || getOptionalEnv("WEB_AUTH_SECRET")
-      ? "No valid Telegram initData or web session was found."
-      : "Auth secrets are not configured, so proof identity could not be verified.",
+    reason:
+      getOptionalEnv("TELEGRAM_BOT_TOKEN") || getOptionalEnv("WEB_AUTH_SECRET")
+        ? "No valid Telegram initData or web session was found."
+        : "Auth secrets are not configured, so proof identity could not be verified.",
   };
 }
 
@@ -232,12 +242,13 @@ export async function POST(request: NextRequest) {
         error: "Community Boss proof auth required.",
         auth,
         persistence,
-        guardrail: "Future persisted proof writes require server-side Telegram/session identity. No database write was made.",
+        guardrail:
+          "Future persisted proof writes require server-side Telegram/session identity. No database write was made.",
       },
       {
         status: 401,
         headers: getCommunityBossNoStoreHeaders(),
-      }
+      },
     );
   }
 
@@ -252,12 +263,13 @@ export async function POST(request: NextRequest) {
         auth,
         persistence,
         forbiddenFields,
-        guardrail: "Community Boss proof cannot include balance, wallet value, income, debt, transactions, payout, or private budget data.",
+        guardrail:
+          "Community Boss proof cannot include balance, wallet value, income, debt, transactions, payout, or private budget data.",
       },
       {
         status: 400,
         headers: getCommunityBossNoStoreHeaders(),
-      }
+      },
     );
   }
 
@@ -269,6 +281,25 @@ export async function POST(request: NextRequest) {
 
   if (!proof.publicDisplayName && auth.publicDisplayName) {
     proof.publicDisplayName = auth.publicDisplayName;
+  }
+
+  if (persistence.canPersist && !auth.authenticated) {
+    return NextResponse.json(
+      {
+        ok: false,
+        buildVersion: BROKE_APP_BUILD_VERSION,
+        error:
+          "Community Boss proof persistence requires verified server auth.",
+        auth,
+        persistence,
+        guardrail:
+          "Manual write gate is open, but no verified Telegram/session identity was found. No database write was made.",
+      },
+      {
+        status: 401,
+        headers: getCommunityBossNoStoreHeaders(),
+      },
+    );
   }
 
   if (proof.weekKey !== currentWeek.weekKey) {
@@ -284,7 +315,7 @@ export async function POST(request: NextRequest) {
       {
         status: 409,
         headers: getCommunityBossNoStoreHeaders(),
-      }
+      },
     );
   }
 
@@ -293,26 +324,40 @@ export async function POST(request: NextRequest) {
     publicUserKey: auth.publicUserKey,
     authenticated: auth.authenticated,
   });
+  const persistenceWrite = await persistCommunityBossProofToSupabase({
+    proof,
+    publicUserKey: auth.publicUserKey,
+    authenticated: auth.authenticated,
+  });
+
+  const persisted = persistenceWrite.persisted === true;
 
   return NextResponse.json(
     {
       ok: true,
       buildVersion: BROKE_APP_BUILD_VERSION,
-      mode: COMMUNITY_BOSS_SYNC_ENABLED ? "skeleton_enabled_no_writes" : "dry_run",
+      mode: COMMUNITY_BOSS_SYNC_ENABLED
+        ? "skeleton_enabled_no_writes"
+        : "dry_run",
       syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
-      persisted: false,
-      wouldWrite: false,
-      wouldPersist: false,
+      persisted,
+      wouldWrite: persistence.canPersist,
+      wouldPersist: persistence.canPersist,
       writePathReady: readiness.canWrite,
       proofPersistenceReady: readiness.canPersistProof,
       proofPersistenceDryRunReady: readiness.proofPersistenceDryRunReady,
       backendReadiness: readiness,
       persistence,
       persistenceDryRun,
+      persistenceWrite,
       auth,
       week: currentWeek,
       proof,
-      nextStep: "A later patch can connect authenticated sanitized proof payloads to Supabase only after migration review, manual apply, and explicit write-path implementation.",
+      nextStep: persisted
+        ? "Next patch can recalculate the public aggregate after this persisted proof row."
+        : persistence.canPersist
+          ? "Manual write gate is open but the proof was not persisted. Check Supabase table, current week seed row, and response error."
+          : "Open the manual write gate only after migration review, manual apply, current week seed, auth validation, and explicit production approval.",
       guardrails: [
         "Server auth checked",
         "Payload sanitized",
@@ -320,14 +365,17 @@ export async function POST(request: NextRequest) {
         "Forbidden private fields rejected",
         "Persistence gate checked",
         "Persistence dry-run row prepared when auth/flags allow",
-        "No database write performed",
+        persisted
+          ? "Safe proof row persisted behind manual write gate"
+          : "No database write performed",
         "No payout math",
         "No wallet value",
       ],
     },
     {
-      status: 202,
+      status:
+        persistenceWrite.status === "failed" ? 502 : persisted ? 200 : 202,
       headers: getCommunityBossNoStoreHeaders(),
-    }
+    },
   );
 }

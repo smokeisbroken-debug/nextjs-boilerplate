@@ -95,10 +95,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Confirm write path remains disabled and no wallet value/payout language appears.
 
 
-## v59.60.9 Community Boss Proof Persistence Dry-Run Server Path
+## v59.61.0 Community Boss Proof Persistence Manual Write Gate
 
 - Run `npm run typecheck`.
 - Run `npm run lint:quiet`.
-- Optional local API check: `POST /api/community-boss/proof` should return `persistenceDryRun.persisted:false`.
-- Confirm `persistenceDryRun.upsertMode` is `dry_run_only`.
-- Confirm no Supabase write is executed in this patch.
+- Run production build where possible.
+- With default env flags, `POST /api/community-boss/proof` should still return `persisted:false`.
+- With manual write flags and Supabase env enabled, authenticated safe proof can upsert into `broke_community_boss_user_proofs`.
+- Payloads containing `balance`, `walletValue`, `income`, `debt`, `payout`, or transaction fields must still be rejected.
