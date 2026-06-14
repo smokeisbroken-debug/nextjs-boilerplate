@@ -2100,31 +2100,35 @@ function getCommunityBossPublicEventPanel({
 }) {
   const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
   const seededWeek = hasCommunityBossSeededWeek(backend);
-  const autoReady = backend.canAutoRecalculateAfterProof;
   const bossName = backend.bossName !== "—" ? backend.bossName : "Community Boss";
   const damage = backend.totalDamage;
   const participants = backend.participantCount;
+  const progressValue = liveAggregateReady
+    ? `${backend.progressPercent}%`
+    : seededWeek
+      ? "Ready"
+      : "Soon";
   const stats = [
     {
       label: "Community damage",
-      value: liveAggregateReady ? String(damage) : "Preparing",
+      value: liveAggregateReady ? String(damage) : "—",
       detail: liveAggregateReady
         ? `${backend.progressPercent}% of weekly boss HP`
-        : "Live total unlocks after first safe proof + auto recalc.",
+        : "Starts after the first verified community proof.",
     },
     {
       label: "Participants",
       value: liveAggregateReady ? String(participants) : "—",
       detail: liveAggregateReady
-        ? "Public-safe proof rows only"
-        : "No personal wallet or balance data.",
+        ? "Public-safe contributors"
+        : "No wallet balances or private finance data.",
     },
     {
-      label: "Update mode",
-      value: autoReady ? "Automatic" : "Gated",
-      detail: autoReady
-        ? "Proof submit can update aggregate without founder action."
-        : "Auto recalc flag must be enabled before public launch.",
+      label: "Boss progress",
+      value: progressValue,
+      detail: liveAggregateReady
+        ? "Live public aggregate"
+        : "Real app actions will move this bar.",
     },
   ];
 
@@ -2132,9 +2136,9 @@ function getCommunityBossPublicEventPanel({
     return {
       tone: "live" as const,
       label: "Community Boss live",
-      badge: "Release candidate",
-      detail: `${bossName} is ready for the first public event: ${damage} damage from ${participants} participant${participants === 1 ? "" : "s"}.`,
-      status: "Public launch copy unlocked. Future safe proofs can auto-update aggregate.",
+      badge: "Live",
+      detail: `${bossName} is active: ${damage} damage from ${participants} participant${participants === 1 ? "" : "s"}.`,
+      status: "Submit real app proof to help the community push the weekly boss.",
       stats,
     };
   }
@@ -2143,24 +2147,22 @@ function getCommunityBossPublicEventPanel({
     return {
       tone: "live" as const,
       label: "Community damage live",
-      badge: "Live aggregate",
-      detail: `${bossName} already has live public aggregate data. Final launch blockers remain in the guard panel.`,
-      status: "Public totals are visible. Keep announcement locked until launch guard passes.",
+      badge: "Live totals",
+      detail: `${bossName} has live community progress: ${damage} damage from ${participants} participant${participants === 1 ? "" : "s"}.`,
+      status: "New safe proofs can update the community total automatically.",
       stats,
     };
   }
 
   if (proofSubmit.persisted) {
     return {
-      tone: proofSubmit.autoRecalculated ? ("syncing" as const) : ("preparing" as const),
-      label: proofSubmit.autoRecalculated
-        ? "Proof saved, aggregate syncing"
-        : "Proof saved, aggregate pending",
-      badge: proofSubmit.autoRecalculated ? "Auto flow" : "Auto refresh",
+      tone: "syncing" as const,
+      label: "Proof saved",
+      badge: "Syncing",
       detail: proofSubmit.autoRecalculated
-        ? "The server auto-recalculated aggregate after proof write. Waiting for live public read to show non-zero totals."
-        : "Safe proof exists, but automatic aggregate recalculation was not confirmed yet.",
-      status: "No manual monitoring should be required after auto recalc is enabled; fallback admin recalc remains available.",
+        ? "Your proof was saved. Community totals are updating."
+        : "Your proof was saved. Community totals will appear after the next safe aggregate update.",
+      status: "No wallet balance, income, debt, or payout data is shown.",
       stats,
     };
   }
@@ -2168,21 +2170,21 @@ function getCommunityBossPublicEventPanel({
   if (seededWeek) {
     return {
       tone: "preparing" as const,
-      label: "First event seeded",
+      label: "First event ready",
       badge: "Proof needed",
-      detail: `${bossName} is seeded for ${backend.weekKey}. One authenticated safe proof is needed to start live totals.`,
-      status: "Users submit real app proof; public aggregate updates after proof write + auto recalc.",
+      detail: `${bossName} is prepared for this week. Submit real app proof to start live progress.`,
+      status: "Routine, tracking, leak fixes, and challenges can help the community boss.",
       stats,
     };
   }
 
   return {
     tone: "preparing" as const,
-    label: "Community Boss preparing",
-    badge: "Backend gated",
+    label: "Community Boss opening soon",
+    badge: "Preparing",
     detail:
-      "First live event is not public yet. Seed week, verify proof write, and enable auto aggregate before launch.",
-    status: "Operator/debug panels stay available, but public users should see a simple preparing state.",
+      "The first Community Boss event is being prepared. Public progress will appear when live totals are ready.",
+    status: "Real habits only. No PvP, no payout promise, no wallet value.",
     stats,
   };
 }
@@ -19555,6 +19557,20 @@ function CommunityBossPrepCard({
       : backend.persisted
         ? "Preparing"
         : "Opening soon";
+  const publicInfoItems = [
+    {
+      title: "Real actions",
+      detail: "Routine, tracking, leak fixes, and challenges feed the boss.",
+    },
+    {
+      title: "Shared progress",
+      detail: "Safe proofs add to one community damage total.",
+    },
+    {
+      title: "Public-safe",
+      detail: "No wallet balance, income, debt, or payout data is shown.",
+    },
+  ];
 
   return (
     <section className="community-boss-prep-card public-community-boss-card">
@@ -19697,22 +19713,18 @@ function CommunityBossPrepCard({
         />
       </div>
 
-      <div className="community-boss-prep-grid public-community-boss-grid">
-        {state.lanes.map((lane) => (
-          <article key={lane.id} className={lane.ready ? "ready" : "locked"}>
-            <div>
-              <span>{lane.title}</span>
-              <strong>{lane.value}</strong>
-              <small>{lane.detail}</small>
-            </div>
-            <b>{lane.ready ? "Ready" : "Next"}</b>
+      <div className="community-boss-public-info-grid" aria-label="How Community Boss works">
+        {publicInfoItems.map((item) => (
+          <article key={item.title}>
+            <strong>{item.title}</strong>
+            <small>{item.detail}</small>
           </article>
         ))}
       </div>
 
-      <footer className="community-boss-guardrail">
-        <span>{state.weekRangeLabel} · Auto-updates while the app is open</span>
-        <b>No PvP · No payout promise · No wallet value</b>
+      <footer className="community-boss-guardrail public-community-boss-guardrail">
+        <span>{state.weekRangeLabel} · Updates automatically while the app is open</span>
+        <b>Real habits only · Public-safe progress</b>
       </footer>
     </section>
   );

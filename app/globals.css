@@ -38632,3 +38632,78 @@ html.embedded-app-view .hero h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.62.4 — Community Boss First Event Public Polish */
+.public-community-boss-card {
+  gap: 12px;
+}
+
+.public-community-boss-card .community-boss-prep-head {
+  align-items: flex-start;
+}
+
+.public-community-boss-card .community-boss-prep-head strong {
+  font-size: clamp(20px, 5.4vw, 32px);
+  line-height: 0.98;
+}
+
+.public-community-boss-card .community-boss-public-event-panel {
+  border-radius: 26px;
+  padding: 17px;
+}
+
+.public-community-boss-card .community-boss-public-event-head strong {
+  font-size: clamp(22px, 5.8vw, 34px);
+}
+
+.public-community-boss-card .community-boss-public-event-grid article,
+.public-community-boss-card .community-boss-proof-submit-grid article,
+.community-boss-public-info-grid article {
+  min-height: 88px;
+  align-content: start;
+}
+
+.community-boss-public-info-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.community-boss-public-info-grid article {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 11px;
+  display: grid;
+  gap: 5px;
+}
+
+.community-boss-public-info-grid strong {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.12;
+  font-weight: 950;
+}
+
+.community-boss-public-info-grid small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 750;
+}
+
+.public-community-boss-guardrail {
+  border-color: rgba(183, 255, 25, 0.14);
+  background: rgba(183, 255, 25, 0.055);
+}
+
+@media (max-width: 620px) {
+  .community-boss-public-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .public-community-boss-card .community-boss-public-event-panel,
+  .public-community-boss-card .community-boss-proof-submit-panel {
+    padding: 13px;
+  }
+}
