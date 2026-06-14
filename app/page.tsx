@@ -1190,8 +1190,11 @@ type CommunityBossBackendUiState = {
   aggregateRecalcReviewed: boolean;
   aggregateWriteEnabled: boolean;
   aggregateManualWriteEnabled: boolean;
+  autoRecalculateAfterProofEnabled: boolean;
+  autoRecalculateAfterProofReady: boolean;
   aggregateWriteImplemented: boolean;
   canRecalculateAggregate: boolean;
+  canAutoRecalculateAfterProof: boolean;
   missing: string[];
 };
 
@@ -1225,6 +1228,11 @@ type CommunityBossProofSubmitUiState = {
   persistenceWriteStatus: string;
   persistenceWriteAttempted: boolean;
   persistenceWriteError: string | null;
+  autoRecalculateStatus: string;
+  autoRecalculateAttempted: boolean;
+  autoRecalculated: boolean;
+  autoRecalculateError: string | null;
+  autoRecalculateDetail: string;
   persistenceBlockedReasons: string[];
   updatedAt: string | null;
   guardrails: string[];
@@ -1281,8 +1289,11 @@ function defaultCommunityBossBackendUiState(): CommunityBossBackendUiState {
     aggregateRecalcReviewed: false,
     aggregateWriteEnabled: false,
     aggregateManualWriteEnabled: false,
+    autoRecalculateAfterProofEnabled: false,
+    autoRecalculateAfterProofReady: false,
     aggregateWriteImplemented: false,
     canRecalculateAggregate: false,
+    canAutoRecalculateAfterProof: false,
     missing: [],
   };
 }
@@ -1318,6 +1329,11 @@ function defaultCommunityBossProofSubmitUiState(): CommunityBossProofSubmitUiSta
     persistenceWriteStatus: "not_checked",
     persistenceWriteAttempted: false,
     persistenceWriteError: null,
+    autoRecalculateStatus: "not_checked",
+    autoRecalculateAttempted: false,
+    autoRecalculated: false,
+    autoRecalculateError: null,
+    autoRecalculateDetail: "Auto aggregate refresh has not run yet.",
     persistenceBlockedReasons: [],
     updatedAt: null,
     guardrails: [],
@@ -1384,7 +1400,9 @@ function parseCommunityBossBackendUiState(
     aggregateUpdatedAt: aggregate.updatedAt
       ? String(aggregate.updatedAt).slice(0, 40)
       : null,
-    refreshedAt: data.refreshedAt ? String(data.refreshedAt).slice(0, 40) : null,
+    refreshedAt: data.refreshedAt
+      ? String(data.refreshedAt).slice(0, 40)
+      : null,
     refreshReason: stringFromCommunityBossApi(
       data.refreshReason,
       data.persisted === true
@@ -1404,8 +1422,14 @@ function parseCommunityBossBackendUiState(
     aggregateRecalcReviewed: readiness.aggregateRecalcReviewed === true,
     aggregateWriteEnabled: readiness.aggregateWriteEnabled === true,
     aggregateManualWriteEnabled: readiness.aggregateManualWriteEnabled === true,
+    autoRecalculateAfterProofEnabled:
+      readiness.autoRecalculateAfterProofEnabled === true,
+    autoRecalculateAfterProofReady:
+      readiness.autoRecalculateAfterProofReady === true,
     aggregateWriteImplemented: readiness.aggregateWriteImplemented === true,
     canRecalculateAggregate: readiness.canRecalculateAggregate === true,
+    canAutoRecalculateAfterProof:
+      readiness.canAutoRecalculateAfterProof === true,
     missing,
   };
 }
@@ -1481,10 +1505,30 @@ function parseCommunityBossProofSubmitUiState(
   const persistenceWriteError = persistenceWrite.error
     ? String(persistenceWrite.error).slice(0, 160)
     : null;
+  const autoRecalculate =
+    data.autoRecalculate && typeof data.autoRecalculate === "object"
+      ? (data.autoRecalculate as Record<string, unknown>)
+      : {};
+  const autoRecalculateError = autoRecalculate.error
+    ? String(autoRecalculate.error).slice(0, 160)
+    : null;
+  const autoRecalculateStatus = stringFromCommunityBossApi(
+    autoRecalculate.status,
+    data.autoRecalculated === true ? "recalculated" : "not_checked",
+  );
+  const autoRecalculateAttempted = autoRecalculate.attempted === true;
+  const autoRecalculated =
+    data.autoRecalculated === true || autoRecalculate.recalculated === true;
+  const autoRecalculateDetail = autoRecalculated
+    ? "Aggregate auto-recalculated after proof write."
+    : autoRecalculateStatus === "blocked"
+      ? "Auto recalc blocked by gates/env; admin fallback remains available."
+      : autoRecalculateError || "Auto aggregate refresh did not run.";
   const persistenceBlockedReasons = [
     ...writeBlockedReasons,
     ...dryRunBlockedReasons,
     ...(persistenceWriteError ? [persistenceWriteError] : []),
+    ...(autoRecalculateError ? [autoRecalculateError] : []),
   ].slice(0, 3);
 
   return {
@@ -1526,6 +1570,11 @@ function parseCommunityBossProofSubmitUiState(
     ),
     persistenceWriteAttempted: persistenceWrite.attempted === true,
     persistenceWriteError,
+    autoRecalculateStatus,
+    autoRecalculateAttempted,
+    autoRecalculated,
+    autoRecalculateError,
+    autoRecalculateDetail,
     persistenceBlockedReasons,
     updatedAt: new Date().toISOString(),
     guardrails,
@@ -1567,7 +1616,8 @@ function getCommunityBossAggregateFreshnessLabel(
   backend: CommunityBossBackendUiState,
 ) {
   if (backend.loading) return "Refreshing";
-  if (backend.dataSource === "supabase" && backend.persisted) return "Live read";
+  if (backend.dataSource === "supabase" && backend.persisted)
+    return "Live read";
   if (backend.readAttempted && backend.readError) return "Fallback read";
   if (backend.canRead) return "Ready to refresh";
   return "Dry-run only";
@@ -1617,12 +1667,17 @@ function getCommunityBossFirstEventState(
   backend: CommunityBossBackendUiState,
   proofSubmit: CommunityBossProofSubmitUiState,
 ): CommunityBossFirstEventState {
-  const readReady = backend.canRead && !(backend.readAttempted && Boolean(backend.readError));
+  const readReady =
+    backend.canRead && !(backend.readAttempted && Boolean(backend.readError));
   const seededWeek = hasCommunityBossSeededWeek(backend);
-  const proofEvidenceReady = hasCommunityBossProofEvidence(backend, proofSubmit);
+  const proofEvidenceReady = hasCommunityBossProofEvidence(
+    backend,
+    proofSubmit,
+  );
   const authReady = proofSubmit.authenticated || proofEvidenceReady;
   const proofGateReady = backend.canPersistProof;
   const aggregateGateReady = backend.canRecalculateAggregate;
+  const autoAggregateReady = backend.canAutoRecalculateAfterProof;
   const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
   const blockers: string[] = [];
 
@@ -1631,8 +1686,10 @@ function getCommunityBossFirstEventState(
   if (!authReady) blockers.push("server auth proof");
   if (!proofGateReady) blockers.push("proof manual write gate");
   if (!proofEvidenceReady) blockers.push("first safe proof row");
-  if (!aggregateGateReady) blockers.push("aggregate manual gate");
-  if (!liveAggregateReady) blockers.push("live aggregate with participant proof");
+  if (!aggregateGateReady) blockers.push("aggregate write gate");
+  if (!autoAggregateReady) blockers.push("automatic aggregate recalc");
+  if (!liveAggregateReady)
+    blockers.push("live aggregate with participant proof");
 
   if (
     readReady &&
@@ -1641,13 +1698,16 @@ function getCommunityBossFirstEventState(
     proofGateReady &&
     proofEvidenceReady &&
     aggregateGateReady &&
+    autoAggregateReady &&
     liveAggregateReady
   ) {
     return {
       stage: "launch_ready",
       label: "Launch ready",
-      detail: "Seed, proof write, aggregate recalculation, and live public read are all verified.",
-      nextAction: "Copy the public post only after final operator review.",
+      detail:
+        "Seed, proof write, automatic aggregate recalculation, and live public read are all verified.",
+      nextAction:
+        "Copy the public post after final operator review. Future proof submits auto-update aggregate.",
       badge: "Ready",
       severity: "ready",
       launchReady: true,
@@ -1665,7 +1725,8 @@ function getCommunityBossFirstEventState(
       detail: backend.readError
         ? `Public read fell back: ${backend.readError}`
         : "Public aggregate read path is not verified yet.",
-      nextAction: "Enable and verify the public aggregate read flags/env first.",
+      nextAction:
+        "Enable and verify the public aggregate read flags/env first.",
       badge: "Blocked",
       severity: "locked",
       launchReady: false,
@@ -1680,8 +1741,10 @@ function getCommunityBossFirstEventState(
     return {
       stage: "ready_to_seed",
       label: "Ready to seed",
-      detail: "Read path is available, but the current week row is not visible from Supabase yet.",
-      nextAction: "Seed the current Community Boss week, then refresh aggregate.",
+      detail:
+        "Read path is available, but the current week row is not visible from Supabase yet.",
+      nextAction:
+        "Seed the current Community Boss week, then refresh aggregate.",
       badge: "Seed week",
       severity: "action",
       launchReady: false,
@@ -1712,17 +1775,21 @@ function getCommunityBossFirstEventState(
     };
   }
 
-  if (!aggregateGateReady || !liveAggregateReady) {
+  if (!aggregateGateReady || !autoAggregateReady || !liveAggregateReady) {
     return {
       stage: "recalc_needed",
-      label: "Recalc needed",
-      detail: aggregateGateReady
-        ? "Safe proof exists. Run admin recalculation, then refresh the public aggregate read."
-        : "Safe proof exists, but aggregate manual gate is still locked.",
-      nextAction: aggregateGateReady
-        ? "Run Community Boss admin recalculation, then press Refresh aggregate."
-        : "Enable aggregate manual gate and use the existing admin panel.",
-      badge: "Recalc",
+      label: "Auto recalc needed",
+      detail: !aggregateGateReady
+        ? "Safe proof exists, but aggregate write gate is still locked."
+        : !autoAggregateReady
+          ? "Safe proof exists, but automatic aggregate recalculation after proof is still locked."
+          : "Safe proof exists. The server should auto-recalculate aggregate, then refresh public totals.",
+      nextAction: !aggregateGateReady
+        ? "Enable aggregate write gate after review."
+        : !autoAggregateReady
+          ? "Enable COMMUNITY_BOSS_AUTO_RECALCULATE_AFTER_PROOF_ENABLED so you do not need manual recalc."
+          : "Submit a proof again or refresh the public aggregate after auto recalculation completes.",
+      badge: "Auto recalc",
       severity: "action",
       launchReady: false,
       publicCopyUnlocked: false,
@@ -1735,8 +1802,10 @@ function getCommunityBossFirstEventState(
   return {
     stage: "aggregate_live",
     label: "Aggregate live",
-    detail: "Public aggregate is live, but final launch guard still has unresolved blocking items.",
-    nextAction: "Review the remaining launch blockers before copying public launch text.",
+    detail:
+      "Public aggregate is live, but final launch guard still has unresolved blocking items.",
+    nextAction:
+      "Review the remaining launch blockers before copying public launch text.",
     badge: "Live",
     severity: "live",
     launchReady: false,
@@ -1752,7 +1821,10 @@ function getCommunityBossLiveFlowSteps(
   proofSubmit: CommunityBossProofSubmitUiState,
 ) {
   const seededWeek = hasCommunityBossSeededWeek(backend);
-  const proofEvidenceReady = hasCommunityBossProofEvidence(backend, proofSubmit);
+  const proofEvidenceReady = hasCommunityBossProofEvidence(
+    backend,
+    proofSubmit,
+  );
   const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
 
   return [
@@ -1806,16 +1878,28 @@ function getCommunityBossLiveFlowSteps(
       label: "Aggregate gate",
       value: backend.canRecalculateAggregate ? "Gate ready" : "Locked",
       detail: backend.canRecalculateAggregate
-        ? "Admin recalculation can write public totals."
-        : "Aggregate manual gate is not ready yet.",
+        ? "Aggregate write path can update public totals."
+        : "Aggregate write gate is not ready yet.",
       ready: backend.canRecalculateAggregate,
+    },
+    {
+      label: "Auto recalc",
+      value: backend.canAutoRecalculateAfterProof
+        ? "Automatic"
+        : backend.autoRecalculateAfterProofEnabled
+          ? "Flagged"
+          : "Locked",
+      detail: backend.canAutoRecalculateAfterProof
+        ? "After a proof persists, the server recalculates totals automatically."
+        : "Enable auto recalculation after proof so the founder does not need to run admin recalc.",
+      ready: backend.canAutoRecalculateAfterProof,
     },
     {
       label: "Live aggregate",
       value: liveAggregateReady ? "Verified" : "Not verified",
       detail: liveAggregateReady
         ? `Live aggregate has ${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"} and ${backend.totalDamage} damage.`
-        : "Run admin recalculation, then refresh public totals.",
+        : "Auto recalc after proof, then refresh public totals.",
       ready: liveAggregateReady,
     },
   ];
@@ -1849,7 +1933,10 @@ function getCommunityBossLaunchGuardItems(
   proofSubmit: CommunityBossProofSubmitUiState,
 ) {
   const seededWeek = hasCommunityBossSeededWeek(backend);
-  const proofEvidenceReady = hasCommunityBossProofEvidence(backend, proofSubmit);
+  const proofEvidenceReady = hasCommunityBossProofEvidence(
+    backend,
+    proofSubmit,
+  );
   const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
 
   return [
@@ -1871,7 +1958,10 @@ function getCommunityBossLaunchGuardItems(
     },
     {
       label: "Auth proof",
-      value: proofSubmit.authenticated || proofEvidenceReady ? "Verified" : "Untested",
+      value:
+        proofSubmit.authenticated || proofEvidenceReady
+          ? "Verified"
+          : "Untested",
       detail: proofSubmit.authenticated
         ? "Server-side Telegram/session identity was accepted."
         : proofEvidenceReady
@@ -1895,13 +1985,28 @@ function getCommunityBossLaunchGuardItems(
       label: "Aggregate gate",
       value: backend.canRecalculateAggregate ? "Ready" : "Locked",
       detail: backend.canRecalculateAggregate
-        ? "Admin aggregate recalculation route can write public totals."
-        : "Enable aggregate manual gate before public launch.",
+        ? "Aggregate write path can write public totals."
+        : "Enable aggregate write gate before public launch.",
       ready: backend.canRecalculateAggregate,
     },
     {
+      label: "Auto recalc",
+      value: backend.canAutoRecalculateAfterProof
+        ? "Automatic"
+        : backend.autoRecalculateAfterProofEnabled
+          ? "Flagged"
+          : "Locked",
+      detail: backend.canAutoRecalculateAfterProof
+        ? "Each persisted proof can trigger aggregate recalculation automatically."
+        : "Launch should not depend on the founder pressing Recalculate manually.",
+      ready: backend.canAutoRecalculateAfterProof,
+    },
+    {
       label: "Aggregate proof",
-      value: backend.participantCount > 0 && backend.totalDamage > 0 ? "Present" : "Missing",
+      value:
+        backend.participantCount > 0 && backend.totalDamage > 0
+          ? "Present"
+          : "Missing",
       detail:
         backend.participantCount > 0 && backend.totalDamage > 0
           ? `${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"} · ${backend.totalDamage} public damage.`
@@ -1913,13 +2018,14 @@ function getCommunityBossLaunchGuardItems(
       value: liveAggregateReady ? "Live" : "Not verified",
       detail: liveAggregateReady
         ? `Public aggregate timestamp ${backend.aggregateUpdatedAt}.`
-        : "Run admin recalculation, then refresh aggregate until Supabase totals are visible.",
+        : "Auto recalculation should run after proof, then refresh until Supabase totals are visible.",
       ready: liveAggregateReady,
     },
     {
       label: "Public safety",
       value: "Locked safe",
-      detail: "No payout promise, wallet value, balances, income, debt, or PvP.",
+      detail:
+        "No payout promise, wallet value, balances, income, debt, or PvP.",
       ready: true,
     },
   ];
@@ -1934,7 +2040,8 @@ function getCommunityBossLaunchGuardStatus(
   if (readyCount === total) {
     return {
       label: "Launch guard passed",
-      detail: "First live Community Boss event can be announced with public-safe wording.",
+      detail:
+        "First live Community Boss event can be announced; proof submits can auto-update public totals.",
       ready: true,
       readyCount,
       total,
@@ -1943,7 +2050,8 @@ function getCommunityBossLaunchGuardStatus(
 
   return {
     label: "Launch blocked",
-    detail: "Finish every checklist item before the first public Community Boss event.",
+    detail:
+      "Finish every checklist item before the first public Community Boss event.",
     ready: false,
     readyCount,
     total,
@@ -1962,7 +2070,10 @@ function getCommunityBossFirstEventLaunchConsole({
   launchReady: boolean;
 }) {
   const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
-  const proofEvidenceReady = hasCommunityBossProofEvidence(backend, proofSubmit);
+  const proofEvidenceReady = hasCommunityBossProofEvidence(
+    backend,
+    proofSubmit,
+  );
   const seededWeek = hasCommunityBossSeededWeek(backend);
   const blockers = launchGuardItems
     .filter((item) => !item.ready)
@@ -1997,19 +2108,23 @@ function getCommunityBossFirstEventLaunchConsole({
       ready: proofEvidenceReady,
     },
     {
-      label: "Run admin recalc",
-      value: backend.canRecalculateAggregate ? "Gate ready" : "Locked",
-      detail: backend.canRecalculateAggregate
-        ? "Use the existing admin panel to recalculate public totals."
-        : "Aggregate manual write gate is not open yet.",
-      ready: backend.canRecalculateAggregate,
+      label: "Auto aggregate recalc",
+      value: backend.canAutoRecalculateAfterProof
+        ? "Automatic"
+        : backend.autoRecalculateAfterProofEnabled
+          ? "Flagged"
+          : "Locked",
+      detail: backend.canAutoRecalculateAfterProof
+        ? "After proof save, server recalculates public totals without founder action."
+        : "Enable auto recalc after proof; admin recalc remains fallback only.",
+      ready: backend.canAutoRecalculateAfterProof,
     },
     {
       label: "Verify live aggregate",
       value: liveAggregateReady ? "Verified" : "Refresh needed",
       detail: liveAggregateReady
         ? `Live aggregate: ${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"} · ${backend.totalDamage} damage.`
-        : "Refresh public aggregate after admin recalculation.",
+        : "Refresh public aggregate after automatic recalculation.",
       ready: liveAggregateReady,
     },
     {
@@ -2027,7 +2142,8 @@ function getCommunityBossFirstEventLaunchConsole({
   if (launchReady) {
     return {
       label: "Launch console ready",
-      detail: "All first-event checks passed. Copy the public post only after final operator review.",
+      detail:
+        "All first-event checks passed. Future safe proofs can auto-update public totals.",
       badge: "Ready",
       blockers,
       steps,
@@ -2036,11 +2152,33 @@ function getCommunityBossFirstEventLaunchConsole({
     };
   }
 
-  if (proofEvidenceReady && backend.canRecalculateAggregate && !liveAggregateReady) {
+  if (
+    proofEvidenceReady &&
+    backend.canAutoRecalculateAfterProof &&
+    !liveAggregateReady
+  ) {
     return {
-      label: "Recalculate then refresh",
-      detail: "Proof evidence exists. Run admin recalculation, then refresh the public aggregate read.",
-      badge: "Action needed",
+      label: "Auto recalc then refresh",
+      detail:
+        "Proof evidence exists. Confirm automatic recalculation, then refresh the public aggregate read.",
+      badge: "Auto flow",
+      blockers,
+      steps,
+      readyCount,
+      total: steps.length,
+    };
+  }
+
+  if (
+    proofEvidenceReady &&
+    backend.canRecalculateAggregate &&
+    !backend.canAutoRecalculateAfterProof
+  ) {
+    return {
+      label: "Enable auto recalc",
+      detail:
+        "Proof and aggregate gate exist, but launch still depends on manual admin recalc. Enable automatic recalculation after proof.",
+      badge: "Auto needed",
       blockers,
       steps,
       readyCount,
@@ -2050,7 +2188,9 @@ function getCommunityBossFirstEventLaunchConsole({
 
   return {
     label: "First event not launchable",
-    detail: blockers[0]?.detail || "Finish the launch guard before public announcement.",
+    detail:
+      blockers[0]?.detail ||
+      "Finish the launch guard before public announcement.",
     badge: `${readyCount}/${steps.length}`,
     blockers,
     steps,
@@ -2077,7 +2217,7 @@ function getCommunityBossFirstEventAnnouncementCopy({
     return {
       statusLabel: "Locked until launch guard passes",
       statusDetail:
-        "Public launch copy stays hidden until seed, proof write, aggregate recalculation, and live read are verified.",
+        "Public launch copy stays hidden until seed, proof write, automatic aggregate recalculation, and live read are verified.",
       operatorNote:
         "Community Boss is still in live-flow QA. Finish the launch guard before posting the first public event announcement.",
       publicCopy: "",
@@ -2100,11 +2240,17 @@ function getCommunityBossFirstEventAnnouncementCopy({
     statusDetail:
       "Safe to copy after the Launch Guard passes. Keep it factual and avoid reward promises.",
     operatorNote:
-      "Use this for the first live Community Boss announcement after one proof write, admin recalculation, and public aggregate refresh are verified.",
+      "Use this for the first live Community Boss announcement after one proof write, automatic recalculation, and public aggregate refresh are verified.",
     publicCopy,
     xCopy: `${publicCopy}\n\n#BROKE #SmokeIsBroke`,
     shortCopy: `Community Boss live: ${bossName} · ${damage} damage · ${participants} participant${participants === 1 ? "" : "s"}. Public-safe proof only. No payout promise.`,
-    tags: ["public-safe", "live-ready", "no-payout", "no-wallet-value", "no-pvp"],
+    tags: [
+      "public-safe",
+      "live-ready",
+      "no-payout",
+      "no-wallet-value",
+      "no-pvp",
+    ],
   };
 }
 
@@ -19013,7 +19159,9 @@ function CommunityBossPrepCard({
     : backend.readAttempted
       ? "Fallback"
       : "Not tried";
-  const seedLabel = hasCommunityBossSeededWeek(backend) ? "Seeded" : "Not seeded";
+  const seedLabel = hasCommunityBossSeededWeek(backend)
+    ? "Seeded"
+    : "Not seeded";
   const firstEventState = getCommunityBossFirstEventState(backend, proofSubmit);
   const liveFlowSteps = getCommunityBossLiveFlowSteps(backend, proofSubmit);
   const firstEventStatus = getCommunityBossFirstEventStatus(
@@ -19043,17 +19191,25 @@ function CommunityBossPrepCard({
   const [announcementCopied, setAnnouncementCopied] = useState(false);
 
   async function copyFirstEventAnnouncement() {
-    if (!firstEventState.publicCopyUnlocked || !firstEventAnnouncement.xCopy) return;
+    if (!firstEventState.publicCopyUnlocked || !firstEventAnnouncement.xCopy)
+      return;
 
     try {
       await navigator.clipboard.writeText(firstEventAnnouncement.xCopy);
       triggerHaptic("success");
       setAnnouncementCopied(true);
       window.setTimeout(() => setAnnouncementCopied(false), 1600);
-      notifyApp("Announcement copied", "First Community Boss public copy is ready to post.");
+      notifyApp(
+        "Announcement copied",
+        "First Community Boss public copy is ready to post.",
+      );
     } catch {
       setAnnouncementCopied(false);
-      notifyApp("Copy unavailable", "Your browser blocked clipboard access.", "info");
+      notifyApp(
+        "Copy unavailable",
+        "Your browser blocked clipboard access.",
+        "info",
+      );
     }
   }
 
@@ -19064,8 +19220,8 @@ function CommunityBossPrepCard({
           <span>Community Boss Prep · {state.weekKey}</span>
           <strong>{state.bossName}</strong>
           <small>
-            Backend-gated community progress. Live aggregate refresh appears when
-            Supabase read path is ready. No payout math.
+            Backend-gated community progress. Live aggregate refresh appears
+            when Supabase read path is ready. No payout math.
           </small>
         </div>
         <b>{state.prepLabel}</b>
@@ -19128,7 +19284,9 @@ function CommunityBossPrepCard({
           <article>
             <span>Write path</span>
             <strong>{backend.canWrite ? "Enabled" : "Disabled"}</strong>
-            <small>User proof writes are still blocked.</small>
+            <small>
+              Proof and aggregate writes stay behind explicit gates.
+            </small>
           </article>
           <article>
             <span>Proof gate</span>
@@ -19171,10 +19329,25 @@ function CommunityBossPrepCard({
             </strong>
             <small>
               {backend.canRecalculateAggregate
-                ? "Admin route can recalculate public aggregate."
+                ? "Aggregate route can update public totals."
                 : backend.aggregateRecalcReviewed
-                  ? "Aggregate review done, waiting for manual gate."
+                  ? "Aggregate review done, waiting for write gate."
                   : "Aggregate recalc review is still off."}
+            </small>
+          </article>
+          <article>
+            <span>Auto recalc</span>
+            <strong>
+              {backend.canAutoRecalculateAfterProof
+                ? "Automatic"
+                : backend.autoRecalculateAfterProofEnabled
+                  ? "Flagged"
+                  : "Locked"}
+            </strong>
+            <small>
+              {backend.canAutoRecalculateAfterProof
+                ? "Proof submit recalculates public totals automatically."
+                : "No founder action needed once this auto gate is enabled."}
             </small>
           </article>
         </div>
@@ -19192,8 +19365,8 @@ function CommunityBossPrepCard({
             <span>Live aggregate refresh</span>
             <strong>{backend.refreshReason}</strong>
             <small>
-              Pulls the public-safe aggregate only. It never reads wallet value,
-              income, debt, payout, or private proof rows.
+              Pulls the public-safe aggregate only. Proof submit can
+              auto-recalculate totals when the auto gate is enabled.
             </small>
           </div>
           <button
@@ -19201,7 +19374,7 @@ function CommunityBossPrepCard({
             onClick={onRefreshBackend}
             disabled={backend.loading}
           >
-            {backend.loading ? "Refreshing..." : "Refresh aggregate"}
+            {backend.loading ? "Refreshing..." : "Refresh live view"}
           </button>
         </div>
 
@@ -19240,7 +19413,10 @@ function CommunityBossPrepCard({
 
           <div className="community-boss-live-flow-grid">
             {liveFlowSteps.map((step) => (
-              <article key={step.label} className={step.ready ? "ready" : "pending"}>
+              <article
+                key={step.label}
+                className={step.ready ? "ready" : "pending"}
+              >
                 <span>{step.label}</span>
                 <strong>{step.value}</strong>
                 <small>{step.detail}</small>
@@ -19274,7 +19450,10 @@ function CommunityBossPrepCard({
 
           <div className="community-boss-launch-guard-grid">
             {launchGuardItems.map((item) => (
-              <article key={item.label} className={item.ready ? "ready" : "locked"}>
+              <article
+                key={item.label}
+                className={item.ready ? "ready" : "locked"}
+              >
                 <span>{item.label}</span>
                 <strong>{item.value}</strong>
                 <small>{item.detail}</small>
@@ -19283,8 +19462,9 @@ function CommunityBossPrepCard({
           </div>
 
           <p className="community-boss-launch-guard-note">
-            Launch is blocked until proof write, admin recalculation, and live
-            aggregate read are all verified. No payout, no wallet value, no PvP.
+            Launch is blocked until proof write, automatic aggregate
+            recalculation, and live aggregate read are all verified. No payout,
+            no wallet value, no PvP.
           </p>
         </div>
 
@@ -19302,7 +19482,10 @@ function CommunityBossPrepCard({
 
           <div className="community-boss-launch-console-grid">
             {launchConsole.steps.map((step) => (
-              <article key={step.label} className={step.ready ? "ready" : "pending"}>
+              <article
+                key={step.label}
+                className={step.ready ? "ready" : "pending"}
+              >
                 <span>{step.label}</span>
                 <strong>{step.value}</strong>
                 <small>{step.detail}</small>
@@ -19318,12 +19501,16 @@ function CommunityBossPrepCard({
                   <b key={item.label}>{item.label}</b>
                 ))}
               </div>
-              <small>Do not post the first live announcement until this list is empty.</small>
+              <small>
+                Do not post the first live announcement until this list is
+                empty.
+              </small>
             </div>
           ) : (
             <p className="community-boss-launch-console-clear">
               Launch path is clear. Final public copy remains factual: real app
-              actions, public aggregate, no payout promise, no wallet value, no PvP.
+              actions, public aggregate, no payout promise, no wallet value, no
+              PvP.
             </p>
           )}
         </div>
@@ -19341,7 +19528,11 @@ function CommunityBossPrepCard({
           </div>
 
           <div className="community-boss-announcement-copy">
-            <span>{firstEventState.publicCopyUnlocked ? "Launch-ready X copy" : "Operator note"}</span>
+            <span>
+              {firstEventState.publicCopyUnlocked
+                ? "Launch-ready X copy"
+                : "Operator note"}
+            </span>
             <p>
               {firstEventState.publicCopyUnlocked
                 ? firstEventAnnouncement.xCopy
@@ -19379,19 +19570,27 @@ function CommunityBossPrepCard({
             <span>Safe proof submit</span>
             <strong>
               {proofSubmit.loading
-                ? "Sending dry-run proof"
+                ? "Submitting safe proof"
                 : proofSubmit.submitted
                   ? proofSubmit.ok
-                    ? "Dry-run proof accepted"
-                    : "Dry-run proof rejected"
-                  : "Preview submit only"}
+                    ? proofSubmit.persisted
+                      ? "Proof saved"
+                      : "Proof checked"
+                    : "Proof rejected"
+                  : "Submit safe proof"}
             </strong>
             <small>
-              POST checks the exact safe payload. If the manual write gate is
-              open, it can persist the safe proof row.
+              POST checks the safe payload. If gates are open, it saves proof
+              and auto-recalculates public aggregate.
             </small>
           </div>
-          <b>{proofSubmit.persisted ? "Persisted" : "Dry-run"}</b>
+          <b>
+            {proofSubmit.autoRecalculated
+              ? "Auto-updated"
+              : proofSubmit.persisted
+                ? "Persisted"
+                : "Checked"}
+          </b>
         </div>
 
         <div className="community-boss-proof-submit-grid">
@@ -19479,6 +19678,23 @@ function CommunityBossPrepCard({
                 : proofSubmit.persistenceWriteAttempted
                   ? "Supabase upsert attempted"
                   : "No Supabase upsert executed"}
+            </small>
+          </article>
+          <article>
+            <span>Auto aggregate</span>
+            <strong>
+              {proofSubmit.submitted
+                ? proofSubmit.autoRecalculated
+                  ? "Updated"
+                  : proofSubmit.autoRecalculateAttempted
+                    ? proofSubmit.autoRecalculateStatus
+                    : "Not run"
+                : "Prepared"}
+            </strong>
+            <small>
+              {proofSubmit.submitted
+                ? proofSubmit.autoRecalculateDetail
+                : "Runs after proof save when auto gate is open"}
             </small>
           </article>
         </div>
@@ -19594,8 +19810,8 @@ function CommunityBossPrepCard({
           {backend.persisted ? "Aggregate read active" : state.syncLabel}
         </span>
         <b>
-          No PvP · No payout · No wallet value · proof writes only behind manual
-          gate
+          No PvP · No payout · No wallet value · proof write + auto aggregate
+          only behind gates
         </b>
       </footer>
     </section>
@@ -36004,7 +36220,9 @@ function WhatIfScreen({
       setCommunityBossProofSubmitState(parsed);
 
       if (parsed.persisted) {
-        void refreshCommunityBossBackendState("Proof persisted; aggregate refreshed");
+        void refreshCommunityBossBackendState(
+          "Proof persisted; aggregate refreshed",
+        );
       }
 
       notifyApp(
@@ -36570,7 +36788,8 @@ function WhatIfScreen({
           <div>
             <span>Community Boss Prep</span>
             <small>
-              Live aggregate read path. No payout math or wallet value.
+              Live aggregate read path. Auto aggregate after proof. No payout
+              math.
             </small>
           </div>
           <b>{communityBossPrepState.prepLabel}</b>
@@ -37949,18 +38168,25 @@ function AdminTreasuryPanel({
         <div className="admin-community-boss-head">
           <div>
             <span>Community Boss admin</span>
-            <strong>Post-proof aggregate recalculation</strong>
+            <strong>Fallback aggregate recalculation</strong>
             <small>
-              Admin-only recalculation for public aggregate totals. Uses safe
-              proof rows only; no payouts, balances, wallet value, or PvP.
+              Fallback only. Normal flow auto-recalculates after proof save.
+              Uses safe proof rows only; no payouts, balances, wallet value, or
+              PvP.
             </small>
           </div>
           <button
             type="button"
             onClick={runCommunityBossAggregateRecalculate}
-            disabled={communityBossRecalcLoading || distributionSaving || serverAutoSending}
+            disabled={
+              communityBossRecalcLoading ||
+              distributionSaving ||
+              serverAutoSending
+            }
           >
-            {communityBossRecalcLoading ? "Recalculating..." : "Recalculate aggregate"}
+            {communityBossRecalcLoading
+              ? "Recalculating..."
+              : "Fallback recalc"}
           </button>
         </div>
 
@@ -37971,33 +38197,37 @@ function AdminTreasuryPanel({
               {communityBossRecalcResult?.recalculated
                 ? "Recalculated"
                 : communityBossRecalcResult
-                  ? communityBossRecalcResult.aggregateRecalculate?.status || "Checked"
+                  ? communityBossRecalcResult.aggregateRecalculate?.status ||
+                    "Checked"
                   : "Not run"}
             </strong>
             <small>
               {communityBossRecalcCheckedAt
                 ? `Last check ${communityBossRecalcCheckedAt}`
-                : "Run after safe proof writes are enabled and tested."}
+                : "Fallback only if automatic proof recalc needs checking."}
             </small>
           </article>
           <article>
             <span>Proof rows</span>
             <strong>
-              {communityBossRecalcResult?.aggregateRecalculate?.proofRowsRead ?? "—"}
+              {communityBossRecalcResult?.aggregateRecalculate?.proofRowsRead ??
+                "—"}
             </strong>
             <small>Reads only Community Boss safe proof rows.</small>
           </article>
           <article>
             <span>Total damage</span>
             <strong>
-              {communityBossRecalcResult?.aggregateRecalculate?.aggregateRow?.total_damage ?? "—"}
+              {communityBossRecalcResult?.aggregateRecalculate?.aggregateRow
+                ?.total_damage ?? "—"}
             </strong>
             <small>Public aggregate damage only.</small>
           </article>
           <article>
             <span>Participants</span>
             <strong>
-              {communityBossRecalcResult?.aggregateRecalculate?.aggregateRow?.participant_count ?? "—"}
+              {communityBossRecalcResult?.aggregateRecalculate?.aggregateRow
+                ?.participant_count ?? "—"}
             </strong>
             <small>No wallet value or balances included.</small>
           </article>

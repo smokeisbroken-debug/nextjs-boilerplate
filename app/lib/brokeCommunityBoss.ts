@@ -75,6 +75,9 @@ export const COMMUNITY_BOSS_AGGREGATE_WRITE_ENABLED =
 export const COMMUNITY_BOSS_AGGREGATE_MANUAL_WRITE_ENABLED =
   process.env.COMMUNITY_BOSS_AGGREGATE_MANUAL_WRITE_ENABLED === "true";
 
+export const COMMUNITY_BOSS_AUTO_RECALCULATE_AFTER_PROOF_ENABLED =
+  process.env.COMMUNITY_BOSS_AUTO_RECALCULATE_AFTER_PROOF_ENABLED === "true";
+
 export const COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED = false;
 export const COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED = false;
 export const COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED = true;
@@ -341,6 +344,10 @@ export function getCommunityBossBackendReadiness() {
     missing.push("COMMUNITY_BOSS_AGGREGATE_WRITE_ENABLED is not true");
   if (!COMMUNITY_BOSS_AGGREGATE_MANUAL_WRITE_ENABLED)
     missing.push("COMMUNITY_BOSS_AGGREGATE_MANUAL_WRITE_ENABLED is not true");
+  if (!COMMUNITY_BOSS_AUTO_RECALCULATE_AFTER_PROOF_ENABLED)
+    missing.push(
+      "COMMUNITY_BOSS_AUTO_RECALCULATE_AFTER_PROOF_ENABLED is not true",
+    );
   if (!COMMUNITY_BOSS_AGGREGATE_WRITE_IMPLEMENTED)
     missing.push("aggregate write implementation is disabled");
 
@@ -380,6 +387,12 @@ export function getCommunityBossBackendReadiness() {
     COMMUNITY_BOSS_AGGREGATE_WRITE_IMPLEMENTED,
   );
 
+  const autoRecalculateAfterProofReady = Boolean(
+    proofManualWriteReady &&
+    aggregateManualWriteReady &&
+    COMMUNITY_BOSS_AUTO_RECALCULATE_AFTER_PROOF_ENABLED,
+  );
+
   return {
     syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
     migrationReviewed: COMMUNITY_BOSS_MIGRATION_REVIEWED,
@@ -401,11 +414,15 @@ export function getCommunityBossBackendReadiness() {
     aggregateRecalcReviewed: COMMUNITY_BOSS_AGGREGATE_RECALC_REVIEWED,
     aggregateWriteEnabled: COMMUNITY_BOSS_AGGREGATE_WRITE_ENABLED,
     aggregateManualWriteEnabled: COMMUNITY_BOSS_AGGREGATE_MANUAL_WRITE_ENABLED,
+    autoRecalculateAfterProofEnabled:
+      COMMUNITY_BOSS_AUTO_RECALCULATE_AFTER_PROOF_ENABLED,
     aggregateWriteImplemented: COMMUNITY_BOSS_AGGREGATE_WRITE_IMPLEMENTED,
     aggregateManualWriteReady,
+    autoRecalculateAfterProofReady,
     canSeedWrite: false,
     canPersistProof: proofManualWriteReady,
     canRecalculateAggregate: aggregateManualWriteReady,
+    canAutoRecalculateAfterProof: autoRecalculateAfterProofReady,
     canWrite: proofManualWriteReady || aggregateManualWriteReady,
     missing,
   };
@@ -882,18 +899,28 @@ function buildCommunityBossAggregateUpsertRow({
   rows: CommunityBossProofAggregateRow[];
 }) {
   const totalDamage = rows.reduce(
-    (sum, row) => sum + Math.max(0, safeCommunityBossNumber(row.weekly_damage, 0)),
+    (sum, row) =>
+      sum + Math.max(0, safeCommunityBossNumber(row.weekly_damage, 0)),
     0,
   );
   const totalSafePoints = rows.reduce(
-    (sum, row) => sum + Math.max(0, safeCommunityBossNumber(row.safe_points, 0)),
+    (sum, row) =>
+      sum + Math.max(0, safeCommunityBossNumber(row.safe_points, 0)),
     0,
   );
-  const routineCount = rows.filter((row) => row.routine_completed === true).length;
-  const challengeCount = rows.filter((row) => row.challenge_completed === true).length;
-  const weaknessHitCount = rows.filter((row) => row.weakness_hit === true).length;
+  const routineCount = rows.filter(
+    (row) => row.routine_completed === true,
+  ).length;
+  const challengeCount = rows.filter(
+    (row) => row.challenge_completed === true,
+  ).length;
+  const weaknessHitCount = rows.filter(
+    (row) => row.weakness_hit === true,
+  ).length;
   const trackingDayTotal = rows.reduce(
-    (sum, row) => sum + Math.min(7, Math.max(0, safeCommunityBossNumber(row.tracking_days, 0))),
+    (sum, row) =>
+      sum +
+      Math.min(7, Math.max(0, safeCommunityBossNumber(row.tracking_days, 0))),
     0,
   );
 
@@ -912,19 +939,29 @@ function buildCommunityBossAggregateUpsertRow({
 
 export async function recalculateCommunityBossAggregateInSupabase({
   weekKey,
+  trigger = "manual_admin",
 }: {
   weekKey?: string;
+  trigger?: "manual_admin" | "post_proof_auto";
 }) {
   const week = getCurrentCommunityBossWeek();
   const targetWeekKey = cleanCommunityBossDbText(weekKey, 12) || week.weekKey;
   const gate = getCommunityBossAggregateRecalculateGate();
   const blockedReasons: string[] = [];
 
-  if (!gate.canRecalculate) blockedReasons.push("aggregate manual write gate is closed");
+  if (!gate.canRecalculate)
+    blockedReasons.push("aggregate manual write gate is closed");
+  if (
+    trigger === "post_proof_auto" &&
+    !COMMUNITY_BOSS_AUTO_RECALCULATE_AFTER_PROOF_ENABLED
+  )
+    blockedReasons.push("auto recalculation after proof flag is closed");
   if (!hasCommunityBossSupabaseReadEnv())
     blockedReasons.push("Supabase service env is missing");
   if (targetWeekKey !== week.weekKey)
-    blockedReasons.push("only current week aggregate can be recalculated by this endpoint");
+    blockedReasons.push(
+      "only current week aggregate can be recalculated by this endpoint",
+    );
 
   if (blockedReasons.length > 0) {
     return {
@@ -936,6 +973,7 @@ export async function recalculateCommunityBossAggregateInSupabase({
       sourceTable: "broke_community_boss_user_proofs",
       conflictTarget: "week_key",
       weekKey: targetWeekKey,
+      trigger,
       proofRowsRead: 0,
       aggregateRow: null,
       returnedRow: null,
@@ -990,6 +1028,7 @@ export async function recalculateCommunityBossAggregateInSupabase({
         sourceTable: "broke_community_boss_user_proofs",
         conflictTarget: "week_key",
         weekKey: targetWeekKey,
+        trigger,
         proofRowsRead: 0,
         aggregateRow: null,
         returnedRow: null,
@@ -1038,6 +1077,7 @@ export async function recalculateCommunityBossAggregateInSupabase({
         sourceTable: "broke_community_boss_user_proofs",
         conflictTarget: "week_key",
         weekKey: targetWeekKey,
+        trigger,
         proofRowsRead: Array.isArray(proofRows) ? proofRows.length : 0,
         aggregateRow,
         returnedRow: null,
@@ -1067,6 +1107,7 @@ export async function recalculateCommunityBossAggregateInSupabase({
       sourceTable: "broke_community_boss_user_proofs",
       conflictTarget: "week_key",
       weekKey: targetWeekKey,
+      trigger,
       proofRowsRead: Array.isArray(proofRows) ? proofRows.length : 0,
       aggregateRow,
       returnedRow,
@@ -1074,8 +1115,10 @@ export async function recalculateCommunityBossAggregateInSupabase({
       error: null,
       gate,
       guardrails: [
-        "Public aggregate recalculated from safe proof rows",
-        "Manual aggregate write gate was open",
+        trigger === "post_proof_auto"
+          ? "Public aggregate auto-recalculated after safe proof write"
+          : "Public aggregate recalculated from safe proof rows",
+        "Aggregate write gate was open",
         "No wallet value",
         "No payout math",
       ],
@@ -1090,6 +1133,7 @@ export async function recalculateCommunityBossAggregateInSupabase({
       sourceTable: "broke_community_boss_user_proofs",
       conflictTarget: "week_key",
       weekKey: targetWeekKey,
+      trigger,
       proofRowsRead: 0,
       aggregateRow: null,
       returnedRow: null,

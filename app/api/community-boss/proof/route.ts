@@ -6,6 +6,7 @@ import {
   COMMUNITY_BOSS_SYNC_ENABLED,
   buildCommunityBossProofPersistenceDryRun,
   persistCommunityBossProofToSupabase,
+  recalculateCommunityBossAggregateInSupabase,
   findForbiddenCommunityBossFields,
   getCommunityBossBackendReadiness,
   getCommunityBossNoStoreHeaders,
@@ -331,13 +332,19 @@ export async function POST(request: NextRequest) {
   });
 
   const persisted = persistenceWrite.persisted === true;
+  const autoRecalculate = persisted
+    ? await recalculateCommunityBossAggregateInSupabase({
+        weekKey: proof.weekKey,
+        trigger: "post_proof_auto",
+      })
+    : null;
 
   return NextResponse.json(
     {
       ok: true,
       buildVersion: BROKE_APP_BUILD_VERSION,
       mode: COMMUNITY_BOSS_SYNC_ENABLED
-        ? "skeleton_enabled_no_writes"
+        ? "proof_write_auto_recalculate_gate"
         : "dry_run",
       syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
       persisted,
@@ -350,11 +357,15 @@ export async function POST(request: NextRequest) {
       persistence,
       persistenceDryRun,
       persistenceWrite,
+      autoRecalculate,
+      autoRecalculated: autoRecalculate?.recalculated === true,
       auth,
       week: currentWeek,
       proof,
       nextStep: persisted
-        ? "Next patch can recalculate the public aggregate after this persisted proof row."
+        ? autoRecalculate?.recalculated
+          ? "Proof persisted and aggregate auto-recalculated. The UI can refresh the public aggregate read."
+          : "Proof persisted, but automatic aggregate recalculation did not complete. Check auto aggregate gate and Supabase response."
         : persistence.canPersist
           ? "Manual write gate is open but the proof was not persisted. Check Supabase table, current week seed row, and response error."
           : "Open the manual write gate only after migration review, manual apply, current week seed, auth validation, and explicit production approval.",
@@ -368,6 +379,9 @@ export async function POST(request: NextRequest) {
         persisted
           ? "Safe proof row persisted behind manual write gate"
           : "No database write performed",
+        autoRecalculate?.recalculated
+          ? "Public aggregate auto-recalculated after proof write"
+          : "No automatic aggregate write unless the auto recalculation gate is open",
         "No payout math",
         "No wallet value",
       ],

@@ -1,11 +1,14 @@
-export const BROKE_APP_BUILD_VERSION = "v59.61.8";
+export const BROKE_APP_BUILD_VERSION = "v59.61.9";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Community Boss First Event State Hardening";
+  "Community Boss Auto Aggregate Refresh Public UI Polish";
 
-export const DEFAULT_TREASURY_WALLET_ADDRESS = "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
-export const DEFAULT_BROKE_TOKEN_MINT_ADDRESS = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
-export const DEFAULT_USDC_TOKEN_MINT_ADDRESS = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+export const DEFAULT_TREASURY_WALLET_ADDRESS =
+  "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
+export const DEFAULT_BROKE_TOKEN_MINT_ADDRESS =
+  "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
+export const DEFAULT_USDC_TOKEN_MINT_ADDRESS =
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
 export const REAL_DISTRIBUTION_CONFIRM_PHRASE = "PREPARE REAL DISTRIBUTION";
 export const SERVER_AUTO_SEND_CONFIRM_PHRASE = "SERVER AUTO SEND";
@@ -43,20 +46,22 @@ export function walletAddressEquals(a: string, b: string) {
 
 export function calculateAdminPayoutRows<T extends AdminDistributionHolder>(
   holders: T[],
-  rewardPoolValue: number
+  rewardPoolValue: number,
 ): Array<T & { rewardAmount: number }> {
   if (!Number.isFinite(rewardPoolValue) || rewardPoolValue <= 0) return [];
 
   return holders.map((holder) => ({
     ...holder,
-    rewardAmount: Number(((rewardPoolValue * holder.balanceSharePercent) / 100).toFixed(6)),
+    rewardAmount: Number(
+      ((rewardPoolValue * holder.balanceSharePercent) / 100).toFixed(6),
+    ),
   }));
 }
 
 export function getAdminRewardTokenMint(
   token: string,
   brokeMint = DEFAULT_BROKE_TOKEN_MINT_ADDRESS,
-  usdcMint = DEFAULT_USDC_TOKEN_MINT_ADDRESS
+  usdcMint = DEFAULT_USDC_TOKEN_MINT_ADDRESS,
 ) {
   const normalized = token.toUpperCase();
   if (normalized === "$BROKE" || normalized === "BROKE") return brokeMint;
@@ -71,7 +76,10 @@ export function buildAdminPayoutPaymentLink({
   brokeMint = DEFAULT_BROKE_TOKEN_MINT_ADDRESS,
   usdcMint = DEFAULT_USDC_TOKEN_MINT_ADDRESS,
 }: {
-  row: Pick<AdminDistributionPayoutRow, "walletAddress" | "rewardAmount" | "rank">;
+  row: Pick<
+    AdminDistributionPayoutRow,
+    "walletAddress" | "rewardAmount" | "rank"
+  >;
   rewardPoolToken: string;
   distributionId?: string | null;
   brokeMint?: string;
@@ -82,7 +90,9 @@ export function buildAdminPayoutPaymentLink({
   params.set("label", "Smoke Is Broke Rewards");
   params.set(
     "message",
-    distributionId ? `BROKE reward distribution ${distributionId.slice(0, 8)}` : "BROKE reward distribution"
+    distributionId
+      ? `BROKE reward distribution ${distributionId.slice(0, 8)}`
+      : "BROKE reward distribution",
   );
   params.set("memo", `BROKE reward rank ${row.rank}`);
 
@@ -102,14 +112,16 @@ export function buildAdminPayoutPaymentLinksCsv({
   distributionId?: string | null;
 }) {
   const header = "rank,wallet,amount,token,share_percent,payment_link";
-  const csvRows = rows.map((row) => [
-    row.rank,
-    row.walletAddress,
-    row.rewardAmount,
-    rewardPoolToken,
-    row.balanceSharePercent,
-    buildAdminPayoutPaymentLink({ row, rewardPoolToken, distributionId }),
-  ].join(","));
+  const csvRows = rows.map((row) =>
+    [
+      row.rank,
+      row.walletAddress,
+      row.rewardAmount,
+      rewardPoolToken,
+      row.balanceSharePercent,
+      buildAdminPayoutPaymentLink({ row, rewardPoolToken, distributionId }),
+    ].join(","),
+  );
 
   return [header, ...csvRows].join("\n");
 }
@@ -136,7 +148,10 @@ export function buildAdminDistributionManifest({
   minStreak: number;
 }) {
   return {
-    type: mode === "real_manual" ? "BROKE_REWARD_DISTRIBUTION_REAL_MANUAL_MANIFEST" : "BROKE_REWARD_DISTRIBUTION_TEST_MANIFEST",
+    type:
+      mode === "real_manual"
+        ? "BROKE_REWARD_DISTRIBUTION_REAL_MANUAL_MANIFEST"
+        : "BROKE_REWARD_DISTRIBUTION_TEST_MANIFEST",
     mode,
     generatedAt: new Date().toISOString(),
     token: rewardPoolToken,
@@ -144,7 +159,8 @@ export function buildAdminDistributionManifest({
     eligibleHolders: rows.length,
     treasuryWallet: treasuryWallet || "not_configured",
     connectedWallet: connectedWallet || "not_connected",
-    confirmRealDistribution: mode === "real_manual" ? confirmRealDistribution : "",
+    confirmRealDistribution:
+      mode === "real_manual" ? confirmRealDistribution : "",
     rules: {
       minHold,
       minStreak,
@@ -167,15 +183,20 @@ export function buildAdminDistributionManifest({
   };
 }
 
-export function buildAdminDistributionSendSheet(rows: AdminDistributionPayoutRow[], rewardPoolToken: string) {
+export function buildAdminDistributionSendSheet(
+  rows: AdminDistributionPayoutRow[],
+  rewardPoolToken: string,
+) {
   const header = "rank,wallet,amount,token,share_percent";
-  const csvRows = rows.map((row) => [
-    row.rank,
-    row.walletAddress,
-    row.rewardAmount,
-    rewardPoolToken,
-    row.balanceSharePercent,
-  ].join(","));
+  const csvRows = rows.map((row) =>
+    [
+      row.rank,
+      row.walletAddress,
+      row.rewardAmount,
+      rewardPoolToken,
+      row.balanceSharePercent,
+    ].join(","),
+  );
 
   return [header, ...csvRows].join("\n");
 }
