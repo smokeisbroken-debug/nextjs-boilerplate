@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ClipboardEvent, Dispatch, ReactNode, SetStateAction, SyntheticEvent } from "react";
 import {
+  MyBrokeProofCenter,
+  type BrokeProofCard,
+  type BrokeProofCenterState,
+} from "./components/BrokeProofCenter";
+import {
   BROKE_APP_BUILD_NOTE,
   BROKE_APP_BUILD_VERSION,
   DEFAULT_BROKE_TOKEN_MINT_ADDRESS,
@@ -1144,35 +1149,6 @@ type SocialLeaderboardState = {
   privacyLabel: string;
   shareText: string;
   lanes: SocialLeaderboardLane[];
-};
-
-type BrokeProofCardId = "mascot" | "boss" | "social" | "routine" | "challenge";
-
-type BrokeProofMetric = {
-  label: string;
-  value: string;
-};
-
-type BrokeProofCard = {
-  id: BrokeProofCardId;
-  label: string;
-  eyebrow: string;
-  title: string;
-  subtitle: string;
-  badge: string;
-  primary: string;
-  secondary: string;
-  artSrc: string;
-  tone: string;
-  fileName: string;
-  text: string;
-  metrics: BrokeProofMetric[];
-  chips: string[];
-};
-
-type BrokeProofCenterState = {
-  defaultCardId: BrokeProofCardId;
-  cards: BrokeProofCard[];
 };
 
 type WeeklyBossBattlePulse = "idle" | "attack" | "hit" | "victory";
@@ -14546,214 +14522,6 @@ function DashboardScreen({
 }
 
 
-
-function MyBrokeProofCenter({
-  state,
-  shareInitData,
-}: {
-  state: BrokeProofCenterState;
-  shareInitData: string;
-}) {
-  const [activeCardId, setActiveCardId] = useState<BrokeProofCardId>(state.defaultCardId);
-  const [copied, setCopied] = useState(false);
-  const [busyAction, setBusyAction] = useState<"image" | "x" | "bot" | null>(null);
-  const shareCardRef = useRef<HTMLDivElement | null>(null);
-  const activeCard = state.cards.find((card) => card.id === activeCardId) ?? state.cards[0];
-
-  useEffect(() => {
-    if (!state.cards.some((card) => card.id === activeCardId)) {
-      setActiveCardId(state.defaultCardId);
-    }
-  }, [activeCardId, state.cards, state.defaultCardId]);
-
-  async function copyProofText() {
-    try {
-      await navigator.clipboard.writeText(activeCard.text);
-      triggerHaptic("success");
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      notifyApp("Copy unavailable", "Your browser blocked clipboard access.", "info");
-    }
-  }
-
-  async function createActiveProofImage() {
-    if (!shareCardRef.current) throw new Error("Proof card is not ready.");
-
-    return createShareImageFileFromElement(shareCardRef.current, activeCard.fileName);
-  }
-
-  async function shareProofImage() {
-    if (busyAction) return;
-
-    triggerHaptic("light");
-    setBusyAction("image");
-
-    try {
-      const imageFile = await createActiveProofImage();
-      const nativeShared = await tryNativeImageShare(imageFile, {
-        title: `$BROKE Proof · ${activeCard.label}`,
-        text: activeCard.text,
-      });
-
-      if (nativeShared) {
-        markDailyRoutineAction("sharedProgress");
-        return;
-      }
-
-      downloadImageFile(imageFile);
-      notifyApp("Proof card downloaded", "Native image share is not available here, so the PNG was saved.");
-    } catch {
-      notifyApp("Sharing unavailable", "Could not create this BROKE proof image here.");
-    } finally {
-      setBusyAction(null);
-    }
-  }
-
-  async function shareProofToX() {
-    if (busyAction) return;
-
-    triggerHaptic("light");
-    setBusyAction("x");
-
-    try {
-      const imageFile = await createActiveProofImage();
-      const nativeShared = await tryNativeImageShare(imageFile, {
-        title: `$BROKE Proof · ${activeCard.label}`,
-        text: activeCard.text,
-      });
-
-      if (nativeShared) {
-        markDailyRoutineAction("sharedProgress");
-        notifyApp("Proof card ready", "Choose X in the share sheet to post the image card.");
-        return;
-      }
-
-      try {
-        await navigator.clipboard.writeText(activeCard.text);
-      } catch {
-        // Clipboard access is optional in fallback mode.
-      }
-
-      downloadImageFile(imageFile);
-      openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(activeCard.text)}`);
-      markDailyRoutineAction("sharedProgress");
-      notifyApp("X opened", "The proof card was downloaded. Attach the PNG in X if it was not added automatically.");
-    } catch {
-      openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(activeCard.text)}`);
-      notifyApp("X text share opened", "Could not prepare the image card here, so text share was opened instead.");
-    } finally {
-      setBusyAction(null);
-    }
-  }
-
-  async function sendProofToBot() {
-    if (busyAction) return;
-
-    triggerHaptic("light");
-    setBusyAction("bot");
-
-    try {
-      const imageFile = await createActiveProofImage();
-
-      if (!shareInitData) {
-        downloadImageFile(imageFile);
-        notifyApp("Telegram data missing", "Open the app inside Telegram to send the card to the bot. The PNG was downloaded instead.");
-        return;
-      }
-
-      await sendShareImageViaBot(imageFile, shareInitData, activeCard.text);
-      markDailyRoutineAction("sharedProgress");
-      notifyApp("Proof sent", "Open your Telegram bot chat and forward it anywhere.");
-    } catch {
-      notifyApp("Bot share failed", "Could not send this proof card to the bot from here.");
-    } finally {
-      setBusyAction(null);
-    }
-  }
-
-  return (
-    <section className="broke-proof-center-card">
-      <div className="broke-proof-center-head">
-        <div>
-          <span>My BROKE Proof</span>
-          <strong>One public-safe share center</strong>
-          <small>Pick a proof card, then share the same way: text, PNG, bot, or X image flow.</small>
-        </div>
-        <b>{activeCard.label}</b>
-      </div>
-
-      <div className="broke-proof-tabs" role="tablist" aria-label="BROKE proof card types">
-        {state.cards.map((card) => (
-          <button
-            key={card.id}
-            type="button"
-            className={card.id === activeCard.id ? "active" : ""}
-            onClick={() => setActiveCardId(card.id)}
-          >
-            {card.label}
-          </button>
-        ))}
-      </div>
-
-      <div className={`broke-proof-share-card tone-${activeCard.tone}`} ref={shareCardRef}>
-        <div className="broke-proof-share-top">
-          <div>
-            <span>{activeCard.eyebrow}</span>
-            <strong>{activeCard.title}</strong>
-            <small>{activeCard.subtitle}</small>
-          </div>
-          <b>{activeCard.badge}</b>
-        </div>
-
-        <div className="broke-proof-share-main">
-          <img src={activeCard.artSrc} alt="" loading="lazy" decoding="async" onError={handleMascotAssetError} />
-          <div>
-            <span>{activeCard.label} card</span>
-            <strong>{activeCard.primary}</strong>
-            <small>{activeCard.secondary}</small>
-          </div>
-        </div>
-
-        <div className="broke-proof-metric-grid">
-          {activeCard.metrics.map((metric) => (
-            <article key={metric.label}>
-              <span>{metric.label}</span>
-              <strong>{metric.value}</strong>
-            </article>
-          ))}
-        </div>
-
-        <div className="broke-proof-chip-row">
-          {activeCard.chips.slice(0, 4).map((chip) => (
-            <span key={chip}>{chip}</span>
-          ))}
-        </div>
-
-        <footer>
-          <span>Real app proof only</span>
-          <b>No income · No balance · No wallet value · No payout promise</b>
-        </footer>
-      </div>
-
-      <div className="broke-proof-text-preview" aria-label="Selected public proof text">
-        <span>Text proof</span>
-        <p>{activeCard.text.split("\n").filter(Boolean).slice(0, 4).join(" · ")}</p>
-      </div>
-
-      <div className="broke-proof-actions">
-        <button type="button" onClick={copyProofText}>{copied ? "Copied" : "Copy text"}</button>
-        <button type="button" className="ghost" onClick={shareProofImage}>{busyAction === "image" ? "Preparing..." : "Share image"}</button>
-        <button type="button" className="ghost" onClick={shareProofToX}>{busyAction === "x" ? "Preparing..." : "Share to X"}</button>
-        <button type="button" className="ghost" onClick={sendProofToBot}>{busyAction === "bot" ? "Sending..." : "Send to bot"}</button>
-      </div>
-
-      <p className="broke-proof-center-note">
-        All cards use the same public-safe layout. X image sharing depends on native file share support; otherwise the PNG downloads and text opens in X.
-      </p>
-    </section>
-  );
-}
 
 function MascotProgressionCard({
   state,
@@ -28813,6 +28581,103 @@ function WhatIfScreen({
     );
   }
 
+  function getBrokeProofShareElement(element: HTMLDivElement | null) {
+    if (!element) throw new Error("Proof card is not ready.");
+
+    return element;
+  }
+
+  async function copyBrokeProofText(card: BrokeProofCard) {
+    try {
+      await navigator.clipboard.writeText(card.text);
+      triggerHaptic("success");
+    } catch {
+      notifyApp("Copy unavailable", "Your browser blocked clipboard access.", "info");
+      throw new Error("Clipboard unavailable");
+    }
+  }
+
+  async function createBrokeProofImage(card: BrokeProofCard, element: HTMLDivElement | null) {
+    return createShareImageFileFromElement(getBrokeProofShareElement(element), card.fileName);
+  }
+
+  async function shareBrokeProofImage(card: BrokeProofCard, element: HTMLDivElement | null) {
+    triggerHaptic("light");
+
+    try {
+      const imageFile = await createBrokeProofImage(card, element);
+      const nativeShared = await tryNativeImageShare(imageFile, {
+        title: `$BROKE Proof · ${card.label}`,
+        text: card.text,
+      });
+
+      if (nativeShared) {
+        markDailyRoutineAction("sharedProgress");
+        return;
+      }
+
+      downloadImageFile(imageFile);
+      notifyApp("Proof card downloaded", "Native image share is not available here, so the PNG was saved.");
+    } catch {
+      notifyApp("Sharing unavailable", "Could not create this BROKE proof image here.");
+      throw new Error("Proof image share failed");
+    }
+  }
+
+  async function shareBrokeProofToX(card: BrokeProofCard, element: HTMLDivElement | null) {
+    triggerHaptic("light");
+
+    try {
+      const imageFile = await createBrokeProofImage(card, element);
+      const nativeShared = await tryNativeImageShare(imageFile, {
+        title: `$BROKE Proof · ${card.label}`,
+        text: card.text,
+      });
+
+      if (nativeShared) {
+        markDailyRoutineAction("sharedProgress");
+        notifyApp("Proof card ready", "Choose X in the share sheet to post the image card.");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(card.text);
+      } catch {
+        // Clipboard access is optional in fallback mode.
+      }
+
+      downloadImageFile(imageFile);
+      openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(card.text)}`);
+      markDailyRoutineAction("sharedProgress");
+      notifyApp("X opened", "The proof card was downloaded. Attach the PNG in X if it was not added automatically.");
+    } catch {
+      openExternalUrl(`https://twitter.com/intent/tweet?text=${encodeURIComponent(card.text)}`);
+      notifyApp("X text share opened", "Could not prepare the image card here, so text share was opened instead.");
+      throw new Error("Proof X share fallback used");
+    }
+  }
+
+  async function sendBrokeProofToBot(card: BrokeProofCard, element: HTMLDivElement | null) {
+    triggerHaptic("light");
+
+    try {
+      const imageFile = await createBrokeProofImage(card, element);
+
+      if (!shareInitData) {
+        downloadImageFile(imageFile);
+        notifyApp("Telegram data missing", "Open the app inside Telegram to send the card to the bot. The PNG was downloaded instead.");
+        return;
+      }
+
+      await sendShareImageViaBot(imageFile, shareInitData, card.text);
+      markDailyRoutineAction("sharedProgress");
+      notifyApp("Proof sent", "Open your Telegram bot chat and forward it anywhere.");
+    } catch {
+      notifyApp("Bot share failed", "Could not send this proof card to the bot from here.");
+      throw new Error("Proof bot share failed");
+    }
+  }
+
   return (
     <div className="screen rewards-screen">
       <Header title="Rewards" showBack rightIcon={A.help} onBack={onBack} onRight={onHelp} />
@@ -28834,7 +28699,11 @@ function WhatIfScreen({
         </summary>
         <MyBrokeProofCenter
           state={brokeProofCenterState}
-          shareInitData={shareInitData}
+          onCopyText={copyBrokeProofText}
+          onShareImage={shareBrokeProofImage}
+          onShareToX={shareBrokeProofToX}
+          onSendToBot={sendBrokeProofToBot}
+          onImageError={handleMascotAssetError}
         />
       </details>
 

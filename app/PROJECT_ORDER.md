@@ -51,3 +51,10 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Unifies Mascot, Weekly Boss, Social Leaderboard, Routine, and Challenge proof cards into one public-safe card layout.
 - Each card supports Copy text, Share image, Share to X image-first flow, and Send to bot.
 - No wallet value, income, balance, debt detail, payout promise, Supabase schema, PvP, backend community sync, or reward/admin payout logic changed.
+
+
+## v59.59.1 — Proof Components Split / Refactor
+
+- Extracted My BROKE Proof Center UI/types into `app/components/BrokeProofCenter.tsx`.
+- Kept share side effects in `app/page.tsx` so existing image, X, bot and copy flows stay unchanged.
+- No user-facing behavior, payout logic, wallet verification, Supabase schema, PvP, or reward promise changes.
