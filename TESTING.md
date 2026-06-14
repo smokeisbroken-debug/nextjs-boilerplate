@@ -95,11 +95,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Confirm write path remains disabled and no wallet value/payout language appears.
 
 
-## v59.60.6 Community Boss Proof Submit Dry-Run UI
+## v59.60.7 Community Boss Proof Submit Server Auth Prep
 
 - Run `npm run typecheck`.
 - Run `npm run lint:quiet`.
-- Run production build.
-- In Rewards → Community Boss Prep, click Submit dry-run proof.
-- Confirm the UI displays sanitized proof and `Persisted: No`.
-- Confirm no Supabase proof row is written.
+- Run production build when sandbox allows.
+- Dry-run POST `/api/community-boss/proof` should return `auth.checked:true` and `persisted:false`.
+- With `COMMUNITY_BOSS_PROOF_AUTH_REQUIRED=true`, unauthenticated dry-run should return 401.
+- No Supabase write should occur in this patch.

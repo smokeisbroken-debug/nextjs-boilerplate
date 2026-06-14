@@ -1163,6 +1163,11 @@ type CommunityBossProofSubmitUiState = {
   routineCompleted: boolean;
   challengeCompleted: boolean;
   weaknessHit: boolean;
+  authChecked: boolean;
+  authenticated: boolean;
+  authRequired: boolean;
+  authSource: string;
+  authLabel: string;
   updatedAt: string | null;
   guardrails: string[];
 };
@@ -1204,6 +1209,11 @@ function defaultCommunityBossProofSubmitUiState(): CommunityBossProofSubmitUiSta
     routineCompleted: false,
     challengeCompleted: false,
     weaknessHit: false,
+    authChecked: false,
+    authenticated: false,
+    authRequired: false,
+    authSource: "none",
+    authLabel: "Not checked",
     updatedAt: null,
     guardrails: [],
   };
@@ -1258,6 +1268,20 @@ function parseCommunityBossProofSubmitUiState(payload: unknown): CommunityBossPr
   const guardrails = Array.isArray(data.guardrails)
     ? data.guardrails.map((item) => String(item)).slice(0, 6)
     : [];
+  const auth = data.auth && typeof data.auth === "object" ? data.auth as Record<string, unknown> : {};
+  const authenticated = auth.authenticated === true;
+  const authSource = stringFromCommunityBossApi(auth.source, "none");
+  const authRequired = auth.required === true;
+  const authReason = auth.reason ? String(auth.reason).slice(0, 120) : "";
+  const authLabel = authenticated
+    ? authSource === "telegram_init_data"
+      ? "Telegram verified"
+      : authSource === "web_session"
+        ? "Web session"
+        : "Verified"
+    : authRequired
+      ? "Auth required"
+      : authReason || "Dry-run guest";
 
   return {
     loading: false,
@@ -1274,6 +1298,11 @@ function parseCommunityBossProofSubmitUiState(payload: unknown): CommunityBossPr
     routineCompleted: proof.routineCompleted === true,
     challengeCompleted: proof.challengeCompleted === true,
     weaknessHit: proof.weaknessHit === true,
+    authChecked: auth.checked === true,
+    authenticated,
+    authRequired,
+    authSource,
+    authLabel,
     updatedAt: new Date().toISOString(),
     guardrails,
   };
@@ -15521,12 +15550,17 @@ function CommunityBossPrepCard({
             <strong>{proofSubmit.persisted ? "Yes" : "No"}</strong>
             <small>No database write in this patch</small>
           </article>
+          <article>
+            <span>Server auth</span>
+            <strong>{proofSubmit.submitted ? proofSubmit.authLabel : "Prepared"}</strong>
+            <small>{proofSubmit.submitted ? proofSubmit.authSource : "Telegram/session check next"}</small>
+          </article>
         </div>
 
         {proofSubmit.submitted && (
           <div className="community-boss-proof-submit-result">
             <span>{proofSubmit.error ? proofSubmit.error : `Sanitized proof for ${proofSubmit.weekKey}`}</span>
-            <b>Routine {proofSubmit.routineCompleted ? "yes" : "no"} · Tracking {proofSubmit.trackingDays}/7 · Challenge {proofSubmit.challengeCompleted ? "yes" : "no"} · Weakness {proofSubmit.weaknessHit ? "hit" : "open"}</b>
+            <b>Auth {proofSubmit.authenticated ? "verified" : proofSubmit.authRequired ? "required" : "dry-run"} · Routine {proofSubmit.routineCompleted ? "yes" : "no"} · Tracking {proofSubmit.trackingDays}/7 · Challenge {proofSubmit.challengeCompleted ? "yes" : "no"} · Weakness {proofSubmit.weaknessHit ? "hit" : "open"}</b>
           </div>
         )}
 
@@ -28713,6 +28747,7 @@ function WhatIfScreen({
       trackingDays: trackingContribution?.active ? Math.min(7, Math.max(1, Math.round(trackingContribution.damage / 24))) : 0,
       challengeCompleted: challengeContribution?.active === true,
       weaknessHit,
+      initData: shareInitData,
     };
 
     try {
