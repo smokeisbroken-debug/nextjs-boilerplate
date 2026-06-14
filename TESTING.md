@@ -94,10 +94,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - In Rewards → Community Boss Prep, confirm the backend panel shows dry-run or Supabase source safely.
 - Confirm write path remains disabled and no wallet value/payout language appears.
 
-## v59.61.5 Community Boss First Event Operator Checklist / Launch Guard
 
-- Run `npm run typecheck`.
-- Run `npm run lint:quiet` or targeted ESLint for changed TS files if full lint times out in sandbox.
-- Confirm Rewards → Community Boss Prep shows First Event Launch Guard.
-- Confirm launch guard stays blocked until read path, seed row, auth proof, proof persistence, aggregate gate, and live aggregate are ready.
-- Confirm no payout, wallet value, PvP, balance, income, or debt language was added.
+## v59.61.6 Community Boss First Event Announcement / Public Copy Prep
+
+- Verify Community Boss Prep shows First event public copy panel.
+- Verify Copy launch post is disabled when Launch Guard is blocked.
+- Verify launch-ready copy appears only when Launch Guard passes.
+- Verify copy text contains no payout promise, wallet value, balance, income, debt, or PvP wording.
+- Run typecheck and lint.

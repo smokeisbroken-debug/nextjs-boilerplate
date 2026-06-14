@@ -1786,6 +1786,55 @@ function getCommunityBossLaunchGuardStatus(
   };
 }
 
+function getCommunityBossFirstEventAnnouncementCopy({
+  state,
+  backend,
+  launchReady,
+}: {
+  state: CommunityBossPrepState;
+  backend: CommunityBossBackendUiState;
+  launchReady: boolean;
+}) {
+  const bossName = backend.bossName !== "—" ? backend.bossName : state.bossName;
+  const weekKey = backend.weekKey !== "—" ? backend.weekKey : state.weekKey;
+  const damage = backend.totalDamage || state.localDamage;
+  const participants = backend.participantCount;
+
+  if (!launchReady) {
+    return {
+      statusLabel: "Locked until launch guard passes",
+      statusDetail:
+        "Public launch copy stays hidden until seed, proof write, aggregate recalculation, and live read are verified.",
+      operatorNote:
+        "Community Boss is still in live-flow QA. Finish the launch guard before posting the first public event announcement.",
+      publicCopy: "",
+      xCopy: "",
+      shortCopy: "",
+      tags: ["operator-only", "not-public-yet", "no-payout", "no-wallet-value"],
+    };
+  }
+
+  const publicCopy = [
+    "Community Boss is live in $BROKE.",
+    `This week: ${bossName} · ${weekKey}.`,
+    `Community damage: ${damage} from ${participants} public-safe participant${participants === 1 ? "" : "s"}.`,
+    "Real app actions become safe proof and shared progress.",
+    "No payout promise. No wallet value. No PvP.",
+  ].join("\n");
+
+  return {
+    statusLabel: "Launch-ready public copy",
+    statusDetail:
+      "Safe to copy after the Launch Guard passes. Keep it factual and avoid reward promises.",
+    operatorNote:
+      "Use this for the first live Community Boss announcement after one proof write, admin recalculation, and public aggregate refresh are verified.",
+    publicCopy,
+    xCopy: `${publicCopy}\n\n#BROKE #SmokeIsBroke`,
+    shortCopy: `Community Boss live: ${bossName} · ${damage} damage · ${participants} participant${participants === 1 ? "" : "s"}. Public-safe proof only. No payout promise.`,
+    tags: ["public-safe", "live-ready", "no-payout", "no-wallet-value", "no-pvp"],
+  };
+}
+
 type SocialLeaderboardLane = {
   id: string;
   title: string;
@@ -18706,6 +18755,27 @@ function CommunityBossPrepCard({
     proofSubmit,
   );
   const launchGuardStatus = getCommunityBossLaunchGuardStatus(launchGuardItems);
+  const firstEventAnnouncement = getCommunityBossFirstEventAnnouncementCopy({
+    state,
+    backend,
+    launchReady: launchGuardStatus.ready,
+  });
+  const [announcementCopied, setAnnouncementCopied] = useState(false);
+
+  async function copyFirstEventAnnouncement() {
+    if (!launchGuardStatus.ready || !firstEventAnnouncement.xCopy) return;
+
+    try {
+      await navigator.clipboard.writeText(firstEventAnnouncement.xCopy);
+      triggerHaptic("success");
+      setAnnouncementCopied(true);
+      window.setTimeout(() => setAnnouncementCopied(false), 1600);
+      notifyApp("Announcement copied", "First Community Boss public copy is ready to post.");
+    } catch {
+      setAnnouncementCopied(false);
+      notifyApp("Copy unavailable", "Your browser blocked clipboard access.", "info");
+    }
+  }
 
   return (
     <section className="community-boss-prep-card">
@@ -18917,6 +18987,48 @@ function CommunityBossPrepCard({
             Launch is blocked until proof write, admin recalculation, and live
             aggregate read are all verified. No payout, no wallet value, no PvP.
           </p>
+        </div>
+
+        <div
+          className={`community-boss-announcement-panel ${launchGuardStatus.ready ? "ready" : "locked"}`}
+        >
+          <div className="community-boss-announcement-head">
+            <div>
+              <span>First event public copy</span>
+              <strong>{firstEventAnnouncement.statusLabel}</strong>
+              <small>{firstEventAnnouncement.statusDetail}</small>
+            </div>
+            <b>{launchGuardStatus.ready ? "Ready" : "Locked"}</b>
+          </div>
+
+          <div className="community-boss-announcement-copy">
+            <span>{launchGuardStatus.ready ? "Launch-ready X copy" : "Operator note"}</span>
+            <p>
+              {launchGuardStatus.ready
+                ? firstEventAnnouncement.xCopy
+                : firstEventAnnouncement.operatorNote}
+            </p>
+          </div>
+
+          <div className="community-boss-announcement-tags">
+            {firstEventAnnouncement.tags.map((tag) => (
+              <span key={tag}>{tag}</span>
+            ))}
+          </div>
+
+          <div className="community-boss-announcement-actions">
+            <button
+              type="button"
+              onClick={copyFirstEventAnnouncement}
+              disabled={!launchGuardStatus.ready}
+            >
+              {announcementCopied ? "Copied" : "Copy launch post"}
+            </button>
+            <small>
+              Copy unlocks only after Launch Guard passes. Public wording stays
+              factual: no payout promise, no wallet value, no PvP.
+            </small>
+          </div>
         </div>
       </div>
 

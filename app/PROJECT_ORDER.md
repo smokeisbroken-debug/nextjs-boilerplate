@@ -213,3 +213,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Blocks public launch until read flags, week seed, server auth proof, proof persistence, aggregate gate, live aggregate read, and public-safety guardrails are ready.
 - Keeps previous Live Flow QA panel and next-action hint.
 - No new schema, migration auto-run, payout, wallet value, PvP, reward promises, or game economy changes.
+
+
+## v59.61.6 — Community Boss First Event Announcement / Public Copy Prep
+
+- Adds first-event public copy prep inside Community Boss Prep.
+- Launch-ready copy unlocks only after Launch Guard passes.
+- Copy includes public-safe wording only: real app actions, community damage, participant count, no payout promise, no wallet value, no PvP.
+- No backend schema, payout, wallet verification, PvP, or game economy changes.
