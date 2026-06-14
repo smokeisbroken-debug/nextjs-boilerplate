@@ -93,3 +93,13 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Run production build.
 - In Rewards → Community Boss Prep, confirm the backend panel shows dry-run or Supabase source safely.
 - Confirm write path remains disabled and no wallet value/payout language appears.
+
+
+## v59.60.6 Community Boss Proof Submit Dry-Run UI
+
+- Run `npm run typecheck`.
+- Run `npm run lint:quiet`.
+- Run production build.
+- In Rewards → Community Boss Prep, click Submit dry-run proof.
+- Confirm the UI displays sanitized proof and `Persisted: No`.
+- Confirm no Supabase proof row is written.

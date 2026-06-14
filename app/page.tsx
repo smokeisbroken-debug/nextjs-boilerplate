@@ -1148,6 +1148,25 @@ type CommunityBossBackendUiState = {
   missing: string[];
 };
 
+type CommunityBossProofSubmitUiState = {
+  loading: boolean;
+  submitted: boolean;
+  ok: boolean;
+  persisted: boolean;
+  error: string | null;
+  weekKey: string;
+  weeklyDamage: number;
+  safePoints: number;
+  proofCount: number;
+  mascotStage: number;
+  trackingDays: number;
+  routineCompleted: boolean;
+  challengeCompleted: boolean;
+  weaknessHit: boolean;
+  updatedAt: string | null;
+  guardrails: string[];
+};
+
 function defaultCommunityBossBackendUiState(): CommunityBossBackendUiState {
   return {
     loading: false,
@@ -1166,6 +1185,27 @@ function defaultCommunityBossBackendUiState(): CommunityBossBackendUiState {
     canWrite: false,
     canSeedWrite: false,
     missing: [],
+  };
+}
+
+function defaultCommunityBossProofSubmitUiState(): CommunityBossProofSubmitUiState {
+  return {
+    loading: false,
+    submitted: false,
+    ok: false,
+    persisted: false,
+    error: null,
+    weekKey: "—",
+    weeklyDamage: 0,
+    safePoints: 0,
+    proofCount: 0,
+    mascotStage: 1,
+    trackingDays: 0,
+    routineCompleted: false,
+    challengeCompleted: false,
+    weaknessHit: false,
+    updatedAt: null,
+    guardrails: [],
   };
 }
 
@@ -1210,6 +1250,40 @@ function parseCommunityBossBackendUiState(payload: unknown): CommunityBossBacken
     canSeedWrite: readiness.canSeedWrite === true,
     missing,
   };
+}
+
+function parseCommunityBossProofSubmitUiState(payload: unknown): CommunityBossProofSubmitUiState {
+  const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+  const proof = data.proof && typeof data.proof === "object" ? data.proof as Record<string, unknown> : {};
+  const guardrails = Array.isArray(data.guardrails)
+    ? data.guardrails.map((item) => String(item)).slice(0, 6)
+    : [];
+
+  return {
+    loading: false,
+    submitted: true,
+    ok: data.ok === true,
+    persisted: data.persisted === true,
+    error: data.error ? String(data.error).slice(0, 180) : null,
+    weekKey: stringFromCommunityBossApi(proof.weekKey, "—"),
+    weeklyDamage: numberFromCommunityBossApi(proof.weeklyDamage),
+    safePoints: numberFromCommunityBossApi(proof.safePoints),
+    proofCount: numberFromCommunityBossApi(proof.proofCount),
+    mascotStage: clamp(numberFromCommunityBossApi(proof.mascotStage, 1), 1, 5),
+    trackingDays: clamp(numberFromCommunityBossApi(proof.trackingDays), 0, 7),
+    routineCompleted: proof.routineCompleted === true,
+    challengeCompleted: proof.challengeCompleted === true,
+    weaknessHit: proof.weaknessHit === true,
+    updatedAt: new Date().toISOString(),
+    guardrails,
+  };
+}
+
+function getCommunityBossMascotPowerBucket(power: number) {
+  if (power >= 90) return "legend";
+  if (power >= 65) return "high";
+  if (power >= 35) return "medium";
+  return "low";
 }
 
 function getCommunityBossBackendStatusLabel(backend: CommunityBossBackendUiState) {
@@ -15341,9 +15415,13 @@ function WeeklyBossMvpCard({
 function CommunityBossPrepCard({
   state,
   backend,
+  proofSubmit,
+  onSubmitProof,
 }: {
   state: CommunityBossPrepState;
   backend: CommunityBossBackendUiState;
+  proofSubmit: CommunityBossProofSubmitUiState;
+  onSubmitProof: () => Promise<void>;
 }) {
   const backendStatusLabel = getCommunityBossBackendStatusLabel(backend);
   const backendStatusDetail = getCommunityBossBackendStatusDetail(backend);
@@ -15410,6 +15488,59 @@ function CommunityBossPrepCard({
             ))}
           </div>
         )}
+      </div>
+
+      <div className={`community-boss-proof-submit-panel ${proofSubmit.submitted ? "submitted" : "idle"}`}>
+        <div className="community-boss-proof-submit-head">
+          <div>
+            <span>Safe proof submit</span>
+            <strong>{proofSubmit.loading ? "Sending dry-run proof" : proofSubmit.submitted ? proofSubmit.ok ? "Dry-run proof accepted" : "Dry-run proof rejected" : "Preview submit only"}</strong>
+            <small>POST checks the exact safe payload that future backend sync will use. It still returns persisted:false.</small>
+          </div>
+          <b>{proofSubmit.persisted ? "Persisted" : "Dry-run"}</b>
+        </div>
+
+        <div className="community-boss-proof-submit-grid">
+          <article>
+            <span>Damage</span>
+            <strong>{proofSubmit.submitted ? proofSubmit.weeklyDamage : state.localDamage}</strong>
+            <small>Weekly Boss proof only</small>
+          </article>
+          <article>
+            <span>Safe Points</span>
+            <strong>{proofSubmit.submitted ? proofSubmit.safePoints : state.safeSocialPoints}</strong>
+            <small>Public-safe social progress</small>
+          </article>
+          <article>
+            <span>Proof count</span>
+            <strong>{proofSubmit.submitted ? proofSubmit.proofCount : state.proofCount}</strong>
+            <small>Real action sources</small>
+          </article>
+          <article>
+            <span>Persisted</span>
+            <strong>{proofSubmit.persisted ? "Yes" : "No"}</strong>
+            <small>No database write in this patch</small>
+          </article>
+        </div>
+
+        {proofSubmit.submitted && (
+          <div className="community-boss-proof-submit-result">
+            <span>{proofSubmit.error ? proofSubmit.error : `Sanitized proof for ${proofSubmit.weekKey}`}</span>
+            <b>Routine {proofSubmit.routineCompleted ? "yes" : "no"} · Tracking {proofSubmit.trackingDays}/7 · Challenge {proofSubmit.challengeCompleted ? "yes" : "no"} · Weakness {proofSubmit.weaknessHit ? "hit" : "open"}</b>
+          </div>
+        )}
+
+        {proofSubmit.guardrails.length > 0 && (
+          <div className="community-boss-proof-guardrails">
+            {proofSubmit.guardrails.slice(0, 4).map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+        )}
+
+        <button type="button" onClick={onSubmitProof} disabled={proofSubmit.loading}>
+          {proofSubmit.loading ? "Submitting..." : proofSubmit.submitted ? "Resubmit dry-run proof" : "Submit dry-run proof"}
+        </button>
       </div>
 
       <div className="community-boss-preview-arena" aria-label="Community boss preview">
@@ -28514,6 +28645,9 @@ function WhatIfScreen({
   const [communityBossBackendState, setCommunityBossBackendState] = useState<CommunityBossBackendUiState>(() =>
     defaultCommunityBossBackendUiState()
   );
+  const [communityBossProofSubmitState, setCommunityBossProofSubmitState] = useState<CommunityBossProofSubmitUiState>(() =>
+    defaultCommunityBossProofSubmitUiState()
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -28553,6 +28687,65 @@ function WhatIfScreen({
       cancelled = true;
     };
   }, []);
+
+  async function submitCommunityBossProofDryRun() {
+    if (communityBossProofSubmitState.loading) return;
+
+    triggerHaptic("light");
+    setCommunityBossProofSubmitState((current) => ({
+      ...current,
+      loading: true,
+      error: null,
+    }));
+
+    const challengeContribution = weeklyBossState.contributions.find((item) => item.id === "challenge");
+    const weaknessHit = weeklyBossState.contributions.some((item) => item.weaknessHit);
+    const trackingContribution = weeklyBossState.contributions.find((item) => item.id === "tracking");
+    const payload = {
+      weekKey: weeklyBossState.weekKey,
+      weeklyDamage: weeklyBossState.userDamage,
+      safePoints: communityBossPrepState.safeSocialPoints,
+      proofCount: communityBossPrepState.proofCount,
+      mascotStage: mascotProgressionState.stage,
+      mascotPowerBucket: getCommunityBossMascotPowerBucket(mascotProgressionState.power),
+      badgeCount: mascotProgressionState.badges.filter((badge) => badge.unlocked).length,
+      routineCompleted: activeProofStatus.activeToday,
+      trackingDays: trackingContribution?.active ? Math.min(7, Math.max(1, Math.round(trackingContribution.damage / 24))) : 0,
+      challengeCompleted: challengeContribution?.active === true,
+      weaknessHit,
+    };
+
+    try {
+      const response = await fetch("/api/community-boss/proof", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      const parsed = parseCommunityBossProofSubmitUiState(result);
+
+      setCommunityBossProofSubmitState(parsed);
+      notifyApp(
+        parsed.ok ? "Dry-run proof checked" : "Proof rejected",
+        parsed.ok
+          ? "Community Boss proof was sanitized. No database write was made."
+          : parsed.error || "Community Boss proof was rejected by the dry-run endpoint.",
+        "info"
+      );
+    } catch (error) {
+      setCommunityBossProofSubmitState({
+        ...defaultCommunityBossProofSubmitUiState(),
+        loading: false,
+        submitted: true,
+        ok: false,
+        error: error instanceof Error ? error.message.slice(0, 180) : "Community Boss proof dry-run failed.",
+        updatedAt: new Date().toISOString(),
+      });
+      notifyApp("Dry-run failed", "Community Boss proof submit preview could not be checked.", "info");
+    }
+  }
 
   function openChallengeArea() {
     triggerHaptic("light");
@@ -28974,7 +29167,12 @@ function WhatIfScreen({
           </div>
           <b>{communityBossPrepState.prepLabel}</b>
         </summary>
-        <CommunityBossPrepCard state={communityBossPrepState} backend={communityBossBackendState} />
+        <CommunityBossPrepCard
+          state={communityBossPrepState}
+          backend={communityBossBackendState}
+          proofSubmit={communityBossProofSubmitState}
+          onSubmitProof={submitCommunityBossProofDryRun}
+        />
       </details>
 
       <details className="clean-details rewards-social-details social-leaderboard-rewards-details">

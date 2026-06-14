@@ -37059,3 +37059,169 @@ html.embedded-app-view .hero h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.60.6 — Community Boss Proof Submit Dry-Run UI */
+.community-boss-proof-submit-panel {
+  position: relative;
+  z-index: 1;
+  margin-top: 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(183, 255, 25, 0.15);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(183, 255, 25, 0.11), transparent 34%),
+    rgba(0, 0, 0, 0.18);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.community-boss-proof-submit-panel.submitted {
+  border-color: rgba(133, 223, 255, 0.18);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(133, 223, 255, 0.12), transparent 34%),
+    rgba(0, 0, 0, 0.18);
+}
+
+.community-boss-proof-submit-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.community-boss-proof-submit-head div,
+.community-boss-proof-submit-panel article,
+.community-boss-proof-submit-result {
+  min-width: 0;
+}
+
+.community-boss-proof-submit-head span,
+.community-boss-proof-submit-grid span,
+.community-boss-proof-submit-result span,
+.community-boss-proof-guardrails span {
+  color: rgba(237, 255, 219, 0.66);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.community-boss-proof-submit-head strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.05;
+  font-weight: 1000;
+  overflow-wrap: anywhere;
+}
+
+.community-boss-proof-submit-head small,
+.community-boss-proof-submit-grid small,
+.community-boss-proof-submit-result b {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.28;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.community-boss-proof-submit-head b {
+  padding: 7px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(183, 255, 25, 0.2);
+  background: rgba(183, 255, 25, 0.09);
+  color: var(--green);
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.community-boss-proof-submit-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.community-boss-proof-submit-grid article {
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 9px;
+}
+
+.community-boss-proof-submit-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.08;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.community-boss-proof-submit-result {
+  border-radius: 15px;
+  border: 1px solid rgba(133, 223, 255, 0.12);
+  background: rgba(133, 223, 255, 0.055);
+  padding: 9px;
+}
+
+.community-boss-proof-guardrails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.community-boss-proof-guardrails span {
+  max-width: 100%;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 6px 8px;
+  color: rgba(237, 255, 219, 0.68);
+  letter-spacing: 0;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+.community-boss-proof-submit-panel button {
+  width: 100%;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 14px;
+  background: linear-gradient(135deg, rgba(183, 255, 25, 0.92), rgba(90, 255, 164, 0.82));
+  color: #071106;
+  font-weight: 1000;
+  cursor: pointer;
+}
+
+.community-boss-proof-submit-panel button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+@media (max-width: 620px) {
+  .community-boss-proof-submit-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 390px) {
+  .community-boss-proof-submit-head {
+    grid-template-columns: 1fr;
+  }
+
+  .community-boss-proof-submit-head b {
+    justify-self: start;
+    white-space: normal;
+  }
+
+  .community-boss-proof-submit-grid {
+    grid-template-columns: 1fr;
+  }
+}
