@@ -76,3 +76,12 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Tightens Rewards section summaries and mobile wrapping.
 - Keeps My BROKE Proof as the main share center and marks the separate streak card as optional legacy share.
 - No backend, schema, payout, wallet verification, PvP, or game economy changes.
+
+
+## v59.60.0 — Community Boss Backend Plan / Schema Draft
+
+- Adds documentation for Community Boss backend data boundaries, schema draft, and API contract.
+- Adds draft SQL for public-safe weekly boss tables, aggregate table, audit table, indexes, view, and RLS policies.
+- Keeps Community Boss as local-only preview in the app; no API writes or database sync are enabled.
+- Explicitly forbids wallet value, balances, income, debt, payout value, rewards promises, PvP, and game economy fields in Community Boss backend.
+- Next planned step: v59.60.1 Community Boss Safe Sync API Skeleton.
