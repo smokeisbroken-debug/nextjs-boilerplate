@@ -67,3 +67,12 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Makes share action buttons compact and consistent on narrow screens.
 - Adds a selected-proof hint and stronger public-safe fallback note.
 - Keeps all proof cards public-safe and does not change backend, rewards, wallet verification, payout logic, PvP, or game economy.
+
+
+## v59.59.3 — Rewards Layout Cleanup
+
+- Adds a compact Rewards map so users understand Proof, Boss, Routine, and Tools lanes.
+- Moves Social Leaderboard next to the other social/game blocks.
+- Tightens Rewards section summaries and mobile wrapping.
+- Keeps My BROKE Proof as the main share center and marks the separate streak card as optional legacy share.
+- No backend, schema, payout, wallet verification, PvP, or game economy changes.

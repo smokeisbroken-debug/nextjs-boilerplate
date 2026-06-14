@@ -28689,11 +28689,41 @@ function WhatIfScreen({
         onOpenProfile={onOpenProfile}
       />
 
+      <section className="rewards-layout-map" aria-label="Rewards layout map">
+        <div>
+          <span>Rewards map</span>
+          <strong>Proof first, game layer second, tools after.</strong>
+          <small>Open only what you need. Social/game blocks stay public-safe and do not expose wallet value.</small>
+        </div>
+        <div className="rewards-layout-map-grid">
+          <article>
+            <b>1</b>
+            <span>Proof</span>
+            <small>Cards for X, bot, and text.</small>
+          </article>
+          <article>
+            <b>2</b>
+            <span>Boss</span>
+            <small>Mascot, Weekly Boss, Safe Points.</small>
+          </article>
+          <article>
+            <b>3</b>
+            <span>Routine</span>
+            <small>Daily proof and streak recovery.</small>
+          </article>
+          <article>
+            <b>4</b>
+            <span>Tools</span>
+            <small>Survival, challenges, leak cuts.</small>
+          </article>
+        </div>
+      </section>
+
       <details className="clean-details rewards-social-details broke-proof-center-details">
         <summary>
           <div>
             <span>My BROKE Proof</span>
-            <small>One place for text, image, bot, and X proof cards.</small>
+            <small>Main public-safe share center for text, image, bot, and X cards.</small>
           </div>
           <b>{brokeProofCenterState.cards.length} cards</b>
         </summary>
@@ -28711,7 +28741,7 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Mascot Progression</span>
-            <small>Visual mascot growth, badges, boost plan, and share proof.</small>
+            <small>Visual growth, badge proof, and real-action boosts.</small>
           </div>
           <b>Stage {mascotProgressionState.stage}/5</b>
         </summary>
@@ -28728,7 +28758,7 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Weekly Boss</span>
-            <small>Real habits become boss damage. Visual battle only, no fake taps.</small>
+            <small>Step battle from real weekly actions. Visual only, no fake taps.</small>
           </div>
           <b>{weeklyBossState.progressPercent}%</b>
         </summary>
@@ -28750,6 +28780,22 @@ function WhatIfScreen({
           <b>{communityBossPrepState.prepLabel}</b>
         </summary>
         <CommunityBossPrepCard state={communityBossPrepState} />
+      </details>
+
+      <details className="clean-details rewards-social-details social-leaderboard-rewards-details">
+        <summary>
+          <div>
+            <span>Social Leaderboard</span>
+            <small>Safe Points from proof. No wallet value, balances, or payout tiers.</small>
+          </div>
+          <b>{socialLeaderboardState.rankTier}</b>
+        </summary>
+        <LeaderboardPanel
+          leaderboard={leaderboard}
+          loading={leaderboardLoading}
+          social={socialLeaderboardState}
+          onToggleLeaderboard={onToggleLeaderboard}
+        />
       </details>
 
       <details className="clean-details rewards-core-details">
@@ -28850,8 +28896,8 @@ function WhatIfScreen({
       <details className="clean-details rewards-core-details">
         <summary>
           <div>
-            <span>Share Active Streak Card</span>
-            <small>Public proof card without income, balance, payday, or debt details.</small>
+            <span>Streak share card</span>
+            <small>Optional legacy streak card. Main proof sharing now lives in My BROKE Proof.</small>
           </div>
           <b>Share</b>
         </summary>
@@ -28982,22 +29028,6 @@ function WhatIfScreen({
           loading={challengeLoading}
           currency={settings.currency}
           onStartChallenge={onStartChallenge}
-        />
-      </details>
-
-      <details className="clean-details rewards-tool-details">
-        <summary>
-          <div>
-            <span>Social Leaderboard MVP</span>
-            <small>Safe Points from proof. No wallet value, balances, or payout tiers.</small>
-          </div>
-          <b>{socialLeaderboardState.rankTier}</b>
-        </summary>
-        <LeaderboardPanel
-          leaderboard={leaderboard}
-          loading={leaderboardLoading}
-          social={socialLeaderboardState}
-          onToggleLeaderboard={onToggleLeaderboard}
         />
       </details>
 

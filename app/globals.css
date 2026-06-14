@@ -36757,3 +36757,159 @@ html.embedded-app-view .hero h1 {
     font-size: 11px;
   }
 }
+
+
+/* v59.59.3 — Rewards Layout Cleanup */
+.rewards-screen > .clean-details,
+.rewards-screen > .rewards-layout-map,
+.rewards-screen > .v58-empty-card,
+.rewards-screen > .savings-card {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.rewards-layout-map {
+  box-sizing: border-box;
+  width: 100%;
+  border-radius: 24px;
+  border: 1px solid rgba(143, 255, 160, 0.15);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(126, 255, 142, 0.14), transparent 34%),
+    linear-gradient(145deg, rgba(5, 19, 8, 0.94), rgba(2, 8, 4, 0.98));
+  padding: 13px;
+  display: grid;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.rewards-layout-map,
+.rewards-layout-map * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rewards-layout-map > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.rewards-layout-map span {
+  color: rgba(203, 255, 212, 0.72);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rewards-layout-map strong {
+  color: #f1fff4;
+  font-size: 17px;
+  line-height: 1.1;
+}
+
+.rewards-layout-map small {
+  color: rgba(230, 255, 235, 0.72);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.rewards-layout-map-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rewards-layout-map-grid article {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 9px;
+  display: grid;
+  gap: 3px;
+}
+
+.rewards-layout-map-grid b {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(126, 255, 142, 0.14);
+  color: #caffd0;
+  font-size: 12px;
+}
+
+.rewards-screen > .clean-details > summary {
+  gap: 10px;
+}
+
+.rewards-screen > .clean-details > summary > div {
+  min-width: 0;
+}
+
+.rewards-screen > .clean-details > summary span,
+.rewards-screen > .clean-details > summary small {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.rewards-screen > .clean-details > summary b {
+  max-width: 42%;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.rewards-social-details > summary {
+  border-color: rgba(126, 255, 142, 0.16);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(126, 255, 142, 0.09), transparent 34%),
+    rgba(5, 16, 7, 0.58);
+}
+
+.rewards-core-details > summary {
+  border-color: rgba(255, 225, 130, 0.13);
+}
+
+.rewards-tool-details > summary {
+  border-color: rgba(149, 185, 255, 0.12);
+}
+
+.social-leaderboard-rewards-details {
+  order: 6;
+}
+
+@media (max-width: 620px) {
+  .rewards-layout-map {
+    border-radius: 20px;
+    padding: 11px;
+  }
+
+  .rewards-layout-map-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rewards-screen > .clean-details > summary {
+    align-items: flex-start;
+  }
+
+  .rewards-screen > .clean-details > summary b {
+    max-width: 112px;
+    font-size: 11px;
+    line-height: 1.15;
+    white-space: normal;
+  }
+}
+
+@media (max-width: 390px) {
+  .rewards-layout-map-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rewards-screen > .clean-details > summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .rewards-screen > .clean-details > summary b {
+    max-width: 96px;
+  }
+}
