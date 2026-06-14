@@ -1,7 +1,7 @@
-export const BROKE_APP_BUILD_VERSION = "v59.61.9";
+export const BROKE_APP_BUILD_VERSION = "v59.62.0";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Community Boss Auto Aggregate Refresh Public UI Polish";
+  "Community Boss First Event Release Candidate";
 
 export const DEFAULT_TREASURY_WALLET_ADDRESS =
   "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";

@@ -1816,6 +1816,105 @@ function getCommunityBossFirstEventState(
   };
 }
 
+
+function getCommunityBossPublicEventPanel({
+  backend,
+  proofSubmit,
+  firstEventState,
+}: {
+  backend: CommunityBossBackendUiState;
+  proofSubmit: CommunityBossProofSubmitUiState;
+  firstEventState: CommunityBossFirstEventState;
+}) {
+  const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
+  const seededWeek = hasCommunityBossSeededWeek(backend);
+  const autoReady = backend.canAutoRecalculateAfterProof;
+  const bossName = backend.bossName !== "—" ? backend.bossName : "Community Boss";
+  const damage = backend.totalDamage;
+  const participants = backend.participantCount;
+  const stats = [
+    {
+      label: "Community damage",
+      value: liveAggregateReady ? String(damage) : "Preparing",
+      detail: liveAggregateReady
+        ? `${backend.progressPercent}% of weekly boss HP`
+        : "Live total unlocks after first safe proof + auto recalc.",
+    },
+    {
+      label: "Participants",
+      value: liveAggregateReady ? String(participants) : "—",
+      detail: liveAggregateReady
+        ? "Public-safe proof rows only"
+        : "No personal wallet or balance data.",
+    },
+    {
+      label: "Update mode",
+      value: autoReady ? "Automatic" : "Gated",
+      detail: autoReady
+        ? "Proof submit can update aggregate without founder action."
+        : "Auto recalc flag must be enabled before public launch.",
+    },
+  ];
+
+  if (firstEventState.launchReady) {
+    return {
+      tone: "live" as const,
+      label: "Community Boss live",
+      badge: "Release candidate",
+      detail: `${bossName} is ready for the first public event: ${damage} damage from ${participants} participant${participants === 1 ? "" : "s"}.`,
+      status: "Public launch copy unlocked. Future safe proofs can auto-update aggregate.",
+      stats,
+    };
+  }
+
+  if (liveAggregateReady) {
+    return {
+      tone: "live" as const,
+      label: "Community damage live",
+      badge: "Live aggregate",
+      detail: `${bossName} already has live public aggregate data. Final launch blockers remain in the guard panel.`,
+      status: "Public totals are visible. Keep announcement locked until launch guard passes.",
+      stats,
+    };
+  }
+
+  if (proofSubmit.persisted) {
+    return {
+      tone: proofSubmit.autoRecalculated ? ("syncing" as const) : ("preparing" as const),
+      label: proofSubmit.autoRecalculated
+        ? "Proof saved, aggregate syncing"
+        : "Proof saved, aggregate pending",
+      badge: proofSubmit.autoRecalculated ? "Auto flow" : "Auto refresh",
+      detail: proofSubmit.autoRecalculated
+        ? "The server auto-recalculated aggregate after proof write. Waiting for live public read to show non-zero totals."
+        : "Safe proof exists, but automatic aggregate recalculation was not confirmed yet.",
+      status: "No manual monitoring should be required after auto recalc is enabled; fallback admin recalc remains available.",
+      stats,
+    };
+  }
+
+  if (seededWeek) {
+    return {
+      tone: "preparing" as const,
+      label: "First event seeded",
+      badge: "Proof needed",
+      detail: `${bossName} is seeded for ${backend.weekKey}. One authenticated safe proof is needed to start live totals.`,
+      status: "Users submit real app proof; public aggregate updates after proof write + auto recalc.",
+      stats,
+    };
+  }
+
+  return {
+    tone: "preparing" as const,
+    label: "Community Boss preparing",
+    badge: "Backend gated",
+    detail:
+      "First live event is not public yet. Seed week, verify proof write, and enable auto aggregate before launch.",
+    status: "Operator/debug panels stay available, but public users should see a simple preparing state.",
+    stats,
+  };
+}
+
 function getCommunityBossLiveFlowSteps(
   backend: CommunityBossBackendUiState,
   proofSubmit: CommunityBossProofSubmitUiState,
@@ -2121,7 +2220,7 @@ function getCommunityBossFirstEventLaunchConsole({
     },
     {
       label: "Verify live aggregate",
-      value: liveAggregateReady ? "Verified" : "Refresh needed",
+      value: liveAggregateReady ? "Verified" : "Auto refresh",
       detail: liveAggregateReady
         ? `Live aggregate: ${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"} · ${backend.totalDamage} damage.`
         : "Refresh public aggregate after automatic recalculation.",
@@ -19188,6 +19287,11 @@ function CommunityBossPrepCard({
     backend,
     launchReady: firstEventState.publicCopyUnlocked,
   });
+  const publicEventPanel = getCommunityBossPublicEventPanel({
+    backend,
+    proofSubmit,
+    firstEventState,
+  });
   const [announcementCopied, setAnnouncementCopied] = useState(false);
 
   async function copyFirstEventAnnouncement() {
@@ -19220,8 +19324,8 @@ function CommunityBossPrepCard({
           <span>Community Boss Prep · {state.weekKey}</span>
           <strong>{state.bossName}</strong>
           <small>
-            Backend-gated community progress. Live aggregate refresh appears
-            when Supabase read path is ready. No payout math.
+            First live event release candidate. Safe proofs can auto-update
+            public aggregate when backend gates are open. No payout math.
           </small>
         </div>
         <b>{state.prepLabel}</b>
@@ -19230,6 +19334,27 @@ function CommunityBossPrepCard({
       <div className="social-game-guide-strip compact">
         <strong>Backend readiness</strong>
         <span>{backendStatusDetail}</span>
+      </div>
+
+      <div className={`community-boss-public-event-panel ${publicEventPanel.tone}`}>
+        <div className="community-boss-public-event-head">
+          <div>
+            <span>First live event</span>
+            <strong>{publicEventPanel.label}</strong>
+            <small>{publicEventPanel.detail}</small>
+          </div>
+          <b>{publicEventPanel.badge}</b>
+        </div>
+        <div className="community-boss-public-event-grid">
+          {publicEventPanel.stats.map((item) => (
+            <article key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </article>
+          ))}
+        </div>
+        <p>{publicEventPanel.status}</p>
       </div>
 
       <div
@@ -19365,8 +19490,8 @@ function CommunityBossPrepCard({
             <span>Live aggregate refresh</span>
             <strong>{backend.refreshReason}</strong>
             <small>
-              Pulls the public-safe aggregate only. Proof submit can
-              auto-recalculate totals when the auto gate is enabled.
+              Auto-refresh also runs while the app is open. This button is
+              only a fallback public-safe read, not a manual launch task.
             </small>
           </div>
           <button
@@ -19374,7 +19499,7 @@ function CommunityBossPrepCard({
             onClick={onRefreshBackend}
             disabled={backend.loading}
           >
-            {backend.loading ? "Refreshing..." : "Refresh live view"}
+            {backend.loading ? "Refreshing..." : "Refresh now"}
           </button>
         </div>
 
@@ -19810,7 +19935,7 @@ function CommunityBossPrepCard({
           {backend.persisted ? "Aggregate read active" : state.syncLabel}
         </span>
         <b>
-          No PvP · No payout · No wallet value · proof write + auto aggregate
+          No PvP · No payout · No wallet value · auto proof aggregate
           only behind gates
         </b>
       </footer>
@@ -36166,6 +36291,15 @@ function WhatIfScreen({
     void refreshCommunityBossBackendState("Initial aggregate read");
   }, [refreshCommunityBossBackendState]);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      void refreshCommunityBossBackendState("Auto live aggregate refresh");
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, [refreshCommunityBossBackendState]);
+
   async function submitCommunityBossProofDryRun() {
     if (communityBossProofSubmitState.loading) return;
 
@@ -36221,22 +36355,28 @@ function WhatIfScreen({
 
       if (parsed.persisted) {
         void refreshCommunityBossBackendState(
-          "Proof persisted; aggregate refreshed",
+          parsed.autoRecalculated
+            ? "Proof saved; auto aggregate recalculated"
+            : "Proof saved; live aggregate refresh",
         );
       }
 
       notifyApp(
-        parsed.persisted
-          ? "Proof persisted"
-          : parsed.ok
-            ? "Proof checked"
-            : "Proof rejected",
-        parsed.persisted
-          ? "Community Boss proof was stored behind the manual write gate."
-          : parsed.ok
-            ? "Community Boss proof was sanitized. No database write was made unless the gate is open."
-            : parsed.error ||
-              "Community Boss proof was rejected by the endpoint.",
+        parsed.persisted && parsed.autoRecalculated
+          ? "Proof saved + aggregate updated"
+          : parsed.persisted
+            ? "Proof persisted"
+            : parsed.ok
+              ? "Proof checked"
+              : "Proof rejected",
+        parsed.persisted && parsed.autoRecalculated
+          ? "Community Boss proof was stored and public totals were recalculated automatically."
+          : parsed.persisted
+            ? "Community Boss proof was stored behind the manual write gate."
+            : parsed.ok
+              ? "Community Boss proof was sanitized. No database write was made unless the gate is open."
+              : parsed.error ||
+                "Community Boss proof was rejected by the endpoint.",
         "info",
       );
     } catch (error) {
@@ -37477,7 +37617,7 @@ function AdminTreasuryPanel({
 
       if (data.recalculated || recalculation?.recalculated) {
         setCommunityBossRecalcMessage(
-          `Aggregate recalculated for ${recalculation?.weekKey || "current week"}: ${proofRows} safe proof row(s), ${aggregateRow?.total_damage || 0} total damage, ${aggregateRow?.participant_count || 0} participant(s).`,
+          `Fallback aggregate recalculated for ${recalculation?.weekKey || "current week"}: ${proofRows} safe proof row(s), ${aggregateRow?.total_damage || 0} total damage, ${aggregateRow?.participant_count || 0} participant(s).`,
         );
         triggerHaptic("success");
       } else {
