@@ -1184,6 +1184,11 @@ type CommunityBossBackendUiState = {
   proofPersistenceDryRunEnabled: boolean;
   proofPersistenceDryRunReady: boolean;
   canPersistProof: boolean;
+  aggregateRecalcReviewed: boolean;
+  aggregateWriteEnabled: boolean;
+  aggregateManualWriteEnabled: boolean;
+  aggregateWriteImplemented: boolean;
+  canRecalculateAggregate: boolean;
   missing: string[];
 };
 
@@ -1245,6 +1250,11 @@ function defaultCommunityBossBackendUiState(): CommunityBossBackendUiState {
     proofPersistenceDryRunEnabled: false,
     proofPersistenceDryRunReady: false,
     canPersistProof: false,
+    aggregateRecalcReviewed: false,
+    aggregateWriteEnabled: false,
+    aggregateManualWriteEnabled: false,
+    aggregateWriteImplemented: false,
+    canRecalculateAggregate: false,
     missing: [],
   };
 }
@@ -1353,6 +1363,11 @@ function parseCommunityBossBackendUiState(
       readiness.proofPersistenceDryRunEnabled === true,
     proofPersistenceDryRunReady: readiness.proofPersistenceDryRunReady === true,
     canPersistProof: readiness.canPersistProof === true,
+    aggregateRecalcReviewed: readiness.aggregateRecalcReviewed === true,
+    aggregateWriteEnabled: readiness.aggregateWriteEnabled === true,
+    aggregateManualWriteEnabled: readiness.aggregateManualWriteEnabled === true,
+    aggregateWriteImplemented: readiness.aggregateWriteImplemented === true,
+    canRecalculateAggregate: readiness.canRecalculateAggregate === true,
     missing,
   };
 }
@@ -18475,6 +18490,23 @@ function CommunityBossPrepCard({
               {backend.proofPersistenceDryRunReady
                 ? "Server can prepare a no-write upsert row."
                 : "Dry-run server path is still gated."}
+            </small>
+          </article>
+          <article>
+            <span>Aggregate gate</span>
+            <strong>
+              {backend.canRecalculateAggregate
+                ? "Ready"
+                : backend.aggregateWriteEnabled
+                  ? "Flagged"
+                  : "Locked"}
+            </strong>
+            <small>
+              {backend.canRecalculateAggregate
+                ? "Admin route can recalculate public aggregate."
+                : backend.aggregateRecalcReviewed
+                  ? "Aggregate review done, waiting for manual gate."
+                  : "Aggregate recalc review is still off."}
             </small>
           </article>
         </div>

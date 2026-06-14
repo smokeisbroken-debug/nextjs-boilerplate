@@ -6,6 +6,7 @@ import {
   getCommunityBossBackendReadiness,
   getCommunityBossNoStoreHeaders,
   getCurrentCommunityBossWeek,
+  recalculateCommunityBossAggregateInSupabase,
 } from "@/app/lib/brokeCommunityBoss";
 
 export const runtime = "nodejs";
@@ -34,6 +35,14 @@ function isAuthorized(request: NextRequest) {
   return key === secret || bearer === secret;
 }
 
+async function readJson(request: NextRequest) {
+  try {
+    return await request.json();
+  } catch {
+    return {};
+  }
+}
+
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) {
     return NextResponse.json(
@@ -45,29 +54,46 @@ export async function POST(request: NextRequest) {
       {
         status: 401,
         headers: getCommunityBossNoStoreHeaders(),
-      }
+      },
     );
   }
 
+  const body = await readJson(request);
+  const requestedWeekKey =
+    body && typeof body === "object" && "weekKey" in body
+      ? String((body as Record<string, unknown>).weekKey || "")
+      : "";
+  const currentWeek = getCurrentCommunityBossWeek();
+  const result = await recalculateCommunityBossAggregateInSupabase({
+    weekKey: requestedWeekKey || currentWeek.weekKey,
+  });
   const readiness = getCommunityBossBackendReadiness();
 
   return NextResponse.json(
     {
-      ok: true,
+      ok: result.status !== "failed",
       buildVersion: BROKE_APP_BUILD_VERSION,
-      mode: COMMUNITY_BOSS_SYNC_ENABLED ? "skeleton_enabled_no_writes" : "dry_run",
+      mode: COMMUNITY_BOSS_SYNC_ENABLED
+        ? "manual_aggregate_recalculate_gate"
+        : "dry_run",
       syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
-      persisted: false,
-      recalculated: false,
+      persisted: result.persisted,
+      recalculated: result.recalculated,
       writePathReady: readiness.canWrite,
+      aggregateRecalculateReady: readiness.canRecalculateAggregate,
       backendReadiness: readiness,
-      week: getCurrentCommunityBossWeek(),
-      message: "Community Boss aggregate recalculation skeleton is wired but intentionally does not touch Supabase in v59.60.3.",
-      nextStep: "Connect aggregate recalculation only after the reviewed migration exists and write path is enabled explicitly.",
+      week: currentWeek,
+      aggregateRecalculate: result,
+      message: result.recalculated
+        ? "Community Boss aggregate recalculated from safe proof rows behind manual write gate."
+        : "Community Boss aggregate recalculation did not write. Check gate readiness, flags, current week seed, and Supabase response.",
+      nextStep: result.recalculated
+        ? "Next patch can refresh the live UI after proof submit or add controlled post-proof aggregate refresh."
+        : "Enable aggregate manual write gate only after migration, current week seed, proof persistence test, and production approval.",
     },
     {
-      status: 202,
+      status: result.status === "failed" ? 502 : result.recalculated ? 200 : 202,
       headers: getCommunityBossNoStoreHeaders(),
-    }
+    },
   );
 }

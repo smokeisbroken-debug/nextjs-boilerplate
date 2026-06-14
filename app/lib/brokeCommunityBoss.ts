@@ -66,9 +66,19 @@ export const COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED =
 export const COMMUNITY_BOSS_PROOF_MANUAL_WRITE_ENABLED =
   process.env.COMMUNITY_BOSS_PROOF_MANUAL_WRITE_ENABLED === "true";
 
+export const COMMUNITY_BOSS_AGGREGATE_RECALC_REVIEWED =
+  process.env.COMMUNITY_BOSS_AGGREGATE_RECALC_REVIEWED === "true";
+
+export const COMMUNITY_BOSS_AGGREGATE_WRITE_ENABLED =
+  process.env.COMMUNITY_BOSS_AGGREGATE_WRITE_ENABLED === "true";
+
+export const COMMUNITY_BOSS_AGGREGATE_MANUAL_WRITE_ENABLED =
+  process.env.COMMUNITY_BOSS_AGGREGATE_MANUAL_WRITE_ENABLED === "true";
+
 export const COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED = false;
 export const COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED = false;
 export const COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED = true;
+export const COMMUNITY_BOSS_AGGREGATE_WRITE_IMPLEMENTED = true;
 
 const COMMUNITY_BOSS_ROTATION = [
   { code: "subscription-leech", name: "Subscription Leech" },
@@ -325,6 +335,14 @@ export function getCommunityBossBackendReadiness() {
     missing.push("COMMUNITY_BOSS_PROOF_MANUAL_WRITE_ENABLED is not true");
   if (!COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED)
     missing.push("proof write implementation is disabled");
+  if (!COMMUNITY_BOSS_AGGREGATE_RECALC_REVIEWED)
+    missing.push("COMMUNITY_BOSS_AGGREGATE_RECALC_REVIEWED is not true");
+  if (!COMMUNITY_BOSS_AGGREGATE_WRITE_ENABLED)
+    missing.push("COMMUNITY_BOSS_AGGREGATE_WRITE_ENABLED is not true");
+  if (!COMMUNITY_BOSS_AGGREGATE_MANUAL_WRITE_ENABLED)
+    missing.push("COMMUNITY_BOSS_AGGREGATE_MANUAL_WRITE_ENABLED is not true");
+  if (!COMMUNITY_BOSS_AGGREGATE_WRITE_IMPLEMENTED)
+    missing.push("aggregate write implementation is disabled");
 
   const canRead = Boolean(
     COMMUNITY_BOSS_SYNC_ENABLED &&
@@ -350,6 +368,18 @@ export function getCommunityBossBackendReadiness() {
     COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED,
   );
 
+  const aggregateManualWriteReady = Boolean(
+    COMMUNITY_BOSS_SYNC_ENABLED &&
+    COMMUNITY_BOSS_MIGRATION_REVIEWED &&
+    COMMUNITY_BOSS_DB_READ_ENABLED &&
+    supabaseReadEnvReady &&
+    COMMUNITY_BOSS_WRITE_PATH_ENABLED &&
+    COMMUNITY_BOSS_AGGREGATE_RECALC_REVIEWED &&
+    COMMUNITY_BOSS_AGGREGATE_WRITE_ENABLED &&
+    COMMUNITY_BOSS_AGGREGATE_MANUAL_WRITE_ENABLED &&
+    COMMUNITY_BOSS_AGGREGATE_WRITE_IMPLEMENTED,
+  );
+
   return {
     syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
     migrationReviewed: COMMUNITY_BOSS_MIGRATION_REVIEWED,
@@ -368,10 +398,43 @@ export function getCommunityBossBackendReadiness() {
     proofManualWriteEnabled: COMMUNITY_BOSS_PROOF_MANUAL_WRITE_ENABLED,
     proofManualWriteReady,
     proofWriteImplemented: COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED,
+    aggregateRecalcReviewed: COMMUNITY_BOSS_AGGREGATE_RECALC_REVIEWED,
+    aggregateWriteEnabled: COMMUNITY_BOSS_AGGREGATE_WRITE_ENABLED,
+    aggregateManualWriteEnabled: COMMUNITY_BOSS_AGGREGATE_MANUAL_WRITE_ENABLED,
+    aggregateWriteImplemented: COMMUNITY_BOSS_AGGREGATE_WRITE_IMPLEMENTED,
+    aggregateManualWriteReady,
     canSeedWrite: false,
     canPersistProof: proofManualWriteReady,
-    canWrite: proofManualWriteReady,
+    canRecalculateAggregate: aggregateManualWriteReady,
+    canWrite: proofManualWriteReady || aggregateManualWriteReady,
     missing,
+  };
+}
+
+export function getCommunityBossAggregateRecalculateGate() {
+  const readiness = getCommunityBossBackendReadiness();
+  const canRecalculate = Boolean(readiness.canRecalculateAggregate);
+
+  return {
+    status: canRecalculate
+      ? ("manual_recalculate_ready" as const)
+      : readiness.aggregateWriteEnabled
+        ? ("flagged" as const)
+        : ("locked" as const),
+    persisted: false,
+    recalculated: false,
+    canRecalculate,
+    aggregateRecalcReviewed: readiness.aggregateRecalcReviewed,
+    aggregateWriteEnabled: readiness.aggregateWriteEnabled,
+    aggregateManualWriteEnabled: readiness.aggregateManualWriteEnabled,
+    aggregateWriteImplemented: readiness.aggregateWriteImplemented,
+    reason: canRecalculate
+      ? "Aggregate recalculation manual write gate is open. Admin route can recompute public aggregate from safe proof rows."
+      : "Aggregate recalculation is locked until migration review, DB read, write path, aggregate review, and manual aggregate flags are enabled.",
+    targetTable: "broke_community_boss_aggregates",
+    sourceTable: "broke_community_boss_user_proofs",
+    conflictTarget: "week_key",
+    backendReadiness: readiness,
   };
 }
 
@@ -798,6 +861,250 @@ export async function readCommunityBossPublicSnapshotFromSupabase(
       week: fallbackWeek,
       aggregate: getDryRunCommunityBossAggregate(fallbackWeek),
       backendReadiness: readiness,
+    };
+  }
+}
+
+type CommunityBossProofAggregateRow = {
+  weekly_damage?: number | string | null;
+  safe_points?: number | string | null;
+  routine_completed?: boolean | null;
+  challenge_completed?: boolean | null;
+  weakness_hit?: boolean | null;
+  tracking_days?: number | string | null;
+};
+
+function buildCommunityBossAggregateUpsertRow({
+  weekKey,
+  rows,
+}: {
+  weekKey: string;
+  rows: CommunityBossProofAggregateRow[];
+}) {
+  const totalDamage = rows.reduce(
+    (sum, row) => sum + Math.max(0, safeCommunityBossNumber(row.weekly_damage, 0)),
+    0,
+  );
+  const totalSafePoints = rows.reduce(
+    (sum, row) => sum + Math.max(0, safeCommunityBossNumber(row.safe_points, 0)),
+    0,
+  );
+  const routineCount = rows.filter((row) => row.routine_completed === true).length;
+  const challengeCount = rows.filter((row) => row.challenge_completed === true).length;
+  const weaknessHitCount = rows.filter((row) => row.weakness_hit === true).length;
+  const trackingDayTotal = rows.reduce(
+    (sum, row) => sum + Math.min(7, Math.max(0, safeCommunityBossNumber(row.tracking_days, 0))),
+    0,
+  );
+
+  return {
+    week_key: weekKey,
+    total_damage: Math.round(totalDamage),
+    total_safe_points: Math.round(totalSafePoints),
+    participant_count: rows.length,
+    routine_count: routineCount,
+    challenge_count: challengeCount,
+    weakness_hit_count: weaknessHitCount,
+    tracking_day_total: Math.round(trackingDayTotal),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export async function recalculateCommunityBossAggregateInSupabase({
+  weekKey,
+}: {
+  weekKey?: string;
+}) {
+  const week = getCurrentCommunityBossWeek();
+  const targetWeekKey = cleanCommunityBossDbText(weekKey, 12) || week.weekKey;
+  const gate = getCommunityBossAggregateRecalculateGate();
+  const blockedReasons: string[] = [];
+
+  if (!gate.canRecalculate) blockedReasons.push("aggregate manual write gate is closed");
+  if (!hasCommunityBossSupabaseReadEnv())
+    blockedReasons.push("Supabase service env is missing");
+  if (targetWeekKey !== week.weekKey)
+    blockedReasons.push("only current week aggregate can be recalculated by this endpoint");
+
+  if (blockedReasons.length > 0) {
+    return {
+      status: "blocked" as const,
+      attempted: false,
+      persisted: false,
+      recalculated: false,
+      targetTable: "broke_community_boss_aggregates",
+      sourceTable: "broke_community_boss_user_proofs",
+      conflictTarget: "week_key",
+      weekKey: targetWeekKey,
+      proofRowsRead: 0,
+      aggregateRow: null,
+      returnedRow: null,
+      blockedReasons,
+      error: null,
+      gate,
+      guardrails: [
+        "No aggregate write without manual gate",
+        "Reads safe proof rows only",
+        "No wallet value",
+        "No payout math",
+      ],
+    };
+  }
+
+  try {
+    const baseUrl = getCommunityBossSupabaseBaseUrl();
+    const serviceKey = getCommunityBossSupabaseServiceKey();
+    const readParams = new URLSearchParams({
+      select: [
+        "weekly_damage",
+        "safe_points",
+        "routine_completed",
+        "challenge_completed",
+        "weakness_hit",
+        "tracking_days",
+      ].join(","),
+      week_key: `eq.${targetWeekKey}`,
+      limit: "10000",
+    });
+    const readResponse = await fetch(
+      `${baseUrl}/rest/v1/broke_community_boss_user_proofs?${readParams.toString()}`,
+      {
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+      },
+    );
+
+    const readText = await readResponse.text();
+
+    if (!readResponse.ok) {
+      return {
+        status: "failed" as const,
+        attempted: true,
+        persisted: false,
+        recalculated: false,
+        targetTable: "broke_community_boss_aggregates",
+        sourceTable: "broke_community_boss_user_proofs",
+        conflictTarget: "week_key",
+        weekKey: targetWeekKey,
+        proofRowsRead: 0,
+        aggregateRow: null,
+        returnedRow: null,
+        blockedReasons: [],
+        error: `Supabase proof aggregate read ${readResponse.status}: ${readText.slice(0, 260)}`,
+        gate,
+        guardrails: [
+          "Aggregate read attempted behind manual gate",
+          "Read failed safely",
+          "No wallet value",
+          "No payout math",
+        ],
+      };
+    }
+
+    const proofRows = readText
+      ? (JSON.parse(readText) as CommunityBossProofAggregateRow[])
+      : [];
+    const aggregateRow = buildCommunityBossAggregateUpsertRow({
+      weekKey: targetWeekKey,
+      rows: Array.isArray(proofRows) ? proofRows : [],
+    });
+    const writeResponse = await fetch(
+      `${baseUrl}/rest/v1/broke_community_boss_aggregates?on_conflict=week_key`,
+      {
+        method: "POST",
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates,return=representation",
+        },
+        body: JSON.stringify(aggregateRow),
+        cache: "no-store",
+      },
+    );
+    const writeText = await writeResponse.text();
+
+    if (!writeResponse.ok) {
+      return {
+        status: "failed" as const,
+        attempted: true,
+        persisted: false,
+        recalculated: false,
+        targetTable: "broke_community_boss_aggregates",
+        sourceTable: "broke_community_boss_user_proofs",
+        conflictTarget: "week_key",
+        weekKey: targetWeekKey,
+        proofRowsRead: Array.isArray(proofRows) ? proofRows.length : 0,
+        aggregateRow,
+        returnedRow: null,
+        blockedReasons: [],
+        error: `Supabase aggregate upsert ${writeResponse.status}: ${writeText.slice(0, 260)}`,
+        gate,
+        guardrails: [
+          "Aggregate write attempted behind manual gate",
+          "Write failed safely",
+          "No wallet value",
+          "No payout math",
+        ],
+      };
+    }
+
+    const returnedRows = writeText ? (JSON.parse(writeText) as unknown) : null;
+    const returnedRow = Array.isArray(returnedRows)
+      ? (returnedRows[0] ?? null)
+      : returnedRows;
+
+    return {
+      status: "recalculated" as const,
+      attempted: true,
+      persisted: true,
+      recalculated: true,
+      targetTable: "broke_community_boss_aggregates",
+      sourceTable: "broke_community_boss_user_proofs",
+      conflictTarget: "week_key",
+      weekKey: targetWeekKey,
+      proofRowsRead: Array.isArray(proofRows) ? proofRows.length : 0,
+      aggregateRow,
+      returnedRow,
+      blockedReasons: [],
+      error: null,
+      gate,
+      guardrails: [
+        "Public aggregate recalculated from safe proof rows",
+        "Manual aggregate write gate was open",
+        "No wallet value",
+        "No payout math",
+      ],
+    };
+  } catch (error) {
+    return {
+      status: "failed" as const,
+      attempted: true,
+      persisted: false,
+      recalculated: false,
+      targetTable: "broke_community_boss_aggregates",
+      sourceTable: "broke_community_boss_user_proofs",
+      conflictTarget: "week_key",
+      weekKey: targetWeekKey,
+      proofRowsRead: 0,
+      aggregateRow: null,
+      returnedRow: null,
+      blockedReasons: [],
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown Community Boss aggregate recalculation error.",
+      gate,
+      guardrails: [
+        "Aggregate recalculation attempted behind manual gate",
+        "Operation failed safely",
+        "No wallet value",
+        "No payout math",
+      ],
     };
   }
 }

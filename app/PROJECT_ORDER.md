@@ -174,3 +174,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Default state remains locked/no-write.
 - UI now distinguishes dry-run, manual write gate, upsert attempted, and persisted states.
 - No payout, no wallet value, no PvP, no reward promises, and no game economy changes.
+
+
+## v59.61.1 — Community Boss Aggregate Recalculate Manual Gate
+
+- Adds admin-protected aggregate recalculation write path behind manual flags.
+- `POST /api/community-boss/recalculate` can read safe proof rows and upsert public aggregate when all gates are enabled.
+- Community Boss Prep UI now shows Aggregate gate status.
+- No payout, wallet value, PvP, reward promises, or game economy changes.
