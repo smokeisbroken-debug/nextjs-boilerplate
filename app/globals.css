@@ -38442,3 +38442,108 @@ html.embedded-app-view .hero h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.62.2 — Community Boss Public / Admin UI Split */
+.public-community-boss-card .community-boss-prep-head small,
+.public-community-boss-card .community-boss-public-event-panel p,
+.public-community-boss-card .community-boss-guardrail {
+  max-width: 100%;
+}
+
+.public-proof-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.public-proof-result {
+  border-color: rgba(124, 255, 149, 0.14);
+  background: rgba(124, 255, 149, 0.07);
+}
+
+.admin-community-boss-operator-panel {
+  gap: 13px;
+}
+
+.admin-community-boss-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.admin-community-boss-head .admin-community-boss-actions button.ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e9ffee;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.admin-community-boss-details {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 10px;
+}
+
+.admin-community-boss-details summary {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+  list-style: none;
+}
+
+.admin-community-boss-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-community-boss-details summary div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-community-boss-details summary span {
+  color: rgba(203, 255, 213, 0.72);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-community-boss-details summary small {
+  color: rgba(231, 255, 236, 0.7);
+  font-size: 12px;
+}
+
+.admin-community-boss-details summary b {
+  color: #dfffe6;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.admin-runtime-grid,
+.admin-launch-grid,
+.admin-live-flow-grid,
+.admin-launch-console-grid {
+  margin-top: 10px;
+}
+
+.admin-only-missing-flags {
+  margin: 0;
+}
+
+.admin-announcement-panel {
+  margin: 0;
+}
+
+@media (max-width: 620px) {
+  .public-proof-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-community-boss-actions {
+    justify-content: stretch;
+  }
+
+  .admin-community-boss-actions button {
+    flex: 1 1 100%;
+  }
+}

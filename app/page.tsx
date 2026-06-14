@@ -19379,154 +19379,69 @@ function CommunityBossPrepCard({
   backend,
   proofSubmit,
   onSubmitProof,
-  onRefreshBackend,
 }: {
   state: CommunityBossPrepState;
   backend: CommunityBossBackendUiState;
   proofSubmit: CommunityBossProofSubmitUiState;
   onSubmitProof: () => Promise<void>;
-  onRefreshBackend: () => Promise<void>;
 }) {
-  const backendStatusLabel = getCommunityBossBackendStatusLabel(backend);
-  const backendStatusDetail = getCommunityBossBackendStatusDetail(backend);
-  const readLabel = backend.persisted
-    ? "Supabase"
-    : backend.readAttempted
-      ? "Fallback"
-      : "Not tried";
-  const seedLabel = hasCommunityBossSeededWeek(backend)
-    ? "Seeded"
-    : "Not seeded";
   const firstEventState = getCommunityBossFirstEventState(backend, proofSubmit);
-  const liveFlowSteps = getCommunityBossLiveFlowSteps(backend, proofSubmit);
-  const firstEventStatus = getCommunityBossFirstEventStatus(
-    backend,
-    proofSubmit,
-  );
-  const firstEventNextAction = getCommunityBossFirstEventNextAction(
-    backend,
-    proofSubmit,
-  );
-  const launchGuardItems = getCommunityBossLaunchGuardItems(
-    backend,
-    proofSubmit,
-  );
-  const launchGuardStatus = getCommunityBossLaunchGuardStatus(launchGuardItems);
-  const launchConsole = getCommunityBossFirstEventLaunchConsole({
-    backend,
-    proofSubmit,
-    launchGuardItems,
-    launchReady: firstEventState.launchReady,
-  });
-  const firstEventAnnouncement = getCommunityBossFirstEventAnnouncementCopy({
-    state,
-    backend,
-    launchReady: firstEventState.publicCopyUnlocked,
-  });
   const publicEventPanel = getCommunityBossPublicEventPanel({
     backend,
     proofSubmit,
     firstEventState,
   });
-  const runtimeQa = getCommunityBossProductionRuntimeQa(
-    backend,
-    proofSubmit,
-    firstEventState,
-  );
-  const [announcementCopied, setAnnouncementCopied] = useState(false);
-
-  async function copyFirstEventAnnouncement() {
-    if (!firstEventState.publicCopyUnlocked || !firstEventAnnouncement.xCopy)
-      return;
-
-    try {
-      await navigator.clipboard.writeText(firstEventAnnouncement.xCopy);
-      triggerHaptic("success");
-      setAnnouncementCopied(true);
-      window.setTimeout(() => setAnnouncementCopied(false), 1600);
-      notifyApp(
-        "Announcement copied",
-        "First Community Boss public copy is ready to post.",
-      );
-    } catch {
-      setAnnouncementCopied(false);
-      notifyApp(
-        "Copy unavailable",
-        "Your browser blocked clipboard access.",
-        "info",
-      );
-    }
-  }
+  const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
+  const proofStatusLabel = proofSubmit.loading
+    ? "Submitting"
+    : proofSubmit.persisted
+      ? "Proof saved"
+      : proofSubmit.submitted && proofSubmit.ok
+        ? "Proof checked"
+        : proofSubmit.submitted
+          ? "Proof blocked"
+          : "Ready";
+  const proofStatusDetail = proofSubmit.loading
+    ? "Sending your safe boss proof."
+    : proofSubmit.persisted && proofSubmit.autoRecalculated
+      ? "Your proof was saved and community totals were updated."
+      : proofSubmit.persisted
+        ? "Your proof was saved. Community totals will update automatically."
+        : proofSubmit.submitted && proofSubmit.ok
+          ? "Your proof was checked. Live write opens when backend gates are ready."
+          : proofSubmit.submitted && proofSubmit.error
+            ? "Proof could not be submitted yet. Try again later."
+            : "Submit real app proof to help the weekly Community Boss.";
+  const communityUpdateLabel = liveAggregateReady
+    ? "Live"
+    : proofSubmit.persisted
+      ? "Syncing"
+      : backend.persisted
+        ? "Preparing"
+        : "Opening soon";
 
   return (
-    <section className="community-boss-prep-card">
+    <section className="community-boss-prep-card public-community-boss-card">
       <div className="community-boss-prep-head">
         <div>
-          <span>Community Boss Prep · {state.weekKey}</span>
+          <span>Community Boss · {state.weekKey}</span>
           <strong>{state.bossName}</strong>
           <small>
-            First live event release candidate. Safe proofs can auto-update
-            public aggregate when backend gates are open. No payout math.
+            A weekly community boss powered by real app actions. No payout
+            promise, no wallet value, no PvP.
           </small>
         </div>
-        <b>{state.prepLabel}</b>
-      </div>
-
-      <div className="social-game-guide-strip compact">
-        <strong>Backend readiness</strong>
-        <span>{backendStatusDetail}</span>
-      </div>
-
-      <div
-        className={`community-boss-runtime-qa-panel ${runtimeQa.ready ? "ready" : "blocked"}`}
-      >
-        <div className="community-boss-runtime-qa-head">
-          <div>
-            <span>Production runtime QA</span>
-            <strong>{runtimeQa.label}</strong>
-            <small>{runtimeQa.detail}</small>
-          </div>
-          <b>{runtimeQa.badge}</b>
-        </div>
-
-        <div className="community-boss-runtime-qa-grid">
-          {runtimeQa.items.map((item) => (
-            <article
-              key={item.label}
-              className={item.ready ? "ready" : "blocked"}
-            >
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-              <small>{item.detail}</small>
-            </article>
-          ))}
-        </div>
-
-        {runtimeQa.missingFlags.length > 0 ? (
-          <div className="community-boss-runtime-qa-missing">
-            <span>Missing / blocking flags</span>
-            <div>
-              {runtimeQa.missingFlags.slice(0, 6).map((item) => (
-                <b key={item}>{item}</b>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p>
-            Runtime QA reads public-safe status only. No balances, wallet value,
-            payout math, or private financial data.
-          </p>
-        )}
+        <b>{publicEventPanel.badge}</b>
       </div>
 
       <div className={`community-boss-public-event-panel ${publicEventPanel.tone}`}>
         <div className="community-boss-public-event-head">
           <div>
-            <span>First live event</span>
+            <span>Community event</span>
             <strong>{publicEventPanel.label}</strong>
             <small>{publicEventPanel.detail}</small>
           </div>
-          <b>{publicEventPanel.badge}</b>
+          <b>{communityUpdateLabel}</b>
         </div>
         <div className="community-boss-public-event-grid">
           {publicEventPanel.stats.map((item) => (
@@ -19541,375 +19456,32 @@ function CommunityBossPrepCard({
       </div>
 
       <div
-        className={`community-boss-backend-panel ${backend.persisted ? "seeded" : "dry"}`}
-      >
-        <div className="community-boss-backend-head">
-          <div>
-            <span>Aggregate source</span>
-            <strong>{backendStatusLabel}</strong>
-            <small>
-              {backend.weekKey !== "—"
-                ? `${backend.bossName} · ${backend.weekKey}`
-                : state.weekRangeLabel}
-            </small>
-          </div>
-          <b>{backend.dataSource === "supabase" ? "DB read" : "Dry-run"}</b>
-        </div>
-
-        <div className="community-boss-backend-grid">
-          <article>
-            <span>Week row</span>
-            <strong>{seedLabel}</strong>
-            <small>
-              {backend.persisted
-                ? "Current week exists in public view."
-                : "Seed current week before live aggregate."}
-            </small>
-          </article>
-          <article>
-            <span>Read path</span>
-            <strong>{readLabel}</strong>
-            <small>
-              {backend.canRead
-                ? "Flags/env ready."
-                : "Waiting for flags/env/review."}
-            </small>
-          </article>
-          <article>
-            <span>Community damage</span>
-            <strong>{backend.totalDamage}</strong>
-            <small>
-              {backend.participantCount} participant
-              {backend.participantCount === 1 ? "" : "s"} ·{" "}
-              {backend.progressPercent}%
-            </small>
-          </article>
-          <article>
-            <span>Live refresh</span>
-            <strong>{getCommunityBossAggregateFreshnessLabel(backend)}</strong>
-            <small>{getCommunityBossAggregateFreshnessDetail(backend)}</small>
-          </article>
-          <article>
-            <span>Write path</span>
-            <strong>{backend.canWrite ? "Enabled" : "Disabled"}</strong>
-            <small>
-              Proof and aggregate writes stay behind explicit gates.
-            </small>
-          </article>
-          <article>
-            <span>Proof gate</span>
-            <strong>
-              {backend.canPersistProof
-                ? "Ready"
-                : backend.proofWriteEnabled
-                  ? "Flagged"
-                  : "Locked"}
-            </strong>
-            <small>
-              {backend.proofPersistenceReviewed
-                ? "Persistence reviewed flag is on."
-                : "Persistence review flag is off."}
-            </small>
-          </article>
-          <article>
-            <span>Dry-run path</span>
-            <strong>
-              {backend.proofPersistenceDryRunReady
-                ? "Ready"
-                : backend.proofPersistenceDryRunEnabled
-                  ? "Flagged"
-                  : "Locked"}
-            </strong>
-            <small>
-              {backend.proofPersistenceDryRunReady
-                ? "Server can prepare a no-write upsert row."
-                : "Dry-run server path is still gated."}
-            </small>
-          </article>
-          <article>
-            <span>Aggregate gate</span>
-            <strong>
-              {backend.canRecalculateAggregate
-                ? "Ready"
-                : backend.aggregateWriteEnabled
-                  ? "Flagged"
-                  : "Locked"}
-            </strong>
-            <small>
-              {backend.canRecalculateAggregate
-                ? "Aggregate route can update public totals."
-                : backend.aggregateRecalcReviewed
-                  ? "Aggregate review done, waiting for write gate."
-                  : "Aggregate recalc review is still off."}
-            </small>
-          </article>
-          <article>
-            <span>Auto recalc</span>
-            <strong>
-              {backend.canAutoRecalculateAfterProof
-                ? "Automatic"
-                : backend.autoRecalculateAfterProofEnabled
-                  ? "Flagged"
-                  : "Locked"}
-            </strong>
-            <small>
-              {backend.canAutoRecalculateAfterProof
-                ? "Proof submit recalculates public totals automatically."
-                : "No founder action needed once this auto gate is enabled."}
-            </small>
-          </article>
-        </div>
-
-        {backend.missing.length > 0 && (
-          <div className="community-boss-backend-missing">
-            {backend.missing.slice(0, 3).map((item) => (
-              <span key={item}>{item}</span>
-            ))}
-          </div>
-        )}
-
-        <div className="community-boss-live-refresh-row">
-          <div>
-            <span>Live aggregate refresh</span>
-            <strong>{backend.refreshReason}</strong>
-            <small>
-              Auto-refresh also runs while the app is open. This button is
-              only a fallback public-safe read, not a manual launch task.
-            </small>
-          </div>
-          <button
-            type="button"
-            onClick={onRefreshBackend}
-            disabled={backend.loading}
-          >
-            {backend.loading ? "Refreshing..." : "Refresh now"}
-          </button>
-        </div>
-
-        <div
-          className={`community-boss-first-event-state-panel ${firstEventState.severity}`}
-        >
-          <div>
-            <span>First event state</span>
-            <strong>{firstEventState.label}</strong>
-            <small>{firstEventState.detail}</small>
-          </div>
-          <b>{firstEventState.stage}</b>
-          <p>{firstEventState.nextAction}</p>
-          {firstEventState.blockers.length > 0 && (
-            <div className="community-boss-first-event-state-blockers">
-              {firstEventState.blockers.slice(0, 4).map((item) => (
-                <span key={item}>{item}</span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div
-          className={`community-boss-live-flow-panel ${firstEventState.launchReady ? "ready" : "checking"}`}
-        >
-          <div className="community-boss-live-flow-head">
-            <div>
-              <span>Live flow QA</span>
-              <strong>{firstEventStatus.label}</strong>
-              <small>{firstEventStatus.detail}</small>
-            </div>
-            <b>
-              {firstEventStatus.readyCount}/{firstEventStatus.total}
-            </b>
-          </div>
-
-          <div className="community-boss-live-flow-grid">
-            {liveFlowSteps.map((step) => (
-              <article
-                key={step.label}
-                className={step.ready ? "ready" : "pending"}
-              >
-                <span>{step.label}</span>
-                <strong>{step.value}</strong>
-                <small>{step.detail}</small>
-              </article>
-            ))}
-          </div>
-
-          <div className="community-boss-first-event-next">
-            <span>First event next action</span>
-            <strong>{firstEventNextAction}</strong>
-            <small>
-              First live event stays public-safe: no payout promise, no wallet
-              value, no PvP, no private financial data.
-            </small>
-          </div>
-        </div>
-
-        <div
-          className={`community-boss-launch-guard-panel ${launchGuardStatus.ready ? "ready" : "locked"}`}
-        >
-          <div className="community-boss-launch-guard-head">
-            <div>
-              <span>First event launch guard</span>
-              <strong>{launchGuardStatus.label}</strong>
-              <small>{launchGuardStatus.detail}</small>
-            </div>
-            <b>
-              {launchGuardStatus.readyCount}/{launchGuardStatus.total}
-            </b>
-          </div>
-
-          <div className="community-boss-launch-guard-grid">
-            {launchGuardItems.map((item) => (
-              <article
-                key={item.label}
-                className={item.ready ? "ready" : "locked"}
-              >
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-                <small>{item.detail}</small>
-              </article>
-            ))}
-          </div>
-
-          <p className="community-boss-launch-guard-note">
-            Launch is blocked until proof write, automatic aggregate
-            recalculation, and live aggregate read are all verified. No payout,
-            no wallet value, no PvP.
-          </p>
-        </div>
-
-        <div
-          className={`community-boss-launch-console-panel ${firstEventState.launchReady ? "ready" : "locked"}`}
-        >
-          <div className="community-boss-launch-console-head">
-            <div>
-              <span>First event launch console</span>
-              <strong>{launchConsole.label}</strong>
-              <small>{launchConsole.detail}</small>
-            </div>
-            <b>{launchConsole.badge}</b>
-          </div>
-
-          <div className="community-boss-launch-console-grid">
-            {launchConsole.steps.map((step) => (
-              <article
-                key={step.label}
-                className={step.ready ? "ready" : "pending"}
-              >
-                <span>{step.label}</span>
-                <strong>{step.value}</strong>
-                <small>{step.detail}</small>
-              </article>
-            ))}
-          </div>
-
-          {launchConsole.blockers.length > 0 ? (
-            <div className="community-boss-launch-console-blockers">
-              <span>Blocking items</span>
-              <div>
-                {launchConsole.blockers.slice(0, 4).map((item) => (
-                  <b key={item.label}>{item.label}</b>
-                ))}
-              </div>
-              <small>
-                Do not post the first live announcement until this list is
-                empty.
-              </small>
-            </div>
-          ) : (
-            <p className="community-boss-launch-console-clear">
-              Launch path is clear. Final public copy remains factual: real app
-              actions, public aggregate, no payout promise, no wallet value, no
-              PvP.
-            </p>
-          )}
-        </div>
-
-        <div
-          className={`community-boss-announcement-panel ${firstEventState.publicCopyUnlocked ? "ready" : "locked"}`}
-        >
-          <div className="community-boss-announcement-head">
-            <div>
-              <span>First event public copy</span>
-              <strong>{firstEventAnnouncement.statusLabel}</strong>
-              <small>{firstEventAnnouncement.statusDetail}</small>
-            </div>
-            <b>{firstEventState.publicCopyUnlocked ? "Ready" : "Locked"}</b>
-          </div>
-
-          <div className="community-boss-announcement-copy">
-            <span>
-              {firstEventState.publicCopyUnlocked
-                ? "Launch-ready X copy"
-                : "Operator note"}
-            </span>
-            <p>
-              {firstEventState.publicCopyUnlocked
-                ? firstEventAnnouncement.xCopy
-                : firstEventAnnouncement.operatorNote}
-            </p>
-          </div>
-
-          <div className="community-boss-announcement-tags">
-            {firstEventAnnouncement.tags.map((tag) => (
-              <span key={tag}>{tag}</span>
-            ))}
-          </div>
-
-          <div className="community-boss-announcement-actions">
-            <button
-              type="button"
-              onClick={copyFirstEventAnnouncement}
-              disabled={!firstEventState.publicCopyUnlocked}
-            >
-              {announcementCopied ? "Copied" : "Copy launch post"}
-            </button>
-            <small>
-              Copy unlocks only after Launch Guard passes. Public wording stays
-              factual: no payout promise, no wallet value, no PvP.
-            </small>
-          </div>
-        </div>
-      </div>
-
-      <div
         className={`community-boss-proof-submit-panel ${proofSubmit.submitted ? "submitted" : "idle"}`}
       >
         <div className="community-boss-proof-submit-head">
           <div>
-            <span>Safe proof submit</span>
-            <strong>
-              {proofSubmit.loading
-                ? "Submitting safe proof"
-                : proofSubmit.submitted
-                  ? proofSubmit.ok
-                    ? proofSubmit.persisted
-                      ? "Proof saved"
-                      : "Proof checked"
-                    : "Proof rejected"
-                  : "Submit safe proof"}
-            </strong>
-            <small>
-              POST checks the safe payload. If gates are open, it saves proof
-              and auto-recalculates public aggregate.
-            </small>
+            <span>Your boss proof</span>
+            <strong>{proofStatusLabel}</strong>
+            <small>{proofStatusDetail}</small>
           </div>
           <b>
             {proofSubmit.autoRecalculated
-              ? "Auto-updated"
+              ? "Updated"
               : proofSubmit.persisted
-                ? "Persisted"
-                : "Checked"}
+                ? "Saved"
+                : "Safe proof"}
           </b>
         </div>
 
-        <div className="community-boss-proof-submit-grid">
+        <div className="community-boss-proof-submit-grid public-proof-grid">
           <article>
-            <span>Damage</span>
+            <span>Your hit</span>
             <strong>
               {proofSubmit.submitted
                 ? proofSubmit.weeklyDamage
                 : state.localDamage}
             </strong>
-            <small>Weekly Boss proof only</small>
+            <small>Weekly Boss damage from real actions</small>
           </article>
           <article>
             <span>Safe Points</span>
@@ -19921,139 +19493,30 @@ function CommunityBossPrepCard({
             <small>Public-safe social progress</small>
           </article>
           <article>
-            <span>Proof count</span>
-            <strong>
-              {proofSubmit.submitted
-                ? proofSubmit.proofCount
-                : state.proofCount}
-            </strong>
-            <small>Real action sources</small>
-          </article>
-          <article>
-            <span>Persisted</span>
-            <strong>{proofSubmit.persisted ? "Yes" : "No"}</strong>
+            <span>Community damage</span>
+            <strong>{liveAggregateReady ? backend.totalDamage : "Preparing"}</strong>
             <small>
-              {proofSubmit.persisted
-                ? "Manual gate write completed"
-                : "No database write unless gate is open"}
+              {liveAggregateReady
+                ? `${backend.progressPercent}% of weekly boss HP`
+                : "Live total appears after first safe proof"}
             </small>
           </article>
           <article>
-            <span>Server auth</span>
-            <strong>
-              {proofSubmit.submitted ? proofSubmit.authLabel : "Prepared"}
-            </strong>
-            <small>
-              {proofSubmit.submitted
-                ? proofSubmit.authSource
-                : "Telegram/session check next"}
-            </small>
-          </article>
-          <article>
-            <span>Persistence gate</span>
-            <strong>
-              {proofSubmit.submitted ? proofSubmit.persistenceLabel : "Locked"}
-            </strong>
-            <small>
-              {proofSubmit.submitted
-                ? proofSubmit.persistenceDetail
-                : "Flag prep only · no write"}
-            </small>
-          </article>
-          <article>
-            <span>Server path</span>
-            <strong>
-              {proofSubmit.submitted
-                ? proofSubmit.persistenceDryRunPrepared
-                  ? "Prepared"
-                  : "Blocked"
-                : "Not checked"}
-            </strong>
-            <small>
-              {proofSubmit.submitted
-                ? `${proofSubmit.persistenceDryRunStatus} · write ${proofSubmit.persistenceWriteStatus}`
-                : "Dry-run upsert prep"}
-            </small>
-          </article>
-          <article>
-            <span>DB target</span>
-            <strong>
-              {proofSubmit.submitted ? proofSubmit.persistenceTargetTable : "—"}
-            </strong>
-            <small>
-              {proofSubmit.persisted
-                ? "Supabase upsert completed"
-                : proofSubmit.persistenceWriteAttempted
-                  ? "Supabase upsert attempted"
-                  : "No Supabase upsert executed"}
-            </small>
-          </article>
-          <article>
-            <span>Auto aggregate</span>
-            <strong>
-              {proofSubmit.submitted
-                ? proofSubmit.autoRecalculated
-                  ? "Updated"
-                  : proofSubmit.autoRecalculateAttempted
-                    ? proofSubmit.autoRecalculateStatus
-                    : "Not run"
-                : "Prepared"}
-            </strong>
-            <small>
-              {proofSubmit.submitted
-                ? proofSubmit.autoRecalculateDetail
-                : "Runs after proof save when auto gate is open"}
-            </small>
+            <span>Participants</span>
+            <strong>{liveAggregateReady ? backend.participantCount : "—"}</strong>
+            <small>No wallet balances or private finance data</small>
           </article>
         </div>
 
         {proofSubmit.submitted && (
-          <div className="community-boss-proof-submit-result">
-            <span>
-              {proofSubmit.error
-                ? proofSubmit.error
-                : `Sanitized proof for ${proofSubmit.weekKey}`}
-            </span>
+          <div className="community-boss-proof-submit-result public-proof-result">
+            <span>{proofStatusLabel}</span>
             <b>
-              Auth{" "}
-              {proofSubmit.authenticated
-                ? "verified"
-                : proofSubmit.authRequired
-                  ? "required"
-                  : "dry-run"}{" "}
-              · Server path{" "}
-              {proofSubmit.persisted
-                ? "persisted"
-                : proofSubmit.persistenceDryRunPrepared
-                  ? "prepared"
-                  : "blocked"}{" "}
-              · Persistence{" "}
-              {proofSubmit.persisted
-                ? "saved"
-                : proofSubmit.canPersist
-                  ? "ready"
-                  : "locked"}{" "}
-              · Routine {proofSubmit.routineCompleted ? "yes" : "no"} · Tracking{" "}
+              Routine {proofSubmit.routineCompleted ? "yes" : "no"} · Tracking{" "}
               {proofSubmit.trackingDays}/7 · Challenge{" "}
               {proofSubmit.challengeCompleted ? "yes" : "no"} · Weakness{" "}
               {proofSubmit.weaknessHit ? "hit" : "open"}
             </b>
-          </div>
-        )}
-
-        {proofSubmit.persistenceBlockedReasons.length > 0 && (
-          <div className="community-boss-proof-guardrails blocked">
-            {proofSubmit.persistenceBlockedReasons.map((item) => (
-              <span key={item}>{item}</span>
-            ))}
-          </div>
-        )}
-
-        {proofSubmit.guardrails.length > 0 && (
-          <div className="community-boss-proof-guardrails">
-            {proofSubmit.guardrails.slice(0, 4).map((item) => (
-              <span key={item}>{item}</span>
-            ))}
           </div>
         )}
 
@@ -20064,37 +19527,41 @@ function CommunityBossPrepCard({
         >
           {proofSubmit.loading
             ? "Submitting..."
-            : proofSubmit.submitted
-              ? "Resubmit safe proof"
-              : "Submit safe proof"}
+            : proofSubmit.persisted
+              ? "Submit another proof"
+              : "Submit my boss proof"}
         </button>
       </div>
 
       <div
-        className="community-boss-preview-arena"
-        aria-label="Community boss preview"
+        className="community-boss-preview-arena public-community-boss-proof-preview"
+        aria-label="Community boss proof preview"
       >
         <div>
-          <span>Local proof</span>
+          <span>Your proof</span>
           <strong>{state.localDamage}</strong>
           <small>Current Weekly Boss damage</small>
         </div>
         <i aria-hidden="true" />
         <div>
-          <span>Community shadow</span>
-          <strong>{state.projectedCommunityProgress}%</strong>
-          <small>Preview only · not synced</small>
+          <span>Community</span>
+          <strong>{liveAggregateReady ? backend.progressPercent : state.projectedCommunityProgress}%</strong>
+          <small>{liveAggregateReady ? "Live public progress" : "Preparing live event"}</small>
         </div>
       </div>
 
       <div
         className="community-boss-meter"
-        aria-label={`Community boss prep ${state.projectedCommunityProgress}%`}
+        aria-label={`Community boss progress ${liveAggregateReady ? backend.progressPercent : state.projectedCommunityProgress}%`}
       >
-        <i style={{ width: `${state.projectedCommunityProgress}%` }} />
+        <i
+          style={{
+            width: `${liveAggregateReady ? backend.progressPercent : state.projectedCommunityProgress}%`,
+          }}
+        />
       </div>
 
-      <div className="community-boss-prep-grid">
+      <div className="community-boss-prep-grid public-community-boss-grid">
         {state.lanes.map((lane) => (
           <article key={lane.id} className={lane.ready ? "ready" : "locked"}>
             <div>
@@ -20107,20 +19574,9 @@ function CommunityBossPrepCard({
         ))}
       </div>
 
-      <div className="community-boss-next">
-        <span>Next prep action</span>
-        <strong>{state.nextPrepAction}</strong>
-      </div>
-
       <footer className="community-boss-guardrail">
-        <span>
-          {state.weekRangeLabel} ·{" "}
-          {backend.persisted ? "Aggregate read active" : state.syncLabel}
-        </span>
-        <b>
-          No PvP · No payout · No wallet value · auto proof aggregate
-          only behind gates
-        </b>
+        <span>{state.weekRangeLabel} · Auto-updates while the app is open</span>
+        <b>No PvP · No payout promise · No wallet value</b>
       </footer>
     </section>
   );
@@ -37122,9 +36578,6 @@ function WhatIfScreen({
           backend={communityBossBackendState}
           proofSubmit={communityBossProofSubmitState}
           onSubmitProof={submitCommunityBossProofDryRun}
-          onRefreshBackend={() =>
-            refreshCommunityBossBackendState("Manual aggregate refresh")
-          }
         />
       </details>
 
@@ -37600,6 +37053,117 @@ function AdminTreasuryPanel({
     useState("");
   const [communityBossRecalcResult, setCommunityBossRecalcResult] =
     useState<AdminCommunityBossRecalculateResponse | null>(null);
+  const [communityBossLaunchCopyCopied, setCommunityBossLaunchCopyCopied] =
+    useState(false);
+  const [communityBossBackend, setCommunityBossBackend] =
+    useState<CommunityBossBackendUiState>(() =>
+      defaultCommunityBossBackendUiState(),
+    );
+  const communityBossProofSubmit = useMemo(
+    () => defaultCommunityBossProofSubmitUiState(),
+    [],
+  );
+  const communityBossState = useMemo<CommunityBossPrepState>(
+    () => ({
+      weekKey: communityBossBackend.weekKey !== "—" ? communityBossBackend.weekKey : "operator",
+      weekRangeLabel:
+        communityBossBackend.weekKey !== "—"
+          ? communityBossBackend.weekKey
+          : "Current Community Boss week",
+      bossName:
+        communityBossBackend.bossName !== "—"
+          ? communityBossBackend.bossName
+          : "Community Boss",
+      prepLabel: communityBossBackend.persisted ? "Live read" : "Admin check",
+      syncLabel:
+        communityBossBackend.dataSource === "supabase"
+          ? "Supabase public read"
+          : "Dry-run/fallback",
+      localDamage: communityBossBackend.totalDamage,
+      safeSocialPoints: communityBossBackend.totalSafePoints,
+      projectedCommunityProgress: communityBossBackend.progressPercent,
+      proofCount: communityBossBackend.participantCount,
+      nextPrepAction:
+        communityBossBackend.canAutoRecalculateAfterProof
+          ? "Submit safe proof and let auto aggregate update totals."
+          : "Enable auto recalc gate before public launch.",
+      lanes: [],
+    }),
+    [communityBossBackend],
+  );
+
+  const onRefreshCommunityBossBackend = useCallback(async () => {
+    setCommunityBossBackend((current) => ({
+      ...current,
+      loading: true,
+      readError: null,
+      refreshReason: "Admin Community Boss refresh",
+    }));
+
+    try {
+      const response = await fetch("/api/community-boss/current", {
+        cache: "no-store",
+      });
+      const payload = await response.json();
+      const parsed = parseCommunityBossBackendUiState(payload);
+      setCommunityBossBackend({
+        ...parsed,
+        refreshReason: parsed.refreshReason || "Admin Community Boss refresh",
+      });
+    } catch (error) {
+      setCommunityBossBackend((current) => ({
+        ...current,
+        loading: false,
+        loaded: true,
+        dataSource: "dry_run",
+        persisted: false,
+        readAttempted: true,
+        refreshedAt: new Date().toISOString(),
+        refreshReason: "Admin Community Boss refresh failed",
+        readError:
+          error instanceof Error
+            ? error.message.slice(0, 180)
+            : "Community Boss aggregate refresh failed.",
+      }));
+    }
+  }, []);
+
+  useEffect(() => {
+    void onRefreshCommunityBossBackend();
+  }, [onRefreshCommunityBossBackend]);
+
+  const communityBossFirstEventState = getCommunityBossFirstEventState(
+    communityBossBackend,
+    communityBossProofSubmit,
+  );
+  const communityBossRuntimeQa = getCommunityBossProductionRuntimeQa(
+    communityBossBackend,
+    communityBossProofSubmit,
+    communityBossFirstEventState,
+  );
+  const communityBossLiveFlowSteps = getCommunityBossLiveFlowSteps(
+    communityBossBackend,
+    communityBossProofSubmit,
+  );
+  const communityBossLaunchGuardItems = getCommunityBossLaunchGuardItems(
+    communityBossBackend,
+    communityBossProofSubmit,
+  );
+  const communityBossLaunchGuardStatus = getCommunityBossLaunchGuardStatus(
+    communityBossLaunchGuardItems,
+  );
+  const communityBossLaunchConsole = getCommunityBossFirstEventLaunchConsole({
+    backend: communityBossBackend,
+    proofSubmit: communityBossProofSubmit,
+    launchGuardItems: communityBossLaunchGuardItems,
+    launchReady: communityBossFirstEventState.launchReady,
+  });
+  const communityBossFirstEventAnnouncement =
+    getCommunityBossFirstEventAnnouncementCopy({
+      state: communityBossState,
+      backend: communityBossBackend,
+      launchReady: communityBossFirstEventState.publicCopyUnlocked,
+    });
 
   useEffect(() => {
     setAdminEmbeddedView(isEmbeddedAppView());
@@ -37802,6 +37366,7 @@ function AdminTreasuryPanel({
         setCommunityBossRecalcMessage(
           `Fallback aggregate recalculated for ${recalculation?.weekKey || "current week"}: ${proofRows} safe proof row(s), ${aggregateRow?.total_damage || 0} total damage, ${aggregateRow?.participant_count || 0} participant(s).`,
         );
+        await onRefreshCommunityBossBackend();
         triggerHaptic("success");
       } else {
         setCommunityBossRecalcMessage(
@@ -38453,6 +38018,25 @@ function AdminTreasuryPanel({
     }
   }
 
+  async function copyCommunityBossLaunchPost() {
+    if (
+      !communityBossFirstEventState.publicCopyUnlocked ||
+      !communityBossFirstEventAnnouncement.xCopy
+    )
+      return;
+
+    try {
+      await navigator.clipboard.writeText(communityBossFirstEventAnnouncement.xCopy);
+      setCommunityBossLaunchCopyCopied(true);
+      window.setTimeout(() => setCommunityBossLaunchCopyCopied(false), 1600);
+      triggerHaptic("success");
+    } catch {
+      setCommunityBossLaunchCopyCopied(false);
+      setCommunityBossRecalcMessage("Clipboard blocked. Copy the public text manually.");
+      triggerHaptic("error");
+    }
+  }
+
   return (
     <section className="admin-clean-panel">
       <div className="admin-clean-hero">
@@ -38486,36 +38070,252 @@ function AdminTreasuryPanel({
       </label>
 
       <section
-        className={`admin-community-boss-panel ${communityBossRecalcResult?.recalculated ? "success" : communityBossRecalcResult ? "checked" : ""}`}
+        className={`admin-community-boss-panel admin-community-boss-operator-panel ${communityBossRecalcResult?.recalculated ? "success" : communityBossRecalcResult ? "checked" : ""}`}
       >
         <div className="admin-community-boss-head">
           <div>
             <span>Community Boss admin</span>
-            <strong>Fallback aggregate recalculation</strong>
+            <strong>Operator tools / launch control</strong>
             <small>
-              Fallback only. Normal flow auto-recalculates after proof save.
-              Uses safe proof rows only; no payouts, balances, wallet value, or
-              PvP.
+              Technical QA, launch guard, env blockers, public copy, and fallback
+              recalc stay here. Public users see only the simple Community Boss
+              card in the app.
             </small>
           </div>
-          <button
-            type="button"
-            onClick={runCommunityBossAggregateRecalculate}
-            disabled={
-              communityBossRecalcLoading ||
-              distributionSaving ||
-              serverAutoSending
-            }
-          >
-            {communityBossRecalcLoading
-              ? "Recalculating..."
-              : "Fallback recalc"}
-          </button>
+          <div className="admin-community-boss-actions">
+            <button
+              type="button"
+              className="ghost"
+              onClick={onRefreshCommunityBossBackend}
+              disabled={communityBossBackend.loading || distributionSaving}
+            >
+              {communityBossBackend.loading ? "Refreshing..." : "Refresh read"}
+            </button>
+            <button
+              type="button"
+              onClick={runCommunityBossAggregateRecalculate}
+              disabled={
+                communityBossRecalcLoading ||
+                distributionSaving ||
+                serverAutoSending
+              }
+            >
+              {communityBossRecalcLoading
+                ? "Recalculating..."
+                : "Fallback recalc"}
+            </button>
+          </div>
         </div>
 
         <div className="admin-community-boss-grid">
           <article>
-            <span>Status</span>
+            <span>Runtime QA</span>
+            <strong>{communityBossRuntimeQa.label}</strong>
+            <small>{communityBossRuntimeQa.detail}</small>
+          </article>
+          <article>
+            <span>First event state</span>
+            <strong>{communityBossFirstEventState.label}</strong>
+            <small>{communityBossFirstEventState.nextAction}</small>
+          </article>
+          <article>
+            <span>Launch guard</span>
+            <strong>{communityBossLaunchGuardStatus.label}</strong>
+            <small>
+              {communityBossLaunchGuardStatus.readyCount}/
+              {communityBossLaunchGuardStatus.total} checks ready
+            </small>
+          </article>
+          <article>
+            <span>Auto recalc</span>
+            <strong>
+              {communityBossBackend.canAutoRecalculateAfterProof
+                ? "Automatic"
+                : "Locked"}
+            </strong>
+            <small>
+              {communityBossBackend.canAutoRecalculateAfterProof
+                ? "Proof save can update aggregate without founder action."
+                : "Enable auto aggregate gate before live launch."}
+            </small>
+          </article>
+          <article>
+            <span>Live totals</span>
+            <strong>
+              {communityBossBackend.participantCount} /{" "}
+              {communityBossBackend.totalDamage}
+            </strong>
+            <small>participants / public damage</small>
+          </article>
+          <article>
+            <span>Last refresh</span>
+            <strong>{communityBossBackend.refreshReason}</strong>
+            <small>{communityBossBackend.refreshedAt || "Not refreshed yet"}</small>
+          </article>
+        </div>
+
+        {communityBossRuntimeQa.missingFlags.length > 0 && (
+          <div className="community-boss-runtime-qa-missing admin-only-missing-flags">
+            <span>Missing / blocking flags</span>
+            <div>
+              {communityBossRuntimeQa.missingFlags.slice(0, 8).map((item) => (
+                <b key={item}>{item}</b>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <details className="admin-community-boss-details">
+          <summary>
+            <div>
+              <span>Runtime QA details</span>
+              <small>Env/read/write/auto-recalc checks for first live event.</small>
+            </div>
+            <b>{communityBossRuntimeQa.badge}</b>
+          </summary>
+          <div className="community-boss-runtime-qa-grid admin-runtime-grid">
+            {communityBossRuntimeQa.items.map((item) => (
+              <article
+                key={item.label}
+                className={item.ready ? "ready" : "blocked"}
+              >
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+        </details>
+
+        <details className="admin-community-boss-details">
+          <summary>
+            <div>
+              <span>Launch guard</span>
+              <small>Operator checklist hidden from normal users.</small>
+            </div>
+            <b>
+              {communityBossLaunchGuardStatus.readyCount}/
+              {communityBossLaunchGuardStatus.total}
+            </b>
+          </summary>
+          <div className="community-boss-launch-guard-grid admin-launch-grid">
+            {communityBossLaunchGuardItems.map((item) => (
+              <article
+                key={item.label}
+                className={item.ready ? "ready" : "locked"}
+              >
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+        </details>
+
+        <details className="admin-community-boss-details">
+          <summary>
+            <div>
+              <span>Live flow sequence</span>
+              <small>Proof write → auto aggregate → public read.</small>
+            </div>
+            <b>{communityBossFirstEventState.stage}</b>
+          </summary>
+          <div className="community-boss-live-flow-grid admin-live-flow-grid">
+            {communityBossLiveFlowSteps.map((step) => (
+              <article
+                key={step.label}
+                className={step.ready ? "ready" : "pending"}
+              >
+                <span>{step.label}</span>
+                <strong>{step.value}</strong>
+                <small>{step.detail}</small>
+              </article>
+            ))}
+          </div>
+        </details>
+
+        <details className="admin-community-boss-details">
+          <summary>
+            <div>
+              <span>Launch console</span>
+              <small>Only admin sees blocking items and final public copy.</small>
+            </div>
+            <b>{communityBossLaunchConsole.badge}</b>
+          </summary>
+          <div className="community-boss-launch-console-grid admin-launch-console-grid">
+            {communityBossLaunchConsole.steps.map((step) => (
+              <article
+                key={step.label}
+                className={step.ready ? "ready" : "pending"}
+              >
+                <span>{step.label}</span>
+                <strong>{step.value}</strong>
+                <small>{step.detail}</small>
+              </article>
+            ))}
+          </div>
+          {communityBossLaunchConsole.blockers.length > 0 ? (
+            <div className="community-boss-launch-console-blockers">
+              <span>Blocking items</span>
+              <div>
+                {communityBossLaunchConsole.blockers.slice(0, 6).map((item) => (
+                  <b key={item.label}>{item.label}</b>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p className="community-boss-launch-console-clear">
+              Launch path is clear. Public copy is factual and contains no payout
+              promise, wallet value, or PvP.
+            </p>
+          )}
+        </details>
+
+        <div
+          className={`community-boss-announcement-panel admin-announcement-panel ${communityBossFirstEventState.publicCopyUnlocked ? "ready" : "locked"}`}
+        >
+          <div className="community-boss-announcement-head">
+            <div>
+              <span>First event public copy</span>
+              <strong>{communityBossFirstEventAnnouncement.statusLabel}</strong>
+              <small>{communityBossFirstEventAnnouncement.statusDetail}</small>
+            </div>
+            <b>
+              {communityBossFirstEventState.publicCopyUnlocked
+                ? "Ready"
+                : "Locked"}
+            </b>
+          </div>
+          <div className="community-boss-announcement-copy">
+            <span>
+              {communityBossFirstEventState.publicCopyUnlocked
+                ? "Launch-ready X copy"
+                : "Operator note"}
+            </span>
+            <p>
+              {communityBossFirstEventState.publicCopyUnlocked
+                ? communityBossFirstEventAnnouncement.xCopy
+                : communityBossFirstEventAnnouncement.operatorNote}
+            </p>
+          </div>
+          <div className="community-boss-announcement-actions">
+            <button
+              type="button"
+              onClick={copyCommunityBossLaunchPost}
+              disabled={!communityBossFirstEventState.publicCopyUnlocked}
+            >
+              {communityBossLaunchCopyCopied ? "Copied" : "Copy launch post"}
+            </button>
+            <small>
+              Public copy is admin-only until Launch Guard passes. Normal users
+              never see env flags or operator blockers.
+            </small>
+          </div>
+        </div>
+
+        <div className="admin-community-boss-grid admin-community-boss-recalc-grid">
+          <article>
+            <span>Fallback status</span>
             <strong>
               {communityBossRecalcResult?.recalculated
                 ? "Recalculated"
