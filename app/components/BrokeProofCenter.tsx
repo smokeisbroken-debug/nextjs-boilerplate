@@ -122,12 +122,22 @@ export function MyBrokeProofCenter({
           <button
             key={card.id}
             type="button"
+            role="tab"
+            aria-selected={card.id === activeCard.id}
             className={card.id === activeCard.id ? "active" : ""}
             onClick={() => setActiveCardId(card.id)}
           >
             {card.label}
           </button>
         ))}
+      </div>
+
+      <div className="broke-proof-mobile-hint">
+        <strong>{activeCard.label} proof selected</strong>
+        <span>
+          Same card, same actions: copy text, share PNG, send to bot, or open X
+          with image-first fallback.
+        </span>
       </div>
 
       <div
@@ -189,14 +199,15 @@ export function MyBrokeProofCenter({
         </p>
       </div>
 
-      <div className="broke-proof-actions">
-        <button type="button" onClick={copyProofText}>
+      <div className="broke-proof-actions" aria-label="BROKE proof share actions">
+        <button type="button" onClick={copyProofText} aria-label={`Copy ${activeCard.label} proof text`}>
           {copied ? "Copied" : "Copy text"}
         </button>
         <button
           type="button"
           className="ghost"
           onClick={() => runShareAction("image", onShareImage)}
+          aria-label={`Share ${activeCard.label} proof image`}
         >
           {busyAction === "image" ? "Preparing..." : "Share image"}
         </button>
@@ -204,6 +215,7 @@ export function MyBrokeProofCenter({
           type="button"
           className="ghost"
           onClick={() => runShareAction("x", onShareToX)}
+          aria-label={`Share ${activeCard.label} proof to X`}
         >
           {busyAction === "x" ? "Preparing..." : "Share to X"}
         </button>
@@ -211,15 +223,16 @@ export function MyBrokeProofCenter({
           type="button"
           className="ghost"
           onClick={() => runShareAction("bot", onSendToBot)}
+          aria-label={`Send ${activeCard.label} proof to Telegram bot`}
         >
           {busyAction === "bot" ? "Sending..." : "Send to bot"}
         </button>
       </div>
 
       <p className="broke-proof-center-note">
-        All cards use the same public-safe layout. X image sharing depends on
-        native file share support; otherwise the PNG downloads and text opens in
-        X.
+        Public-safe only: no balance, income, debt, wallet value, payout value,
+        or reward promise. If X opens without an attached image, use the
+        downloaded PNG.
       </p>
     </section>
   );

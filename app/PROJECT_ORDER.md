@@ -58,3 +58,12 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Extracted My BROKE Proof Center UI/types into `app/components/BrokeProofCenter.tsx`.
 - Kept share side effects in `app/page.tsx` so existing image, X, bot and copy flows stay unchanged.
 - No user-facing behavior, payout logic, wallet verification, Supabase schema, PvP, or reward promise changes.
+
+
+## v59.59.2 — Proof Center QA / Mobile Polish
+
+- Hardens My BROKE Proof Center mobile layout.
+- Keeps proof tabs inside screen bounds with horizontal tab scrolling.
+- Makes share action buttons compact and consistent on narrow screens.
+- Adds a selected-proof hint and stronger public-safe fallback note.
+- Keeps all proof cards public-safe and does not change backend, rewards, wallet verification, payout logic, PvP, or game economy.

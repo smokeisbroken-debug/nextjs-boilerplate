@@ -36568,3 +36568,192 @@ html.embedded-app-view .hero h1 {
     flex: 1 1 calc(50% - 8px);
   }
 }
+
+
+/* v59.59.2 — Proof Center QA / Mobile Polish */
+.broke-proof-center-details,
+.broke-proof-center-details summary,
+.broke-proof-center-details summary > div,
+.broke-proof-center-details summary small,
+.broke-proof-center-card,
+.broke-proof-share-card,
+.broke-proof-text-preview,
+.broke-proof-actions,
+.broke-proof-tabs {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.broke-proof-center-card {
+  isolation: isolate;
+  overflow-x: clip;
+}
+
+.broke-proof-center-head > div,
+.broke-proof-share-top > div,
+.broke-proof-share-main > div,
+.broke-proof-text-preview,
+.broke-proof-center-note {
+  min-width: 0;
+}
+
+.broke-proof-tabs {
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  padding-bottom: 2px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.broke-proof-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.broke-proof-tabs button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.broke-proof-mobile-hint {
+  display: grid;
+  gap: 3px;
+  border-radius: 16px;
+  border: 1px solid rgba(134, 255, 158, 0.12);
+  background: rgba(126, 255, 142, 0.065);
+  padding: 9px 10px;
+}
+
+.broke-proof-mobile-hint strong {
+  color: rgba(239, 255, 243, 0.92);
+  font-size: 12px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.broke-proof-mobile-hint span {
+  color: rgba(226, 255, 232, 0.72);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.broke-proof-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.broke-proof-actions button {
+  width: 100%;
+  min-height: 40px;
+  white-space: normal;
+  line-height: 1.15;
+}
+
+.broke-proof-share-top b,
+.broke-proof-metric-grid strong,
+.broke-proof-chip-row span,
+.broke-proof-share-card footer b {
+  word-break: break-word;
+}
+
+.broke-proof-share-card.share-capture-flat-export {
+  width: min(720px, 100%) !important;
+}
+
+@media (max-width: 620px) {
+  .broke-proof-center-head {
+    flex-direction: column;
+  }
+
+  .broke-proof-center-head b {
+    align-self: flex-start;
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .broke-proof-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .broke-proof-share-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .broke-proof-share-top b {
+    max-width: 120px;
+    padding: 8px 9px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  .broke-proof-center-card {
+    padding: 10px;
+    gap: 10px;
+  }
+
+  .broke-proof-share-card {
+    padding: 10px;
+    gap: 10px;
+    border-radius: 20px;
+  }
+
+  .broke-proof-share-main {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .broke-proof-share-main img {
+    width: 58px;
+    height: 58px;
+  }
+
+  .broke-proof-share-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .broke-proof-share-top b {
+    max-width: 100%;
+    width: fit-content;
+    text-align: left;
+  }
+
+  .broke-proof-metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .broke-proof-chip-row {
+    gap: 5px;
+  }
+
+  .broke-proof-chip-row span {
+    max-width: 100%;
+  }
+
+  .broke-proof-share-card footer {
+    display: grid;
+    justify-content: stretch;
+    text-align: left;
+  }
+
+  .broke-proof-share-card footer b {
+    text-align: left;
+  }
+
+  .broke-proof-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .broke-proof-actions button {
+    min-height: 38px;
+    padding: 9px 10px;
+  }
+
+  .broke-proof-tabs button {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+}
