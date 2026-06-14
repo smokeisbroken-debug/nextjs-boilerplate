@@ -38707,3 +38707,57 @@ html.embedded-app-view .hero h1 {
     padding: 13px;
   }
 }
+
+/* v59.62.5 — Community Boss First Event Test Checklist / Runtime Fixes */
+.community-boss-public-status-strip {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.045);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.community-boss-public-status-strip span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.community-boss-public-status-strip b {
+  color: #e9ffee;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  text-align: right;
+}
+
+.first-event-test-checklist-details .community-boss-live-test-status {
+  border-color: rgba(125, 211, 252, 0.16);
+  background: rgba(125, 211, 252, 0.06);
+}
+
+.first-event-test-checklist-details .community-boss-live-test-grid article.ready {
+  border-color: rgba(125, 211, 252, 0.18);
+  background: rgba(125, 211, 252, 0.065);
+}
+
+.public-community-boss-card .community-boss-public-event-panel.syncing {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(125, 211, 252, 0.15), transparent 34%),
+    rgba(8, 12, 18, 0.72);
+}
+
+@media (max-width: 460px) {
+  .community-boss-public-status-strip {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .community-boss-public-status-strip b {
+    text-align: left;
+  }
+}

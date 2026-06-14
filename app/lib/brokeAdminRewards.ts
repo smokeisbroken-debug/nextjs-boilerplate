@@ -1,7 +1,7 @@
-export const BROKE_APP_BUILD_VERSION = "v59.62.4";
+export const BROKE_APP_BUILD_VERSION = "v59.62.5";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Community Boss First Event Public Polish";
+  "Community Boss First Event Test Checklist Runtime Fixes";
 
 export const DEFAULT_TREASURY_WALLET_ADDRESS =
   "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";

@@ -1909,6 +1909,124 @@ function getCommunityBossFirstLiveTestStatus({
   };
 }
 
+
+function getCommunityBossFirstEventTestChecklist({
+  backend,
+  proofSubmit,
+  runtimeQa,
+  firstLiveTest,
+  firstEventState,
+}: {
+  backend: CommunityBossBackendUiState;
+  proofSubmit: CommunityBossProofSubmitUiState;
+  runtimeQa: CommunityBossRuntimeQaStatus;
+  firstLiveTest: CommunityBossFirstLiveTestStatus;
+  firstEventState: CommunityBossFirstEventState;
+}): CommunityBossRuntimeQaStatus {
+  const publicReadStable =
+    backend.dataSource === "supabase" &&
+    backend.persisted &&
+    backend.canRead &&
+    !backend.readError;
+  const proofSubmitSettled = !proofSubmit.loading;
+  const autoFlowReady = backend.canAutoRecalculateAfterProof;
+  const liveTotalsReady = hasCommunityBossLiveAggregateProof(backend);
+  const publicCopySafe =
+    firstEventState.publicCopyUnlocked === firstEventState.launchReady &&
+    (!firstEventState.publicCopyUnlocked || liveTotalsReady);
+  const aggregateStateConsistent =
+    liveTotalsReady ||
+    (!firstEventState.launchReady &&
+      backend.participantCount === 0 &&
+      backend.totalDamage === 0);
+
+  const items: CommunityBossRuntimeQaItem[] = [
+    {
+      label: "Public user view",
+      value: "Clean",
+      detail:
+        "Normal users see Community Boss status, damage, participants, proof submit, and public-safe guardrails only.",
+      ready: true,
+    },
+    {
+      label: "Runtime source",
+      value: publicReadStable ? "Supabase" : backend.readError ? "Fallback" : "Waiting",
+      detail: publicReadStable
+        ? "Public totals are coming from the live public-safe aggregate read."
+        : backend.readError
+          ? `Runtime read fallback: ${backend.readError}`
+          : "Wait for Supabase public read before first live event.",
+      ready: publicReadStable,
+    },
+    {
+      label: "Proof submit state",
+      value: proofSubmit.loading
+        ? "Submitting"
+        : proofSubmit.error
+          ? "Handled error"
+          : proofSubmit.persisted
+            ? "Saved"
+            : "Idle",
+      detail: proofSubmit.loading
+        ? "Do not launch while a proof submit is still pending."
+        : proofSubmit.error
+          ? "Proof errors show a user-safe retry state instead of backend/debug wording."
+          : "Proof submit has a settled state.",
+      ready: proofSubmitSettled,
+    },
+    {
+      label: "Auto aggregate flow",
+      value: autoFlowReady ? "Automatic" : "Locked",
+      detail: autoFlowReady
+        ? "A saved proof can recalculate aggregate without founder action."
+        : "Enable auto aggregate recalculation before relying on live public totals.",
+      ready: autoFlowReady,
+    },
+    {
+      label: "Aggregate consistency",
+      value: liveTotalsReady ? "Live" : aggregateStateConsistent ? "Empty safe" : "Mismatch",
+      detail: liveTotalsReady
+        ? `${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"} and ${backend.totalDamage} damage are visible.`
+        : aggregateStateConsistent
+          ? "Empty aggregate is treated as pre-launch, not launch-ready."
+          : "Aggregate has partial data. Keep public launch locked until participant and damage totals are non-zero.",
+      ready: liveTotalsReady || aggregateStateConsistent,
+    },
+    {
+      label: "Launch copy lock",
+      value: publicCopySafe ? "Aligned" : "Too early",
+      detail: publicCopySafe
+        ? "Public copy unlock follows launch-ready state and live totals."
+        : "Public launch copy would unlock before live aggregate proof; keep it blocked.",
+      ready: publicCopySafe,
+    },
+    {
+      label: "First live test",
+      value: firstLiveTest.passed ? "Passed" : firstLiveTest.badge,
+      detail: firstLiveTest.passed
+        ? "The proof → auto recalc → public totals chain is verified."
+        : firstLiveTest.nextAction,
+      ready: firstLiveTest.passed,
+    },
+  ];
+
+  const readyCount = items.filter((item) => item.ready).length;
+  const ready = items.every((item) => item.ready);
+  const firstBlocked = items.find((item) => !item.ready);
+  const missingFlags = runtimeQa.missingFlags.slice(0, 8);
+
+  return {
+    label: ready ? "First event test ready" : "Runtime fixes needed",
+    detail: ready
+      ? "Public UI, proof submit state, automatic aggregate flow, and launch copy locks are aligned for the first live event."
+      : firstBlocked?.detail || "Complete the blocked runtime check before first live event.",
+    badge: ready ? "Ready" : `${readyCount}/${items.length}`,
+    ready,
+    missingFlags,
+    items,
+  };
+}
+
 function hasCommunityBossSeededWeek(backend: CommunityBossBackendUiState) {
   return (
     backend.dataSource === "supabase" &&
@@ -2131,6 +2249,28 @@ function getCommunityBossPublicEventPanel({
         : "Real app actions will move this bar.",
     },
   ];
+
+  if (backend.loading && !backend.loaded) {
+    return {
+      tone: "preparing" as const,
+      label: "Community Boss loading",
+      badge: "Checking",
+      detail: "Getting the latest community boss progress.",
+      status: "Live totals update automatically while the app is open.",
+      stats,
+    };
+  }
+
+  if (backend.readAttempted && backend.readError && !liveAggregateReady) {
+    return {
+      tone: "syncing" as const,
+      label: "Community Boss updating",
+      badge: "Updating",
+      detail: "Community progress is being refreshed. Try again in a moment.",
+      status: "No wallet balance, income, debt, or payout data is shown.",
+      stats,
+    };
+  }
 
   if (firstEventState.launchReady) {
     return {
@@ -19530,6 +19670,11 @@ function CommunityBossPrepCard({
     firstEventState,
   });
   const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
+  const publicProgressPercent = clamp(
+    liveAggregateReady ? backend.progressPercent : state.projectedCommunityProgress,
+    0,
+    100,
+  );
   const proofStatusLabel = proofSubmit.loading
     ? "Submitting"
     : proofSubmit.persisted
@@ -19546,7 +19691,7 @@ function CommunityBossPrepCard({
       : proofSubmit.persisted
         ? "Your proof was saved. Community totals will update automatically."
         : proofSubmit.submitted && proofSubmit.ok
-          ? "Your proof was checked. Live write opens when backend gates are ready."
+          ? "Your proof was checked. Live saving will open when the event is ready."
           : proofSubmit.submitted && proofSubmit.error
             ? "Proof could not be submitted yet. Try again later."
             : "Submit real app proof to help the weekly Community Boss.";
@@ -19554,9 +19699,7 @@ function CommunityBossPrepCard({
     ? "Live"
     : proofSubmit.persisted
       ? "Syncing"
-      : backend.persisted
-        ? "Preparing"
-        : "Opening soon";
+      : publicEventPanel.badge;
   const publicInfoItems = [
     {
       title: "Real actions",
@@ -19605,6 +19748,17 @@ function CommunityBossPrepCard({
           ))}
         </div>
         <p>{publicEventPanel.status}</p>
+      </div>
+
+      <div className="community-boss-public-status-strip">
+        <span>{liveAggregateReady ? "Live totals" : proofSubmit.persisted ? "Aggregate syncing" : "First event"}</span>
+        <b>
+          {liveAggregateReady
+            ? `${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"}`
+            : proofSubmit.persisted
+              ? "Proof saved"
+              : "Public-safe proof only"}
+        </b>
       </div>
 
       <div
@@ -19697,18 +19851,18 @@ function CommunityBossPrepCard({
         <i aria-hidden="true" />
         <div>
           <span>Community</span>
-          <strong>{liveAggregateReady ? backend.progressPercent : state.projectedCommunityProgress}%</strong>
+          <strong>{publicProgressPercent}%</strong>
           <small>{liveAggregateReady ? "Live public progress" : "Preparing live event"}</small>
         </div>
       </div>
 
       <div
         className="community-boss-meter"
-        aria-label={`Community boss progress ${liveAggregateReady ? backend.progressPercent : state.projectedCommunityProgress}%`}
+        aria-label={`Community boss progress ${publicProgressPercent}%`}
       >
         <i
           style={{
-            width: `${liveAggregateReady ? backend.progressPercent : state.projectedCommunityProgress}%`,
+            width: `${publicProgressPercent}%`,
           }}
         />
       </div>
@@ -37293,6 +37447,14 @@ function AdminTreasuryPanel({
     backend: communityBossBackend,
     proofSubmit: communityBossProofSubmit,
   });
+  const communityBossFirstEventTestChecklist =
+    getCommunityBossFirstEventTestChecklist({
+      backend: communityBossBackend,
+      proofSubmit: communityBossProofSubmit,
+      runtimeQa: communityBossRuntimeQa,
+      firstLiveTest: communityBossFirstLiveTest,
+      firstEventState: communityBossFirstEventState,
+    });
   const communityBossLiveFlowSteps = getCommunityBossLiveFlowSteps(
     communityBossBackend,
     communityBossProofSubmit,
@@ -38270,6 +38432,11 @@ function AdminTreasuryPanel({
             <strong>{communityBossRuntimeQa.label}</strong>
             <small>{communityBossRuntimeQa.detail}</small>
           </article>
+          <article className={communityBossFirstEventTestChecklist.ready ? "ready" : "blocked"}>
+            <span>Test checklist</span>
+            <strong>{communityBossFirstEventTestChecklist.label}</strong>
+            <small>{communityBossFirstEventTestChecklist.detail}</small>
+          </article>
           <article>
             <span>First event state</span>
             <strong>{communityBossFirstEventState.label}</strong>
@@ -38332,6 +38499,32 @@ function AdminTreasuryPanel({
           </summary>
           <div className="community-boss-runtime-qa-grid admin-runtime-grid">
             {communityBossRuntimeQa.items.map((item) => (
+              <article
+                key={item.label}
+                className={item.ready ? "ready" : "blocked"}
+              >
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+        </details>
+
+        <details className="admin-community-boss-details first-event-test-checklist-details" open={!communityBossFirstEventTestChecklist.ready}>
+          <summary>
+            <div>
+              <span>First Event Test Checklist</span>
+              <small>Final runtime fixes before the first public Community Boss event.</small>
+            </div>
+            <b>{communityBossFirstEventTestChecklist.badge}</b>
+          </summary>
+          <div className="community-boss-live-test-status">
+            <strong>{communityBossFirstEventTestChecklist.label}</strong>
+            <small>{communityBossFirstEventTestChecklist.detail}</small>
+          </div>
+          <div className="community-boss-live-test-grid admin-live-test-grid">
+            {communityBossFirstEventTestChecklist.items.map((item) => (
               <article
                 key={item.label}
                 className={item.ready ? "ready" : "blocked"}
