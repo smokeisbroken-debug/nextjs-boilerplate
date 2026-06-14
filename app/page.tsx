@@ -1276,6 +1276,22 @@ type CommunityBossRuntimeQaStatus = {
   items: CommunityBossRuntimeQaItem[];
 };
 
+type CommunityBossFirstLiveTestStep = {
+  label: string;
+  value: string;
+  detail: string;
+  ready: boolean;
+};
+
+type CommunityBossFirstLiveTestStatus = {
+  label: string;
+  detail: string;
+  badge: string;
+  passed: boolean;
+  nextAction: string;
+  steps: CommunityBossFirstLiveTestStep[];
+};
+
 function defaultCommunityBossBackendUiState(): CommunityBossBackendUiState {
   return {
     loading: false,
@@ -1770,6 +1786,126 @@ function getCommunityBossProductionRuntimeQa(
     ready: false,
     missingFlags,
     items,
+  };
+}
+
+function getCommunityBossFirstLiveTestStatus({
+  backend,
+  proofSubmit,
+}: {
+  backend: CommunityBossBackendUiState;
+  proofSubmit: CommunityBossProofSubmitUiState;
+}): CommunityBossFirstLiveTestStatus {
+  const supabaseReadActive =
+    backend.dataSource === "supabase" &&
+    backend.persisted &&
+    backend.canRead &&
+    !backend.readError;
+  const currentWeekSeeded = hasCommunityBossSeededWeek(backend);
+  const proofWriteEnabled = backend.canPersistProof;
+  const autoRecalcEnabled = backend.canAutoRecalculateAfterProof;
+  const testProofPersisted = hasCommunityBossProofEvidence(
+    backend,
+    proofSubmit,
+  );
+  const aggregateUpdated =
+    hasCommunityBossLiveAggregateProof(backend) &&
+    Boolean(backend.aggregateUpdatedAt);
+  const publicUiReadsLiveTotals =
+    aggregateUpdated &&
+    backend.totalDamage > 0 &&
+    backend.participantCount > 0 &&
+    Boolean(backend.refreshedAt);
+
+  const steps: CommunityBossFirstLiveTestStep[] = [
+    {
+      label: "Supabase read active",
+      value: supabaseReadActive ? "Live" : backend.readError ? "Fallback" : "Locked",
+      detail: supabaseReadActive
+        ? "Public read uses the Supabase aggregate source, not dry-run fallback."
+        : backend.readError
+          ? `Public read fell back: ${backend.readError}`
+          : "Enable read flags and Supabase env before live test.",
+      ready: supabaseReadActive,
+    },
+    {
+      label: "Current week seeded",
+      value: currentWeekSeeded ? "Seeded" : "Missing",
+      detail: currentWeekSeeded
+        ? `${backend.weekKey} is visible in the public read path.`
+        : "Seed the current Community Boss week before collecting proof.",
+      ready: currentWeekSeeded,
+    },
+    {
+      label: "Proof write enabled",
+      value: proofWriteEnabled ? "Ready" : "Locked",
+      detail: proofWriteEnabled
+        ? "Authenticated safe proof rows can persist behind manual gates."
+        : "Proof persistence flags/env/auth are not ready for live test.",
+      ready: proofWriteEnabled,
+    },
+    {
+      label: "Auto recalc enabled",
+      value: autoRecalcEnabled ? "Automatic" : "Locked",
+      detail: autoRecalcEnabled
+        ? "A saved proof can trigger aggregate recalculation without founder action."
+        : "Enable automatic post-proof recalculation; admin recalc is fallback only.",
+      ready: autoRecalcEnabled,
+    },
+    {
+      label: "Test proof persisted",
+      value: testProofPersisted ? "Present" : "Needed",
+      detail: testProofPersisted
+        ? "A safe proof is stored or already reflected in public totals."
+        : "Submit one authenticated safe proof from the app.",
+      ready: testProofPersisted,
+    },
+    {
+      label: "Aggregate updated",
+      value: aggregateUpdated ? "Updated" : "Waiting",
+      detail: aggregateUpdated
+        ? `Public aggregate timestamp: ${backend.aggregateUpdatedAt}.`
+        : "Auto recalc must write non-zero participant and damage totals.",
+      ready: aggregateUpdated,
+    },
+    {
+      label: "Public UI reads live totals",
+      value: publicUiReadsLiveTotals ? "Verified" : "Waiting",
+      detail: publicUiReadsLiveTotals
+        ? `${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"} · ${backend.totalDamage} public damage visible.`
+        : "Refresh/poll public aggregate until live totals appear in the user card.",
+      ready: publicUiReadsLiveTotals,
+    },
+  ];
+
+  const readyCount = steps.filter((step) => step.ready).length;
+  const firstBlocked = steps.find((step) => !step.ready);
+  const passed = readyCount === steps.length;
+
+  if (passed) {
+    return {
+      label: "Live test passed",
+      detail:
+        "Proof write, automatic aggregate recalculation, and public live totals are verified.",
+      badge: "Passed",
+      passed: true,
+      nextAction:
+        "Keep admin fallback available, then run final public UI polish before first broader event.",
+      steps,
+    };
+  }
+
+  return {
+    label: "Live test blocked",
+    detail: firstBlocked
+      ? `${firstBlocked.label}: ${firstBlocked.detail}`
+      : "Live test is not fully verified yet.",
+    badge: `${readyCount}/${steps.length}`,
+    passed: false,
+    nextAction:
+      firstBlocked?.detail ||
+      "Complete the blocked live-test step, then refresh admin status.",
+    steps,
   };
 }
 
@@ -37141,6 +37277,10 @@ function AdminTreasuryPanel({
     communityBossProofSubmit,
     communityBossFirstEventState,
   );
+  const communityBossFirstLiveTest = getCommunityBossFirstLiveTestStatus({
+    backend: communityBossBackend,
+    proofSubmit: communityBossProofSubmit,
+  });
   const communityBossLiveFlowSteps = getCommunityBossLiveFlowSteps(
     communityBossBackend,
     communityBossProofSubmit,
@@ -38108,6 +38248,11 @@ function AdminTreasuryPanel({
         </div>
 
         <div className="admin-community-boss-grid">
+          <article className={communityBossFirstLiveTest.passed ? "ready" : "blocked"}>
+            <span>First Live Test</span>
+            <strong>{communityBossFirstLiveTest.label}</strong>
+            <small>{communityBossFirstLiveTest.detail}</small>
+          </article>
           <article>
             <span>Runtime QA</span>
             <strong>{communityBossRuntimeQa.label}</strong>
@@ -38182,6 +38327,32 @@ function AdminTreasuryPanel({
                 <span>{item.label}</span>
                 <strong>{item.value}</strong>
                 <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+        </details>
+
+        <details className="admin-community-boss-details first-live-test-details" open={!communityBossFirstLiveTest.passed}>
+          <summary>
+            <div>
+              <span>First Live Test</span>
+              <small>Automatic chain check: proof write → auto recalc → public totals.</small>
+            </div>
+            <b>{communityBossFirstLiveTest.badge}</b>
+          </summary>
+          <div className="community-boss-live-test-status">
+            <strong>{communityBossFirstLiveTest.label}</strong>
+            <small>{communityBossFirstLiveTest.nextAction}</small>
+          </div>
+          <div className="community-boss-live-test-grid admin-live-test-grid">
+            {communityBossFirstLiveTest.steps.map((step) => (
+              <article
+                key={step.label}
+                className={step.ready ? "ready" : "blocked"}
+              >
+                <span>{step.label}</span>
+                <strong>{step.value}</strong>
+                <small>{step.detail}</small>
               </article>
             ))}
           </div>

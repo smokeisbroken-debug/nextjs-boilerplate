@@ -38547,3 +38547,88 @@ html.embedded-app-view .hero h1 {
     flex: 1 1 100%;
   }
 }
+
+.community-boss-live-test-status {
+  margin-top: 10px;
+  border: 1px solid rgba(142, 255, 161, 0.12);
+  background: rgba(142, 255, 161, 0.055);
+  border-radius: 14px;
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.community-boss-live-test-status strong {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.12;
+  font-weight: 1000;
+}
+
+.community-boss-live-test-status small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+  font-weight: 750;
+}
+
+.community-boss-live-test-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.community-boss-live-test-grid article {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 9px;
+  display: grid;
+  gap: 4px;
+}
+
+.community-boss-live-test-grid article.ready {
+  border-color: rgba(142, 255, 161, 0.18);
+  background: rgba(142, 255, 161, 0.07);
+}
+
+.community-boss-live-test-grid article.blocked {
+  border-color: rgba(255, 227, 126, 0.13);
+  background: rgba(255, 227, 126, 0.045);
+}
+
+.community-boss-live-test-grid span {
+  color: rgba(219, 255, 226, 0.68);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.community-boss-live-test-grid strong {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.12;
+  font-weight: 950;
+}
+
+.community-boss-live-test-grid small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.28;
+  font-weight: 750;
+}
+
+@media (max-width: 720px) {
+  .community-boss-live-test-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 390px) {
+  .community-boss-live-test-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,7 +1,7 @@
-export const BROKE_APP_BUILD_VERSION = "v59.62.2";
+export const BROKE_APP_BUILD_VERSION = "v59.62.3";
 
 export const BROKE_APP_BUILD_NOTE =
-  "Community Boss Public Admin UI Split";
+  "Community Boss First Live Test Flow";
 
 export const DEFAULT_TREASURY_WALLET_ADDRESS =
   "5eniFeReK8v39tHavRpnsinoxQ6YV5ymw5RmVMA7PxC9";
