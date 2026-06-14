@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { BROKE_APP_BUILD_VERSION } from "@/app/lib/brokeAdminRewards";
 import {
   COMMUNITY_BOSS_SYNC_ENABLED,
+  buildCommunityBossProofPersistenceDryRun,
   findForbiddenCommunityBossFields,
   getCommunityBossBackendReadiness,
   getCommunityBossNoStoreHeaders,
@@ -287,6 +288,12 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const persistenceDryRun = buildCommunityBossProofPersistenceDryRun({
+    proof,
+    publicUserKey: auth.publicUserKey,
+    authenticated: auth.authenticated,
+  });
+
   return NextResponse.json(
     {
       ok: true,
@@ -298,8 +305,10 @@ export async function POST(request: NextRequest) {
       wouldPersist: false,
       writePathReady: readiness.canWrite,
       proofPersistenceReady: readiness.canPersistProof,
+      proofPersistenceDryRunReady: readiness.proofPersistenceDryRunReady,
       backendReadiness: readiness,
       persistence,
+      persistenceDryRun,
       auth,
       week: currentWeek,
       proof,
@@ -310,6 +319,7 @@ export async function POST(request: NextRequest) {
         "Numbers clamped",
         "Forbidden private fields rejected",
         "Persistence gate checked",
+        "Persistence dry-run row prepared when auth/flags allow",
         "No database write performed",
         "No payout math",
         "No wallet value",

@@ -37225,3 +37225,10 @@ html.embedded-app-view .hero h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.60.9 — Community Boss proof persistence dry-run server path */
+.community-boss-proof-guardrails.blocked span {
+  border-color: rgba(255, 190, 90, 0.18);
+  background: rgba(255, 190, 90, 0.075);
+  color: rgba(255, 236, 200, 0.82);
+}

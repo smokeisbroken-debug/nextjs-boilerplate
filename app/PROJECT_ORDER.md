@@ -156,3 +156,12 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - `POST /api/community-boss/proof` returns a `persistence` object with `canPersist:false` and `persisted:false`.
 - Community Boss Prep UI now shows proof persistence gate status.
 - No Supabase writes, no proof persistence, no aggregate writes, no payout, no wallet value, no PvP.
+
+
+## v59.60.9 — Community Boss Proof Persistence Dry-Run Server Path
+
+- Adds future proof persistence dry-run server path behind explicit flags.
+- Builds a public-safe Supabase upsert row for `broke_community_boss_user_proofs` without executing the write.
+- `POST /api/community-boss/proof` returns `persistenceDryRun` with target table, conflict target, blocked reasons, and guardrails.
+- Community Boss Prep UI shows server path Prepared/Blocked and DB target.
+- No Supabase write, no proof persistence, no aggregate write, no payout, no wallet value, no PvP.

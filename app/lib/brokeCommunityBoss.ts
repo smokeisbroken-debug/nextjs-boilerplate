@@ -60,6 +60,9 @@ export const COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED =
 export const COMMUNITY_BOSS_PROOF_WRITE_ENABLED =
   process.env.COMMUNITY_BOSS_PROOF_WRITE_ENABLED === "true";
 
+export const COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED =
+  process.env.COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED === "true";
+
 export const COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED = false;
 export const COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED = false;
 export const COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED = false;
@@ -267,6 +270,7 @@ export function getCommunityBossBackendReadiness() {
   if (!COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED) missing.push("seed write is intentionally not implemented in this patch");
   if (!COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED) missing.push("COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED is not true");
   if (!COMMUNITY_BOSS_PROOF_WRITE_ENABLED) missing.push("COMMUNITY_BOSS_PROOF_WRITE_ENABLED is not true");
+  if (!COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED) missing.push("COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED is not true");
   if (!COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED) missing.push("proof write is intentionally not implemented in this patch");
 
   const canRead = Boolean(
@@ -274,6 +278,14 @@ export function getCommunityBossBackendReadiness() {
     COMMUNITY_BOSS_MIGRATION_REVIEWED &&
     COMMUNITY_BOSS_DB_READ_ENABLED &&
     supabaseReadEnvReady
+  );
+
+  const proofPersistenceDryRunReady = Boolean(
+    COMMUNITY_BOSS_SYNC_ENABLED &&
+    COMMUNITY_BOSS_MIGRATION_REVIEWED &&
+    COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED &&
+    COMMUNITY_BOSS_PROOF_WRITE_ENABLED &&
+    COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED
   );
 
   return {
@@ -288,6 +300,8 @@ export function getCommunityBossBackendReadiness() {
     seedWriteImplemented: COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED,
     proofPersistenceReviewed: COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED,
     proofWriteEnabled: COMMUNITY_BOSS_PROOF_WRITE_ENABLED,
+    proofPersistenceDryRunEnabled: COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED,
+    proofPersistenceDryRunReady,
     proofWriteImplemented: COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED,
     canSeedWrite: false,
     canPersistProof: false,
@@ -305,18 +319,99 @@ export function getCommunityBossProofPersistenceGate() {
     proofPersistenceReviewed: COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED,
     writePathEnabled: COMMUNITY_BOSS_WRITE_PATH_ENABLED,
     proofWriteEnabled: COMMUNITY_BOSS_PROOF_WRITE_ENABLED,
+    proofPersistenceDryRunEnabled: COMMUNITY_BOSS_PROOF_PERSISTENCE_DRY_RUN_ENABLED,
   };
 
+  const dryRunReady = Boolean(readiness.proofPersistenceDryRunReady);
+
   return {
-    status: "locked" as const,
+    status: dryRunReady ? "dry_run_ready" as const : "locked" as const,
     persisted: false,
     wouldPersist: false,
     canPersist: false,
+    dryRunReady,
     implemented: COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED,
     requiredFlags,
-    reason: "Proof persistence is flag-prepared but intentionally not implemented in v59.60.8.",
-    nextStep: "A later patch may implement the Supabase upsert only after migration review, manual apply, auth enforcement, and explicit write flags are confirmed.",
+    reason: dryRunReady
+      ? "Proof persistence dry-run server path is ready, but real Supabase writes remain disabled."
+      : "Proof persistence is still locked until migration review, write flags, and dry-run flag are enabled.",
+    nextStep: "A later patch may switch the prepared Supabase upsert from dry-run to real write only after manual migration apply and explicit production approval.",
     backendReadiness: readiness,
+  };
+}
+
+function cleanCommunityBossDbText(value: unknown, maxLength: number) {
+  return String(value ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+export function buildCommunityBossProofPersistenceRow({
+  proof,
+  publicUserKey,
+}: {
+  proof: CommunityBossSafeProof;
+  publicUserKey: string | null;
+}) {
+  return {
+    week_key: proof.weekKey,
+    telegram_user_id: cleanCommunityBossDbText(publicUserKey, 80) || "dry-run-unverified",
+    public_handle: proof.publicHandle,
+    public_display_name: cleanCommunityBossDbText(proof.publicDisplayName, 48) || null,
+    weekly_damage: proof.weeklyDamage,
+    safe_points: proof.safePoints,
+    proof_count: proof.proofCount,
+    mascot_stage: proof.mascotStage,
+    mascot_power_bucket: proof.mascotPowerBucket,
+    badge_count: proof.badgeCount,
+    routine_completed: proof.routineCompleted,
+    tracking_days: proof.trackingDays,
+    challenge_completed: proof.challengeCompleted,
+    weakness_hit: proof.weaknessHit,
+    proof_hash: null,
+  };
+}
+
+export function buildCommunityBossProofPersistenceDryRun({
+  proof,
+  publicUserKey,
+  authenticated,
+}: {
+  proof: CommunityBossSafeProof;
+  publicUserKey: string | null;
+  authenticated: boolean;
+}) {
+  const gate = getCommunityBossProofPersistenceGate();
+  const blockedReasons: string[] = [];
+
+  if (!authenticated) blockedReasons.push("server auth is not verified");
+  if (!gate.dryRunReady) blockedReasons.push("proof persistence dry-run gate is not ready");
+  if (!COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED) blockedReasons.push("real proof write implementation is disabled");
+
+  const row = buildCommunityBossProofPersistenceRow({ proof, publicUserKey });
+  const dryRunPrepared = Boolean(authenticated && gate.dryRunReady);
+
+  return {
+    status: dryRunPrepared ? "prepared" as const : "blocked" as const,
+    dryRun: true,
+    dryRunPrepared,
+    persisted: false,
+    wouldPersist: false,
+    canPersist: false,
+    targetTable: "broke_community_boss_user_proofs",
+    conflictTarget: "week_key, telegram_user_id",
+    upsertMode: "dry_run_only",
+    row,
+    blockedReasons,
+    gate,
+    guardrails: [
+      "Server-side persistence row prepared only",
+      "No Supabase upsert executed",
+      "No raw Telegram ID returned",
+      "No wallet value",
+      "No payout math",
+    ],
   };
 }
 

@@ -1148,6 +1148,8 @@ type CommunityBossBackendUiState = {
   proofPersistenceReviewed: boolean;
   proofWriteEnabled: boolean;
   proofWriteImplemented: boolean;
+  proofPersistenceDryRunEnabled: boolean;
+  proofPersistenceDryRunReady: boolean;
   canPersistProof: boolean;
   missing: string[];
 };
@@ -1176,6 +1178,10 @@ type CommunityBossProofSubmitUiState = {
   persistenceLabel: string;
   persistenceDetail: string;
   canPersist: boolean;
+  persistenceDryRunStatus: string;
+  persistenceDryRunPrepared: boolean;
+  persistenceTargetTable: string;
+  persistenceBlockedReasons: string[];
   updatedAt: string | null;
   guardrails: string[];
 };
@@ -1200,6 +1206,8 @@ function defaultCommunityBossBackendUiState(): CommunityBossBackendUiState {
     proofPersistenceReviewed: false,
     proofWriteEnabled: false,
     proofWriteImplemented: false,
+    proofPersistenceDryRunEnabled: false,
+    proofPersistenceDryRunReady: false,
     canPersistProof: false,
     missing: [],
   };
@@ -1230,6 +1238,10 @@ function defaultCommunityBossProofSubmitUiState(): CommunityBossProofSubmitUiSta
     persistenceLabel: "Locked",
     persistenceDetail: "Proof persistence gate is not checked yet.",
     canPersist: false,
+    persistenceDryRunStatus: "not_checked",
+    persistenceDryRunPrepared: false,
+    persistenceTargetTable: "—",
+    persistenceBlockedReasons: [],
     updatedAt: null,
     guardrails: [],
   };
@@ -1277,6 +1289,8 @@ function parseCommunityBossBackendUiState(payload: unknown): CommunityBossBacken
     proofPersistenceReviewed: readiness.proofPersistenceReviewed === true,
     proofWriteEnabled: readiness.proofWriteEnabled === true,
     proofWriteImplemented: readiness.proofWriteImplemented === true,
+    proofPersistenceDryRunEnabled: readiness.proofPersistenceDryRunEnabled === true,
+    proofPersistenceDryRunReady: readiness.proofPersistenceDryRunReady === true,
     canPersistProof: readiness.canPersistProof === true,
     missing,
   };
@@ -1316,6 +1330,12 @@ function parseCommunityBossProofSubmitUiState(payload: unknown): CommunityBossPr
     persistence.reason,
     "No proof persistence write was performed."
   ).slice(0, 140);
+  const persistenceDryRun = data.persistenceDryRun && typeof data.persistenceDryRun === "object"
+    ? data.persistenceDryRun as Record<string, unknown>
+    : {};
+  const persistenceBlockedReasons = Array.isArray(persistenceDryRun.blockedReasons)
+    ? persistenceDryRun.blockedReasons.map((item) => String(item)).slice(0, 3)
+    : [];
 
   return {
     loading: false,
@@ -1341,6 +1361,10 @@ function parseCommunityBossProofSubmitUiState(payload: unknown): CommunityBossPr
     persistenceLabel,
     persistenceDetail,
     canPersist,
+    persistenceDryRunStatus: stringFromCommunityBossApi(persistenceDryRun.status, "not_checked"),
+    persistenceDryRunPrepared: persistenceDryRun.dryRunPrepared === true,
+    persistenceTargetTable: stringFromCommunityBossApi(persistenceDryRun.targetTable, "—"),
+    persistenceBlockedReasons,
     updatedAt: new Date().toISOString(),
     guardrails,
   };
@@ -15551,6 +15575,11 @@ function CommunityBossPrepCard({
             <strong>{backend.canPersistProof ? "Ready" : backend.proofWriteEnabled ? "Flagged" : "Locked"}</strong>
             <small>{backend.proofPersistenceReviewed ? "Persistence reviewed flag is on." : "Persistence review flag is off."}</small>
           </article>
+          <article>
+            <span>Dry-run path</span>
+            <strong>{backend.proofPersistenceDryRunReady ? "Ready" : backend.proofPersistenceDryRunEnabled ? "Flagged" : "Locked"}</strong>
+            <small>{backend.proofPersistenceDryRunReady ? "Server can prepare a no-write upsert row." : "Dry-run server path is still gated."}</small>
+          </article>
         </div>
 
         {backend.missing.length > 0 && (
@@ -15603,12 +15632,30 @@ function CommunityBossPrepCard({
             <strong>{proofSubmit.submitted ? proofSubmit.persistenceLabel : "Locked"}</strong>
             <small>{proofSubmit.submitted ? proofSubmit.persistenceDetail : "Flag prep only · no write"}</small>
           </article>
+          <article>
+            <span>Server path</span>
+            <strong>{proofSubmit.submitted ? proofSubmit.persistenceDryRunPrepared ? "Prepared" : "Blocked" : "Not checked"}</strong>
+            <small>{proofSubmit.submitted ? proofSubmit.persistenceDryRunStatus : "Dry-run upsert prep"}</small>
+          </article>
+          <article>
+            <span>DB target</span>
+            <strong>{proofSubmit.submitted ? proofSubmit.persistenceTargetTable : "—"}</strong>
+            <small>No Supabase upsert executed</small>
+          </article>
         </div>
 
         {proofSubmit.submitted && (
           <div className="community-boss-proof-submit-result">
             <span>{proofSubmit.error ? proofSubmit.error : `Sanitized proof for ${proofSubmit.weekKey}`}</span>
-            <b>Auth {proofSubmit.authenticated ? "verified" : proofSubmit.authRequired ? "required" : "dry-run"} · Persistence {proofSubmit.canPersist ? "ready" : "locked"} · Routine {proofSubmit.routineCompleted ? "yes" : "no"} · Tracking {proofSubmit.trackingDays}/7 · Challenge {proofSubmit.challengeCompleted ? "yes" : "no"} · Weakness {proofSubmit.weaknessHit ? "hit" : "open"}</b>
+            <b>Auth {proofSubmit.authenticated ? "verified" : proofSubmit.authRequired ? "required" : "dry-run"} · Server path {proofSubmit.persistenceDryRunPrepared ? "prepared" : "blocked"} · Persistence {proofSubmit.canPersist ? "ready" : "locked"} · Routine {proofSubmit.routineCompleted ? "yes" : "no"} · Tracking {proofSubmit.trackingDays}/7 · Challenge {proofSubmit.challengeCompleted ? "yes" : "no"} · Weakness {proofSubmit.weaknessHit ? "hit" : "open"}</b>
+          </div>
+        )}
+
+        {proofSubmit.persistenceBlockedReasons.length > 0 && (
+          <div className="community-boss-proof-guardrails blocked">
+            {proofSubmit.persistenceBlockedReasons.map((item) => (
+              <span key={item}>{item}</span>
+            ))}
           </div>
         )}
 
