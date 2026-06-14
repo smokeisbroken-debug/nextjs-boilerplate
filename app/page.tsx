@@ -1786,6 +1786,114 @@ function getCommunityBossLaunchGuardStatus(
   };
 }
 
+function getCommunityBossFirstEventLaunchConsole({
+  backend,
+  proofSubmit,
+  launchGuardItems,
+  launchReady,
+}: {
+  backend: CommunityBossBackendUiState;
+  proofSubmit: CommunityBossProofSubmitUiState;
+  launchGuardItems: ReturnType<typeof getCommunityBossLaunchGuardItems>;
+  launchReady: boolean;
+}) {
+  const liveAggregateReady =
+    backend.dataSource === "supabase" && Boolean(backend.aggregateUpdatedAt);
+  const blockers = launchGuardItems
+    .filter((item) => !item.ready)
+    .map((item) => ({
+      label: item.label,
+      detail: item.detail,
+    }));
+
+  const steps = [
+    {
+      label: "Read current boss",
+      value: backend.canRead ? "Ready" : "Locked",
+      detail: backend.canRead
+        ? "Public aggregate read path can be refreshed."
+        : "Enable read flags/env first.",
+      ready: backend.canRead,
+    },
+    {
+      label: "Confirm week seed",
+      value: backend.persisted ? "Seeded" : "Missing",
+      detail: backend.persisted
+        ? "Current week is visible from Supabase public read."
+        : "Seed the current boss week before launch.",
+      ready: backend.persisted,
+    },
+    {
+      label: "Store one safe proof",
+      value: proofSubmit.persisted ? "Stored" : "Needed",
+      detail: proofSubmit.persisted
+        ? "One safe proof persisted behind manual gates."
+        : "Submit one authenticated proof after opening the manual proof gate.",
+      ready: proofSubmit.persisted,
+    },
+    {
+      label: "Run admin recalc",
+      value: backend.canRecalculateAggregate ? "Gate ready" : "Locked",
+      detail: backend.canRecalculateAggregate
+        ? "Use the existing admin panel to recalculate public totals."
+        : "Aggregate manual write gate is not open yet.",
+      ready: backend.canRecalculateAggregate,
+    },
+    {
+      label: "Verify live aggregate",
+      value: liveAggregateReady ? "Verified" : "Refresh needed",
+      detail: liveAggregateReady
+        ? `Live aggregate timestamp ${backend.aggregateUpdatedAt}.`
+        : "Refresh public aggregate after admin recalculation.",
+      ready: liveAggregateReady,
+    },
+    {
+      label: "Copy public post",
+      value: launchReady ? "Unlocked" : "Blocked",
+      detail: launchReady
+        ? "Launch copy is available with public-safe wording."
+        : "Public post stays locked until every launch guard item passes.",
+      ready: launchReady,
+    },
+  ];
+
+  const readyCount = steps.filter((step) => step.ready).length;
+
+  if (launchReady) {
+    return {
+      label: "Launch console ready",
+      detail: "All first-event checks passed. Copy the public post only after final operator review.",
+      badge: "Ready",
+      blockers,
+      steps,
+      readyCount,
+      total: steps.length,
+    };
+  }
+
+  if (proofSubmit.persisted && backend.canRecalculateAggregate && !liveAggregateReady) {
+    return {
+      label: "Recalculate then refresh",
+      detail: "Proof is stored. Run admin recalculation, then refresh the public aggregate read.",
+      badge: "Action needed",
+      blockers,
+      steps,
+      readyCount,
+      total: steps.length,
+    };
+  }
+
+  return {
+    label: "First event not launchable",
+    detail: blockers[0]?.detail || "Finish the launch guard before public announcement.",
+    badge: `${readyCount}/${steps.length}`,
+    blockers,
+    steps,
+    readyCount,
+    total: steps.length,
+  };
+}
+
 function getCommunityBossFirstEventAnnouncementCopy({
   state,
   backend,
@@ -18755,6 +18863,12 @@ function CommunityBossPrepCard({
     proofSubmit,
   );
   const launchGuardStatus = getCommunityBossLaunchGuardStatus(launchGuardItems);
+  const launchConsole = getCommunityBossFirstEventLaunchConsole({
+    backend,
+    proofSubmit,
+    launchGuardItems,
+    launchReady: launchGuardStatus.ready,
+  });
   const firstEventAnnouncement = getCommunityBossFirstEventAnnouncementCopy({
     state,
     backend,
@@ -18987,6 +19101,46 @@ function CommunityBossPrepCard({
             Launch is blocked until proof write, admin recalculation, and live
             aggregate read are all verified. No payout, no wallet value, no PvP.
           </p>
+        </div>
+
+        <div
+          className={`community-boss-launch-console-panel ${launchGuardStatus.ready ? "ready" : "locked"}`}
+        >
+          <div className="community-boss-launch-console-head">
+            <div>
+              <span>First event launch console</span>
+              <strong>{launchConsole.label}</strong>
+              <small>{launchConsole.detail}</small>
+            </div>
+            <b>{launchConsole.badge}</b>
+          </div>
+
+          <div className="community-boss-launch-console-grid">
+            {launchConsole.steps.map((step) => (
+              <article key={step.label} className={step.ready ? "ready" : "pending"}>
+                <span>{step.label}</span>
+                <strong>{step.value}</strong>
+                <small>{step.detail}</small>
+              </article>
+            ))}
+          </div>
+
+          {launchConsole.blockers.length > 0 ? (
+            <div className="community-boss-launch-console-blockers">
+              <span>Blocking items</span>
+              <div>
+                {launchConsole.blockers.slice(0, 4).map((item) => (
+                  <b key={item.label}>{item.label}</b>
+                ))}
+              </div>
+              <small>Do not post the first live announcement until this list is empty.</small>
+            </div>
+          ) : (
+            <p className="community-boss-launch-console-clear">
+              Launch path is clear. Final public copy remains factual: real app
+              actions, public aggregate, no payout promise, no wallet value, no PvP.
+            </p>
+          )}
         </div>
 
         <div
