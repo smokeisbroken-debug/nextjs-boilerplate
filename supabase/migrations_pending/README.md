@@ -17,3 +17,10 @@ Do not apply Community Boss schema until the guardrails are accepted:
 - no payout math
 - no reward promises
 - no PvP/multiplayer
+
+
+For v59.60.4, review and optionally copy/apply manually after schema exists:
+
+- `v59_60_4_seed_current_community_boss_week_manual.sql`
+
+This seed snippet only creates/updates the current weekly boss metadata and a zero aggregate row. It does not insert user proof rows and does not include wallet value, payout math, or private financial data.

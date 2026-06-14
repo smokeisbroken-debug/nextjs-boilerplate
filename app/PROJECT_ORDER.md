@@ -115,3 +115,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Adds `COMMUNITY_BOSS_DB_READ_ENABLED` readiness guard.
 - Keeps proof submit and recalculation endpoints no-write.
 - No migration auto-run, no proof writes, no payout, no wallet value, no PvP.
+
+
+## v59.60.4 — Community Boss Seed Week / Admin Prep
+
+- Adds admin-protected dry-run seed route: `POST /api/community-boss/seed-week`.
+- Adds manual pending seed SQL for the current weekly Community Boss row and zero aggregate row.
+- Adds seed readiness flags while keeping `canSeedWrite:false` and no Supabase writes.
+- No user proof writes, no payout, no wallet value, no PvP, and no game economy changes.

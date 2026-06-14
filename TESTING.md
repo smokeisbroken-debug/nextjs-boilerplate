@@ -72,3 +72,15 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Confirm `GET /api/community-boss/current` still returns dry-run data when `COMMUNITY_BOSS_DB_READ_ENABLED` is not true.
 - After manual migration and ENV enablement, confirm current can read from `broke_community_boss_public_weeks` and falls back safely if no row exists.
 - Confirm `POST /api/community-boss/proof` still returns `persisted:false` and performs no write.
+
+
+## v59.60.4 Community Boss Seed Week / Admin Prep
+
+- Run `npm run typecheck`.
+- Run `npm run lint:quiet`.
+- Run production build.
+- Confirm build lists `/api/community-boss/seed-week`.
+- Optional after local server start:
+  - `POST /api/community-boss/seed-week` without admin secret should return 401.
+  - `POST /api/community-boss/seed-week?key=<admin-secret>` should return `persisted:false`, `manualApplyRequired:true`, and seed SQL.
+- Do not apply the seed SQL until the v59.60.2 schema has been reviewed/applied manually.
