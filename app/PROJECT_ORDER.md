@@ -123,3 +123,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Adds manual pending seed SQL for the current weekly Community Boss row and zero aggregate row.
 - Adds seed readiness flags while keeping `canSeedWrite:false` and no Supabase writes.
 - No user proof writes, no payout, no wallet value, no PvP, and no game economy changes.
+
+
+## v59.60.5 — Community Boss Aggregate UI Readiness
+
+- Adds client-side Community Boss aggregate readiness display in the Community Boss Prep card.
+- Reads `GET /api/community-boss/current` and shows data source, seeded/not seeded, read fallback, community damage, participant count, and write path disabled status.
+- Keeps backend writes, user proof persistence, payouts, wallet value, PvP, and game economy disabled.
+- Next planned step: v59.60.6 Community Boss Proof Submit Dry-Run UI.

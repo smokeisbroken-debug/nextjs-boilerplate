@@ -1129,6 +1129,106 @@ type CommunityBossPrepState = {
   lanes: CommunityBossPrepLane[];
 };
 
+type CommunityBossBackendUiState = {
+  loading: boolean;
+  loaded: boolean;
+  dataSource: "dry_run" | "supabase" | "unknown";
+  persisted: boolean;
+  readAttempted: boolean;
+  readError: string | null;
+  weekKey: string;
+  bossName: string;
+  totalDamage: number;
+  totalSafePoints: number;
+  participantCount: number;
+  progressPercent: number;
+  canRead: boolean;
+  canWrite: boolean;
+  canSeedWrite: boolean;
+  missing: string[];
+};
+
+function defaultCommunityBossBackendUiState(): CommunityBossBackendUiState {
+  return {
+    loading: false,
+    loaded: false,
+    dataSource: "unknown",
+    persisted: false,
+    readAttempted: false,
+    readError: null,
+    weekKey: "—",
+    bossName: "Community Leak Boss",
+    totalDamage: 0,
+    totalSafePoints: 0,
+    participantCount: 0,
+    progressPercent: 0,
+    canRead: false,
+    canWrite: false,
+    canSeedWrite: false,
+    missing: [],
+  };
+}
+
+function numberFromCommunityBossApi(value: unknown, fallback = 0) {
+  const parsed = Number(value ?? fallback);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function stringFromCommunityBossApi(value: unknown, fallback = "") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function parseCommunityBossBackendUiState(payload: unknown): CommunityBossBackendUiState {
+  const data = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+  const week = data.week && typeof data.week === "object" ? data.week as Record<string, unknown> : {};
+  const aggregate = data.aggregate && typeof data.aggregate === "object" ? data.aggregate as Record<string, unknown> : {};
+  const readiness = data.backendReadiness && typeof data.backendReadiness === "object"
+    ? data.backendReadiness as Record<string, unknown>
+    : {};
+  const missing = Array.isArray(readiness.missing)
+    ? readiness.missing.map((item) => String(item)).slice(0, 4)
+    : [];
+  const dataSourceRaw = stringFromCommunityBossApi(data.dataSource, "dry_run");
+  const dataSource = dataSourceRaw === "supabase" ? "supabase" : dataSourceRaw === "dry_run" ? "dry_run" : "unknown";
+
+  return {
+    loading: false,
+    loaded: true,
+    dataSource,
+    persisted: data.persisted === true,
+    readAttempted: data.readAttempted === true,
+    readError: data.readError ? String(data.readError).slice(0, 180) : null,
+    weekKey: stringFromCommunityBossApi(week.weekKey, "—"),
+    bossName: stringFromCommunityBossApi(week.bossName, "Community Leak Boss"),
+    totalDamage: numberFromCommunityBossApi(aggregate.totalDamage),
+    totalSafePoints: numberFromCommunityBossApi(aggregate.totalSafePoints),
+    participantCount: numberFromCommunityBossApi(aggregate.participantCount),
+    progressPercent: clamp(numberFromCommunityBossApi(aggregate.progressPercent), 0, 100),
+    canRead: readiness.canRead === true,
+    canWrite: readiness.canWrite === true,
+    canSeedWrite: readiness.canSeedWrite === true,
+    missing,
+  };
+}
+
+function getCommunityBossBackendStatusLabel(backend: CommunityBossBackendUiState) {
+  if (backend.loading) return "Checking";
+  if (backend.persisted) return "Seeded read";
+  if (backend.readAttempted && backend.readError) return "Fallback";
+  if (backend.canRead) return "Read ready";
+  return "Dry-run";
+}
+
+function getCommunityBossBackendStatusDetail(backend: CommunityBossBackendUiState) {
+  if (backend.loading) return "Checking Community Boss read path.";
+  if (backend.persisted) return "Current week aggregate was read from the public-safe Supabase view.";
+  if (backend.readAttempted && backend.readError) return `Read attempted, then safely fell back: ${backend.readError}`;
+  if (backend.canRead) return "Read path is ready, but no current seeded row was returned yet.";
+  if (backend.missing.length) return backend.missing[0];
+  return "Dry-run preview is active until backend flags and seed row are ready.";
+}
+
 type SocialLeaderboardLane = {
   id: string;
   title: string;
@@ -15240,9 +15340,20 @@ function WeeklyBossMvpCard({
 
 function CommunityBossPrepCard({
   state,
+  backend,
 }: {
   state: CommunityBossPrepState;
+  backend: CommunityBossBackendUiState;
 }) {
+  const backendStatusLabel = getCommunityBossBackendStatusLabel(backend);
+  const backendStatusDetail = getCommunityBossBackendStatusDetail(backend);
+  const readLabel = backend.persisted
+    ? "Supabase"
+    : backend.readAttempted
+      ? "Fallback"
+      : "Not tried";
+  const seedLabel = backend.persisted ? "Seeded" : "Not seeded";
+
   return (
     <section className="community-boss-prep-card">
       <div className="community-boss-prep-head">
@@ -15255,8 +15366,50 @@ function CommunityBossPrepCard({
       </div>
 
       <div className="social-game-guide-strip compact">
-        <strong>Prep only</strong>
-        <span>Local safe points preview. No backend sync, no PvP, no wallet value, no payout math.</span>
+        <strong>Backend readiness</strong>
+        <span>{backendStatusDetail}</span>
+      </div>
+
+      <div className={`community-boss-backend-panel ${backend.persisted ? "seeded" : "dry"}`}>
+        <div className="community-boss-backend-head">
+          <div>
+            <span>Aggregate source</span>
+            <strong>{backendStatusLabel}</strong>
+            <small>{backend.weekKey !== "—" ? `${backend.bossName} · ${backend.weekKey}` : state.weekRangeLabel}</small>
+          </div>
+          <b>{backend.dataSource === "supabase" ? "DB read" : "Dry-run"}</b>
+        </div>
+
+        <div className="community-boss-backend-grid">
+          <article>
+            <span>Week row</span>
+            <strong>{seedLabel}</strong>
+            <small>{backend.persisted ? "Current week exists in public view." : "Seed current week before live aggregate."}</small>
+          </article>
+          <article>
+            <span>Read path</span>
+            <strong>{readLabel}</strong>
+            <small>{backend.canRead ? "Flags/env ready." : "Waiting for flags/env/review."}</small>
+          </article>
+          <article>
+            <span>Community damage</span>
+            <strong>{backend.totalDamage}</strong>
+            <small>{backend.participantCount} participant{backend.participantCount === 1 ? "" : "s"} · {backend.progressPercent}%</small>
+          </article>
+          <article>
+            <span>Write path</span>
+            <strong>{backend.canWrite ? "Enabled" : "Disabled"}</strong>
+            <small>User proof writes are still blocked.</small>
+          </article>
+        </div>
+
+        {backend.missing.length > 0 && (
+          <div className="community-boss-backend-missing">
+            {backend.missing.slice(0, 3).map((item) => (
+              <span key={item}>{item}</span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="community-boss-preview-arena" aria-label="Community boss preview">
@@ -15296,8 +15449,8 @@ function CommunityBossPrepCard({
       </div>
 
       <footer className="community-boss-guardrail">
-        <span>{state.weekRangeLabel} · {state.syncLabel}</span>
-        <b>No PvP · No payout · No wallet value · No backend sync yet</b>
+        <span>{state.weekRangeLabel} · {backend.persisted ? "Aggregate read active" : state.syncLabel}</span>
+        <b>No PvP · No payout · No wallet value · No user proof writes yet</b>
       </footer>
     </section>
   );
@@ -28358,6 +28511,48 @@ function WhatIfScreen({
     }),
     [settings, mascotProgressionState, weeklyBossState, socialLeaderboardState, activeProofStatus, challengeHistory]
   );
+  const [communityBossBackendState, setCommunityBossBackendState] = useState<CommunityBossBackendUiState>(() =>
+    defaultCommunityBossBackendUiState()
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCommunityBossBackendState() {
+      setCommunityBossBackendState((current) => ({
+        ...current,
+        loading: true,
+        readError: null,
+      }));
+
+      try {
+        const response = await fetch("/api/community-boss/current", { cache: "no-store" });
+        const payload = await response.json();
+
+        if (!cancelled) {
+          setCommunityBossBackendState(parseCommunityBossBackendUiState(payload));
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCommunityBossBackendState((current) => ({
+            ...current,
+            loading: false,
+            loaded: true,
+            dataSource: "dry_run",
+            persisted: false,
+            readAttempted: true,
+            readError: error instanceof Error ? error.message.slice(0, 180) : "Community Boss read check failed.",
+          }));
+        }
+      }
+    }
+
+    void loadCommunityBossBackendState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function openChallengeArea() {
     triggerHaptic("light");
@@ -28779,7 +28974,7 @@ function WhatIfScreen({
           </div>
           <b>{communityBossPrepState.prepLabel}</b>
         </summary>
-        <CommunityBossPrepCard state={communityBossPrepState} />
+        <CommunityBossPrepCard state={communityBossPrepState} backend={communityBossBackendState} />
       </details>
 
       <details className="clean-details rewards-social-details social-leaderboard-rewards-details">

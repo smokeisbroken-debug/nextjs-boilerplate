@@ -36913,3 +36913,149 @@ html.embedded-app-view .hero h1 {
     max-width: 96px;
   }
 }
+
+/* v59.60.5 — Community Boss Aggregate UI Readiness */
+.community-boss-backend-panel {
+  position: relative;
+  z-index: 1;
+  margin-top: 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(133, 223, 255, 0.14);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(133, 223, 255, 0.12), transparent 34%),
+    rgba(0, 0, 0, 0.18);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.community-boss-backend-panel.seeded {
+  border-color: rgba(183, 255, 25, 0.2);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(183, 255, 25, 0.13), transparent 34%),
+    rgba(0, 0, 0, 0.18);
+}
+
+.community-boss-backend-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.community-boss-backend-head div {
+  min-width: 0;
+}
+
+.community-boss-backend-head span,
+.community-boss-backend-grid span,
+.community-boss-backend-missing span {
+  color: rgba(224, 248, 255, 0.64);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.community-boss-backend-head strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.05;
+  font-weight: 1000;
+  overflow-wrap: anywhere;
+}
+
+.community-boss-backend-head small,
+.community-boss-backend-grid small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.28;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.community-boss-backend-head b {
+  padding: 7px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(133, 223, 255, 0.2);
+  background: rgba(133, 223, 255, 0.09);
+  color: rgba(224, 248, 255, 0.92);
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.community-boss-backend-panel.seeded .community-boss-backend-head b {
+  border-color: rgba(183, 255, 25, 0.22);
+  background: rgba(183, 255, 25, 0.1);
+  color: var(--green);
+}
+
+.community-boss-backend-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.community-boss-backend-grid article {
+  min-width: 0;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.035);
+  padding: 9px;
+}
+
+.community-boss-backend-grid strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.08;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.community-boss-backend-missing {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.community-boss-backend-missing span {
+  max-width: 100%;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.085);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 6px 8px;
+  color: rgba(237, 255, 219, 0.66);
+  letter-spacing: 0;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  .community-boss-backend-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 390px) {
+  .community-boss-backend-head {
+    grid-template-columns: 1fr;
+  }
+
+  .community-boss-backend-head b {
+    justify-self: start;
+    white-space: normal;
+  }
+
+  .community-boss-backend-grid {
+    grid-template-columns: 1fr;
+  }
+}

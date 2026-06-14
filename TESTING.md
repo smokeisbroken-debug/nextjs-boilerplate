@@ -84,3 +84,12 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
   - `POST /api/community-boss/seed-week` without admin secret should return 401.
   - `POST /api/community-boss/seed-week?key=<admin-secret>` should return `persisted:false`, `manualApplyRequired:true`, and seed SQL.
 - Do not apply the seed SQL until the v59.60.2 schema has been reviewed/applied manually.
+
+
+## v59.60.5 Community Boss Aggregate UI Readiness
+
+- Run `npm run typecheck`.
+- Run `npm run lint:quiet`.
+- Run production build.
+- In Rewards → Community Boss Prep, confirm the backend panel shows dry-run or Supabase source safely.
+- Confirm write path remains disabled and no wallet value/payout language appears.
