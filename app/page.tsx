@@ -1230,6 +1230,28 @@ type CommunityBossProofSubmitUiState = {
   guardrails: string[];
 };
 
+type CommunityBossFirstEventStage =
+  | "not_ready"
+  | "ready_to_seed"
+  | "proof_needed"
+  | "recalc_needed"
+  | "aggregate_live"
+  | "launch_ready";
+
+type CommunityBossFirstEventState = {
+  stage: CommunityBossFirstEventStage;
+  label: string;
+  detail: string;
+  nextAction: string;
+  badge: string;
+  severity: "locked" | "action" | "live" | "ready";
+  launchReady: boolean;
+  publicCopyUnlocked: boolean;
+  proofEvidenceReady: boolean;
+  liveAggregateReady: boolean;
+  blockers: string[];
+};
+
 function defaultCommunityBossBackendUiState(): CommunityBossBackendUiState {
   return {
     loading: false,
@@ -1565,10 +1587,174 @@ function getCommunityBossAggregateFreshnessDetail(
   return backend.refreshReason || "Waiting for a live aggregate refresh.";
 }
 
+function hasCommunityBossSeededWeek(backend: CommunityBossBackendUiState) {
+  return (
+    backend.dataSource === "supabase" &&
+    backend.persisted &&
+    backend.weekKey !== "—"
+  );
+}
+
+function hasCommunityBossLiveAggregateProof(
+  backend: CommunityBossBackendUiState,
+) {
+  return (
+    hasCommunityBossSeededWeek(backend) &&
+    Boolean(backend.aggregateUpdatedAt) &&
+    backend.participantCount > 0 &&
+    backend.totalDamage > 0
+  );
+}
+
+function hasCommunityBossProofEvidence(
+  backend: CommunityBossBackendUiState,
+  proofSubmit: CommunityBossProofSubmitUiState,
+) {
+  return proofSubmit.persisted || hasCommunityBossLiveAggregateProof(backend);
+}
+
+function getCommunityBossFirstEventState(
+  backend: CommunityBossBackendUiState,
+  proofSubmit: CommunityBossProofSubmitUiState,
+): CommunityBossFirstEventState {
+  const readReady = backend.canRead && !(backend.readAttempted && Boolean(backend.readError));
+  const seededWeek = hasCommunityBossSeededWeek(backend);
+  const proofEvidenceReady = hasCommunityBossProofEvidence(backend, proofSubmit);
+  const authReady = proofSubmit.authenticated || proofEvidenceReady;
+  const proofGateReady = backend.canPersistProof;
+  const aggregateGateReady = backend.canRecalculateAggregate;
+  const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
+  const blockers: string[] = [];
+
+  if (!readReady) blockers.push("public read path");
+  if (!seededWeek) blockers.push("current week seed");
+  if (!authReady) blockers.push("server auth proof");
+  if (!proofGateReady) blockers.push("proof manual write gate");
+  if (!proofEvidenceReady) blockers.push("first safe proof row");
+  if (!aggregateGateReady) blockers.push("aggregate manual gate");
+  if (!liveAggregateReady) blockers.push("live aggregate with participant proof");
+
+  if (
+    readReady &&
+    seededWeek &&
+    authReady &&
+    proofGateReady &&
+    proofEvidenceReady &&
+    aggregateGateReady &&
+    liveAggregateReady
+  ) {
+    return {
+      stage: "launch_ready",
+      label: "Launch ready",
+      detail: "Seed, proof write, aggregate recalculation, and live public read are all verified.",
+      nextAction: "Copy the public post only after final operator review.",
+      badge: "Ready",
+      severity: "ready",
+      launchReady: true,
+      publicCopyUnlocked: true,
+      proofEvidenceReady,
+      liveAggregateReady,
+      blockers,
+    };
+  }
+
+  if (!readReady) {
+    return {
+      stage: "not_ready",
+      label: "Not ready",
+      detail: backend.readError
+        ? `Public read fell back: ${backend.readError}`
+        : "Public aggregate read path is not verified yet.",
+      nextAction: "Enable and verify the public aggregate read flags/env first.",
+      badge: "Blocked",
+      severity: "locked",
+      launchReady: false,
+      publicCopyUnlocked: false,
+      proofEvidenceReady,
+      liveAggregateReady,
+      blockers,
+    };
+  }
+
+  if (!seededWeek) {
+    return {
+      stage: "ready_to_seed",
+      label: "Ready to seed",
+      detail: "Read path is available, but the current week row is not visible from Supabase yet.",
+      nextAction: "Seed the current Community Boss week, then refresh aggregate.",
+      badge: "Seed week",
+      severity: "action",
+      launchReady: false,
+      publicCopyUnlocked: false,
+      proofEvidenceReady,
+      liveAggregateReady,
+      blockers,
+    };
+  }
+
+  if (!authReady || !proofGateReady || !proofEvidenceReady) {
+    return {
+      stage: "proof_needed",
+      label: "Proof needed",
+      detail: proofGateReady
+        ? "Week is seeded. Store one authenticated safe proof row before launch."
+        : "Week is seeded, but the manual proof write gate is still locked.",
+      nextAction: proofGateReady
+        ? "Submit one safe proof and confirm persisted:true."
+        : "Enable proof manual write gate only after final migration review.",
+      badge: "Proof",
+      severity: "action",
+      launchReady: false,
+      publicCopyUnlocked: false,
+      proofEvidenceReady,
+      liveAggregateReady,
+      blockers,
+    };
+  }
+
+  if (!aggregateGateReady || !liveAggregateReady) {
+    return {
+      stage: "recalc_needed",
+      label: "Recalc needed",
+      detail: aggregateGateReady
+        ? "Safe proof exists. Run admin recalculation, then refresh the public aggregate read."
+        : "Safe proof exists, but aggregate manual gate is still locked.",
+      nextAction: aggregateGateReady
+        ? "Run Community Boss admin recalculation, then press Refresh aggregate."
+        : "Enable aggregate manual gate and use the existing admin panel.",
+      badge: "Recalc",
+      severity: "action",
+      launchReady: false,
+      publicCopyUnlocked: false,
+      proofEvidenceReady,
+      liveAggregateReady,
+      blockers,
+    };
+  }
+
+  return {
+    stage: "aggregate_live",
+    label: "Aggregate live",
+    detail: "Public aggregate is live, but final launch guard still has unresolved blocking items.",
+    nextAction: "Review the remaining launch blockers before copying public launch text.",
+    badge: "Live",
+    severity: "live",
+    launchReady: false,
+    publicCopyUnlocked: false,
+    proofEvidenceReady,
+    liveAggregateReady,
+    blockers,
+  };
+}
+
 function getCommunityBossLiveFlowSteps(
   backend: CommunityBossBackendUiState,
   proofSubmit: CommunityBossProofSubmitUiState,
 ) {
+  const seededWeek = hasCommunityBossSeededWeek(backend);
+  const proofEvidenceReady = hasCommunityBossProofEvidence(backend, proofSubmit);
+  const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
+
   return [
     {
       label: "Read path",
@@ -1580,40 +1766,44 @@ function getCommunityBossLiveFlowSteps(
     },
     {
       label: "Week seed",
-      value: backend.persisted ? "Seeded" : "Pending",
-      detail: backend.persisted
-        ? "Current week row exists in the public view."
+      value: seededWeek ? "Seeded" : "Pending",
+      detail: seededWeek
+        ? "Current week row exists in the Supabase public view."
         : "Seed the current boss week before a live event.",
-      ready: backend.persisted,
+      ready: seededWeek,
     },
     {
       label: "Proof auth",
       value: proofSubmit.authenticated
         ? "Verified"
-        : proofSubmit.authRequired
-          ? "Required"
-          : proofSubmit.submitted
-            ? "Guest check"
-            : "Untested",
+        : proofEvidenceReady
+          ? "Covered"
+          : proofSubmit.authRequired
+            ? "Required"
+            : proofSubmit.submitted
+              ? "Guest check"
+              : "Untested",
       detail: proofSubmit.authenticated
         ? "Server received Telegram/session auth."
-        : "Submit from Telegram/web session before live event.",
-      ready: proofSubmit.authenticated || proofSubmit.persisted,
+        : proofEvidenceReady
+          ? "Existing live aggregate proves at least one stored safe proof."
+          : "Submit from Telegram/web session before live event.",
+      ready: proofSubmit.authenticated || proofEvidenceReady,
     },
     {
       label: "Proof write",
-      value: proofSubmit.persisted
+      value: proofEvidenceReady
         ? "Stored"
         : backend.canPersistProof
           ? "Gate ready"
           : "Locked",
-      detail: proofSubmit.persisted
-        ? "A safe proof row was persisted."
+      detail: proofEvidenceReady
+        ? "At least one safe proof row is reflected in live public totals."
         : "Manual proof write gate must be enabled and tested.",
-      ready: proofSubmit.persisted || backend.canPersistProof,
+      ready: proofEvidenceReady,
     },
     {
-      label: "Aggregate",
+      label: "Aggregate gate",
       value: backend.canRecalculateAggregate ? "Gate ready" : "Locked",
       detail: backend.canRecalculateAggregate
         ? "Admin recalculation can write public totals."
@@ -1621,12 +1811,12 @@ function getCommunityBossLiveFlowSteps(
       ready: backend.canRecalculateAggregate,
     },
     {
-      label: "Live UI",
-      value: backend.dataSource === "supabase" ? "Live read" : "Dry-run",
-      detail: backend.aggregateUpdatedAt
-        ? `Aggregate timestamp ${backend.aggregateUpdatedAt}`
-        : "Refresh after admin recalculation to verify public totals.",
-      ready: backend.dataSource === "supabase" && backend.persisted,
+      label: "Live aggregate",
+      value: liveAggregateReady ? "Verified" : "Not verified",
+      detail: liveAggregateReady
+        ? `Live aggregate has ${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"} and ${backend.totalDamage} damage.`
+        : "Run admin recalculation, then refresh public totals.",
+      ready: liveAggregateReady,
     },
   ];
 }
@@ -1637,28 +1827,11 @@ function getCommunityBossFirstEventStatus(
 ) {
   const steps = getCommunityBossLiveFlowSteps(backend, proofSubmit);
   const readyCount = steps.filter((step) => step.ready).length;
-
-  if (readyCount === steps.length) {
-    return {
-      label: "First event ready",
-      detail: "Live proof, aggregate recalculation, and public refresh path are ready.",
-      readyCount,
-      total: steps.length,
-    };
-  }
-
-  if (backend.canRead && backend.canPersistProof && backend.canRecalculateAggregate) {
-    return {
-      label: "Backend gates ready",
-      detail: "Run one authenticated proof write, recalculate aggregate, then refresh public read.",
-      readyCount,
-      total: steps.length,
-    };
-  }
+  const eventState = getCommunityBossFirstEventState(backend, proofSubmit);
 
   return {
-    label: "Live QA mode",
-    detail: "Finish the remaining gates before announcing the first live Community Boss event.",
+    label: eventState.label,
+    detail: eventState.detail,
     readyCount,
     total: steps.length,
   };
@@ -1668,41 +1841,17 @@ function getCommunityBossFirstEventNextAction(
   backend: CommunityBossBackendUiState,
   proofSubmit: CommunityBossProofSubmitUiState,
 ) {
-  if (!backend.canRead) {
-    return "Enable read flags/env and verify the public aggregate view.";
-  }
-
-  if (!backend.persisted) {
-    return "Seed the current boss week row, then refresh aggregate.";
-  }
-
-  if (!proofSubmit.authenticated && !proofSubmit.persisted) {
-    return "Submit one proof from Telegram/web session to verify server auth.";
-  }
-
-  if (!backend.canPersistProof) {
-    return "Enable proof manual write gate only after migration review.";
-  }
-
-  if (!proofSubmit.persisted) {
-    return "Submit one safe proof and confirm persisted:true.";
-  }
-
-  if (!backend.canRecalculateAggregate) {
-    return "Enable aggregate manual gate and run admin recalculation.";
-  }
-
-  if (backend.dataSource !== "supabase" || !backend.aggregateUpdatedAt) {
-    return "Refresh aggregate after admin recalculation and confirm live public totals.";
-  }
-
-  return "Prepare the first live Community Boss announcement without payout promises.";
+  return getCommunityBossFirstEventState(backend, proofSubmit).nextAction;
 }
 
 function getCommunityBossLaunchGuardItems(
   backend: CommunityBossBackendUiState,
   proofSubmit: CommunityBossProofSubmitUiState,
 ) {
+  const seededWeek = hasCommunityBossSeededWeek(backend);
+  const proofEvidenceReady = hasCommunityBossProofEvidence(backend, proofSubmit);
+  const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
+
   return [
     {
       label: "Read flags",
@@ -1714,27 +1863,33 @@ function getCommunityBossLaunchGuardItems(
     },
     {
       label: "Week seeded",
-      value: backend.persisted ? "Seeded" : "Missing",
-      detail: backend.persisted
-        ? "Current week row is visible in the public-safe view."
+      value: seededWeek ? "Seeded" : "Missing",
+      detail: seededWeek
+        ? "Current week row is visible in the Supabase public-safe view."
         : "Seed the current boss week before launch.",
-      ready: backend.persisted,
+      ready: seededWeek,
     },
     {
       label: "Auth proof",
-      value: proofSubmit.authenticated || proofSubmit.persisted ? "Verified" : "Untested",
-      detail: proofSubmit.authenticated || proofSubmit.persisted
+      value: proofSubmit.authenticated || proofEvidenceReady ? "Verified" : "Untested",
+      detail: proofSubmit.authenticated
         ? "Server-side Telegram/session identity was accepted."
-        : "Submit one proof from Telegram or a web session.",
-      ready: proofSubmit.authenticated || proofSubmit.persisted,
+        : proofEvidenceReady
+          ? "A persisted proof is already reflected in public totals."
+          : "Submit one proof from Telegram or a web session.",
+      ready: proofSubmit.authenticated || proofEvidenceReady,
     },
     {
       label: "Proof write",
-      value: proofSubmit.persisted ? "Persisted" : backend.canPersistProof ? "Gate ready" : "Locked",
-      detail: proofSubmit.persisted
-        ? "A safe proof row was stored behind manual gates."
+      value: proofEvidenceReady
+        ? "Persisted"
+        : backend.canPersistProof
+          ? "Gate ready"
+          : "Locked",
+      detail: proofEvidenceReady
+        ? "At least one safe proof row is stored behind manual gates."
         : "Do not launch until one safe proof persists successfully.",
-      ready: proofSubmit.persisted,
+      ready: proofEvidenceReady,
     },
     {
       label: "Aggregate gate",
@@ -1745,12 +1900,21 @@ function getCommunityBossLaunchGuardItems(
       ready: backend.canRecalculateAggregate,
     },
     {
+      label: "Aggregate proof",
+      value: backend.participantCount > 0 && backend.totalDamage > 0 ? "Present" : "Missing",
+      detail:
+        backend.participantCount > 0 && backend.totalDamage > 0
+          ? `${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"} · ${backend.totalDamage} public damage.`
+          : "Aggregate must show at least one participant and non-zero damage.",
+      ready: backend.participantCount > 0 && backend.totalDamage > 0,
+    },
+    {
       label: "Live aggregate",
-      value: backend.dataSource === "supabase" && backend.aggregateUpdatedAt ? "Live" : "Not verified",
-      detail: backend.aggregateUpdatedAt
+      value: liveAggregateReady ? "Live" : "Not verified",
+      detail: liveAggregateReady
         ? `Public aggregate timestamp ${backend.aggregateUpdatedAt}.`
-        : "Run admin recalculation, then refresh aggregate.",
-      ready: backend.dataSource === "supabase" && Boolean(backend.aggregateUpdatedAt),
+        : "Run admin recalculation, then refresh aggregate until Supabase totals are visible.",
+      ready: liveAggregateReady,
     },
     {
       label: "Public safety",
@@ -1797,8 +1961,9 @@ function getCommunityBossFirstEventLaunchConsole({
   launchGuardItems: ReturnType<typeof getCommunityBossLaunchGuardItems>;
   launchReady: boolean;
 }) {
-  const liveAggregateReady =
-    backend.dataSource === "supabase" && Boolean(backend.aggregateUpdatedAt);
+  const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
+  const proofEvidenceReady = hasCommunityBossProofEvidence(backend, proofSubmit);
+  const seededWeek = hasCommunityBossSeededWeek(backend);
   const blockers = launchGuardItems
     .filter((item) => !item.ready)
     .map((item) => ({
@@ -1817,19 +1982,19 @@ function getCommunityBossFirstEventLaunchConsole({
     },
     {
       label: "Confirm week seed",
-      value: backend.persisted ? "Seeded" : "Missing",
-      detail: backend.persisted
+      value: seededWeek ? "Seeded" : "Missing",
+      detail: seededWeek
         ? "Current week is visible from Supabase public read."
         : "Seed the current boss week before launch.",
-      ready: backend.persisted,
+      ready: seededWeek,
     },
     {
       label: "Store one safe proof",
-      value: proofSubmit.persisted ? "Stored" : "Needed",
-      detail: proofSubmit.persisted
-        ? "One safe proof persisted behind manual gates."
+      value: proofEvidenceReady ? "Stored" : "Needed",
+      detail: proofEvidenceReady
+        ? "At least one safe proof is reflected in live public totals."
         : "Submit one authenticated proof after opening the manual proof gate.",
-      ready: proofSubmit.persisted,
+      ready: proofEvidenceReady,
     },
     {
       label: "Run admin recalc",
@@ -1843,7 +2008,7 @@ function getCommunityBossFirstEventLaunchConsole({
       label: "Verify live aggregate",
       value: liveAggregateReady ? "Verified" : "Refresh needed",
       detail: liveAggregateReady
-        ? `Live aggregate timestamp ${backend.aggregateUpdatedAt}.`
+        ? `Live aggregate: ${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"} · ${backend.totalDamage} damage.`
         : "Refresh public aggregate after admin recalculation.",
       ready: liveAggregateReady,
     },
@@ -1871,10 +2036,10 @@ function getCommunityBossFirstEventLaunchConsole({
     };
   }
 
-  if (proofSubmit.persisted && backend.canRecalculateAggregate && !liveAggregateReady) {
+  if (proofEvidenceReady && backend.canRecalculateAggregate && !liveAggregateReady) {
     return {
       label: "Recalculate then refresh",
-      detail: "Proof is stored. Run admin recalculation, then refresh the public aggregate read.",
+      detail: "Proof evidence exists. Run admin recalculation, then refresh the public aggregate read.",
       badge: "Action needed",
       blockers,
       steps,
@@ -18848,7 +19013,8 @@ function CommunityBossPrepCard({
     : backend.readAttempted
       ? "Fallback"
       : "Not tried";
-  const seedLabel = backend.persisted ? "Seeded" : "Not seeded";
+  const seedLabel = hasCommunityBossSeededWeek(backend) ? "Seeded" : "Not seeded";
+  const firstEventState = getCommunityBossFirstEventState(backend, proofSubmit);
   const liveFlowSteps = getCommunityBossLiveFlowSteps(backend, proofSubmit);
   const firstEventStatus = getCommunityBossFirstEventStatus(
     backend,
@@ -18867,17 +19033,17 @@ function CommunityBossPrepCard({
     backend,
     proofSubmit,
     launchGuardItems,
-    launchReady: launchGuardStatus.ready,
+    launchReady: firstEventState.launchReady,
   });
   const firstEventAnnouncement = getCommunityBossFirstEventAnnouncementCopy({
     state,
     backend,
-    launchReady: launchGuardStatus.ready,
+    launchReady: firstEventState.publicCopyUnlocked,
   });
   const [announcementCopied, setAnnouncementCopied] = useState(false);
 
   async function copyFirstEventAnnouncement() {
-    if (!launchGuardStatus.ready || !firstEventAnnouncement.xCopy) return;
+    if (!firstEventState.publicCopyUnlocked || !firstEventAnnouncement.xCopy) return;
 
     try {
       await navigator.clipboard.writeText(firstEventAnnouncement.xCopy);
@@ -19040,7 +19206,26 @@ function CommunityBossPrepCard({
         </div>
 
         <div
-          className={`community-boss-live-flow-panel ${firstEventStatus.readyCount === firstEventStatus.total ? "ready" : "checking"}`}
+          className={`community-boss-first-event-state-panel ${firstEventState.severity}`}
+        >
+          <div>
+            <span>First event state</span>
+            <strong>{firstEventState.label}</strong>
+            <small>{firstEventState.detail}</small>
+          </div>
+          <b>{firstEventState.stage}</b>
+          <p>{firstEventState.nextAction}</p>
+          {firstEventState.blockers.length > 0 && (
+            <div className="community-boss-first-event-state-blockers">
+              {firstEventState.blockers.slice(0, 4).map((item) => (
+                <span key={item}>{item}</span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div
+          className={`community-boss-live-flow-panel ${firstEventState.launchReady ? "ready" : "checking"}`}
         >
           <div className="community-boss-live-flow-head">
             <div>
@@ -19104,7 +19289,7 @@ function CommunityBossPrepCard({
         </div>
 
         <div
-          className={`community-boss-launch-console-panel ${launchGuardStatus.ready ? "ready" : "locked"}`}
+          className={`community-boss-launch-console-panel ${firstEventState.launchReady ? "ready" : "locked"}`}
         >
           <div className="community-boss-launch-console-head">
             <div>
@@ -19144,7 +19329,7 @@ function CommunityBossPrepCard({
         </div>
 
         <div
-          className={`community-boss-announcement-panel ${launchGuardStatus.ready ? "ready" : "locked"}`}
+          className={`community-boss-announcement-panel ${firstEventState.publicCopyUnlocked ? "ready" : "locked"}`}
         >
           <div className="community-boss-announcement-head">
             <div>
@@ -19152,13 +19337,13 @@ function CommunityBossPrepCard({
               <strong>{firstEventAnnouncement.statusLabel}</strong>
               <small>{firstEventAnnouncement.statusDetail}</small>
             </div>
-            <b>{launchGuardStatus.ready ? "Ready" : "Locked"}</b>
+            <b>{firstEventState.publicCopyUnlocked ? "Ready" : "Locked"}</b>
           </div>
 
           <div className="community-boss-announcement-copy">
-            <span>{launchGuardStatus.ready ? "Launch-ready X copy" : "Operator note"}</span>
+            <span>{firstEventState.publicCopyUnlocked ? "Launch-ready X copy" : "Operator note"}</span>
             <p>
-              {launchGuardStatus.ready
+              {firstEventState.publicCopyUnlocked
                 ? firstEventAnnouncement.xCopy
                 : firstEventAnnouncement.operatorNote}
             </p>
@@ -19174,7 +19359,7 @@ function CommunityBossPrepCard({
             <button
               type="button"
               onClick={copyFirstEventAnnouncement}
-              disabled={!launchGuardStatus.ready}
+              disabled={!firstEventState.publicCopyUnlocked}
             >
               {announcementCopied ? "Copied" : "Copy launch post"}
             </button>
