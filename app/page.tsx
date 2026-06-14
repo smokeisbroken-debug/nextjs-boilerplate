@@ -1699,6 +1699,93 @@ function getCommunityBossFirstEventNextAction(
   return "Prepare the first live Community Boss announcement without payout promises.";
 }
 
+function getCommunityBossLaunchGuardItems(
+  backend: CommunityBossBackendUiState,
+  proofSubmit: CommunityBossProofSubmitUiState,
+) {
+  return [
+    {
+      label: "Read flags",
+      value: backend.canRead ? "Ready" : "Locked",
+      detail: backend.canRead
+        ? "Public aggregate read path is available."
+        : "Enable read flags/env after migration review.",
+      ready: backend.canRead,
+    },
+    {
+      label: "Week seeded",
+      value: backend.persisted ? "Seeded" : "Missing",
+      detail: backend.persisted
+        ? "Current week row is visible in the public-safe view."
+        : "Seed the current boss week before launch.",
+      ready: backend.persisted,
+    },
+    {
+      label: "Auth proof",
+      value: proofSubmit.authenticated || proofSubmit.persisted ? "Verified" : "Untested",
+      detail: proofSubmit.authenticated || proofSubmit.persisted
+        ? "Server-side Telegram/session identity was accepted."
+        : "Submit one proof from Telegram or a web session.",
+      ready: proofSubmit.authenticated || proofSubmit.persisted,
+    },
+    {
+      label: "Proof write",
+      value: proofSubmit.persisted ? "Persisted" : backend.canPersistProof ? "Gate ready" : "Locked",
+      detail: proofSubmit.persisted
+        ? "A safe proof row was stored behind manual gates."
+        : "Do not launch until one safe proof persists successfully.",
+      ready: proofSubmit.persisted,
+    },
+    {
+      label: "Aggregate gate",
+      value: backend.canRecalculateAggregate ? "Ready" : "Locked",
+      detail: backend.canRecalculateAggregate
+        ? "Admin aggregate recalculation route can write public totals."
+        : "Enable aggregate manual gate before public launch.",
+      ready: backend.canRecalculateAggregate,
+    },
+    {
+      label: "Live aggregate",
+      value: backend.dataSource === "supabase" && backend.aggregateUpdatedAt ? "Live" : "Not verified",
+      detail: backend.aggregateUpdatedAt
+        ? `Public aggregate timestamp ${backend.aggregateUpdatedAt}.`
+        : "Run admin recalculation, then refresh aggregate.",
+      ready: backend.dataSource === "supabase" && Boolean(backend.aggregateUpdatedAt),
+    },
+    {
+      label: "Public safety",
+      value: "Locked safe",
+      detail: "No payout promise, wallet value, balances, income, debt, or PvP.",
+      ready: true,
+    },
+  ];
+}
+
+function getCommunityBossLaunchGuardStatus(
+  items: ReturnType<typeof getCommunityBossLaunchGuardItems>,
+) {
+  const readyCount = items.filter((item) => item.ready).length;
+  const total = items.length;
+
+  if (readyCount === total) {
+    return {
+      label: "Launch guard passed",
+      detail: "First live Community Boss event can be announced with public-safe wording.",
+      ready: true,
+      readyCount,
+      total,
+    };
+  }
+
+  return {
+    label: "Launch blocked",
+    detail: "Finish every checklist item before the first public Community Boss event.",
+    ready: false,
+    readyCount,
+    total,
+  };
+}
+
 type SocialLeaderboardLane = {
   id: string;
   title: string;
@@ -18614,6 +18701,11 @@ function CommunityBossPrepCard({
     backend,
     proofSubmit,
   );
+  const launchGuardItems = getCommunityBossLaunchGuardItems(
+    backend,
+    proofSubmit,
+  );
+  const launchGuardStatus = getCommunityBossLaunchGuardStatus(launchGuardItems);
 
   return (
     <section className="community-boss-prep-card">
@@ -18795,6 +18887,36 @@ function CommunityBossPrepCard({
               value, no PvP, no private financial data.
             </small>
           </div>
+        </div>
+
+        <div
+          className={`community-boss-launch-guard-panel ${launchGuardStatus.ready ? "ready" : "locked"}`}
+        >
+          <div className="community-boss-launch-guard-head">
+            <div>
+              <span>First event launch guard</span>
+              <strong>{launchGuardStatus.label}</strong>
+              <small>{launchGuardStatus.detail}</small>
+            </div>
+            <b>
+              {launchGuardStatus.readyCount}/{launchGuardStatus.total}
+            </b>
+          </div>
+
+          <div className="community-boss-launch-guard-grid">
+            {launchGuardItems.map((item) => (
+              <article key={item.label} className={item.ready ? "ready" : "locked"}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
+
+          <p className="community-boss-launch-guard-note">
+            Launch is blocked until proof write, admin recalculation, and live
+            aggregate read are all verified. No payout, no wallet value, no PvP.
+          </p>
         </div>
       </div>
 

@@ -37566,3 +37566,145 @@ html.embedded-app-view .hero h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.61.5 — Community Boss First Event Operator Checklist / Launch Guard */
+.community-boss-launch-guard-panel {
+  border-radius: 18px;
+  border: 1px solid rgba(255, 227, 126, 0.14);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 227, 126, 0.10), transparent 34%),
+    rgba(16, 12, 3, 0.72);
+  padding: 11px;
+  display: grid;
+  gap: 10px;
+}
+
+.community-boss-launch-guard-panel.ready {
+  border-color: rgba(142, 255, 161, 0.28);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(142, 255, 161, 0.14), transparent 36%),
+    rgba(4, 22, 9, 0.82);
+}
+
+.community-boss-launch-guard-panel,
+.community-boss-launch-guard-panel * {
+  box-sizing: border-box;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.community-boss-launch-guard-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.community-boss-launch-guard-head div {
+  display: grid;
+  gap: 3px;
+}
+
+.community-boss-launch-guard-head span,
+.community-boss-launch-guard-grid span {
+  color: rgba(255, 242, 198, 0.72);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.community-boss-launch-guard-head strong,
+.community-boss-launch-guard-grid strong {
+  color: var(--text);
+  line-height: 1.12;
+  font-weight: 1000;
+}
+
+.community-boss-launch-guard-head strong {
+  font-size: 14px;
+}
+
+.community-boss-launch-guard-grid strong {
+  font-size: 13px;
+}
+
+.community-boss-launch-guard-head small,
+.community-boss-launch-guard-grid small,
+.community-boss-launch-guard-note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.28;
+  font-weight: 750;
+}
+
+.community-boss-launch-guard-head b {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 227, 126, 0.2);
+  background: rgba(255, 227, 126, 0.10);
+  color: rgba(255, 246, 220, 0.92);
+  padding: 7px 9px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 1000;
+}
+
+.community-boss-launch-guard-panel.ready .community-boss-launch-guard-head b {
+  border-color: rgba(142, 255, 161, 0.24);
+  background: rgba(142, 255, 161, 0.11);
+  color: rgba(227, 255, 232, 0.94);
+}
+
+.community-boss-launch-guard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.community-boss-launch-guard-grid article {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 227, 126, 0.11);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 9px;
+  display: grid;
+  gap: 4px;
+}
+
+.community-boss-launch-guard-grid article.ready {
+  border-color: rgba(142, 255, 161, 0.18);
+  background: rgba(142, 255, 161, 0.07);
+}
+
+.community-boss-launch-guard-grid article.locked {
+  border-color: rgba(255, 227, 126, 0.12);
+}
+
+.community-boss-launch-guard-note {
+  margin: 0;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 9px 10px;
+}
+
+@media (max-width: 760px) {
+  .community-boss-launch-guard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .community-boss-launch-guard-head {
+    display: grid;
+  }
+
+  .community-boss-launch-guard-head b {
+    justify-self: start;
+  }
+
+  .community-boss-launch-guard-grid {
+    grid-template-columns: 1fr;
+  }
+}

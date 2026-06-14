@@ -206,3 +206,10 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Shows readiness for read path, week seed, proof auth, proof write, aggregate recalculation, and live UI read.
 - Adds a First Event next-action hint.
 - Keeps all writes behind existing manual gates and does not add payout, wallet value, PvP, or game economy changes.
+
+## v59.61.5 — Community Boss First Event Operator Checklist / Launch Guard
+
+- Adds a First Event Launch Guard panel inside Community Boss Prep.
+- Blocks public launch until read flags, week seed, server auth proof, proof persistence, aggregate gate, live aggregate read, and public-safety guardrails are ready.
+- Keeps previous Live Flow QA panel and next-action hint.
+- No new schema, migration auto-run, payout, wallet value, PvP, reward promises, or game economy changes.

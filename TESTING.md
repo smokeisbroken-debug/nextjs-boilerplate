@@ -94,11 +94,10 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - In Rewards → Community Boss Prep, confirm the backend panel shows dry-run or Supabase source safely.
 - Confirm write path remains disabled and no wallet value/payout language appears.
 
-
-## v59.61.4 Community Boss Live Flow QA / First Real Event Prep
+## v59.61.5 Community Boss First Event Operator Checklist / Launch Guard
 
 - Run `npm run typecheck`.
-- Run `npm run lint:quiet`.
-- Verify Rewards → Community Boss Prep shows Live Flow QA.
-- Verify first-event next action changes as backend/proof/aggregate states change.
-- Verify no payout, wallet value, income, debt, or PvP wording appears.
+- Run `npm run lint:quiet` or targeted ESLint for changed TS files if full lint times out in sandbox.
+- Confirm Rewards → Community Boss Prep shows First Event Launch Guard.
+- Confirm launch guard stays blocked until read path, seed row, auth proof, proof persistence, aggregate gate, and live aggregate are ready.
+- Confirm no payout, wallet value, PvP, balance, income, or debt language was added.
