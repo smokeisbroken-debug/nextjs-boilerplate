@@ -37428,3 +37428,141 @@ html.embedded-app-view .hero h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* v59.61.4 — Community Boss Live Flow QA / First Real Event Prep */
+.community-boss-live-flow-panel {
+  border-radius: 18px;
+  border: 1px solid rgba(142, 255, 161, 0.14);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(142, 255, 161, 0.10), transparent 34%),
+    rgba(3, 16, 7, 0.72);
+  padding: 11px;
+  display: grid;
+  gap: 10px;
+}
+
+.community-boss-live-flow-panel.ready {
+  border-color: rgba(142, 255, 161, 0.28);
+  background:
+    radial-gradient(circle at 10% 0%, rgba(142, 255, 161, 0.16), transparent 36%),
+    rgba(4, 22, 9, 0.82);
+}
+
+.community-boss-live-flow-panel,
+.community-boss-live-flow-panel * {
+  box-sizing: border-box;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.community-boss-live-flow-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.community-boss-live-flow-head div {
+  display: grid;
+  gap: 3px;
+}
+
+.community-boss-live-flow-head span,
+.community-boss-live-flow-grid span,
+.community-boss-first-event-next span {
+  color: rgba(219, 255, 226, 0.68);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.community-boss-live-flow-head strong,
+.community-boss-first-event-next strong {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.12;
+  font-weight: 1000;
+}
+
+.community-boss-live-flow-head small,
+.community-boss-live-flow-grid small,
+.community-boss-first-event-next small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.28;
+  font-weight: 750;
+}
+
+.community-boss-live-flow-head b {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  border: 1px solid rgba(142, 255, 161, 0.2);
+  background: rgba(142, 255, 161, 0.10);
+  color: rgba(227, 255, 232, 0.92);
+  padding: 7px 9px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 1000;
+}
+
+.community-boss-live-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.community-boss-live-flow-grid article {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 9px;
+  display: grid;
+  gap: 4px;
+}
+
+.community-boss-live-flow-grid article.ready {
+  border-color: rgba(142, 255, 161, 0.18);
+  background: rgba(142, 255, 161, 0.07);
+}
+
+.community-boss-live-flow-grid article.pending {
+  border-color: rgba(255, 227, 126, 0.12);
+}
+
+.community-boss-live-flow-grid strong {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.12;
+  font-weight: 950;
+}
+
+.community-boss-first-event-next {
+  border-radius: 14px;
+  border: 1px solid rgba(255, 227, 126, 0.13);
+  background: rgba(255, 227, 126, 0.055);
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+@media (max-width: 620px) {
+  .community-boss-live-flow-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .community-boss-live-flow-head {
+    display: grid;
+  }
+
+  .community-boss-live-flow-head b {
+    justify-self: start;
+  }
+
+  .community-boss-live-flow-grid {
+    grid-template-columns: 1fr;
+  }
+}

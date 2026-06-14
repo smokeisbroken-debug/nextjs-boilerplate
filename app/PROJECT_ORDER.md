@@ -198,3 +198,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Admin button calls `POST /api/community-boss/recalculate` with the existing admin key.
 - Shows status, proof rows read, public aggregate damage, and participant count.
 - Does not add payout math, wallet value, PvP, reward promises, or game economy.
+
+
+## v59.61.4 — Community Boss Live Flow QA / First Real Event Prep
+
+- Adds a Live Flow QA panel inside Community Boss Prep.
+- Shows readiness for read path, week seed, proof auth, proof write, aggregate recalculation, and live UI read.
+- Adds a First Event next-action hint.
+- Keeps all writes behind existing manual gates and does not add payout, wallet value, PvP, or game economy changes.

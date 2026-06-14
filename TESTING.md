@@ -94,10 +94,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - In Rewards → Community Boss Prep, confirm the backend panel shows dry-run or Supabase source safely.
 - Confirm write path remains disabled and no wallet value/payout language appears.
 
-## v59.61.3 Community Boss Post-Proof Recalculate Admin Flow
 
-- Confirm Rewards admin modal contains `Community Boss admin`.
-- Confirm `Recalculate aggregate` requires Admin key.
-- With gates closed, route should return a locked/blocked response and no write.
-- With gates open and Supabase configured, route may recalculate `broke_community_boss_aggregates` from safe proof rows only.
-- Confirm no payout, wallet value, balance, income, debt, PvP, or reward promise fields are shown.
+## v59.61.4 Community Boss Live Flow QA / First Real Event Prep
+
+- Run `npm run typecheck`.
+- Run `npm run lint:quiet`.
+- Verify Rewards → Community Boss Prep shows Live Flow QA.
+- Verify first-event next action changes as backend/proof/aggregate states change.
+- Verify no payout, wallet value, income, debt, or PvP wording appears.

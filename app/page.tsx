@@ -1565,6 +1565,140 @@ function getCommunityBossAggregateFreshnessDetail(
   return backend.refreshReason || "Waiting for a live aggregate refresh.";
 }
 
+function getCommunityBossLiveFlowSteps(
+  backend: CommunityBossBackendUiState,
+  proofSubmit: CommunityBossProofSubmitUiState,
+) {
+  return [
+    {
+      label: "Read path",
+      value: backend.canRead ? "Ready" : "Locked",
+      detail: backend.canRead
+        ? "Public aggregate read path is available."
+        : "Enable read flags/env after migration review.",
+      ready: backend.canRead,
+    },
+    {
+      label: "Week seed",
+      value: backend.persisted ? "Seeded" : "Pending",
+      detail: backend.persisted
+        ? "Current week row exists in the public view."
+        : "Seed the current boss week before a live event.",
+      ready: backend.persisted,
+    },
+    {
+      label: "Proof auth",
+      value: proofSubmit.authenticated
+        ? "Verified"
+        : proofSubmit.authRequired
+          ? "Required"
+          : proofSubmit.submitted
+            ? "Guest check"
+            : "Untested",
+      detail: proofSubmit.authenticated
+        ? "Server received Telegram/session auth."
+        : "Submit from Telegram/web session before live event.",
+      ready: proofSubmit.authenticated || proofSubmit.persisted,
+    },
+    {
+      label: "Proof write",
+      value: proofSubmit.persisted
+        ? "Stored"
+        : backend.canPersistProof
+          ? "Gate ready"
+          : "Locked",
+      detail: proofSubmit.persisted
+        ? "A safe proof row was persisted."
+        : "Manual proof write gate must be enabled and tested.",
+      ready: proofSubmit.persisted || backend.canPersistProof,
+    },
+    {
+      label: "Aggregate",
+      value: backend.canRecalculateAggregate ? "Gate ready" : "Locked",
+      detail: backend.canRecalculateAggregate
+        ? "Admin recalculation can write public totals."
+        : "Aggregate manual gate is not ready yet.",
+      ready: backend.canRecalculateAggregate,
+    },
+    {
+      label: "Live UI",
+      value: backend.dataSource === "supabase" ? "Live read" : "Dry-run",
+      detail: backend.aggregateUpdatedAt
+        ? `Aggregate timestamp ${backend.aggregateUpdatedAt}`
+        : "Refresh after admin recalculation to verify public totals.",
+      ready: backend.dataSource === "supabase" && backend.persisted,
+    },
+  ];
+}
+
+function getCommunityBossFirstEventStatus(
+  backend: CommunityBossBackendUiState,
+  proofSubmit: CommunityBossProofSubmitUiState,
+) {
+  const steps = getCommunityBossLiveFlowSteps(backend, proofSubmit);
+  const readyCount = steps.filter((step) => step.ready).length;
+
+  if (readyCount === steps.length) {
+    return {
+      label: "First event ready",
+      detail: "Live proof, aggregate recalculation, and public refresh path are ready.",
+      readyCount,
+      total: steps.length,
+    };
+  }
+
+  if (backend.canRead && backend.canPersistProof && backend.canRecalculateAggregate) {
+    return {
+      label: "Backend gates ready",
+      detail: "Run one authenticated proof write, recalculate aggregate, then refresh public read.",
+      readyCount,
+      total: steps.length,
+    };
+  }
+
+  return {
+    label: "Live QA mode",
+    detail: "Finish the remaining gates before announcing the first live Community Boss event.",
+    readyCount,
+    total: steps.length,
+  };
+}
+
+function getCommunityBossFirstEventNextAction(
+  backend: CommunityBossBackendUiState,
+  proofSubmit: CommunityBossProofSubmitUiState,
+) {
+  if (!backend.canRead) {
+    return "Enable read flags/env and verify the public aggregate view.";
+  }
+
+  if (!backend.persisted) {
+    return "Seed the current boss week row, then refresh aggregate.";
+  }
+
+  if (!proofSubmit.authenticated && !proofSubmit.persisted) {
+    return "Submit one proof from Telegram/web session to verify server auth.";
+  }
+
+  if (!backend.canPersistProof) {
+    return "Enable proof manual write gate only after migration review.";
+  }
+
+  if (!proofSubmit.persisted) {
+    return "Submit one safe proof and confirm persisted:true.";
+  }
+
+  if (!backend.canRecalculateAggregate) {
+    return "Enable aggregate manual gate and run admin recalculation.";
+  }
+
+  if (backend.dataSource !== "supabase" || !backend.aggregateUpdatedAt) {
+    return "Refresh aggregate after admin recalculation and confirm live public totals.";
+  }
+
+  return "Prepare the first live Community Boss announcement without payout promises.";
+}
+
 type SocialLeaderboardLane = {
   id: string;
   title: string;
@@ -18471,6 +18605,15 @@ function CommunityBossPrepCard({
       ? "Fallback"
       : "Not tried";
   const seedLabel = backend.persisted ? "Seeded" : "Not seeded";
+  const liveFlowSteps = getCommunityBossLiveFlowSteps(backend, proofSubmit);
+  const firstEventStatus = getCommunityBossFirstEventStatus(
+    backend,
+    proofSubmit,
+  );
+  const firstEventNextAction = getCommunityBossFirstEventNextAction(
+    backend,
+    proofSubmit,
+  );
 
   return (
     <section className="community-boss-prep-card">
@@ -18618,6 +18761,40 @@ function CommunityBossPrepCard({
           >
             {backend.loading ? "Refreshing..." : "Refresh aggregate"}
           </button>
+        </div>
+
+        <div
+          className={`community-boss-live-flow-panel ${firstEventStatus.readyCount === firstEventStatus.total ? "ready" : "checking"}`}
+        >
+          <div className="community-boss-live-flow-head">
+            <div>
+              <span>Live flow QA</span>
+              <strong>{firstEventStatus.label}</strong>
+              <small>{firstEventStatus.detail}</small>
+            </div>
+            <b>
+              {firstEventStatus.readyCount}/{firstEventStatus.total}
+            </b>
+          </div>
+
+          <div className="community-boss-live-flow-grid">
+            {liveFlowSteps.map((step) => (
+              <article key={step.label} className={step.ready ? "ready" : "pending"}>
+                <span>{step.label}</span>
+                <strong>{step.value}</strong>
+                <small>{step.detail}</small>
+              </article>
+            ))}
+          </div>
+
+          <div className="community-boss-first-event-next">
+            <span>First event next action</span>
+            <strong>{firstEventNextAction}</strong>
+            <small>
+              First live event stays public-safe: no payout promise, no wallet
+              value, no PvP, no private financial data.
+            </small>
+          </div>
         </div>
       </div>
 

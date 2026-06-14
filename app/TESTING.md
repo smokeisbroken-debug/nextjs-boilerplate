@@ -30,3 +30,12 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Extracted My BROKE Proof Center UI/types into `app/components/BrokeProofCenter.tsx`.
 - Kept share side effects in `app/page.tsx` so existing image, X, bot and copy flows stay unchanged.
 - No user-facing behavior, payout logic, wallet verification, Supabase schema, PvP, or reward promise changes.
+
+
+## v59.61.4 Community Boss Live Flow QA / First Real Event Prep
+
+- Run `npm run typecheck`.
+- Run `npm run lint:quiet`.
+- Verify Rewards → Community Boss Prep shows Live Flow QA.
+- Verify first-event next action changes as backend/proof/aggregate states change.
+- Verify no payout, wallet value, income, debt, or PvP wording appears.
