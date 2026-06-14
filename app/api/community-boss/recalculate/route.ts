@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { BROKE_APP_BUILD_VERSION } from "@/app/lib/brokeAdminRewards";
 import {
   COMMUNITY_BOSS_SYNC_ENABLED,
+  getCommunityBossBackendReadiness,
   getCommunityBossNoStoreHeaders,
   getCurrentCommunityBossWeek,
 } from "@/app/lib/brokeCommunityBoss";
@@ -48,6 +49,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const readiness = getCommunityBossBackendReadiness();
+
   return NextResponse.json(
     {
       ok: true,
@@ -56,8 +59,10 @@ export async function POST(request: NextRequest) {
       syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
       persisted: false,
       recalculated: false,
+      writePathReady: readiness.canWrite,
+      backendReadiness: readiness,
       week: getCurrentCommunityBossWeek(),
-      message: "Community Boss aggregate recalculation skeleton is wired but intentionally does not touch Supabase in v59.60.1.",
+      message: "Community Boss aggregate recalculation skeleton is wired but intentionally does not touch Supabase in v59.60.2.",
       nextStep: "Connect aggregate recalculation only after the reviewed migration exists and write path is enabled explicitly.",
     },
     {

@@ -42,6 +42,14 @@ export type CommunityBossSafeProof = {
 export const COMMUNITY_BOSS_SYNC_ENABLED =
   process.env.COMMUNITY_BOSS_SYNC_ENABLED === "true";
 
+export const COMMUNITY_BOSS_MIGRATION_REVIEWED =
+  process.env.COMMUNITY_BOSS_MIGRATION_REVIEWED === "true";
+
+export const COMMUNITY_BOSS_WRITE_PATH_ENABLED =
+  process.env.COMMUNITY_BOSS_WRITE_PATH_ENABLED === "true";
+
+export const COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED = false;
+
 const COMMUNITY_BOSS_ROTATION = [
   { code: "subscription-leech", name: "Subscription Leech" },
   { code: "impulse-goblin", name: "Impulse Goblin" },
@@ -211,6 +219,25 @@ export function sanitizeCommunityBossProof(input: unknown, currentWeek = getCurr
 export function getCommunityBossProgressPercent(totalDamage: number, bossHp: number) {
   if (!Number.isFinite(totalDamage) || !Number.isFinite(bossHp) || bossHp <= 0) return 0;
   return Math.min(100, Math.max(0, Math.round((totalDamage / bossHp) * 100)));
+}
+
+
+export function getCommunityBossBackendReadiness() {
+  const missing: string[] = [];
+
+  if (!COMMUNITY_BOSS_SYNC_ENABLED) missing.push("COMMUNITY_BOSS_SYNC_ENABLED is not true");
+  if (!COMMUNITY_BOSS_MIGRATION_REVIEWED) missing.push("COMMUNITY_BOSS_MIGRATION_REVIEWED is not true");
+  if (!COMMUNITY_BOSS_WRITE_PATH_ENABLED) missing.push("COMMUNITY_BOSS_WRITE_PATH_ENABLED is not true");
+  if (!COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED) missing.push("write path is intentionally not implemented in this patch");
+
+  return {
+    syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
+    migrationReviewed: COMMUNITY_BOSS_MIGRATION_REVIEWED,
+    writePathEnabled: COMMUNITY_BOSS_WRITE_PATH_ENABLED,
+    writePathImplemented: COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED,
+    canWrite: false,
+    missing,
+  };
 }
 
 export function getCommunityBossNoStoreHeaders() {

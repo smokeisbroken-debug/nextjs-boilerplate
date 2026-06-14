@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { BROKE_APP_BUILD_VERSION } from "@/app/lib/brokeAdminRewards";
 import {
   COMMUNITY_BOSS_SYNC_ENABLED,
+  getCommunityBossBackendReadiness,
   getCommunityBossNoStoreHeaders,
   getCommunityBossProgressPercent,
   getCurrentCommunityBossWeek,
@@ -14,6 +15,7 @@ export const runtime = "nodejs";
 export async function GET(_request: NextRequest) {
   const week = getCurrentCommunityBossWeek();
   const aggregate = getDryRunCommunityBossAggregate(week);
+  const readiness = getCommunityBossBackendReadiness();
 
   return NextResponse.json(
     {
@@ -22,6 +24,8 @@ export async function GET(_request: NextRequest) {
       mode: COMMUNITY_BOSS_SYNC_ENABLED ? "skeleton_enabled_no_writes" : "dry_run",
       syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
       persisted: false,
+      writePathReady: readiness.canWrite,
+      backendReadiness: readiness,
       week,
       aggregate: {
         ...aggregate,

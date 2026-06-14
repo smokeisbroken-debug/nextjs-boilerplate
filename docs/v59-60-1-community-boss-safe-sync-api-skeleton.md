@@ -104,3 +104,10 @@ Recommended next step:
 2. Decide whether to apply migration manually.
 3. Add a migration file only after review.
 4. Keep API write path disabled until tables exist.
+
+
+## v59.60.2 readiness update
+
+The dry-run routes now include `backendReadiness`, which reports migration/write flags while keeping `canWrite:false`.
+
+The SQL file is prepared in `supabase/migrations_pending/` for manual review only. No Supabase write path is implemented yet.

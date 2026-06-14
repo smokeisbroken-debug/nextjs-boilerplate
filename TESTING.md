@@ -51,3 +51,14 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
   - `GET /api/community-boss/current` should return `persisted:false`.
   - `POST /api/community-boss/proof` with safe fields should return sanitized proof and `persisted:false`.
   - `POST /api/community-boss/proof` with `balance` or `walletValue` should return 400.
+
+
+## v59.60.2 Community Boss Supabase Migration Review / Apply Prep
+
+- Confirm `supabase/migrations_pending/v59_60_2_community_boss_schema_review_required.sql` exists.
+- Confirm the migration is not placed in `supabase/migrations/`.
+- Run `npm run typecheck`.
+- Run `npm run lint:quiet`.
+- Run production build.
+- Optional route check after local server start: `GET /api/community-boss/current` should include `backendReadiness.canWrite:false`.
+- Optional proof route check: `POST /api/community-boss/proof` should still return `persisted:false`.

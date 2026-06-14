@@ -96,3 +96,12 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Adds shared helper/types in `app/lib/brokeCommunityBoss.ts`.
 - Proof route sanitizes safe fields, clamps numbers, rejects private/financial forbidden fields, and returns `persisted: false`.
 - No Supabase writes, no migration auto-run, no backend sync enabled, no payout, no wallet value, no PvP.
+
+
+## v59.60.2 — Community Boss Supabase Migration Review / Apply Prep
+
+- Adds pending manual Supabase SQL in `supabase/migrations_pending/`.
+- Adds a migration review/apply checklist document.
+- Adds backend readiness reporting to Community Boss dry-run API responses.
+- Keeps `canWrite:false` and `persisted:false`; no Supabase writes, no migration auto-run, no payouts, no wallet value, no PvP.
+- Next planned step: read-only DB path prep after manual migration review.

@@ -1,0 +1,19 @@
+# Supabase migrations pending manual review
+
+This directory contains SQL files that are prepared for manual review and copy/apply.
+
+They are intentionally **not** in `supabase/migrations/` so CI or Supabase tooling will not auto-run them.
+
+For v59.60.2, review:
+
+- `v59_60_2_community_boss_schema_review_required.sql`
+- `docs/v59-60-2-community-boss-migration-review-apply-prep.md`
+
+Do not apply Community Boss schema until the guardrails are accepted:
+
+- no wallet value
+- no real balances
+- no income/debt
+- no payout math
+- no reward promises
+- no PvP/multiplayer

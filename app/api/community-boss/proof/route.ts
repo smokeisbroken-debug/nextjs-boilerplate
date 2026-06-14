@@ -4,6 +4,7 @@ import { BROKE_APP_BUILD_VERSION } from "@/app/lib/brokeAdminRewards";
 import {
   COMMUNITY_BOSS_SYNC_ENABLED,
   findForbiddenCommunityBossFields,
+  getCommunityBossBackendReadiness,
   getCommunityBossNoStoreHeaders,
   getCurrentCommunityBossWeek,
   sanitizeCommunityBossProof,
@@ -21,6 +22,7 @@ async function readJson(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const currentWeek = getCurrentCommunityBossWeek();
+  const readiness = getCommunityBossBackendReadiness();
   const body = await readJson(request);
   const forbiddenFields = findForbiddenCommunityBossFields(body);
 
@@ -66,10 +68,11 @@ export async function POST(request: NextRequest) {
       syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
       persisted: false,
       wouldWrite: false,
-      writePathReady: false,
+      writePathReady: readiness.canWrite,
+      backendReadiness: readiness,
       week: currentWeek,
       proof,
-      nextStep: "v59.60.2 can connect this sanitized proof payload to Supabase after the schema draft is reviewed and applied.",
+      nextStep: "A later patch can connect this sanitized proof payload to Supabase only after migration review, manual apply, and explicit write-path implementation.",
       guardrails: [
         "Payload sanitized",
         "Numbers clamped",
