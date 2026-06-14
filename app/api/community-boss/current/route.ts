@@ -14,10 +14,19 @@ export async function GET(_request: NextRequest) {
   const fallbackWeek = getCurrentCommunityBossWeek();
   const snapshot = await readCommunityBossPublicSnapshotFromSupabase(fallbackWeek);
 
+  const refreshedAt = new Date().toISOString();
+  const refreshReason = snapshot.source === "supabase"
+    ? "Live public aggregate read from Supabase"
+    : snapshot.readAttempted
+      ? "Read attempted, dry-run fallback active"
+      : "Dry-run fallback active";
+
   return NextResponse.json(
     {
       ok: true,
       buildVersion: BROKE_APP_BUILD_VERSION,
+      refreshedAt,
+      refreshReason,
       mode: snapshot.source === "supabase"
         ? "read_only_supabase"
         : COMMUNITY_BOSS_SYNC_ENABLED
@@ -47,14 +56,15 @@ export async function GET(_request: NextRequest) {
         updatedAt: null,
       },
       guardrails: [
-        "Read-only aggregate path only",
+        "Live aggregate refresh is read-only",
+        "Public-safe aggregate view only",
         "No wallet value",
         "No balance",
         "No income",
         "No debt",
         "No payout math",
         "No PvP",
-        "No database writes in this patch",
+        "No writes from this read endpoint",
       ],
     },
     {

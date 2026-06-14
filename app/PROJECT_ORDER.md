@@ -182,3 +182,12 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - `POST /api/community-boss/recalculate` can read safe proof rows and upsert public aggregate when all gates are enabled.
 - Community Boss Prep UI now shows Aggregate gate status.
 - No payout, wallet value, PvP, reward promises, or game economy changes.
+
+
+## v59.61.2 — Community Boss Live Aggregate Refresh
+
+- Adds live aggregate refresh metadata to `GET /api/community-boss/current`.
+- Adds manual Refresh aggregate action inside Community Boss Prep.
+- After a persisted proof, UI triggers a public aggregate read refresh.
+- Refresh reads only public-safe aggregate data and performs no writes.
+- No payout, wallet value, PvP, reward promise, or game economy changes.

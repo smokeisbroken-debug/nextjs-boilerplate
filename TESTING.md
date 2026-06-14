@@ -95,22 +95,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Confirm write path remains disabled and no wallet value/payout language appears.
 
 
-## v59.61.0 Community Boss Proof Persistence Manual Write Gate
+## v59.61.2 Community Boss Live Aggregate Refresh
 
 - Run `npm run typecheck`.
 - Run `npm run lint:quiet`.
-- Run production build where possible.
-- With default env flags, `POST /api/community-boss/proof` should still return `persisted:false`.
-- With manual write flags and Supabase env enabled, authenticated safe proof can upsert into `broke_community_boss_user_proofs`.
-- Payloads containing `balance`, `walletValue`, `income`, `debt`, `payout`, or transaction fields must still be rejected.
-
-
-## v59.61.1 Community Boss Aggregate Recalculate Manual Gate
-
-- Run `npm run typecheck`.
-- Run `npm run lint:quiet`.
-- Optional admin API checks after deployment:
-  - `POST /api/community-boss/recalculate` without admin secret should return 401.
-  - With admin secret but closed gates, response should be 202 with `recalculated:false`.
-  - With reviewed migration, seeded current week, safe proof rows, Supabase env, and all aggregate flags enabled, response can return `recalculated:true`.
-- Confirm no wallet value, payout, income, debt, or transaction fields are returned.
+- Build if sandbox permits.
+- Verify `GET /api/community-boss/current` returns `refreshedAt` and `refreshReason`.
+- Verify Community Boss Prep shows Refresh aggregate button and live/fallback freshness.
+- Verify refresh performs only a read and never writes aggregate/proof data.

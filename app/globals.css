@@ -37226,9 +37226,76 @@ html.embedded-app-view .hero h1 {
   }
 }
 
-/* v59.60.9 — Community Boss proof persistence dry-run server path */
-.community-boss-proof-guardrails.blocked span {
-  border-color: rgba(255, 190, 90, 0.18);
-  background: rgba(255, 190, 90, 0.075);
-  color: rgba(255, 236, 200, 0.82);
+/* v59.61.2 — Community Boss Live Aggregate Refresh */
+.community-boss-live-refresh-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border-radius: 16px;
+  border: 1px solid rgba(133, 223, 255, 0.12);
+  background: rgba(133, 223, 255, 0.045);
+  padding: 10px;
+}
+
+.community-boss-live-refresh-row div {
+  min-width: 0;
+}
+
+.community-boss-live-refresh-row span {
+  color: rgba(224, 248, 255, 0.66);
+  font-size: 10px;
+  line-height: 1.1;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.community-boss-live-refresh-row strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.12;
+  font-weight: 950;
+  overflow-wrap: anywhere;
+}
+
+.community-boss-live-refresh-row small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.28;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.community-boss-live-refresh-row button {
+  border: 0;
+  border-radius: 999px;
+  padding: 9px 12px;
+  background: linear-gradient(135deg, rgba(133, 223, 255, 0.92), rgba(90, 255, 164, 0.82));
+  color: #041106;
+  font-size: 11px;
+  font-weight: 1000;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.community-boss-live-refresh-row button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+@media (max-width: 520px) {
+  .community-boss-live-refresh-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .community-boss-live-refresh-row button {
+    width: 100%;
+    white-space: normal;
+  }
 }

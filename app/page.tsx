@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   ClipboardEvent,
   Dispatch,
@@ -1175,6 +1175,9 @@ type CommunityBossBackendUiState = {
   totalSafePoints: number;
   participantCount: number;
   progressPercent: number;
+  aggregateUpdatedAt: string | null;
+  refreshedAt: string | null;
+  refreshReason: string;
   canRead: boolean;
   canWrite: boolean;
   canSeedWrite: boolean;
@@ -1241,6 +1244,9 @@ function defaultCommunityBossBackendUiState(): CommunityBossBackendUiState {
     totalSafePoints: 0,
     participantCount: 0,
     progressPercent: 0,
+    aggregateUpdatedAt: null,
+    refreshedAt: null,
+    refreshReason: "Not refreshed yet",
     canRead: false,
     canWrite: false,
     canSeedWrite: false,
@@ -1353,6 +1359,16 @@ function parseCommunityBossBackendUiState(
       0,
       100,
     ),
+    aggregateUpdatedAt: aggregate.updatedAt
+      ? String(aggregate.updatedAt).slice(0, 40)
+      : null,
+    refreshedAt: data.refreshedAt ? String(data.refreshedAt).slice(0, 40) : null,
+    refreshReason: stringFromCommunityBossApi(
+      data.refreshReason,
+      data.persisted === true
+        ? "Live public aggregate read"
+        : "Dry-run fallback read",
+    ).slice(0, 120),
     canRead: readiness.canRead === true,
     canWrite: readiness.canWrite === true,
     canSeedWrite: readiness.canSeedWrite === true,
@@ -1523,6 +1539,30 @@ function getCommunityBossBackendStatusDetail(
     return "Read path is ready, but no current seeded row was returned yet.";
   if (backend.missing.length) return backend.missing[0];
   return "Dry-run preview is active until backend flags and seed row are ready.";
+}
+
+function getCommunityBossAggregateFreshnessLabel(
+  backend: CommunityBossBackendUiState,
+) {
+  if (backend.loading) return "Refreshing";
+  if (backend.dataSource === "supabase" && backend.persisted) return "Live read";
+  if (backend.readAttempted && backend.readError) return "Fallback read";
+  if (backend.canRead) return "Ready to refresh";
+  return "Dry-run only";
+}
+
+function getCommunityBossAggregateFreshnessDetail(
+  backend: CommunityBossBackendUiState,
+) {
+  if (backend.dataSource === "supabase" && backend.aggregateUpdatedAt) {
+    return `Aggregate updated ${backend.aggregateUpdatedAt}`;
+  }
+
+  if (backend.refreshedAt) {
+    return `Last refresh ${backend.refreshedAt}`;
+  }
+
+  return backend.refreshReason || "Waiting for a live aggregate refresh.";
 }
 
 type SocialLeaderboardLane = {
@@ -18379,11 +18419,13 @@ function CommunityBossPrepCard({
   backend,
   proofSubmit,
   onSubmitProof,
+  onRefreshBackend,
 }: {
   state: CommunityBossPrepState;
   backend: CommunityBossBackendUiState;
   proofSubmit: CommunityBossProofSubmitUiState;
   onSubmitProof: () => Promise<void>;
+  onRefreshBackend: () => Promise<void>;
 }) {
   const backendStatusLabel = getCommunityBossBackendStatusLabel(backend);
   const backendStatusDetail = getCommunityBossBackendStatusDetail(backend);
@@ -18401,8 +18443,8 @@ function CommunityBossPrepCard({
           <span>Community Boss Prep · {state.weekKey}</span>
           <strong>{state.bossName}</strong>
           <small>
-            Shared boss concept UI only. Personal proof can be converted into
-            safe public points later, after backend design is ready.
+            Backend-gated community progress. Live aggregate refresh appears when
+            Supabase read path is ready. No payout math.
           </small>
         </div>
         <b>{state.prepLabel}</b>
@@ -18456,6 +18498,11 @@ function CommunityBossPrepCard({
               {backend.participantCount === 1 ? "" : "s"} ·{" "}
               {backend.progressPercent}%
             </small>
+          </article>
+          <article>
+            <span>Live refresh</span>
+            <strong>{getCommunityBossAggregateFreshnessLabel(backend)}</strong>
+            <small>{getCommunityBossAggregateFreshnessDetail(backend)}</small>
           </article>
           <article>
             <span>Write path</span>
@@ -18518,6 +18565,24 @@ function CommunityBossPrepCard({
             ))}
           </div>
         )}
+
+        <div className="community-boss-live-refresh-row">
+          <div>
+            <span>Live aggregate refresh</span>
+            <strong>{backend.refreshReason}</strong>
+            <small>
+              Pulls the public-safe aggregate only. It never reads wallet value,
+              income, debt, payout, or private proof rows.
+            </small>
+          </div>
+          <button
+            type="button"
+            onClick={onRefreshBackend}
+            disabled={backend.loading}
+          >
+            {backend.loading ? "Refreshing..." : "Refresh aggregate"}
+          </button>
+        </div>
       </div>
 
       <div
@@ -35047,14 +35112,15 @@ function WhatIfScreen({
       defaultCommunityBossProofSubmitUiState(),
     );
 
-  useEffect(() => {
-    let cancelled = false;
+  const refreshCommunityBossBackendState = useCallback(
+    async (reason = "Live aggregate refresh") => {
+      let parsedReason = reason;
 
-    async function loadCommunityBossBackendState() {
       setCommunityBossBackendState((current) => ({
         ...current,
         loading: true,
         readError: null,
+        refreshReason: reason,
       }));
 
       try {
@@ -35062,36 +35128,41 @@ function WhatIfScreen({
           cache: "no-store",
         });
         const payload = await response.json();
+        const parsed = parseCommunityBossBackendUiState(payload);
 
-        if (!cancelled) {
-          setCommunityBossBackendState(
-            parseCommunityBossBackendUiState(payload),
-          );
+        if (parsed.refreshReason && reason !== "Live aggregate refresh") {
+          parsedReason = `${reason} · ${parsed.refreshReason}`.slice(0, 120);
+        } else {
+          parsedReason = parsed.refreshReason;
         }
+
+        setCommunityBossBackendState({
+          ...parsed,
+          refreshReason: parsedReason,
+        });
       } catch (error) {
-        if (!cancelled) {
-          setCommunityBossBackendState((current) => ({
-            ...current,
-            loading: false,
-            loaded: true,
-            dataSource: "dry_run",
-            persisted: false,
-            readAttempted: true,
-            readError:
-              error instanceof Error
-                ? error.message.slice(0, 180)
-                : "Community Boss read check failed.",
-          }));
-        }
+        setCommunityBossBackendState((current) => ({
+          ...current,
+          loading: false,
+          loaded: true,
+          dataSource: "dry_run",
+          persisted: false,
+          readAttempted: true,
+          refreshedAt: new Date().toISOString(),
+          refreshReason: reason,
+          readError:
+            error instanceof Error
+              ? error.message.slice(0, 180)
+              : "Community Boss aggregate refresh failed.",
+        }));
       }
-    }
+    },
+    [],
+  );
 
-    void loadCommunityBossBackendState();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  useEffect(() => {
+    void refreshCommunityBossBackendState("Initial aggregate read");
+  }, [refreshCommunityBossBackendState]);
 
   async function submitCommunityBossProofDryRun() {
     if (communityBossProofSubmitState.loading) return;
@@ -35145,6 +35216,11 @@ function WhatIfScreen({
       const parsed = parseCommunityBossProofSubmitUiState(result);
 
       setCommunityBossProofSubmitState(parsed);
+
+      if (parsed.persisted) {
+        void refreshCommunityBossBackendState("Proof persisted; aggregate refreshed");
+      }
+
       notifyApp(
         parsed.persisted
           ? "Proof persisted"
@@ -35708,7 +35784,7 @@ function WhatIfScreen({
           <div>
             <span>Community Boss Prep</span>
             <small>
-              Local-only shared boss preview. No backend sync or payout math.
+              Live aggregate read path. No payout math or wallet value.
             </small>
           </div>
           <b>{communityBossPrepState.prepLabel}</b>
@@ -35718,6 +35794,9 @@ function WhatIfScreen({
           backend={communityBossBackendState}
           proofSubmit={communityBossProofSubmitState}
           onSubmitProof={submitCommunityBossProofDryRun}
+          onRefreshBackend={() =>
+            refreshCommunityBossBackendState("Manual aggregate refresh")
+          }
         />
       </details>
 
