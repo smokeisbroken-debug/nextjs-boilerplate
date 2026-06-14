@@ -1145,6 +1145,10 @@ type CommunityBossBackendUiState = {
   canRead: boolean;
   canWrite: boolean;
   canSeedWrite: boolean;
+  proofPersistenceReviewed: boolean;
+  proofWriteEnabled: boolean;
+  proofWriteImplemented: boolean;
+  canPersistProof: boolean;
   missing: string[];
 };
 
@@ -1168,6 +1172,10 @@ type CommunityBossProofSubmitUiState = {
   authRequired: boolean;
   authSource: string;
   authLabel: string;
+  persistenceStatus: string;
+  persistenceLabel: string;
+  persistenceDetail: string;
+  canPersist: boolean;
   updatedAt: string | null;
   guardrails: string[];
 };
@@ -1189,6 +1197,10 @@ function defaultCommunityBossBackendUiState(): CommunityBossBackendUiState {
     canRead: false,
     canWrite: false,
     canSeedWrite: false,
+    proofPersistenceReviewed: false,
+    proofWriteEnabled: false,
+    proofWriteImplemented: false,
+    canPersistProof: false,
     missing: [],
   };
 }
@@ -1214,6 +1226,10 @@ function defaultCommunityBossProofSubmitUiState(): CommunityBossProofSubmitUiSta
     authRequired: false,
     authSource: "none",
     authLabel: "Not checked",
+    persistenceStatus: "locked",
+    persistenceLabel: "Locked",
+    persistenceDetail: "Proof persistence gate is not checked yet.",
+    canPersist: false,
     updatedAt: null,
     guardrails: [],
   };
@@ -1258,6 +1274,10 @@ function parseCommunityBossBackendUiState(payload: unknown): CommunityBossBacken
     canRead: readiness.canRead === true,
     canWrite: readiness.canWrite === true,
     canSeedWrite: readiness.canSeedWrite === true,
+    proofPersistenceReviewed: readiness.proofPersistenceReviewed === true,
+    proofWriteEnabled: readiness.proofWriteEnabled === true,
+    proofWriteImplemented: readiness.proofWriteImplemented === true,
+    canPersistProof: readiness.canPersistProof === true,
     missing,
   };
 }
@@ -1282,6 +1302,20 @@ function parseCommunityBossProofSubmitUiState(payload: unknown): CommunityBossPr
     : authRequired
       ? "Auth required"
       : authReason || "Dry-run guest";
+  const persistence = data.persistence && typeof data.persistence === "object"
+    ? data.persistence as Record<string, unknown>
+    : {};
+  const persistenceStatus = stringFromCommunityBossApi(persistence.status, "locked");
+  const canPersist = persistence.canPersist === true;
+  const persistenceLabel = canPersist
+    ? "Ready"
+    : persistenceStatus === "locked"
+      ? "Locked"
+      : "Dry-run";
+  const persistenceDetail = stringFromCommunityBossApi(
+    persistence.reason,
+    "No proof persistence write was performed."
+  ).slice(0, 140);
 
   return {
     loading: false,
@@ -1303,6 +1337,10 @@ function parseCommunityBossProofSubmitUiState(payload: unknown): CommunityBossPr
     authRequired,
     authSource,
     authLabel,
+    persistenceStatus,
+    persistenceLabel,
+    persistenceDetail,
+    canPersist,
     updatedAt: new Date().toISOString(),
     guardrails,
   };
@@ -15508,6 +15546,11 @@ function CommunityBossPrepCard({
             <strong>{backend.canWrite ? "Enabled" : "Disabled"}</strong>
             <small>User proof writes are still blocked.</small>
           </article>
+          <article>
+            <span>Proof gate</span>
+            <strong>{backend.canPersistProof ? "Ready" : backend.proofWriteEnabled ? "Flagged" : "Locked"}</strong>
+            <small>{backend.proofPersistenceReviewed ? "Persistence reviewed flag is on." : "Persistence review flag is off."}</small>
+          </article>
         </div>
 
         {backend.missing.length > 0 && (
@@ -15555,12 +15598,17 @@ function CommunityBossPrepCard({
             <strong>{proofSubmit.submitted ? proofSubmit.authLabel : "Prepared"}</strong>
             <small>{proofSubmit.submitted ? proofSubmit.authSource : "Telegram/session check next"}</small>
           </article>
+          <article>
+            <span>Persistence gate</span>
+            <strong>{proofSubmit.submitted ? proofSubmit.persistenceLabel : "Locked"}</strong>
+            <small>{proofSubmit.submitted ? proofSubmit.persistenceDetail : "Flag prep only · no write"}</small>
+          </article>
         </div>
 
         {proofSubmit.submitted && (
           <div className="community-boss-proof-submit-result">
             <span>{proofSubmit.error ? proofSubmit.error : `Sanitized proof for ${proofSubmit.weekKey}`}</span>
-            <b>Auth {proofSubmit.authenticated ? "verified" : proofSubmit.authRequired ? "required" : "dry-run"} · Routine {proofSubmit.routineCompleted ? "yes" : "no"} · Tracking {proofSubmit.trackingDays}/7 · Challenge {proofSubmit.challengeCompleted ? "yes" : "no"} · Weakness {proofSubmit.weaknessHit ? "hit" : "open"}</b>
+            <b>Auth {proofSubmit.authenticated ? "verified" : proofSubmit.authRequired ? "required" : "dry-run"} · Persistence {proofSubmit.canPersist ? "ready" : "locked"} · Routine {proofSubmit.routineCompleted ? "yes" : "no"} · Tracking {proofSubmit.trackingDays}/7 · Challenge {proofSubmit.challengeCompleted ? "yes" : "no"} · Weakness {proofSubmit.weaknessHit ? "hit" : "open"}</b>
           </div>
         )}
 

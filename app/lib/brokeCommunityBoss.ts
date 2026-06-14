@@ -54,8 +54,15 @@ export const COMMUNITY_BOSS_DB_READ_ENABLED =
 export const COMMUNITY_BOSS_SEED_WRITE_ENABLED =
   process.env.COMMUNITY_BOSS_SEED_WRITE_ENABLED === "true";
 
+export const COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED =
+  process.env.COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED === "true";
+
+export const COMMUNITY_BOSS_PROOF_WRITE_ENABLED =
+  process.env.COMMUNITY_BOSS_PROOF_WRITE_ENABLED === "true";
+
 export const COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED = false;
 export const COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED = false;
+export const COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED = false;
 
 const COMMUNITY_BOSS_ROTATION = [
   { code: "subscription-leech", name: "Subscription Leech" },
@@ -258,6 +265,9 @@ export function getCommunityBossBackendReadiness() {
   if (!COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED) missing.push("write path is intentionally not implemented in this patch");
   if (!COMMUNITY_BOSS_SEED_WRITE_ENABLED) missing.push("COMMUNITY_BOSS_SEED_WRITE_ENABLED is not true");
   if (!COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED) missing.push("seed write is intentionally not implemented in this patch");
+  if (!COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED) missing.push("COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED is not true");
+  if (!COMMUNITY_BOSS_PROOF_WRITE_ENABLED) missing.push("COMMUNITY_BOSS_PROOF_WRITE_ENABLED is not true");
+  if (!COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED) missing.push("proof write is intentionally not implemented in this patch");
 
   const canRead = Boolean(
     COMMUNITY_BOSS_SYNC_ENABLED &&
@@ -276,9 +286,37 @@ export function getCommunityBossBackendReadiness() {
     writePathImplemented: COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED,
     seedWriteEnabled: COMMUNITY_BOSS_SEED_WRITE_ENABLED,
     seedWriteImplemented: COMMUNITY_BOSS_SEED_WRITE_IMPLEMENTED,
+    proofPersistenceReviewed: COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED,
+    proofWriteEnabled: COMMUNITY_BOSS_PROOF_WRITE_ENABLED,
+    proofWriteImplemented: COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED,
     canSeedWrite: false,
+    canPersistProof: false,
     canWrite: false,
     missing,
+  };
+}
+
+export function getCommunityBossProofPersistenceGate() {
+  const readiness = getCommunityBossBackendReadiness();
+  const requiredFlags = {
+    syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
+    migrationReviewed: COMMUNITY_BOSS_MIGRATION_REVIEWED,
+    dbReadEnabled: COMMUNITY_BOSS_DB_READ_ENABLED,
+    proofPersistenceReviewed: COMMUNITY_BOSS_PROOF_PERSISTENCE_REVIEWED,
+    writePathEnabled: COMMUNITY_BOSS_WRITE_PATH_ENABLED,
+    proofWriteEnabled: COMMUNITY_BOSS_PROOF_WRITE_ENABLED,
+  };
+
+  return {
+    status: "locked" as const,
+    persisted: false,
+    wouldPersist: false,
+    canPersist: false,
+    implemented: COMMUNITY_BOSS_PROOF_WRITE_IMPLEMENTED,
+    requiredFlags,
+    reason: "Proof persistence is flag-prepared but intentionally not implemented in v59.60.8.",
+    nextStep: "A later patch may implement the Supabase upsert only after migration review, manual apply, auth enforcement, and explicit write flags are confirmed.",
+    backendReadiness: readiness,
   };
 }
 

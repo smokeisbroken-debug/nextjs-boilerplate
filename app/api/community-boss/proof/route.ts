@@ -7,6 +7,7 @@ import {
   findForbiddenCommunityBossFields,
   getCommunityBossBackendReadiness,
   getCommunityBossNoStoreHeaders,
+  getCommunityBossProofPersistenceGate,
   getCurrentCommunityBossWeek,
   sanitizeCommunityBossProof,
 } from "@/app/lib/brokeCommunityBoss";
@@ -218,6 +219,7 @@ function getCommunityBossProofAuthState(
 export async function POST(request: NextRequest) {
   const currentWeek = getCurrentCommunityBossWeek();
   const readiness = getCommunityBossBackendReadiness();
+  const persistence = getCommunityBossProofPersistenceGate();
   const body = await readJson(request);
   const auth = getCommunityBossProofAuthState(request, body);
 
@@ -228,6 +230,7 @@ export async function POST(request: NextRequest) {
         buildVersion: BROKE_APP_BUILD_VERSION,
         error: "Community Boss proof auth required.",
         auth,
+        persistence,
         guardrail: "Future persisted proof writes require server-side Telegram/session identity. No database write was made.",
       },
       {
@@ -246,6 +249,7 @@ export async function POST(request: NextRequest) {
         buildVersion: BROKE_APP_BUILD_VERSION,
         error: "Forbidden Community Boss fields were rejected.",
         auth,
+        persistence,
         forbiddenFields,
         guardrail: "Community Boss proof cannot include balance, wallet value, income, debt, transactions, payout, or private budget data.",
       },
@@ -291,8 +295,11 @@ export async function POST(request: NextRequest) {
       syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
       persisted: false,
       wouldWrite: false,
+      wouldPersist: false,
       writePathReady: readiness.canWrite,
+      proofPersistenceReady: readiness.canPersistProof,
       backendReadiness: readiness,
+      persistence,
       auth,
       week: currentWeek,
       proof,
@@ -302,6 +309,7 @@ export async function POST(request: NextRequest) {
         "Payload sanitized",
         "Numbers clamped",
         "Forbidden private fields rejected",
+        "Persistence gate checked",
         "No database write performed",
         "No payout math",
         "No wallet value",

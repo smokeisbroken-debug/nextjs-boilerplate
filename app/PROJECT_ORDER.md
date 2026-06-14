@@ -148,3 +148,11 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Returns public-safe auth status without exposing raw Telegram ID.
 - Optional `COMMUNITY_BOSS_PROOF_AUTH_REQUIRED=true` can require auth for dry-run proof submit.
 - Still no Supabase writes, proof persistence, payout, wallet value, PvP, or game economy changes.
+
+
+## v59.60.8 — Community Boss Proof Persistence Flag Prep
+
+- Adds explicit proof persistence readiness flags and API response metadata.
+- `POST /api/community-boss/proof` returns a `persistence` object with `canPersist:false` and `persisted:false`.
+- Community Boss Prep UI now shows proof persistence gate status.
+- No Supabase writes, no proof persistence, no aggregate writes, no payout, no wallet value, no PvP.
