@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       writePathReady: readiness.canWrite,
       backendReadiness: readiness,
       week: getCurrentCommunityBossWeek(),
-      message: "Community Boss aggregate recalculation skeleton is wired but intentionally does not touch Supabase in v59.60.2.",
+      message: "Community Boss aggregate recalculation skeleton is wired but intentionally does not touch Supabase in v59.60.3.",
       nextStep: "Connect aggregate recalculation only after the reviewed migration exists and write path is enabled explicitly.",
     },
     {

@@ -62,3 +62,13 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Run production build.
 - Optional route check after local server start: `GET /api/community-boss/current` should include `backendReadiness.canWrite:false`.
 - Optional proof route check: `POST /api/community-boss/proof` should still return `persisted:false`.
+
+
+## v59.60.3 Community Boss DB Read Path Prep
+
+- Run `npm run typecheck`.
+- Run `npm run lint:quiet`.
+- Run production build.
+- Confirm `GET /api/community-boss/current` still returns dry-run data when `COMMUNITY_BOSS_DB_READ_ENABLED` is not true.
+- After manual migration and ENV enablement, confirm current can read from `broke_community_boss_public_weeks` and falls back safely if no row exists.
+- Confirm `POST /api/community-boss/proof` still returns `persisted:false` and performs no write.

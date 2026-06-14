@@ -3,34 +3,35 @@ import { NextRequest, NextResponse } from "next/server";
 import { BROKE_APP_BUILD_VERSION } from "@/app/lib/brokeAdminRewards";
 import {
   COMMUNITY_BOSS_SYNC_ENABLED,
-  getCommunityBossBackendReadiness,
   getCommunityBossNoStoreHeaders,
-  getCommunityBossProgressPercent,
   getCurrentCommunityBossWeek,
-  getDryRunCommunityBossAggregate,
+  readCommunityBossPublicSnapshotFromSupabase,
 } from "@/app/lib/brokeCommunityBoss";
 
 export const runtime = "nodejs";
 
 export async function GET(_request: NextRequest) {
-  const week = getCurrentCommunityBossWeek();
-  const aggregate = getDryRunCommunityBossAggregate(week);
-  const readiness = getCommunityBossBackendReadiness();
+  const fallbackWeek = getCurrentCommunityBossWeek();
+  const snapshot = await readCommunityBossPublicSnapshotFromSupabase(fallbackWeek);
 
   return NextResponse.json(
     {
       ok: true,
       buildVersion: BROKE_APP_BUILD_VERSION,
-      mode: COMMUNITY_BOSS_SYNC_ENABLED ? "skeleton_enabled_no_writes" : "dry_run",
+      mode: snapshot.source === "supabase"
+        ? "read_only_supabase"
+        : COMMUNITY_BOSS_SYNC_ENABLED
+          ? "read_path_fallback_dry_run"
+          : "dry_run",
       syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
-      persisted: false,
-      writePathReady: readiness.canWrite,
-      backendReadiness: readiness,
-      week,
-      aggregate: {
-        ...aggregate,
-        progressPercent: getCommunityBossProgressPercent(aggregate.totalDamage, week.bossHp),
-      },
+      persisted: snapshot.persisted,
+      readAttempted: snapshot.readAttempted,
+      readError: snapshot.readError,
+      dataSource: snapshot.source,
+      writePathReady: snapshot.backendReadiness.canWrite,
+      backendReadiness: snapshot.backendReadiness,
+      week: snapshot.week,
+      aggregate: snapshot.aggregate,
       userProof: {
         submitted: false,
         weeklyDamage: 0,
@@ -46,13 +47,14 @@ export async function GET(_request: NextRequest) {
         updatedAt: null,
       },
       guardrails: [
+        "Read-only aggregate path only",
         "No wallet value",
         "No balance",
         "No income",
         "No debt",
         "No payout math",
         "No PvP",
-        "No database writes in this skeleton",
+        "No database writes in this patch",
       ],
     },
     {

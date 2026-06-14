@@ -105,3 +105,13 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Adds backend readiness reporting to Community Boss dry-run API responses.
 - Keeps `canWrite:false` and `persisted:false`; no Supabase writes, no migration auto-run, no payouts, no wallet value, no PvP.
 - Next planned step: read-only DB path prep after manual migration review.
+
+
+## v59.60.3 — Community Boss DB Read Path Prep
+
+- Adds read-only Supabase aggregate read path for `GET /api/community-boss/current`.
+- Reads only from public-safe view `broke_community_boss_public_weeks` when readiness flags and Supabase ENV are present.
+- Falls back to dry-run if flags/ENV/table/current row are missing.
+- Adds `COMMUNITY_BOSS_DB_READ_ENABLED` readiness guard.
+- Keeps proof submit and recalculation endpoints no-write.
+- No migration auto-run, no proof writes, no payout, no wallet value, no PvP.

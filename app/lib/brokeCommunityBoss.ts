@@ -48,6 +48,9 @@ export const COMMUNITY_BOSS_MIGRATION_REVIEWED =
 export const COMMUNITY_BOSS_WRITE_PATH_ENABLED =
   process.env.COMMUNITY_BOSS_WRITE_PATH_ENABLED === "true";
 
+export const COMMUNITY_BOSS_DB_READ_ENABLED =
+  process.env.COMMUNITY_BOSS_DB_READ_ENABLED === "true";
+
 export const COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED = false;
 
 const COMMUNITY_BOSS_ROTATION = [
@@ -222,22 +225,191 @@ export function getCommunityBossProgressPercent(totalDamage: number, bossHp: num
 }
 
 
+function getOptionalCommunityBossEnv(name: string) {
+  return process.env[name] || "";
+}
+
+function getCommunityBossSupabaseBaseUrl() {
+  const raw = getOptionalCommunityBossEnv("SUPABASE_URL");
+  return raw.trim().replace(/\/+$/, "").replace(/\/rest\/v1$/, "");
+}
+
+function getCommunityBossSupabaseServiceKey() {
+  return getOptionalCommunityBossEnv("SUPABASE_SERVICE_ROLE_KEY");
+}
+
+function hasCommunityBossSupabaseReadEnv() {
+  return Boolean(getCommunityBossSupabaseBaseUrl() && getCommunityBossSupabaseServiceKey());
+}
+
 export function getCommunityBossBackendReadiness() {
   const missing: string[] = [];
+  const supabaseReadEnvReady = hasCommunityBossSupabaseReadEnv();
 
   if (!COMMUNITY_BOSS_SYNC_ENABLED) missing.push("COMMUNITY_BOSS_SYNC_ENABLED is not true");
   if (!COMMUNITY_BOSS_MIGRATION_REVIEWED) missing.push("COMMUNITY_BOSS_MIGRATION_REVIEWED is not true");
+  if (!COMMUNITY_BOSS_DB_READ_ENABLED) missing.push("COMMUNITY_BOSS_DB_READ_ENABLED is not true");
+  if (!supabaseReadEnvReady) missing.push("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing for DB read");
   if (!COMMUNITY_BOSS_WRITE_PATH_ENABLED) missing.push("COMMUNITY_BOSS_WRITE_PATH_ENABLED is not true");
   if (!COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED) missing.push("write path is intentionally not implemented in this patch");
+
+  const canRead = Boolean(
+    COMMUNITY_BOSS_SYNC_ENABLED &&
+    COMMUNITY_BOSS_MIGRATION_REVIEWED &&
+    COMMUNITY_BOSS_DB_READ_ENABLED &&
+    supabaseReadEnvReady
+  );
 
   return {
     syncEnabled: COMMUNITY_BOSS_SYNC_ENABLED,
     migrationReviewed: COMMUNITY_BOSS_MIGRATION_REVIEWED,
+    dbReadEnabled: COMMUNITY_BOSS_DB_READ_ENABLED,
+    supabaseReadEnvReady,
+    canRead,
     writePathEnabled: COMMUNITY_BOSS_WRITE_PATH_ENABLED,
     writePathImplemented: COMMUNITY_BOSS_WRITE_PATH_IMPLEMENTED,
     canWrite: false,
     missing,
   };
+}
+
+function safeCommunityBossNumber(value: unknown, fallback = 0) {
+  const parsed = Number(value ?? fallback);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function safeCommunityBossString(value: unknown, fallback = "") {
+  const text = String(value ?? "").trim();
+  return text || fallback;
+}
+
+function mapCommunityBossPublicWeekRow(row: Record<string, unknown>, fallbackWeek: CommunityBossWeek) {
+  const bossHp = safeCommunityBossNumber(row.boss_hp, fallbackWeek.bossHp);
+  const totalDamage = safeCommunityBossNumber(row.total_damage, 0);
+
+  const week: CommunityBossWeek = {
+    weekKey: safeCommunityBossString(row.week_key, fallbackWeek.weekKey),
+    bossCode: safeCommunityBossString(row.boss_code, fallbackWeek.bossCode),
+    bossName: safeCommunityBossString(row.boss_name, fallbackWeek.bossName),
+    weekStartDate: safeCommunityBossString(row.week_start_date, fallbackWeek.weekStartDate),
+    weekEndDate: safeCommunityBossString(row.week_end_date, fallbackWeek.weekEndDate),
+    status: safeCommunityBossString(row.status, fallbackWeek.status) as CommunityBossStatus,
+    bossHp,
+    phaseLabel: safeCommunityBossString(row.phase_label, fallbackWeek.phaseLabel),
+  };
+
+  const aggregate: CommunityBossAggregate = {
+    totalDamage,
+    totalSafePoints: safeCommunityBossNumber(row.total_safe_points, 0),
+    participantCount: safeCommunityBossNumber(row.participant_count, 0),
+    routineCount: safeCommunityBossNumber(row.routine_count, 0),
+    challengeCount: safeCommunityBossNumber(row.challenge_count, 0),
+    weaknessHitCount: safeCommunityBossNumber(row.weakness_hit_count, 0),
+    progressPercent: getCommunityBossProgressPercent(totalDamage, bossHp),
+    updatedAt: row.aggregate_updated_at ? String(row.aggregate_updated_at) : null,
+  };
+
+  return { week, aggregate };
+}
+
+export async function readCommunityBossPublicSnapshotFromSupabase(fallbackWeek = getCurrentCommunityBossWeek()) {
+  const readiness = getCommunityBossBackendReadiness();
+
+  if (!readiness.canRead) {
+    return {
+      source: "dry_run" as const,
+      persisted: false,
+      readAttempted: false,
+      readError: null,
+      week: fallbackWeek,
+      aggregate: getDryRunCommunityBossAggregate(fallbackWeek),
+      backendReadiness: readiness,
+    };
+  }
+
+  try {
+    const baseUrl = getCommunityBossSupabaseBaseUrl();
+    const serviceKey = getCommunityBossSupabaseServiceKey();
+    const params = new URLSearchParams({
+      select: [
+        "week_key",
+        "boss_code",
+        "boss_name",
+        "week_start_date",
+        "week_end_date",
+        "status",
+        "boss_hp",
+        "phase_label",
+        "total_damage",
+        "total_safe_points",
+        "participant_count",
+        "routine_count",
+        "challenge_count",
+        "weakness_hit_count",
+        "aggregate_updated_at",
+      ].join(","),
+      week_key: `eq.${fallbackWeek.weekKey}`,
+      limit: "1",
+    });
+
+    const response = await fetch(`${baseUrl}/rest/v1/broke_community_boss_public_weeks?${params.toString()}`, {
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+      },
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      return {
+        source: "dry_run" as const,
+        persisted: false,
+        readAttempted: true,
+        readError: `Supabase read ${response.status}: ${detail.slice(0, 220)}`,
+        week: fallbackWeek,
+        aggregate: getDryRunCommunityBossAggregate(fallbackWeek),
+        backendReadiness: readiness,
+      };
+    }
+
+    const rows = await response.json() as Record<string, unknown>[];
+    const firstRow = rows[0];
+
+    if (!firstRow) {
+      return {
+        source: "dry_run" as const,
+        persisted: false,
+        readAttempted: true,
+        readError: "No community boss row found for current week.",
+        week: fallbackWeek,
+        aggregate: getDryRunCommunityBossAggregate(fallbackWeek),
+        backendReadiness: readiness,
+      };
+    }
+
+    const snapshot = mapCommunityBossPublicWeekRow(firstRow, fallbackWeek);
+
+    return {
+      source: "supabase" as const,
+      persisted: true,
+      readAttempted: true,
+      readError: null,
+      ...snapshot,
+      backendReadiness: readiness,
+    };
+  } catch (error) {
+    return {
+      source: "dry_run" as const,
+      persisted: false,
+      readAttempted: true,
+      readError: error instanceof Error ? error.message : "Unknown Community Boss DB read error.",
+      week: fallbackWeek,
+      aggregate: getDryRunCommunityBossAggregate(fallbackWeek),
+      backendReadiness: readiness,
+    };
+  }
 }
 
 export function getCommunityBossNoStoreHeaders() {
