@@ -40,3 +40,14 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
   - `docs/v59-60-0-community-boss-schema-draft.sql`
   - `docs/v59-60-0-community-boss-api-contract.md`
 - No runtime backend sync should be active in this patch.
+
+
+## v59.60.1 Community Boss Safe Sync API Skeleton
+
+- Run `npm run typecheck`.
+- Run `npm run lint:quiet`.
+- Run production build.
+- Optional API checks after local server start:
+  - `GET /api/community-boss/current` should return `persisted:false`.
+  - `POST /api/community-boss/proof` with safe fields should return sanitized proof and `persisted:false`.
+  - `POST /api/community-boss/proof` with `balance` or `walletValue` should return 400.

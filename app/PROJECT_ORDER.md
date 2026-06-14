@@ -85,3 +85,14 @@ v59.52.15 is a targeted share-card export hotfix on top of v59.52.14 stable8.
 - Keeps Community Boss as local-only preview in the app; no API writes or database sync are enabled.
 - Explicitly forbids wallet value, balances, income, debt, payout value, rewards promises, PvP, and game economy fields in Community Boss backend.
 - Next planned step: v59.60.1 Community Boss Safe Sync API Skeleton.
+
+
+## v59.60.1 — Community Boss Safe Sync API Skeleton
+
+- Adds dry-run Community Boss API skeleton routes:
+  - `GET /api/community-boss/current`
+  - `POST /api/community-boss/proof`
+  - `POST /api/community-boss/recalculate`
+- Adds shared helper/types in `app/lib/brokeCommunityBoss.ts`.
+- Proof route sanitizes safe fields, clamps numbers, rejects private/financial forbidden fields, and returns `persisted: false`.
+- No Supabase writes, no migration auto-run, no backend sync enabled, no payout, no wallet value, no PvP.
