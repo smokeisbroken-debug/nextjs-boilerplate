@@ -1260,6 +1260,22 @@ type CommunityBossFirstEventState = {
   blockers: string[];
 };
 
+type CommunityBossRuntimeQaItem = {
+  label: string;
+  value: string;
+  detail: string;
+  ready: boolean;
+};
+
+type CommunityBossRuntimeQaStatus = {
+  label: string;
+  detail: string;
+  badge: string;
+  ready: boolean;
+  missingFlags: string[];
+  items: CommunityBossRuntimeQaItem[];
+};
+
 function defaultCommunityBossBackendUiState(): CommunityBossBackendUiState {
   return {
     loading: false,
@@ -1370,7 +1386,7 @@ function parseCommunityBossBackendUiState(
       ? (data.backendReadiness as Record<string, unknown>)
       : {};
   const missing = Array.isArray(readiness.missing)
-    ? readiness.missing.map((item) => String(item)).slice(0, 4)
+    ? readiness.missing.map((item) => String(item)).slice(0, 10)
     : [];
   const dataSourceRaw = stringFromCommunityBossApi(data.dataSource, "dry_run");
   const dataSource =
@@ -1635,6 +1651,126 @@ function getCommunityBossAggregateFreshnessDetail(
   }
 
   return backend.refreshReason || "Waiting for a live aggregate refresh.";
+}
+
+function getCommunityBossProductionRuntimeQa(
+  backend: CommunityBossBackendUiState,
+  proofSubmit: CommunityBossProofSubmitUiState,
+  firstEventState: CommunityBossFirstEventState,
+): CommunityBossRuntimeQaStatus {
+  const supabasePublicReadReady =
+    backend.dataSource === "supabase" &&
+    backend.persisted &&
+    backend.canRead &&
+    !backend.readError;
+  const seededWeekReady = hasCommunityBossSeededWeek(backend);
+  const proofWriteReady = backend.canPersistProof;
+  const autoRecalcReady = backend.canAutoRecalculateAfterProof;
+  const aggregateWriteReady = backend.canRecalculateAggregate;
+  const liveTotalsReady = hasCommunityBossLiveAggregateProof(backend);
+  const proofEvidenceReady = hasCommunityBossProofEvidence(backend, proofSubmit);
+
+  const items: CommunityBossRuntimeQaItem[] = [
+    {
+      label: "Supabase public read",
+      value: supabasePublicReadReady ? "Live" : backend.canRead ? "Fallback" : "Locked",
+      detail: supabasePublicReadReady
+        ? "Current aggregate is coming from the public-safe Supabase view."
+        : backend.readError
+          ? `Read fallback: ${backend.readError}`
+          : "Enable sync, migration review, DB read, and Supabase env before live test.",
+      ready: supabasePublicReadReady,
+    },
+    {
+      label: "Week seed",
+      value: seededWeekReady ? "Seeded" : "Missing",
+      detail: seededWeekReady
+        ? `${backend.weekKey} is visible from the live read path.`
+        : "Seed the current Community Boss week before first proof test.",
+      ready: seededWeekReady,
+    },
+    {
+      label: "Proof write gate",
+      value: proofWriteReady ? "Ready" : "Locked",
+      detail: proofWriteReady
+        ? "Authenticated safe proofs can persist behind the manual gate."
+        : "Proof write requires migration review, write flags, dry-run flag, manual flag, and Supabase env.",
+      ready: proofWriteReady,
+    },
+    {
+      label: "Auto aggregate",
+      value: autoRecalcReady ? "Automatic" : "Locked",
+      detail: autoRecalcReady
+        ? "Persisted proof can trigger aggregate recalculation without founder action."
+        : "Enable auto recalc after proof so the founder does not monitor manual recalculation.",
+      ready: autoRecalcReady,
+    },
+    {
+      label: "Aggregate write",
+      value: aggregateWriteReady ? "Ready" : "Locked",
+      detail: aggregateWriteReady
+        ? "Public aggregate totals can be recomputed from safe proof rows."
+        : "Aggregate recalculation gate/env is still blocked.",
+      ready: aggregateWriteReady,
+    },
+    {
+      label: "First proof evidence",
+      value: proofEvidenceReady ? "Present" : "Needed",
+      detail: proofEvidenceReady
+        ? "A safe proof is persisted or reflected in live totals."
+        : "Submit one authenticated safe proof during the first live test.",
+      ready: proofEvidenceReady,
+    },
+    {
+      label: "Live totals",
+      value: liveTotalsReady ? "Visible" : "Waiting",
+      detail: liveTotalsReady
+        ? `${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"} · ${backend.totalDamage} public damage.`
+        : "Live totals must show participant count and non-zero damage before announcement.",
+      ready: liveTotalsReady,
+    },
+  ];
+
+  const missingFlags = backend.missing.slice(0, 8);
+  const ready = items.every((item) => item.ready) && firstEventState.launchReady;
+
+  if (ready) {
+    return {
+      label: "Ready for first live test",
+      detail:
+        "Runtime flags, live read, proof write, auto aggregate, and public totals are verified.",
+      badge: "Ready",
+      ready: true,
+      missingFlags,
+      items,
+    };
+  }
+
+  const firstMissing = missingFlags[0];
+
+  if (firstMissing) {
+    return {
+      label: "Runtime blocked",
+      detail: `Blocked: ${firstMissing}.`,
+      badge: `${items.filter((item) => item.ready).length}/${items.length}`,
+      ready: false,
+      missingFlags,
+      items,
+    };
+  }
+
+  const firstBlocked = items.find((item) => !item.ready);
+
+  return {
+    label: "Runtime check needed",
+    detail:
+      firstBlocked?.detail ||
+      "Backend flags look close, but first event state is not launch-ready yet.",
+    badge: `${items.filter((item) => item.ready).length}/${items.length}`,
+    ready: false,
+    missingFlags,
+    items,
+  };
 }
 
 function hasCommunityBossSeededWeek(backend: CommunityBossBackendUiState) {
@@ -19292,6 +19428,11 @@ function CommunityBossPrepCard({
     proofSubmit,
     firstEventState,
   });
+  const runtimeQa = getCommunityBossProductionRuntimeQa(
+    backend,
+    proofSubmit,
+    firstEventState,
+  );
   const [announcementCopied, setAnnouncementCopied] = useState(false);
 
   async function copyFirstEventAnnouncement() {
@@ -19334,6 +19475,48 @@ function CommunityBossPrepCard({
       <div className="social-game-guide-strip compact">
         <strong>Backend readiness</strong>
         <span>{backendStatusDetail}</span>
+      </div>
+
+      <div
+        className={`community-boss-runtime-qa-panel ${runtimeQa.ready ? "ready" : "blocked"}`}
+      >
+        <div className="community-boss-runtime-qa-head">
+          <div>
+            <span>Production runtime QA</span>
+            <strong>{runtimeQa.label}</strong>
+            <small>{runtimeQa.detail}</small>
+          </div>
+          <b>{runtimeQa.badge}</b>
+        </div>
+
+        <div className="community-boss-runtime-qa-grid">
+          {runtimeQa.items.map((item) => (
+            <article
+              key={item.label}
+              className={item.ready ? "ready" : "blocked"}
+            >
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+              <small>{item.detail}</small>
+            </article>
+          ))}
+        </div>
+
+        {runtimeQa.missingFlags.length > 0 ? (
+          <div className="community-boss-runtime-qa-missing">
+            <span>Missing / blocking flags</span>
+            <div>
+              {runtimeQa.missingFlags.slice(0, 6).map((item) => (
+                <b key={item}>{item}</b>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p>
+            Runtime QA reads public-safe status only. No balances, wallet value,
+            payout math, or private financial data.
+          </p>
+        )}
       </div>
 
       <div className={`community-boss-public-event-panel ${publicEventPanel.tone}`}>
