@@ -38761,3 +38761,25 @@ html.embedded-app-view .hero h1 {
     text-align: left;
   }
 }
+
+/* v59.62.6 — Community Boss First Event Final Public QA */
+.community-boss-public-cta-row {
+  display: grid;
+  gap: 8px;
+}
+
+.community-boss-public-cta-row button:disabled {
+  cursor: progress;
+  opacity: 0.72;
+}
+
+.community-boss-public-cta-row small {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.public-community-boss-card .community-boss-prep-head small {
+  max-width: 520px;
+}

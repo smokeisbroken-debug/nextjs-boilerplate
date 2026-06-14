@@ -19689,12 +19689,29 @@ function CommunityBossPrepCard({
     : proofSubmit.persisted && proofSubmit.autoRecalculated
       ? "Your proof was saved and community totals were updated."
       : proofSubmit.persisted
-        ? "Your proof was saved. Community totals will update automatically."
+        ? "Your proof was saved. Community totals update automatically."
         : proofSubmit.submitted && proofSubmit.ok
-          ? "Your proof was checked. Live saving will open when the event is ready."
+          ? "Your proof was checked. Live saving opens when the event is ready."
           : proofSubmit.submitted && proofSubmit.error
             ? "Proof could not be submitted yet. Try again later."
-            : "Submit real app proof to help the weekly Community Boss.";
+            : "Submit real app proof to help this week's Community Boss.";
+  const proofSubmitDisabled = proofSubmit.loading || (backend.loading && !backend.loaded);
+  const proofSubmitButtonLabel = proofSubmit.loading
+    ? "Submitting..."
+    : backend.loading && !backend.loaded
+      ? "Checking event..."
+      : proofSubmit.persisted
+        ? "Update my proof"
+        : liveAggregateReady
+          ? "Hit the Community Boss"
+          : "Submit my boss proof";
+  const proofSubmitCtaDetail = backend.loading && !backend.loaded
+    ? "Checking live event status before proof submit."
+    : liveAggregateReady
+      ? "Your real app proof can update the public community total automatically."
+      : proofSubmit.persisted
+        ? "Proof saved. Public totals will keep refreshing while the app is open."
+        : "Safe proof only: no wallet balance, income, debt, or payout data.";
   const communityUpdateLabel = liveAggregateReady
     ? "Live"
     : proofSubmit.persisted
@@ -19719,11 +19736,11 @@ function CommunityBossPrepCard({
     <section className="community-boss-prep-card public-community-boss-card">
       <div className="community-boss-prep-head">
         <div>
-          <span>Community Boss · {state.weekKey}</span>
+          <span>Community Boss</span>
           <strong>{state.bossName}</strong>
           <small>
-            A weekly community boss powered by real app actions. No payout
-            promise, no wallet value, no PvP.
+            A weekly community event powered by real app actions and public-safe
+            proof.
           </small>
         </div>
         <b>{publicEventPanel.badge}</b>
@@ -19826,17 +19843,16 @@ function CommunityBossPrepCard({
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={onSubmitProof}
-          disabled={proofSubmit.loading}
-        >
-          {proofSubmit.loading
-            ? "Submitting..."
-            : proofSubmit.persisted
-              ? "Submit another proof"
-              : "Submit my boss proof"}
-        </button>
+        <div className="community-boss-public-cta-row">
+          <button
+            type="button"
+            onClick={onSubmitProof}
+            disabled={proofSubmitDisabled}
+          >
+            {proofSubmitButtonLabel}
+          </button>
+          <small>{proofSubmitCtaDetail}</small>
+        </div>
       </div>
 
       <div
@@ -19877,7 +19893,7 @@ function CommunityBossPrepCard({
       </div>
 
       <footer className="community-boss-guardrail public-community-boss-guardrail">
-        <span>{state.weekRangeLabel} · Updates automatically while the app is open</span>
+        <span>{state.weekRangeLabel} · Auto-updates while the app is open</span>
         <b>Real habits only · Public-safe progress</b>
       </footer>
     </section>
