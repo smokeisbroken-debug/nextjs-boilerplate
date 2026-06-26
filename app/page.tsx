@@ -3781,8 +3781,9 @@ const ruText: Record<string, string> = {
   "$BROKE Score": "$BROKE Score",
   "$BROKE Score updated": "$BROKE Score обновлён",
   Home: "Главная",
-  Add: "Добавить",
-  Chart: "График",
+  Add: "Записать",
+  Chart: "Аналитика",
+  Analysis: "Аналитика",
   Save: "Экономия",
   Rewards: "Награды",
   Settings: "Настройки",
@@ -11020,9 +11021,9 @@ const APP_MODE_LABELS: Record<AppMode, { label: string; detail: string }> = {
 
 const STANDARD_MODE_ALLOWED_TABS: Tab[] = [
   "home",
-  "check",
   "add",
   "chart",
+  "check",
   "settings",
 ];
 
@@ -16084,13 +16085,13 @@ function HelpGuideModal({
       ],
     },
     add: {
-      label: "Add",
-      eyebrow: "Add Button Guide",
-      title: "Add: Track Leak Correctly",
+      label: "Track",
+      eyebrow: "Track Button Guide",
+      title: "Track: Add Wallet Leaks Correctly",
       intro:
-        "Add is the data entry screen. Every chart, pattern, challenge, report, growth plan, and share card becomes better when records here are honest.",
+        "Track is the core action screen. Every chart, pattern, challenge, report, growth plan, and share card becomes better when leak records here are honest.",
       icon: "/nav-add.png",
-      footerTitle: "Add rule",
+      footerTitle: "Track rule",
       footerBody:
         "Record the expense as soon as possible, choose the real category, mark the real decision type, then save. Accuracy beats perfection.",
       sections: [
@@ -16167,10 +16168,10 @@ function HelpGuideModal({
           icon: A.deleteData,
         },
         {
-          title: "When to use Add instead of other screens",
+          title: "When to use Track instead of other screens",
           body: [
-            "Use Add when money was spent and the app needs a new record.",
-            "Use Chart after the record exists and you want analysis.",
+            "Use Track when money was spent and the app needs a new leak record.",
+            "Use Analysis after the record exists and you want reports, patterns, or chart movement.",
             "Use Rewards when you want to reduce the leak, protect proof, or start a challenge.",
             "Use Growth when you want to redirect the leak into a goal.",
           ],
@@ -16179,15 +16180,15 @@ function HelpGuideModal({
       ],
     },
     chart: {
-      label: "Chart",
-      eyebrow: "Chart Button Guide",
-      title: "Chart: Read Wallet Pressure",
+      label: "Analysis",
+      eyebrow: "Analysis Button Guide",
+      title: "Analysis: Read Wallet Pressure",
       intro:
-        "Chart explains what happened after records are saved. It turns daily spending into pressure candles, patterns, one fix, weekly review, and monthly history.",
+        "Analysis explains what happened after records are saved. It turns daily spending into pressure candles, patterns, one fix, weekly review, and monthly history.",
       icon: "/nav-chart.png",
-      footerTitle: "Chart rule",
+      footerTitle: "Analysis rule",
       footerBody:
-        "Use Chart after adding records. First read the selected day, then follow One Fix. Open deeper labs only when you need more context.",
+        "Use Analysis after tracking records. First read the selected day, then follow One Fix. Open deeper labs only when you need more context.",
       sections: [
         {
           title: "Range buttons",
