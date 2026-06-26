@@ -39197,3 +39197,84 @@ html.embedded-app-view .hero h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== V59.63.7 HOME SIMPLIFICATION ===== */
+.home-main-survival-report {
+  border-color: rgba(183, 255, 25, 0.18);
+}
+
+.home-report-toolbox {
+  display: grid;
+  gap: 10px;
+  margin: 0 12px 12px;
+}
+
+.home-nested-details {
+  border-radius: 17px;
+  border: 1px solid rgba(183, 255, 25, 0.11);
+  background: rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+}
+
+.home-nested-details > summary {
+  min-height: 54px;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.home-nested-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-nested-details > summary span {
+  color: var(--text);
+  font-size: 0.92rem;
+  font-weight: 950;
+}
+
+.home-nested-details > summary small {
+  display: block;
+  margin-top: 3px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.74rem;
+  font-weight: 750;
+  line-height: 1.25;
+}
+
+.home-nested-details > summary b {
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: var(--green);
+  background: rgba(183, 255, 25, 0.09);
+  font-size: 0.68rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.home-nested-details > .share-card,
+.home-nested-details > section,
+.home-nested-details > .reports-panel {
+  margin: 0 10px 10px;
+  border-radius: 15px;
+}
+
+.home-secondary-hub[open] {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(183, 255, 25, 0.055), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.036), rgba(255, 255, 255, 0.01));
+}
+
+.home-secondary-hub > .clean-details,
+.home-secondary-hub > .home-compact-details {
+  margin: 0 12px 12px;
+}
+
+.home-secondary-hub > .clean-details:first-of-type,
+.home-secondary-hub > .home-compact-details:first-of-type {
+  margin-top: 0;
+}

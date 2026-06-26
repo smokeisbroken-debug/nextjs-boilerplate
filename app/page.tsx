@@ -18438,37 +18438,6 @@ function DashboardScreen({
         </div>
       </details>
 
-      {isProMode && (
-        <details className="home-compact-details home-weekly-report-details home-collapsed-section">
-          <summary className="home-compact-summary home-weekly-report-summary">
-            <div>
-              <span>Weekly Behavior Report</span>
-              <strong>
-                {weeklyPatternSummary.strongestPattern ||
-                  weeklyPatternSummary.headline}
-              </strong>
-              <small>
-                Weekly pattern, pressure, comparison, share card, and next move.
-              </small>
-            </div>
-            <b>{weeklyPatternSummary.leakPressure}%</b>
-          </summary>
-          <div className="home-compact-body">
-            <WeeklyBehaviorReportHomeCard
-              settings={settings}
-              weeklyPatternSummary={weeklyPatternSummary}
-              patternHistory={patternHistory}
-              walletHp={summary.walletHp}
-              identityStats={identityStats}
-              leaderboard={leaderboard}
-              shareInitData={telegram.isTelegram ? telegram.initData : ""}
-              onOpenChart={onOpenChart}
-              onOpenAdd={onOpenAdd}
-            />
-          </div>
-        </details>
-      )}
-
       {allExpenses.length === 0 && (
         <section className="first-user-clarity-card">
           <div>
@@ -18485,229 +18454,274 @@ function DashboardScreen({
         </section>
       )}
 
-      {isProMode && comebackState && (
-        <details className="home-compact-details home-comeback-details home-collapsed-section">
-          <summary className="home-compact-summary home-comeback-summary">
-            <div>
-              <span>Comeback Mode</span>
-              <strong>Restart without filling the whole app.</strong>
-              <small>
-                Use this when you missed tracking and need a controlled restart.
-              </small>
-            </div>
-            <b>Open</b>
-          </summary>
-          <div className="home-compact-body">
-            <ComebackModeCard
-              settings={settings}
-              comeback={comebackState}
-              onAddMissedLeak={onOpenAdd}
-              onRestartToday={onOpenAdd}
-              onShowDamage={onOpenChart}
-              onOpenSurvival={onOpenSurvival}
-            />
-          </div>
-        </details>
-      )}
-
-      {isProMode && (
-        <details className="clean-details">
-          <summary>
-            <div>
-              <span>Biggest Leak Challenge</span>
-              <small>
-                Optional 3-day mission built from your real leak pattern.
-              </small>
-            </div>
-            <b>
-              {identityStats.biggestLeakAmount > 0 ? "Ready" : "Needs leak"}
-            </b>
-          </summary>
-          <BiggestLeakChallengePanel
-            settings={settings}
-            identityStats={identityStats}
-            mission={leakMission}
-            expenses={allExpenses}
-            shareInitData={telegram.isTelegram ? telegram.initData : ""}
-            onStartMission={onStartLeakMission}
-            onResetMission={onResetLeakMission}
-            onOpenAdd={onOpenAdd}
-          />
-        </details>
-      )}
-
-      {expenses.length === 0 && (
-        <details className="clean-details">
-          <summary>
-            <div>
-              <span>First Leak Mission</span>
-              <small>Quick preset if you want to start faster.</small>
-            </div>
-            <b>Start</b>
-          </summary>
-          <FirstLeakOnboardingCard
-            settings={settings}
-            onQuickLeak={onQuickLeak}
-            onOpenAdd={onOpenAdd}
-          />
-        </details>
-      )}
-
-      <details className="clean-details" id="daily-routine-panel">
-        <summary>
-          <div>
-            <span>Daily Routine</span>
-            <small>No-spend days count. Final task: Share on X.</small>
-          </div>
-          <b>Streak proof</b>
-        </summary>
-        <DailyRoutinePanel
-          settings={settings}
-          summary={summary}
-          expenses={routineExpenses}
-          onRoutineComplete={onRoutineComplete}
-        />
-      </details>
-
-      <details className="clean-details">
+      <details className="clean-details home-main-survival-report">
         <summary>
           <div>
             <span>Wallet Survival Report</span>
-            <small>Your weekly score, status, and biggest leak.</small>
+            <small>
+              Main shareable report. Public cards are grouped here.
+            </small>
           </div>
           <b>{identityStats.weeklySurvivalScore}/100</b>
         </summary>
         <V2IdentityPanel settings={settings} identityStats={identityStats} />
+
+        {isProMode && (
+          <div className="home-report-toolbox">
+            <details className="home-nested-details">
+              <summary>
+                <div>
+                  <span>Share report cards</span>
+                  <small>Clean public wallet cards from this same report.</small>
+                </div>
+                <b>Reports</b>
+              </summary>
+              <ReportsPanel
+                settings={settings}
+                summary={summary}
+                expenses={allExpenses}
+                identityStats={identityStats}
+                exchangeRates={exchangeRates}
+                shareInitData={telegram.isTelegram ? telegram.initData : ""}
+              />
+            </details>
+
+            <details className="home-nested-details" id="share-result-card-panel">
+              <summary>
+                <div>
+                  <span>Profile share card</span>
+                  <small>Uses the slots selected in Profile.</small>
+                </div>
+                <b>Public card</b>
+              </summary>
+              <ShareResultCard
+                settings={settings}
+                walletHp={summary.walletHp}
+                totalLeaks={summary.totalLeaks}
+                realBalance={summary.realBalance}
+                potentialYearlySavings={summary.totalLeaks * 12}
+                leaderboard={leaderboard}
+                identityStats={identityStats}
+                exchangeRates={exchangeRates}
+                shareInitData={telegram.isTelegram ? telegram.initData : ""}
+              />
+            </details>
+          </div>
+        )}
       </details>
 
-      {isProMode && (
-        <details className="clean-details">
-          <summary>
-            <div>
-              <span>Share Reports</span>
-              <small>Generate clean public wallet cards.</small>
-            </div>
-            <b>Reports</b>
-          </summary>
-          <ReportsPanel
-            settings={settings}
-            summary={summary}
-            expenses={allExpenses}
-            identityStats={identityStats}
-            exchangeRates={exchangeRates}
-            shareInitData={telegram.isTelegram ? telegram.initData : ""}
-          />
-        </details>
-      )}
-
-      {isProMode && (
-        <details className="clean-details">
-          <summary>
-            <div>
-              <span>Smart Insights Lab</span>
-              <small>
-                Signals from leaks, fixed costs, silent pressure, targets, and
-                currency repair.
-              </small>
-            </div>
-            <b>{walletInsights.length} signals</b>
-          </summary>
-          <WalletInsightsPanel insights={walletInsights} />
-        </details>
-      )}
-
-      {isProMode && (
-        <details className="clean-details">
-          <summary>
-            <span>Badges</span>
-            <b>
-              {badges.filter((badge) => badge.earned).length}/{badges.length}
-            </b>
-          </summary>
-          <BadgeMiniStrip badges={badges} />
-        </details>
-      )}
-
-      {isProMode && (
-        <details className="clean-details" id="share-result-card-panel">
-          <summary>
-            <div>
-              <span>Profile Share Card</span>
-              <small>Uses the slots selected in Profile.</small>
-            </div>
-            <b>Public card</b>
-          </summary>
-          <ShareResultCard
-            settings={settings}
-            walletHp={summary.walletHp}
-            totalLeaks={summary.totalLeaks}
-            realBalance={summary.realBalance}
-            potentialYearlySavings={summary.totalLeaks * 12}
-            leaderboard={leaderboard}
-            identityStats={identityStats}
-            exchangeRates={exchangeRates}
-            shareInitData={telegram.isTelegram ? telegram.initData : ""}
-          />
-        </details>
-      )}
-
-      <details className="clean-details">
+      <details className="clean-details home-secondary-hub">
         <summary>
           <div>
-            <span>$BROKE Chart</span>
-            <small>Preview wallet movement and today’s damage.</small>
+            <span>More tools</span>
+            <small>
+              Growth, analysis preview, routines, recent expenses, and sync.
+            </small>
           </div>
-          <b>7D Preview</b>
+          <b>Optional</b>
         </summary>
-        <section className="chart-preview">
-          <div className="section-title">
-            <span>$BROKE Chart</span>
-            <small>7D Preview</small>
-          </div>
 
-          <MiniChart chartDays={chartDays} />
-
-          <div className="damage-card">
-            <div>
-              <small>Today&apos;s Damage</small>
-              <strong>
-                {summary.todaySpent > 0
-                  ? `-${money(summary.todaySpent, settings.currency)}`
-                  : money(0, settings.currency)}
-              </strong>
-              <span>tracked today</span>
+        {isProMode && (
+          <details className="home-compact-details home-weekly-report-details home-collapsed-section">
+            <summary className="home-compact-summary home-weekly-report-summary">
+              <div>
+                <span>Weekly Behavior Report</span>
+                <strong>
+                  {weeklyPatternSummary.strongestPattern ||
+                    weeklyPatternSummary.headline}
+                </strong>
+                <small>
+                  Weekly pattern, pressure, comparison, share card, and next move.
+                </small>
+              </div>
+              <b>{weeklyPatternSummary.leakPressure}%</b>
+            </summary>
+            <div className="home-compact-body">
+              <WeeklyBehaviorReportHomeCard
+                settings={settings}
+                weeklyPatternSummary={weeklyPatternSummary}
+                patternHistory={patternHistory}
+                walletHp={summary.walletHp}
+                identityStats={identityStats}
+                leaderboard={leaderboard}
+                shareInitData={telegram.isTelegram ? telegram.initData : ""}
+                onOpenChart={onOpenChart}
+                onOpenAdd={onOpenAdd}
+              />
             </div>
-            <img src={A.chartFrog} alt="Chart frog" />
-          </div>
-        </section>
-      </details>
+          </details>
+        )}
 
-      <details className="clean-details">
-        <summary>
-          <span>Recent Expenses</span>
-          <b>{expenses.length} total</b>
-        </summary>
-        <RecentExpenses
-          settings={settings}
-          expenses={expenses}
-          onDeleteExpense={onDeleteExpense}
-          onUpdateExpense={onUpdateExpense}
-          onOpenAdd={onOpenAdd}
-        />
-      </details>
+        {isProMode && comebackState && (
+          <details className="home-compact-details home-comeback-details home-collapsed-section">
+            <summary className="home-compact-summary home-comeback-summary">
+              <div>
+                <span>Comeback Mode</span>
+                <strong>Restart without filling the whole app.</strong>
+                <small>
+                  Use this when you missed tracking and need a controlled restart.
+                </small>
+              </div>
+              <b>Open</b>
+            </summary>
+            <div className="home-compact-body">
+              <ComebackModeCard
+                settings={settings}
+                comeback={comebackState}
+                onAddMissedLeak={onOpenAdd}
+                onRestartToday={onOpenAdd}
+                onShowDamage={onOpenChart}
+                onOpenSurvival={onOpenSurvival}
+              />
+            </div>
+          </details>
+        )}
 
-      <details className="clean-details">
-        <summary>
-          <span>Account / Sync</span>
-          <b>
-            {telegram.isTelegram
-              ? "Telegram"
-              : webAuth.authenticated
-                ? "Synced"
-                : "Web"}
-          </b>
-        </summary>
-        <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
+        {isProMode && (
+          <details className="clean-details">
+            <summary>
+              <div>
+                <span>Biggest Leak Challenge</span>
+                <small>
+                  Optional 3-day mission built from your real leak pattern.
+                </small>
+              </div>
+              <b>
+                {identityStats.biggestLeakAmount > 0 ? "Ready" : "Needs leak"}
+              </b>
+            </summary>
+            <BiggestLeakChallengePanel
+              settings={settings}
+              identityStats={identityStats}
+              mission={leakMission}
+              expenses={allExpenses}
+              shareInitData={telegram.isTelegram ? telegram.initData : ""}
+              onStartMission={onStartLeakMission}
+              onResetMission={onResetLeakMission}
+              onOpenAdd={onOpenAdd}
+            />
+          </details>
+        )}
+
+        {expenses.length === 0 && (
+          <details className="clean-details">
+            <summary>
+              <div>
+                <span>First Leak Mission</span>
+                <small>Quick preset if you want to start faster.</small>
+              </div>
+              <b>Start</b>
+            </summary>
+            <FirstLeakOnboardingCard
+              settings={settings}
+              onQuickLeak={onQuickLeak}
+              onOpenAdd={onOpenAdd}
+            />
+          </details>
+        )}
+
+        <details className="clean-details" id="daily-routine-panel">
+          <summary>
+            <div>
+              <span>Daily Routine</span>
+              <small>No-spend days count. Final task: Share on X.</small>
+            </div>
+            <b>Streak proof</b>
+          </summary>
+          <DailyRoutinePanel
+            settings={settings}
+            summary={summary}
+            expenses={routineExpenses}
+            onRoutineComplete={onRoutineComplete}
+          />
+        </details>
+
+        {isProMode && (
+          <details className="clean-details">
+            <summary>
+              <div>
+                <span>Smart Insights Lab</span>
+                <small>
+                  Signals from leaks, fixed costs, silent pressure, targets, and
+                  currency repair.
+                </small>
+              </div>
+              <b>{walletInsights.length} signals</b>
+            </summary>
+            <WalletInsightsPanel insights={walletInsights} />
+          </details>
+        )}
+
+        {isProMode && (
+          <details className="clean-details">
+            <summary>
+              <span>Badges</span>
+              <b>
+                {badges.filter((badge) => badge.earned).length}/{badges.length}
+              </b>
+            </summary>
+            <BadgeMiniStrip badges={badges} />
+          </details>
+        )}
+
+        <details className="clean-details">
+          <summary>
+            <div>
+              <span>Analysis preview</span>
+              <small>Preview wallet movement and today’s damage.</small>
+            </div>
+            <b>7D Preview</b>
+          </summary>
+          <section className="chart-preview">
+            <div className="section-title">
+              <span>Analysis preview</span>
+              <small>7D Preview</small>
+            </div>
+
+            <MiniChart chartDays={chartDays} />
+
+            <div className="damage-card">
+              <div>
+                <small>Today&apos;s Damage</small>
+                <strong>
+                  {summary.todaySpent > 0
+                    ? `-${money(summary.todaySpent, settings.currency)}`
+                    : money(0, settings.currency)}
+                </strong>
+                <span>tracked today</span>
+              </div>
+              <img src={A.chartFrog} alt="Chart frog" />
+            </div>
+          </section>
+        </details>
+
+        <details className="clean-details">
+          <summary>
+            <span>Recent Expenses</span>
+            <b>{expenses.length} total</b>
+          </summary>
+          <RecentExpenses
+            settings={settings}
+            expenses={expenses}
+            onDeleteExpense={onDeleteExpense}
+            onUpdateExpense={onUpdateExpense}
+            onOpenAdd={onOpenAdd}
+          />
+        </details>
+
+        <details className="clean-details">
+          <summary>
+            <span>Account / Sync</span>
+            <b>
+              {telegram.isTelegram
+                ? "Telegram"
+                : webAuth.authenticated
+                  ? "Synced"
+                  : "Web"}
+            </b>
+          </summary>
+          <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
+        </details>
       </details>
     </div>
   );
