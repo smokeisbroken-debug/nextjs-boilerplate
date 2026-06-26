@@ -31,6 +31,7 @@ type AppStatePayload = {
     routineReminderLastSentDate?: string;
     routineReminderLastSentAt?: string;
   };
+  [key: string]: unknown;
 };
 
 type SettingsRow = {
@@ -41,8 +42,24 @@ type SettingsRow = {
   app_state_payload?: AppStatePayload | null;
 };
 
-const MAX_PER_RUN = 220;
-const DUE_WINDOW_MINUTES = 12;
+type NotificationLogRow = {
+  sent_at?: string | null;
+  status?: string | null;
+};
+
+type RoutineReminderDetail = {
+  telegramId: number;
+  status: string;
+  reason?: string;
+  time?: string;
+  timezone?: string;
+  dateKey?: string;
+};
+
+const NOTIFICATION_TYPE = "routine_daily_check";
+const MAX_PER_RUN = 300;
+const EARLY_GRACE_MINUTES = 2;
+const LATE_GRACE_MINUTES = 10 * 60;
 
 function getOptionalEnv(name: string) {
   return process.env[name] || "";
@@ -144,13 +161,16 @@ function getLocalParts(date: Date, timezone: string) {
     hour12: false,
   }).formatToParts(date);
 
-  const get = (type: string) => parts.find((part) => part.type === type)?.value || "00";
+  const get = (type: string) =>
+    parts.find((part) => part.type === type)?.value || "00";
   const hour = Number(get("hour"));
   const minute = Number(get("minute"));
 
   return {
     dateKey: `${get("year")}-${get("month")}-${get("day")}`,
-    minutes: (Number.isFinite(hour) ? hour : 0) * 60 + (Number.isFinite(minute) ? minute : 0),
+    minutes:
+      (Number.isFinite(hour) ? hour : 0) * 60 +
+      (Number.isFinite(minute) ? minute : 0),
   };
 }
 
@@ -159,11 +179,20 @@ function minutesFromTime(time: string) {
   return hour * 60 + minute;
 }
 
-function isDueNow(time: string, timezone: string, now = new Date()) {
+function getDueState(time: string, timezone: string, now = new Date()) {
   const local = getLocalParts(now, timezone);
   const target = minutesFromTime(time);
   const diff = local.minutes - target;
-  return diff >= 0 && diff <= DUE_WINDOW_MINUTES;
+
+  if (diff < -EARLY_GRACE_MINUTES) {
+    return { due: false, reason: "not-due-yet", diffMinutes: diff };
+  }
+
+  if (diff > LATE_GRACE_MINUTES) {
+    return { due: false, reason: "due-window-passed", diffMinutes: diff };
+  }
+
+  return { due: true, reason: "due", diffMinutes: diff };
 }
 
 function localDateKey(timezone: string, now = new Date()) {
@@ -199,27 +228,99 @@ async function getEligibleSettingsRows() {
     [
       "broke_settings",
       "?select=telegram_id,daily_reminder,onboarding_completed,settings_payload,app_state_payload",
-      "&daily_reminder=eq.true",
       "&onboarding_completed=eq.true",
+      "&order=updated_at.desc",
       `&limit=${MAX_PER_RUN}`,
     ].join("")
   )) as SettingsRow[];
 }
 
-function alreadySentToday(appState: AppStatePayload | null | undefined, dateKey: string) {
+function alreadySentTodayFromAppState(
+  appState: AppStatePayload | null | undefined,
+  dateKey: string
+) {
   return appState?.notificationState?.routineReminderLastSentDate === dateKey;
 }
 
-async function markReminderSent(row: SettingsRow, dateKey: string) {
-  const telegramId = Number(row.telegram_id);
-  const appState: AppStatePayload = {
-    ...(row.app_state_payload || {}),
+function logDateMatchesLocalDay(
+  log: NotificationLogRow,
+  dateKey: string,
+  timezone: string
+) {
+  if (log.status !== "sent" || !log.sent_at) return false;
+
+  const sentAt = new Date(log.sent_at);
+  if (!Number.isFinite(sentAt.getTime())) return false;
+
+  return localDateKey(timezone, sentAt) === dateKey;
+}
+
+async function getRecentNotificationLogs(telegramId: number) {
+  try {
+    return (await supabaseFetch(
+      [
+        "broke_notification_logs",
+        "?select=sent_at,status",
+        `&telegram_id=eq.${telegramId}`,
+        `&type=eq.${NOTIFICATION_TYPE}`,
+        "&order=sent_at.desc",
+        "&limit=8",
+      ].join("")
+    )) as NotificationLogRow[];
+  } catch {
+    return [];
+  }
+}
+
+function alreadySentTodayFromLogs(
+  logs: NotificationLogRow[],
+  dateKey: string,
+  timezone: string
+) {
+  return logs.some((log) => logDateMatchesLocalDay(log, dateKey, timezone));
+}
+
+async function getLatestAppStatePayload(telegramId: number) {
+  try {
+    const rows = (await supabaseFetch(
+      `broke_settings?telegram_id=eq.${telegramId}&select=app_state_payload&limit=1`
+    )) as Array<{ app_state_payload?: AppStatePayload | null }>;
+
+    return rows[0]?.app_state_payload || null;
+  } catch {
+    return null;
+  }
+}
+
+function buildMarkedAppState(
+  current: AppStatePayload | null | undefined,
+  fallback: AppStatePayload | null | undefined,
+  dateKey: string
+): AppStatePayload {
+  const base = current || fallback || {};
+  const fallbackActions = fallback?.dailyRoutineActions;
+  const currentActions = current?.dailyRoutineActions;
+
+  return {
+    ...base,
+    dailyRoutineActions: currentActions || fallbackActions,
     notificationState: {
-      ...(row.app_state_payload?.notificationState || {}),
+      ...(fallback?.notificationState || {}),
+      ...(current?.notificationState || {}),
       routineReminderLastSentDate: dateKey,
       routineReminderLastSentAt: new Date().toISOString(),
     },
   };
+}
+
+async function markReminderSent(row: SettingsRow, dateKey: string) {
+  const telegramId = Number(row.telegram_id);
+  const latestAppState = await getLatestAppStatePayload(telegramId);
+  const appState = buildMarkedAppState(
+    latestAppState,
+    row.app_state_payload,
+    dateKey
+  );
 
   await supabaseFetch("broke_settings?on_conflict=telegram_id", {
     method: "POST",
@@ -239,36 +340,42 @@ function buildRoutineMessage() {
     "$BROKE reminder",
     "",
     "Your routine is not complete yet.",
-    "Run Check, track a leak or mark Clean Day before the day ends.",
+    "Open the tracker, log one real leak or finish Clean Day before the day ends.",
   ].join("\n");
 }
 
 async function sendTelegramMessage(telegramId: number, text: string) {
   const botToken = getEnv("TELEGRAM_BOT_TOKEN");
-  const webAppUrl = getEnv("WEBAPP_URL");
+  const webAppUrl =
+    getOptionalEnv("WEBAPP_URL") || getOptionalEnv("NEXT_PUBLIC_WEBAPP_URL");
+
+  const body: Record<string, unknown> = {
+    chat_id: telegramId,
+    text,
+    disable_web_page_preview: true,
+  };
+
+  if (webAppUrl) {
+    body.reply_markup = {
+      inline_keyboard: [
+        [
+          {
+            text: "Open $BROKE",
+            web_app: {
+              url: webAppUrl,
+            },
+          },
+        ],
+      ],
+    };
+  }
 
   const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      chat_id: telegramId,
-      text,
-      disable_web_page_preview: true,
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: "Open $BROKE",
-              web_app: {
-                url: webAppUrl,
-              },
-            },
-          ],
-        ],
-      },
-    }),
+    body: JSON.stringify(body),
   });
 
   const data = await response.json();
@@ -280,13 +387,43 @@ async function sendTelegramMessage(telegramId: number, text: string) {
   return Number(data.result?.message_id || 0);
 }
 
+async function safeLogNotification(input: {
+  telegramId: number;
+  message: string;
+  status: "sent" | "failed";
+  reason?: string;
+  telegramMessageId?: number | null;
+}) {
+  try {
+    await supabaseFetch("broke_notification_logs", {
+      method: "POST",
+      headers: {
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        telegram_id: input.telegramId,
+        type: NOTIFICATION_TYPE,
+        message: input.message,
+        status: input.status,
+        reason: input.reason || null,
+        telegram_message_id: input.telegramMessageId ?? null,
+        sent_at: new Date().toISOString(),
+      }),
+    });
+  } catch {
+    // Notification logs are useful for duplicate protection, but they must not
+    // block actual Telegram reminders when the log table is unavailable.
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     if (!getNotificationSecret()) {
       return NextResponse.json(
         {
           ok: false,
-          error: "Missing CRON_SECRET or NOTIFICATIONS_SECRET. Notification endpoint is locked by default.",
+          error:
+            "Missing CRON_SECRET or NOTIFICATIONS_SECRET. Notification endpoint is locked by default.",
         },
         { status: 500 }
       );
@@ -303,7 +440,12 @@ export async function GET(request: NextRequest) {
 
     if (testTelegramId > 0) {
       if (dryRun) {
-        return NextResponse.json({ ok: true, dryRun: true, testTelegramId, status: "test-ready" });
+        return NextResponse.json({
+          ok: true,
+          dryRun: true,
+          testTelegramId,
+          status: "test-ready",
+        });
       }
 
       const telegramMessageId = await sendTelegramMessage(
@@ -311,7 +453,12 @@ export async function GET(request: NextRequest) {
         ["$BROKE test reminder", "", "Telegram reminders are connected."].join("\n")
       );
 
-      return NextResponse.json({ ok: true, testTelegramId, status: "test-sent", telegramMessageId });
+      return NextResponse.json({
+        ok: true,
+        testTelegramId,
+        status: "test-sent",
+        telegramMessageId,
+      });
     }
 
     const result = {
@@ -321,7 +468,8 @@ export async function GET(request: NextRequest) {
       skipped: 0,
       failed: 0,
       dryRun,
-      details: [] as Array<{ telegramId: number; status: string; reason?: string; time?: string; timezone?: string }>,
+      windowMinutes: LATE_GRACE_MINUTES,
+      details: [] as RoutineReminderDetail[],
     };
 
     for (const row of rows) {
@@ -337,9 +485,16 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      if (!isDueNow(reminder.time, reminder.timezone)) {
+      const dueState = getDueState(reminder.time, reminder.timezone);
+      if (!dueState.due) {
         result.skipped += 1;
-        result.details.push({ telegramId, status: "skipped", reason: "not-due", time: reminder.time, timezone: reminder.timezone });
+        result.details.push({
+          telegramId,
+          status: "skipped",
+          reason: dueState.reason,
+          time: reminder.time,
+          timezone: reminder.timezone,
+        });
         continue;
       }
 
@@ -350,32 +505,83 @@ export async function GET(request: NextRequest) {
 
       if (isRoutineComplete(routineActions, dateKey)) {
         result.skipped += 1;
-        result.details.push({ telegramId, status: "skipped", reason: "routine-complete", time: reminder.time, timezone: reminder.timezone });
+        result.details.push({
+          telegramId,
+          status: "skipped",
+          reason: "routine-complete",
+          time: reminder.time,
+          timezone: reminder.timezone,
+          dateKey,
+        });
         continue;
       }
 
-      if (alreadySentToday(row.app_state_payload, dateKey)) {
+      const recentLogs = await getRecentNotificationLogs(telegramId);
+      const alreadySent =
+        alreadySentTodayFromAppState(row.app_state_payload, dateKey) ||
+        alreadySentTodayFromLogs(recentLogs, dateKey, reminder.timezone);
+
+      if (alreadySent) {
         result.skipped += 1;
-        result.details.push({ telegramId, status: "skipped", reason: "already-sent", time: reminder.time, timezone: reminder.timezone });
+        result.details.push({
+          telegramId,
+          status: "skipped",
+          reason: "already-sent",
+          time: reminder.time,
+          timezone: reminder.timezone,
+          dateKey,
+        });
         continue;
       }
 
       try {
         if (dryRun) {
           result.sent += 1;
-          result.details.push({ telegramId, status: "dry-run", time: reminder.time, timezone: reminder.timezone });
+          result.details.push({
+            telegramId,
+            status: "dry-run",
+            time: reminder.time,
+            timezone: reminder.timezone,
+            dateKey,
+          });
           continue;
         }
 
-        await sendTelegramMessage(telegramId, message);
+        const telegramMessageId = await sendTelegramMessage(telegramId, message);
         await markReminderSent(row, dateKey);
+        await safeLogNotification({
+          telegramId,
+          message,
+          status: "sent",
+          telegramMessageId,
+        });
 
         result.sent += 1;
-        result.details.push({ telegramId, status: "sent", time: reminder.time, timezone: reminder.timezone });
+        result.details.push({
+          telegramId,
+          status: "sent",
+          time: reminder.time,
+          timezone: reminder.timezone,
+          dateKey,
+        });
       } catch (error) {
         const reason = error instanceof Error ? error.message : "send-failed";
+        await safeLogNotification({
+          telegramId,
+          message,
+          status: "failed",
+          reason,
+        });
+
         result.failed += 1;
-        result.details.push({ telegramId, status: "failed", reason, time: reminder.time, timezone: reminder.timezone });
+        result.details.push({
+          telegramId,
+          status: "failed",
+          reason,
+          time: reminder.time,
+          timezone: reminder.timezone,
+          dateKey,
+        });
       }
     }
 
