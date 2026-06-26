@@ -41385,3 +41385,70 @@ html.embedded-app-view .hero h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== V59.63.13 GROWTH FLOW CLEANUP ===== */
+.growth-flow-card {
+  padding: 18px;
+  border: 1px solid rgba(183, 255, 25, 0.17);
+  border-radius: 26px;
+  background: linear-gradient(145deg, rgba(13, 21, 13, 0.95), rgba(6, 8, 7, 0.98));
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
+}
+
+.growth-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.growth-flow-grid button {
+  display: grid;
+  min-height: 132px;
+  padding: 14px;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+}
+
+.growth-flow-grid button span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 10px;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(183, 255, 25, 0.13);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.growth-flow-grid button strong {
+  align-self: end;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.08;
+}
+
+.growth-flow-grid button small {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.growth-flow-grid button:active {
+  transform: translateY(1px);
+}
+
+@media (max-width: 520px) {
+  .growth-flow-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .growth-flow-grid button {
+    min-height: 116px;
+  }
+}

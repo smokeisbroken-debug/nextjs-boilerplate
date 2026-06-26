@@ -15784,6 +15784,7 @@ export default function Home() {
             onBack={goHome}
             onHelp={openHelp}
             onOpenAdd={() => setActiveTab("add")}
+            onOpenRewards={() => setActiveTab("whatif")}
             onAppStateChange={queueCloudAppStateSync}
           />
         )}
@@ -29248,6 +29249,7 @@ function GrowthLabScreen({
   onBack,
   onHelp,
   onOpenAdd,
+  onOpenRewards,
   onAppStateChange,
 }: {
   settings: Settings;
@@ -29256,6 +29258,7 @@ function GrowthLabScreen({
   onBack: () => void;
   onHelp: () => void;
   onOpenAdd: () => void;
+  onOpenRewards: () => void;
   onAppStateChange?: () => void;
 }) {
   const [savedSimulations, setSavedSimulations] = useState<GrowthSimulation[]>(
@@ -29886,6 +29889,14 @@ function GrowthLabScreen({
     }
   }
 
+  function scrollToGrowthSection(sectionId: string) {
+    requestAnimationFrame(() => {
+      document
+        .getElementById(sectionId)
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   return (
     <div
       className="screen growth-screen"
@@ -29902,11 +29913,12 @@ function GrowthLabScreen({
 
       <section className="growth-hero-card">
         <div>
-          <span>Monthly Leak Plan</span>
-          <h2>Base saving + redirected leaks = real goal progress.</h2>
+          <span>Growth path</span>
+          <h2>Turn tracked leaks into habits, challenges, and goal progress.</h2>
           <p>
-            Leaks are the boost, not the whole engine. Lower leaks should make
-            the user look disciplined, not farther from the goal.
+            Growth starts after tracking. Use real leaks as the signal, then
+            build routine, complete challenges, unlock badges, and redirect the
+            saved amount toward a concrete target.
           </p>
         </div>
         <img
@@ -29942,7 +29954,37 @@ function GrowthLabScreen({
         />
       </section>
 
-      <section className="growth-leak-card">
+      <section className="growth-flow-card" aria-label="Growth flow">
+        <div className="section-title">
+          <span>Growth flow</span>
+          <small>Track → improve → earn</small>
+        </div>
+
+        <div className="growth-flow-grid">
+          <button type="button" onClick={onOpenAdd}>
+            <span>1</span>
+            <strong>Track leaks</strong>
+            <small>Record the real spending signal first.</small>
+          </button>
+          <button type="button" onClick={() => scrollToGrowthSection("growth-plan-builder")}>
+            <span>2</span>
+            <strong>Redirect leaks</strong>
+            <small>Convert leak pressure into a monthly plan.</small>
+          </button>
+          <button type="button" onClick={onOpenRewards}>
+            <span>3</span>
+            <strong>Challenges & badges</strong>
+            <small>Use Rewards for missions, proof, and public progress.</small>
+          </button>
+          <button type="button" onClick={() => scrollToGrowthSection("growth-saved-plans")}>
+            <span>4</span>
+            <strong>Track progress</strong>
+            <small>Keep saved plans and checkpoints in one place.</small>
+          </button>
+        </div>
+      </section>
+
+      <section className="growth-leak-card" id="growth-leak-signal">
         <img
           className="growth-leak-asset"
           src={GROWTH_PUBLIC_ASSETS.leak}
@@ -29999,7 +30041,7 @@ function GrowthLabScreen({
         </section>
       )}
 
-      <section className="growth-form-card">
+      <section className="growth-form-card" id="growth-plan-builder">
         <div className="section-title">
           <span>Create leak plan</span>
           <small>Planning only</small>
@@ -30469,7 +30511,7 @@ function GrowthLabScreen({
         </section>
       )}
 
-      <section className="growth-result-card growth-plan-tracker-card">
+      <section className="growth-result-card growth-plan-tracker-card" id="growth-saved-plans">
         <div className="section-title">
           <span>Saved plans</span>
           <small>{savedSimulations.length}/8 · clickable</small>
