@@ -1964,11 +1964,33 @@ function dbToPatternHistory(row: Record<string, unknown>): PatternHistoryRecord 
   };
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function dateKey(date: Date) {
   const y = date.getUTCFullYear();
   const m = String(date.getUTCMonth() + 1).padStart(2, "0");
   const d = String(date.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+function shiftDateKey(dateKeyValue: string, days: number) {
+  const date = new Date(`${dateKeyValue}T00:00:00Z`);
+
+  if (Number.isNaN(date.getTime())) return dateKeyValue;
+
+  date.setUTCDate(date.getUTCDate() + days);
+  return dateKey(date);
+}
+
+function getDateKeyDistance(fromKey: string | null, toKey: string | null) {
+  if (!fromKey || !toKey) return 999;
+
+  const from = new Date(`${fromKey}T00:00:00Z`).getTime();
+  const to = new Date(`${toKey}T00:00:00Z`).getTime();
+
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return 999;
+
+  return Math.round((to - from) / DAY_MS);
 }
 
 function calculateStreakFromExpenses(expenses: Expense[]): Streak {
@@ -1990,7 +2012,7 @@ function calculateStreakFromExpenses(expenses: Expense[]): Streak {
   for (const key of dates) {
     const time = new Date(`${key}T00:00:00Z`).getTime();
 
-    if (previousTime && time - previousTime === 24 * 60 * 60 * 1000) {
+    if (previousTime && time - previousTime === DAY_MS) {
       rollingStreak += 1;
     } else {
       rollingStreak = 1;
@@ -2001,9 +2023,7 @@ function calculateStreakFromExpenses(expenses: Expense[]): Streak {
   }
 
   const today = dateKey(new Date());
-  const yesterdayDate = new Date();
-  yesterdayDate.setUTCDate(yesterdayDate.getUTCDate() - 1);
-  const yesterday = dateKey(yesterdayDate);
+  const yesterday = shiftDateKey(today, -1);
 
   let currentStreak = 0;
 
@@ -2058,16 +2078,57 @@ async function saveStreak(telegramId: number, streak: Streak) {
   });
 }
 
+function protectStreakFromAccidentalDowngrade(
+  saved: Streak,
+  calculated: Streak,
+): Streak {
+  const today = dateKey(new Date());
+  const yesterday = shiftDateKey(today, -1);
+  const savedLast = saved.lastActiveDate;
+  const calculatedLast = calculated.lastActiveDate;
+  let currentStreak = calculated.currentStreak;
+  let lastActiveDate = calculatedLast;
+
+  const savedIsStillFresh = savedLast === today || savedLast === yesterday;
+  const calculatedIsEmpty = !calculatedLast || calculated.currentStreak <= 0;
+  const sameLastActiveDay = Boolean(
+    savedLast && calculatedLast && savedLast === calculatedLast,
+  );
+  const savedYesterdayCalculatedToday =
+    savedLast === yesterday && calculatedLast === today;
+  const calculatedWentBackwards =
+    Boolean(savedLast && calculatedLast) &&
+    getDateKeyDistance(calculatedLast, savedLast) > 0 &&
+    getDateKeyDistance(calculatedLast, savedLast) <= 1;
+
+  if (savedYesterdayCalculatedToday) {
+    currentStreak = Math.max(currentStreak, saved.currentStreak + 1);
+    lastActiveDate = calculatedLast;
+  } else if (saved.currentStreak > currentStreak) {
+    if (calculatedIsEmpty && savedIsStillFresh) {
+      currentStreak = saved.currentStreak;
+      lastActiveDate = savedLast;
+    } else if (sameLastActiveDay) {
+      currentStreak = saved.currentStreak;
+      lastActiveDate = savedLast;
+    } else if (calculatedWentBackwards && savedIsStillFresh) {
+      currentStreak = saved.currentStreak;
+      lastActiveDate = savedLast;
+    }
+  }
+
+  return {
+    currentStreak,
+    bestStreak: Math.max(saved.bestStreak, calculated.bestStreak, currentStreak),
+    lastActiveDate,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 async function getAndUpdateStreak(telegramId: number, expenses: Expense[]) {
   const calculated = calculateStreakFromExpenses(expenses);
   const saved = await getSavedStreak(telegramId);
-
-  const streak: Streak = {
-    currentStreak: calculated.currentStreak,
-    bestStreak: Math.max(saved.bestStreak, calculated.bestStreak),
-    lastActiveDate: calculated.lastActiveDate,
-    updatedAt: new Date().toISOString(),
-  };
+  const streak = protectStreakFromAccidentalDowngrade(saved, calculated);
 
   await saveStreak(telegramId, streak);
   return streak;
