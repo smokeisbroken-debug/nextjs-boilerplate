@@ -18265,14 +18265,6 @@ function DashboardScreen({
         />
       )}
 
-      <HomeTrackLeakCard
-        settings={settings}
-        summary={summary}
-        onQuickLeak={onQuickLeak}
-        onOpenFullTrack={onOpenAdd}
-        onOpenAnalysis={onOpenChart}
-      />
-
       <details
         open
         className="home-compact-details home-wallet-snapshot-card home-collapsed-section"
@@ -18410,6 +18402,14 @@ function DashboardScreen({
           </details>
         </div>
       </details>
+
+      <HomeTrackLeakCard
+        settings={settings}
+        summary={summary}
+        onQuickLeak={onQuickLeak}
+        onOpenFullTrack={onOpenAdd}
+        onOpenAnalysis={onOpenChart}
+      />
 
       <details className="home-compact-details home-focus-details home-collapsed-section">
         <summary className="home-compact-summary home-focus-summary">
