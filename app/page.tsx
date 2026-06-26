@@ -16474,12 +16474,12 @@ function HelpGuideModal({
           icon: A.calendar,
         },
         {
-          title: "Notifications Prep",
+          title: "Notifications & reminders",
           body: [
-            "Notifications Prep is only a settings preparation block right now.",
-            "Daily Proof, Recovery, 7-day milestone, and reminder time are saved as preferences.",
-            "Real Telegram scheduled alerts or push notifications are not active yet.",
-            "Use this block to tell the app what reminders should exist later.",
+            "Daily reminders help users return before their streak is at risk.",
+            "Profile shows whether the reminder is off, local only, syncing, armed, or blocked by a sync error.",
+            "Server reminders use Telegram delivery, local-day duplicate protection, and routine-complete skipping.",
+            "Daily Proof, Recovery, and milestone preferences remain reward reminder settings.",
           ],
           icon: A.bell,
         },
@@ -24032,6 +24032,158 @@ function BadgeVaultPanel({ badges }: { badges: BadgeItem[] }) {
         </div>
       </section>
     </details>
+  );
+}
+
+
+type ReminderConnectionTone = "off" | "ready" | "syncing" | "warning" | "error";
+
+type ReminderConnectionStatus = {
+  tone: ReminderConnectionTone;
+  label: string;
+  detail: string;
+  scheduleLabel: string;
+  channelLabel: string;
+  protectionLabel: string;
+  actionLabel: string;
+};
+
+function buildReminderConnectionStatus({
+  settings,
+  telegram,
+  webAuth,
+  cloudStatus,
+  cloudError,
+}: {
+  settings: Settings;
+  telegram: TelegramState;
+  webAuth: WebAuthState;
+  cloudStatus: CloudStatus;
+  cloudError: string;
+}): ReminderConnectionStatus {
+  const reminders = normalizeTelegramReminderSettings(
+    settings.reminders,
+    settings.dailyReminder,
+  );
+  const timezone = reminders.timezone || getClientTimeZone();
+  const scheduleLabel = `${reminders.time} · ${timezone}`;
+  const hasSyncedAccount = telegram.isTelegram || webAuth.authenticated;
+  const channelLabel = telegram.isTelegram
+    ? "Telegram bot"
+    : webAuth.authenticated
+      ? "Web account sync"
+      : "Local device only";
+
+  if (!reminders.enabled) {
+    return {
+      tone: "off",
+      label: "Off",
+      detail:
+        "Daily reminders are disabled. Turn them on to protect check-ins and streaks.",
+      scheduleLabel,
+      channelLabel,
+      protectionLabel: "Duplicate guard ready",
+      actionLabel: "Turn reminder on",
+    };
+  }
+
+  if (!hasSyncedAccount) {
+    return {
+      tone: "warning",
+      label: "Local only",
+      detail:
+        "The reminder time is saved locally. Connect Telegram sync so server reminders can reach this user.",
+      scheduleLabel,
+      channelLabel,
+      protectionLabel: "Saved locally",
+      actionLabel: "Connect Telegram",
+    };
+  }
+
+  if (cloudStatus === "error") {
+    return {
+      tone: "error",
+      label: "Sync error",
+      detail:
+        cloudError ||
+        "Cloud sync is not healthy. Reminder settings may not reach the server until sync recovers.",
+      scheduleLabel,
+      channelLabel,
+      protectionLabel: "Retry after sync",
+      actionLabel: "Check connection",
+    };
+  }
+
+  if (cloudStatus === "syncing") {
+    return {
+      tone: "syncing",
+      label: "Syncing",
+      detail:
+        "Reminder settings are being synced. Keep the app open until the status changes to armed.",
+      scheduleLabel,
+      channelLabel,
+      protectionLabel: "Waiting for cloud",
+      actionLabel: "Syncing",
+    };
+  }
+
+  if (cloudStatus !== "cloud") {
+    return {
+      tone: "warning",
+      label: "Needs sync",
+      detail:
+        "Reminder is enabled, but cloud sync is not confirmed yet. Server delivery starts after sync is healthy.",
+      scheduleLabel,
+      channelLabel,
+      protectionLabel: "Pending cloud",
+      actionLabel: "Open sync details",
+    };
+  }
+
+  return {
+    tone: "ready",
+    label: "Armed",
+    detail:
+      "Daily Telegram reminder is enabled. The server sends once per local day and skips completed routines.",
+    scheduleLabel,
+    channelLabel,
+    protectionLabel: "Once per local day",
+    actionLabel: "Ready",
+  };
+}
+
+function ReminderConnectionCard({
+  status,
+}: {
+  status: ReminderConnectionStatus;
+}) {
+  return (
+    <section className={`reminder-status-card ${status.tone}`}>
+      <div className="reminder-status-head">
+        <div>
+          <span>Reminder status</span>
+          <strong>{status.label}</strong>
+        </div>
+        <b>{status.actionLabel}</b>
+      </div>
+
+      <p>{status.detail}</p>
+
+      <div className="reminder-status-grid">
+        <div>
+          <span>Schedule</span>
+          <strong>{status.scheduleLabel}</strong>
+        </div>
+        <div>
+          <span>Channel</span>
+          <strong>{status.channelLabel}</strong>
+        </div>
+        <div>
+          <span>Duplicate protection</span>
+          <strong>{status.protectionLabel}</strong>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -37197,8 +37349,8 @@ function WhatIfScreen({
       <details className="clean-details rewards-core-details">
         <summary>
           <div>
-            <span>Notifications prep</span>
-            <small>Local reminder settings for future alerts.</small>
+            <span>Reward reminder prefs</span>
+            <small>Daily proof, recovery and milestone reminder preferences.</small>
           </div>
           <b>{rewardNotificationPrefs.reminderTime}</b>
         </summary>
@@ -39463,6 +39615,17 @@ function SettingsScreen({
     : webAuth.authenticated
       ? "Web linked"
       : "Local profile";
+  const reminderConnectionStatus = useMemo(
+    () =>
+      buildReminderConnectionStatus({
+        settings,
+        telegram,
+        webAuth,
+        cloudStatus,
+        cloudError,
+      }),
+    [settings.reminders, settings.dailyReminder, telegram, webAuth, cloudStatus, cloudError],
+  );
   const shareSlotLimit = getProfileShareSlotLimit(
     settingsWalletHp,
     settings.wallet,
@@ -42381,11 +42544,7 @@ function SettingsScreen({
                 Daily reminder, Telegram connection and cloud status.
               </small>
             </div>
-            <b>
-              {settings.reminders.enabled
-                ? settings.reminders.time
-                : profileConnectionLabel}
-            </b>
+            <b>{reminderConnectionStatus.label}</b>
           </summary>
           <div className="profile-section-body profile-section-stack">
             <section className="settings-menu profile-section-menu">
@@ -42462,6 +42621,7 @@ function SettingsScreen({
                 </label>
               ) : null}
             </section>
+            <ReminderConnectionCard status={reminderConnectionStatus} />
             <details className="tech-details">
               <summary>Sync & connection details</summary>
               <TelegramMiniStatus

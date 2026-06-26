@@ -38783,3 +38783,122 @@ html.embedded-app-view .hero h1 {
 .public-community-boss-card .community-boss-prep-head small {
   max-width: 520px;
 }
+
+/* ===== REMINDER STATUS CARD ===== */
+.reminder-status-card {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(183, 255, 25, 0.08), transparent 42%),
+    rgba(0, 0, 0, 0.2);
+}
+
+.reminder-status-card.ready {
+  border-color: rgba(183, 255, 25, 0.24);
+  background:
+    radial-gradient(circle at top right, rgba(183, 255, 25, 0.12), transparent 44%),
+    rgba(9, 20, 11, 0.78);
+}
+
+.reminder-status-card.syncing {
+  border-color: rgba(255, 213, 74, 0.24);
+}
+
+.reminder-status-card.warning {
+  border-color: rgba(255, 213, 74, 0.22);
+  background:
+    radial-gradient(circle at top right, rgba(255, 213, 74, 0.09), transparent 44%),
+    rgba(0, 0, 0, 0.2);
+}
+
+.reminder-status-card.error {
+  border-color: rgba(255, 92, 92, 0.26);
+  background:
+    radial-gradient(circle at top right, rgba(255, 92, 92, 0.09), transparent 44%),
+    rgba(0, 0, 0, 0.22);
+}
+
+.reminder-status-card.off {
+  opacity: 0.86;
+}
+
+.reminder-status-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reminder-status-head div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.reminder-status-head span,
+.reminder-status-grid span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.reminder-status-head strong {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.1;
+}
+
+.reminder-status-head b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(183, 255, 25, 0.16);
+  border-radius: 999px;
+  padding: 6px 9px;
+  color: var(--accent);
+  background: rgba(183, 255, 25, 0.07);
+  font-size: 0.68rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.reminder-status-card p {
+  margin: 0;
+  color: rgba(244, 247, 240, 0.68);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.reminder-status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.reminder-status-grid div {
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 15px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.reminder-status-grid strong {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.77rem;
+  line-height: 1.18;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 430px) {
+  .reminder-status-grid {
+    grid-template-columns: 1fr;
+  }
+}
