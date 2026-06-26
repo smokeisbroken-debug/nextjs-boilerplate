@@ -18265,6 +18265,14 @@ function DashboardScreen({
         />
       )}
 
+      <HomeTrackLeakCard
+        settings={settings}
+        summary={summary}
+        onQuickLeak={onQuickLeak}
+        onOpenFullTrack={onOpenAdd}
+        onOpenAnalysis={onOpenChart}
+      />
+
       <details
         open
         className="home-compact-details home-wallet-snapshot-card home-collapsed-section"
@@ -18702,6 +18710,132 @@ function DashboardScreen({
         <WebTelegramSyncCard telegram={telegram} webAuth={webAuth} />
       </details>
     </div>
+  );
+}
+
+function HomeTrackLeakCard({
+  settings,
+  summary,
+  onQuickLeak,
+  onOpenFullTrack,
+  onOpenAnalysis,
+}: {
+  settings: Settings;
+  summary: {
+    walletHp: number;
+    todaySpent: number;
+  };
+  onQuickLeak: (category: string, value: number, needType?: NeedType) => void;
+  onOpenFullTrack: () => void;
+  onOpenAnalysis: () => void;
+}) {
+  const [quickAmount, setQuickAmount] = useState("");
+  const [quickCategory, setQuickCategory] = useState("Coffee");
+  const [quickNeedType, setQuickNeedType] = useState<NeedType>("Not needed");
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+
+  const normalizedAmount = useMemo(
+    () => normalizeTrackedMoneyAmount(quickAmount),
+    [quickAmount],
+  );
+  const canTrack = isValidTrackedMoneyAmount(normalizedAmount);
+  const categoryChoices = categories.slice(0, 6);
+  const needTypeChoices: Array<{ value: NeedType; label: string; detail: string }> = [
+    { value: "Not needed", label: "Leak", detail: "avoidable" },
+    { value: "Maybe", label: "Maybe", detail: "grey zone" },
+    { value: "Needed", label: "Need", detail: "survival" },
+  ];
+
+  function submitHomeLeak(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAttemptedSubmit(true);
+
+    if (!canTrack) return;
+
+    onQuickLeak(quickCategory, normalizedAmount, quickNeedType);
+    setQuickAmount("");
+    setAttemptedSubmit(false);
+  }
+
+  return (
+    <section className="home-track-leak-card" aria-label="Track leak from Home">
+      <div className="home-track-leak-head">
+        <div>
+          <span>Core action</span>
+          <h2>Track a leak now</h2>
+          <p>Track leaks → build habits → improve Wallet Health.</p>
+        </div>
+        <b>{summary.walletHp}/100 HP</b>
+      </div>
+
+      <form className="home-track-leak-form" onSubmit={submitHomeLeak}>
+        <label className="home-track-amount-field">
+          <span>Amount</span>
+          <div>
+            <strong>{settings.currency}</strong>
+            <input
+              value={quickAmount}
+              onChange={(event) => setQuickAmount(event.target.value)}
+              inputMode="decimal"
+              placeholder="0"
+              aria-label="Leak amount"
+            />
+          </div>
+        </label>
+
+        <div className="home-track-category-row" aria-label="Leak category">
+          {categoryChoices.map((item) => (
+            <button
+              key={item.name}
+              type="button"
+              className={item.name === quickCategory ? "active" : ""}
+              onClick={() => setQuickCategory(item.name)}
+            >
+              <img src={item.icon} alt="" />
+              <span>{categoryDisplayName(settings, item.name)}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="home-track-need-row" aria-label="Leak type">
+          {needTypeChoices.map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              className={item.value === quickNeedType ? "active" : ""}
+              onClick={() => setQuickNeedType(item.value)}
+            >
+              <strong>{item.label}</strong>
+              <small>{item.detail}</small>
+            </button>
+          ))}
+        </div>
+
+        {attemptedSubmit && !canTrack && (
+          <p className="home-track-leak-error">
+            Enter an amount of at least {money(MIN_TRACKED_MONEY_AMOUNT, settings.currency)}.
+          </p>
+        )}
+
+        <div className="home-track-action-row">
+          <button className="home-track-submit" type="submit" disabled={!canTrack}>
+            Save leak
+          </button>
+          <button className="home-track-secondary" type="button" onClick={onOpenFullTrack}>
+            Full Track
+          </button>
+        </div>
+      </form>
+
+      <div className="home-track-foot">
+        <span>
+          Today tracked: {money(summary.todaySpent, settings.currency)}
+        </span>
+        <button type="button" onClick={onOpenAnalysis}>
+          Open analysis
+        </button>
+      </div>
+    </section>
   );
 }
 
