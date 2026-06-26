@@ -18294,6 +18294,14 @@ function DashboardScreen({
         />
       )}
 
+      <HomeTrackLeakCard
+        settings={settings}
+        summary={summary}
+        onQuickLeak={onQuickLeak}
+        onOpenFullTrack={onOpenAdd}
+        onOpenAnalysis={onOpenChart}
+      />
+
       <details
         open
         className="home-compact-details home-wallet-snapshot-card home-collapsed-section"
@@ -18432,14 +18440,6 @@ function DashboardScreen({
         </div>
       </details>
 
-      <HomeTrackLeakCard
-        settings={settings}
-        summary={summary}
-        onQuickLeak={onQuickLeak}
-        onOpenFullTrack={onOpenAdd}
-        onOpenAnalysis={onOpenChart}
-      />
-
       <details className="home-compact-details home-focus-details home-collapsed-section">
         <summary className="home-compact-summary home-focus-summary">
           <div>
@@ -18538,6 +18538,16 @@ function DashboardScreen({
                 shareInitData={telegram.isTelegram ? telegram.initData : ""}
               />
             </details>
+            <details className="home-nested-details">
+              <summary>
+                <div>
+                  <span>Smart Insight</span>
+                  <small>Wallet signals and tomorrow’s next move.</small>
+                </div>
+                <b>{walletInsights.length} signals</b>
+              </summary>
+              <WalletInsightsPanel insights={walletInsights} />
+            </details>
           </div>
         )}
       </details>
@@ -18547,8 +18557,7 @@ function DashboardScreen({
           <div>
             <span>More tools</span>
             <small>
-              Growth, routines, recent expenses, sync, and links to deeper
-              reports.
+              Growth, routines, recent expenses, and sync tools.
             </small>
           </div>
           <b>Optional</b>
@@ -18613,28 +18622,48 @@ function DashboardScreen({
         )}
 
         {isProMode && (
-          <details className="clean-details">
+          <details className="clean-details home-challenges-badges-details">
             <summary>
               <div>
-                <span>Biggest Leak Challenge</span>
-                <small>
-                  Optional 3-day mission built from your real leak pattern.
-                </small>
+                <span>Challenges & Badges</span>
+                <small>Biggest leak mission and progress badges together.</small>
               </div>
               <b>
                 {identityStats.biggestLeakAmount > 0 ? "Ready" : "Needs leak"}
               </b>
             </summary>
-            <BiggestLeakChallengePanel
-              settings={settings}
-              identityStats={identityStats}
-              mission={leakMission}
-              expenses={allExpenses}
-              shareInitData={telegram.isTelegram ? telegram.initData : ""}
-              onStartMission={onStartLeakMission}
-              onResetMission={onResetLeakMission}
-              onOpenAdd={onOpenAdd}
-            />
+            <div className="home-challenges-badges-stack">
+              <section className="home-combined-panel">
+                <div className="home-combined-panel-head">
+                  <span>Biggest Leak Challenge</span>
+                  <b>
+                    {identityStats.biggestLeakAmount > 0
+                      ? "Ready"
+                      : "Needs leak"}
+                  </b>
+                </div>
+                <BiggestLeakChallengePanel
+                  settings={settings}
+                  identityStats={identityStats}
+                  mission={leakMission}
+                  expenses={allExpenses}
+                  shareInitData={telegram.isTelegram ? telegram.initData : ""}
+                  onStartMission={onStartLeakMission}
+                  onResetMission={onResetLeakMission}
+                  onOpenAdd={onOpenAdd}
+                />
+              </section>
+
+              <section className="home-combined-panel">
+                <div className="home-combined-panel-head">
+                  <span>Badges</span>
+                  <b>
+                    {badges.filter((badge) => badge.earned).length}/{badges.length}
+                  </b>
+                </div>
+                <BadgeMiniStrip badges={badges} />
+              </section>
+            </div>
           </details>
         )}
 
@@ -18669,61 +18698,6 @@ function DashboardScreen({
             expenses={routineExpenses}
             onRoutineComplete={onRoutineComplete}
           />
-        </details>
-
-        {isProMode && (
-          <details className="clean-details">
-            <summary>
-              <div>
-                <span>Smart Insights Lab</span>
-                <small>
-                  Signals from leaks, fixed costs, silent pressure, targets, and
-                  currency repair.
-                </small>
-              </div>
-              <b>{walletInsights.length} signals</b>
-            </summary>
-            <WalletInsightsPanel insights={walletInsights} />
-          </details>
-        )}
-
-        {isProMode && (
-          <details className="clean-details">
-            <summary>
-              <span>Badges</span>
-              <b>
-                {badges.filter((badge) => badge.earned).length}/{badges.length}
-              </b>
-            </summary>
-            <BadgeMiniStrip badges={badges} />
-          </details>
-        )}
-
-        <details className="clean-details">
-          <summary>
-            <div>
-              <span>Analysis & reports</span>
-              <small>
-                Charts, patterns, weekly review, and monthly history live in
-                Analysis.
-              </small>
-            </div>
-            <b>Open tab</b>
-          </summary>
-          <section className="first-user-clarity-card compact-analysis-link">
-            <div>
-              <span>Consolidated reports</span>
-              <strong>Use Analysis after tracking a leak.</strong>
-              <p>
-                Home stays focused on wallet status and tracking. Analysis keeps
-                the pressure chart, one fix, pattern lab, weekly review, and
-                monthly history in one place.
-              </p>
-            </div>
-            <button type="button" onClick={onOpenChart}>
-              Open Analysis
-            </button>
-          </section>
         </details>
 
         <details className="clean-details">

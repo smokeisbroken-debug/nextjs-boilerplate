@@ -41452,3 +41452,47 @@ html.embedded-app-view .hero h1 {
     min-height: 116px;
   }
 }
+
+/* ===== V59.63.14 HOME ACTION CLEANUP ===== */
+.home-challenges-badges-stack {
+  display: grid;
+  gap: 10px;
+  padding: 0 10px 10px;
+}
+
+.home-combined-panel {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(183, 255, 25, 0.1);
+  border-radius: 17px;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.home-combined-panel-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.home-combined-panel-head span {
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 950;
+  line-height: 1.15;
+}
+
+.home-combined-panel-head b {
+  padding: 6px 9px;
+  border-radius: 999px;
+  color: var(--green);
+  background: rgba(183, 255, 25, 0.08);
+  font-size: 0.66rem;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.home-challenges-badges-details .badge-mini-strip {
+  margin: 0;
+}
