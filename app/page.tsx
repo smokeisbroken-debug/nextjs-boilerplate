@@ -1684,12 +1684,19 @@ function getCommunityBossProductionRuntimeQa(
   const autoRecalcReady = backend.canAutoRecalculateAfterProof;
   const aggregateWriteReady = backend.canRecalculateAggregate;
   const liveTotalsReady = hasCommunityBossLiveAggregateProof(backend);
-  const proofEvidenceReady = hasCommunityBossProofEvidence(backend, proofSubmit);
+  const proofEvidenceReady = hasCommunityBossProofEvidence(
+    backend,
+    proofSubmit,
+  );
 
   const items: CommunityBossRuntimeQaItem[] = [
     {
       label: "Supabase public read",
-      value: supabasePublicReadReady ? "Live" : backend.canRead ? "Fallback" : "Locked",
+      value: supabasePublicReadReady
+        ? "Live"
+        : backend.canRead
+          ? "Fallback"
+          : "Locked",
       detail: supabasePublicReadReady
         ? "Current aggregate is coming from the public-safe Supabase view."
         : backend.readError
@@ -1748,7 +1755,8 @@ function getCommunityBossProductionRuntimeQa(
   ];
 
   const missingFlags = backend.missing.slice(0, 8);
-  const ready = items.every((item) => item.ready) && firstEventState.launchReady;
+  const ready =
+    items.every((item) => item.ready) && firstEventState.launchReady;
 
   if (ready) {
     return {
@@ -1820,7 +1828,11 @@ function getCommunityBossFirstLiveTestStatus({
   const steps: CommunityBossFirstLiveTestStep[] = [
     {
       label: "Supabase read active",
-      value: supabaseReadActive ? "Live" : backend.readError ? "Fallback" : "Locked",
+      value: supabaseReadActive
+        ? "Live"
+        : backend.readError
+          ? "Fallback"
+          : "Locked",
       detail: supabaseReadActive
         ? "Public read uses the Supabase aggregate source, not dry-run fallback."
         : backend.readError
@@ -1909,7 +1921,6 @@ function getCommunityBossFirstLiveTestStatus({
   };
 }
 
-
 function getCommunityBossFirstEventTestChecklist({
   backend,
   proofSubmit,
@@ -1950,7 +1961,11 @@ function getCommunityBossFirstEventTestChecklist({
     },
     {
       label: "Runtime source",
-      value: publicReadStable ? "Supabase" : backend.readError ? "Fallback" : "Waiting",
+      value: publicReadStable
+        ? "Supabase"
+        : backend.readError
+          ? "Fallback"
+          : "Waiting",
       detail: publicReadStable
         ? "Public totals are coming from the live public-safe aggregate read."
         : backend.readError
@@ -1984,7 +1999,11 @@ function getCommunityBossFirstEventTestChecklist({
     },
     {
       label: "Aggregate consistency",
-      value: liveTotalsReady ? "Live" : aggregateStateConsistent ? "Empty safe" : "Mismatch",
+      value: liveTotalsReady
+        ? "Live"
+        : aggregateStateConsistent
+          ? "Empty safe"
+          : "Mismatch",
       detail: liveTotalsReady
         ? `${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"} and ${backend.totalDamage} damage are visible.`
         : aggregateStateConsistent
@@ -2019,7 +2038,8 @@ function getCommunityBossFirstEventTestChecklist({
     label: ready ? "First event test ready" : "Runtime fixes needed",
     detail: ready
       ? "Public UI, proof submit state, automatic aggregate flow, and launch copy locks are aligned for the first live event."
-      : firstBlocked?.detail || "Complete the blocked runtime check before first live event.",
+      : firstBlocked?.detail ||
+        "Complete the blocked runtime check before first live event.",
     badge: ready ? "Ready" : `${readyCount}/${items.length}`,
     ready,
     missingFlags,
@@ -2206,7 +2226,6 @@ function getCommunityBossFirstEventState(
   };
 }
 
-
 function getCommunityBossPublicEventPanel({
   backend,
   proofSubmit,
@@ -2218,7 +2237,8 @@ function getCommunityBossPublicEventPanel({
 }) {
   const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
   const seededWeek = hasCommunityBossSeededWeek(backend);
-  const bossName = backend.bossName !== "—" ? backend.bossName : "Community Boss";
+  const bossName =
+    backend.bossName !== "—" ? backend.bossName : "Community Boss";
   const damage = backend.totalDamage;
   const participants = backend.participantCount;
   const progressValue = liveAggregateReady
@@ -2278,7 +2298,8 @@ function getCommunityBossPublicEventPanel({
       label: "Community Boss live",
       badge: "Live",
       detail: `${bossName} is active: ${damage} damage from ${participants} participant${participants === 1 ? "" : "s"}.`,
-      status: "Submit real app proof to help the community push the weekly boss.",
+      status:
+        "Submit real app proof to help the community push the weekly boss.",
       stats,
     };
   }
@@ -2313,7 +2334,8 @@ function getCommunityBossPublicEventPanel({
       label: "First event ready",
       badge: "Proof needed",
       detail: `${bossName} is prepared for this week. Submit real app proof to start live progress.`,
-      status: "Routine, tracking, leak fixes, and challenges can help the community boss.",
+      status:
+        "Routine, tracking, leak fixes, and challenges can help the community boss.",
       stats,
     };
   }
@@ -9400,7 +9422,10 @@ function mergeExpensesForSync(
 }
 
 function normalizeClientStreak(input?: Partial<Streak> | null): Streak {
-  const currentStreak = Math.max(0, Math.floor(Number(input?.currentStreak) || 0));
+  const currentStreak = Math.max(
+    0,
+    Math.floor(Number(input?.currentStreak) || 0),
+  );
   const bestStreak = Math.max(
     currentStreak,
     Math.floor(Number(input?.bestStreak) || 0),
@@ -9450,7 +9475,10 @@ function protectStreakFromAccidentalDowngrade(
         [safeCurrent.updatedAt, safeIncoming.updatedAt]
           .filter((date): date is string => Boolean(date))
           .sort()
-          .pop() || safeCurrent.updatedAt || safeIncoming.updatedAt || null,
+          .pop() ||
+        safeCurrent.updatedAt ||
+        safeIncoming.updatedAt ||
+        null,
     };
   }
 
@@ -18458,9 +18486,7 @@ function DashboardScreen({
         <summary>
           <div>
             <span>Wallet Survival Report</span>
-            <small>
-              Main shareable report. Public cards are grouped here.
-            </small>
+            <small>Main shareable report. Public cards are grouped here.</small>
           </div>
           <b>{identityStats.weeklySurvivalScore}/100</b>
         </summary>
@@ -18472,7 +18498,9 @@ function DashboardScreen({
               <summary>
                 <div>
                   <span>Share report cards</span>
-                  <small>Clean public wallet cards from this same report.</small>
+                  <small>
+                    Clean public wallet cards from this same report.
+                  </small>
                 </div>
                 <b>Reports</b>
               </summary>
@@ -18486,7 +18514,10 @@ function DashboardScreen({
               />
             </details>
 
-            <details className="home-nested-details" id="share-result-card-panel">
+            <details
+              className="home-nested-details"
+              id="share-result-card-panel"
+            >
               <summary>
                 <div>
                   <span>Profile share card</span>
@@ -18515,7 +18546,8 @@ function DashboardScreen({
           <div>
             <span>More tools</span>
             <small>
-              Growth, routines, recent expenses, sync, and links to deeper reports.
+              Growth, routines, recent expenses, sync, and links to deeper
+              reports.
             </small>
           </div>
           <b>Optional</b>
@@ -18531,7 +18563,8 @@ function DashboardScreen({
                     weeklyPatternSummary.headline}
                 </strong>
                 <small>
-                  Weekly pattern, pressure, comparison, share card, and next move.
+                  Weekly pattern, pressure, comparison, share card, and next
+                  move.
                 </small>
               </div>
               <b>{weeklyPatternSummary.leakPressure}%</b>
@@ -18559,7 +18592,8 @@ function DashboardScreen({
                 <span>Comeback Mode</span>
                 <strong>Restart without filling the whole app.</strong>
                 <small>
-                  Use this when you missed tracking and need a controlled restart.
+                  Use this when you missed tracking and need a controlled
+                  restart.
                 </small>
               </div>
               <b>Open</b>
@@ -18668,7 +18702,10 @@ function DashboardScreen({
           <summary>
             <div>
               <span>Analysis & reports</span>
-              <small>Charts, patterns, weekly review, and monthly history live in Analysis.</small>
+              <small>
+                Charts, patterns, weekly review, and monthly history live in
+                Analysis.
+              </small>
             </div>
             <b>Open tab</b>
           </summary>
@@ -18747,7 +18784,11 @@ function HomeTrackLeakCard({
   );
   const canTrack = isValidTrackedMoneyAmount(normalizedAmount);
   const categoryChoices = categories.slice(0, 6);
-  const needTypeChoices: Array<{ value: NeedType; label: string; detail: string }> = [
+  const needTypeChoices: Array<{
+    value: NeedType;
+    label: string;
+    detail: string;
+  }> = [
     { value: "Not needed", label: "Leak", detail: "avoidable" },
     { value: "Maybe", label: "Maybe", detail: "grey zone" },
     { value: "Needed", label: "Need", detail: "survival" },
@@ -18820,15 +18861,24 @@ function HomeTrackLeakCard({
 
         {attemptedSubmit && !canTrack && (
           <p className="home-track-leak-error">
-            Enter an amount of at least {money(MIN_TRACKED_MONEY_AMOUNT, settings.currency)}.
+            Enter an amount of at least{" "}
+            {money(MIN_TRACKED_MONEY_AMOUNT, settings.currency)}.
           </p>
         )}
 
         <div className="home-track-action-row">
-          <button className="home-track-submit" type="submit" disabled={!canTrack}>
+          <button
+            className="home-track-submit"
+            type="submit"
+            disabled={!canTrack}
+          >
             Save leak
           </button>
-          <button className="home-track-secondary" type="button" onClick={onOpenFullTrack}>
+          <button
+            className="home-track-secondary"
+            type="button"
+            onClick={onOpenFullTrack}
+          >
             Full Track
           </button>
         </div>
@@ -19925,7 +19975,9 @@ function CommunityBossPrepCard({
   });
   const liveAggregateReady = hasCommunityBossLiveAggregateProof(backend);
   const publicProgressPercent = clamp(
-    liveAggregateReady ? backend.progressPercent : state.projectedCommunityProgress,
+    liveAggregateReady
+      ? backend.progressPercent
+      : state.projectedCommunityProgress,
     0,
     100,
   );
@@ -19949,7 +20001,8 @@ function CommunityBossPrepCard({
           : proofSubmit.submitted && proofSubmit.error
             ? "Proof could not be submitted yet. Try again later."
             : "Submit real app proof to help this week's Community Boss.";
-  const proofSubmitDisabled = proofSubmit.loading || (backend.loading && !backend.loaded);
+  const proofSubmitDisabled =
+    proofSubmit.loading || (backend.loading && !backend.loaded);
   const proofSubmitButtonLabel = proofSubmit.loading
     ? "Submitting..."
     : backend.loading && !backend.loaded
@@ -19959,13 +20012,14 @@ function CommunityBossPrepCard({
         : liveAggregateReady
           ? "Hit the Community Boss"
           : "Submit my boss proof";
-  const proofSubmitCtaDetail = backend.loading && !backend.loaded
-    ? "Checking live event status before proof submit."
-    : liveAggregateReady
-      ? "Your real app proof can update the public community total automatically."
-      : proofSubmit.persisted
-        ? "Proof saved. Public totals will keep refreshing while the app is open."
-        : "Safe proof only: no wallet balance, income, debt, or payout data.";
+  const proofSubmitCtaDetail =
+    backend.loading && !backend.loaded
+      ? "Checking live event status before proof submit."
+      : liveAggregateReady
+        ? "Your real app proof can update the public community total automatically."
+        : proofSubmit.persisted
+          ? "Proof saved. Public totals will keep refreshing while the app is open."
+          : "Safe proof only: no wallet balance, income, debt, or payout data.";
   const communityUpdateLabel = liveAggregateReady
     ? "Live"
     : proofSubmit.persisted
@@ -20000,7 +20054,9 @@ function CommunityBossPrepCard({
         <b>{publicEventPanel.badge}</b>
       </div>
 
-      <div className={`community-boss-public-event-panel ${publicEventPanel.tone}`}>
+      <div
+        className={`community-boss-public-event-panel ${publicEventPanel.tone}`}
+      >
         <div className="community-boss-public-event-head">
           <div>
             <span>Community event</span>
@@ -20022,7 +20078,13 @@ function CommunityBossPrepCard({
       </div>
 
       <div className="community-boss-public-status-strip">
-        <span>{liveAggregateReady ? "Live totals" : proofSubmit.persisted ? "Aggregate syncing" : "First event"}</span>
+        <span>
+          {liveAggregateReady
+            ? "Live totals"
+            : proofSubmit.persisted
+              ? "Aggregate syncing"
+              : "First event"}
+        </span>
         <b>
           {liveAggregateReady
             ? `${backend.participantCount} participant${backend.participantCount === 1 ? "" : "s"}`
@@ -20071,7 +20133,9 @@ function CommunityBossPrepCard({
           </article>
           <article>
             <span>Community damage</span>
-            <strong>{liveAggregateReady ? backend.totalDamage : "Preparing"}</strong>
+            <strong>
+              {liveAggregateReady ? backend.totalDamage : "Preparing"}
+            </strong>
             <small>
               {liveAggregateReady
                 ? `${backend.progressPercent}% of weekly boss HP`
@@ -20080,7 +20144,9 @@ function CommunityBossPrepCard({
           </article>
           <article>
             <span>Participants</span>
-            <strong>{liveAggregateReady ? backend.participantCount : "—"}</strong>
+            <strong>
+              {liveAggregateReady ? backend.participantCount : "—"}
+            </strong>
             <small>No wallet balances or private finance data</small>
           </article>
         </div>
@@ -20122,7 +20188,11 @@ function CommunityBossPrepCard({
         <div>
           <span>Community</span>
           <strong>{publicProgressPercent}%</strong>
-          <small>{liveAggregateReady ? "Live public progress" : "Preparing live event"}</small>
+          <small>
+            {liveAggregateReady
+              ? "Live public progress"
+              : "Preparing live event"}
+          </small>
         </div>
       </div>
 
@@ -20137,7 +20207,10 @@ function CommunityBossPrepCard({
         />
       </div>
 
-      <div className="community-boss-public-info-grid" aria-label="How Community Boss works">
+      <div
+        className="community-boss-public-info-grid"
+        aria-label="How Community Boss works"
+      >
         {publicInfoItems.map((item) => (
           <article key={item.title}>
             <strong>{item.title}</strong>
@@ -24177,7 +24250,6 @@ function BadgeVaultPanel({ badges }: { badges: BadgeItem[] }) {
   );
 }
 
-
 type ReminderConnectionTone = "off" | "ready" | "syncing" | "warning" | "error";
 
 type ReminderConnectionStatus = {
@@ -27025,6 +27097,22 @@ function ChartScreen({
     title,
   );
 
+  function scrollToAnalysisBlock(targetId: string, openDetails = false) {
+    triggerHaptic("light");
+
+    if (typeof document === "undefined") return;
+
+    const target = document.getElementById(targetId);
+
+    if (!target) return;
+
+    if (openDetails && target instanceof HTMLDetailsElement) {
+      target.open = true;
+    }
+
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <div className="screen">
       <Header
@@ -27037,11 +27125,48 @@ function ChartScreen({
 
       <section className="chart-banner">
         <p>
-          Analysis keeps reports in one place: pressure chart, patterns,
-          weekly review, and monthly history.
+          Analysis keeps reports in one place: pressure chart, patterns, weekly
+          review, and monthly history.
           <br />
           Green means controlled. Red means <span>Wallet HP danger.</span>
         </p>
+      </section>
+
+      <section className="analysis-flow-map" aria-label="Analysis sections">
+        <button
+          type="button"
+          onClick={() => scrollToAnalysisBlock("analysis-pressure-chart")}
+        >
+          <span>1</span>
+          <strong>Pressure chart</strong>
+          <small>Day, week, and month leak pressure.</small>
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollToAnalysisBlock("analysis-candle-story")}
+        >
+          <span>2</span>
+          <strong>Candle story</strong>
+          <small>Why the selected day turned green, yellow, or red.</small>
+        </button>
+        <button
+          type="button"
+          onClick={() => scrollToAnalysisBlock("analysis-pattern-lab", true)}
+        >
+          <span>3</span>
+          <strong>Pattern Lab</strong>
+          <small>Timing, payday, weekend, and behavior signals.</small>
+        </button>
+        <button
+          type="button"
+          onClick={() =>
+            scrollToAnalysisBlock("analysis-history-archive", true)
+          }
+        >
+          <span>4</span>
+          <strong>Reports archive</strong>
+          <small>Weekly review and monthly history.</small>
+        </button>
       </section>
 
       <div className="switcher">
@@ -27070,7 +27195,7 @@ function ChartScreen({
         </button>
       </div>
 
-      <section className="chart-pulse-card">
+      <section id="analysis-pressure-chart" className="chart-pulse-card">
         <div>
           <span>Wallet Pressure Chart</span>
           <strong>
@@ -27262,7 +27387,10 @@ function ChartScreen({
         </div>
       </section>
 
-      <section className="day-card selected-candle-card candle-story-card">
+      <section
+        id="analysis-candle-story"
+        className="day-card selected-candle-card candle-story-card"
+      >
         <div className="day-title candle-story-title">
           <div>
             <strong>{selectedPoint?.label ?? title}</strong>
@@ -27484,7 +27612,10 @@ function ChartScreen({
         onOpenAdd={onOpenAdd}
       />
 
-      <details className="chart-premium-details analysis-lab-details">
+      <details
+        id="analysis-pattern-lab"
+        className="chart-premium-details analysis-lab-details"
+      >
         <summary>
           <div>
             <span>Leak Pattern Lab</span>
@@ -27525,7 +27656,10 @@ function ChartScreen({
         </section>
       </details>
 
-      <details className="chart-premium-details history-archive-details">
+      <details
+        id="analysis-history-archive"
+        className="chart-premium-details history-archive-details"
+      >
         <summary>
           <div>
             <span>History Archive</span>
@@ -37493,7 +37627,9 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Reward reminder prefs</span>
-            <small>Daily proof, recovery and milestone reminder preferences.</small>
+            <small>
+              Daily proof, recovery and milestone reminder preferences.
+            </small>
           </div>
           <b>{rewardNotificationPrefs.reminderTime}</b>
         </summary>
@@ -37804,7 +37940,10 @@ function AdminTreasuryPanel({
   );
   const communityBossState = useMemo<CommunityBossPrepState>(
     () => ({
-      weekKey: communityBossBackend.weekKey !== "—" ? communityBossBackend.weekKey : "operator",
+      weekKey:
+        communityBossBackend.weekKey !== "—"
+          ? communityBossBackend.weekKey
+          : "operator",
       weekRangeLabel:
         communityBossBackend.weekKey !== "—"
           ? communityBossBackend.weekKey
@@ -37822,10 +37961,9 @@ function AdminTreasuryPanel({
       safeSocialPoints: communityBossBackend.totalSafePoints,
       projectedCommunityProgress: communityBossBackend.progressPercent,
       proofCount: communityBossBackend.participantCount,
-      nextPrepAction:
-        communityBossBackend.canAutoRecalculateAfterProof
-          ? "Submit safe proof and let auto aggregate update totals."
-          : "Enable auto recalc gate before public launch.",
+      nextPrepAction: communityBossBackend.canAutoRecalculateAfterProof
+        ? "Submit safe proof and let auto aggregate update totals."
+        : "Enable auto recalc gate before public launch.",
       lanes: [],
     }),
     [communityBossBackend],
@@ -38777,13 +38915,17 @@ function AdminTreasuryPanel({
       return;
 
     try {
-      await navigator.clipboard.writeText(communityBossFirstEventAnnouncement.xCopy);
+      await navigator.clipboard.writeText(
+        communityBossFirstEventAnnouncement.xCopy,
+      );
       setCommunityBossLaunchCopyCopied(true);
       window.setTimeout(() => setCommunityBossLaunchCopyCopied(false), 1600);
       triggerHaptic("success");
     } catch {
       setCommunityBossLaunchCopyCopied(false);
-      setCommunityBossRecalcMessage("Clipboard blocked. Copy the public text manually.");
+      setCommunityBossRecalcMessage(
+        "Clipboard blocked. Copy the public text manually.",
+      );
       triggerHaptic("error");
     }
   }
@@ -38828,9 +38970,9 @@ function AdminTreasuryPanel({
             <span>Community Boss admin</span>
             <strong>Operator tools / launch control</strong>
             <small>
-              Technical QA, launch guard, env blockers, public copy, and fallback
-              recalc stay here. Public users see only the simple Community Boss
-              card in the app.
+              Technical QA, launch guard, env blockers, public copy, and
+              fallback recalc stay here. Public users see only the simple
+              Community Boss card in the app.
             </small>
           </div>
           <div className="admin-community-boss-actions">
@@ -38859,7 +39001,9 @@ function AdminTreasuryPanel({
         </div>
 
         <div className="admin-community-boss-grid">
-          <article className={communityBossFirstLiveTest.passed ? "ready" : "blocked"}>
+          <article
+            className={communityBossFirstLiveTest.passed ? "ready" : "blocked"}
+          >
             <span>First Live Test</span>
             <strong>{communityBossFirstLiveTest.label}</strong>
             <small>{communityBossFirstLiveTest.detail}</small>
@@ -38869,7 +39013,11 @@ function AdminTreasuryPanel({
             <strong>{communityBossRuntimeQa.label}</strong>
             <small>{communityBossRuntimeQa.detail}</small>
           </article>
-          <article className={communityBossFirstEventTestChecklist.ready ? "ready" : "blocked"}>
+          <article
+            className={
+              communityBossFirstEventTestChecklist.ready ? "ready" : "blocked"
+            }
+          >
             <span>Test checklist</span>
             <strong>{communityBossFirstEventTestChecklist.label}</strong>
             <small>{communityBossFirstEventTestChecklist.detail}</small>
@@ -38911,7 +39059,9 @@ function AdminTreasuryPanel({
           <article>
             <span>Last refresh</span>
             <strong>{communityBossBackend.refreshReason}</strong>
-            <small>{communityBossBackend.refreshedAt || "Not refreshed yet"}</small>
+            <small>
+              {communityBossBackend.refreshedAt || "Not refreshed yet"}
+            </small>
           </article>
         </div>
 
@@ -38930,7 +39080,9 @@ function AdminTreasuryPanel({
           <summary>
             <div>
               <span>Runtime QA details</span>
-              <small>Env/read/write/auto-recalc checks for first live event.</small>
+              <small>
+                Env/read/write/auto-recalc checks for first live event.
+              </small>
             </div>
             <b>{communityBossRuntimeQa.badge}</b>
           </summary>
@@ -38948,11 +39100,17 @@ function AdminTreasuryPanel({
           </div>
         </details>
 
-        <details className="admin-community-boss-details first-event-test-checklist-details" open={!communityBossFirstEventTestChecklist.ready}>
+        <details
+          className="admin-community-boss-details first-event-test-checklist-details"
+          open={!communityBossFirstEventTestChecklist.ready}
+        >
           <summary>
             <div>
               <span>First Event Test Checklist</span>
-              <small>Final runtime fixes before the first public Community Boss event.</small>
+              <small>
+                Final runtime fixes before the first public Community Boss
+                event.
+              </small>
             </div>
             <b>{communityBossFirstEventTestChecklist.badge}</b>
           </summary>
@@ -38974,11 +39132,17 @@ function AdminTreasuryPanel({
           </div>
         </details>
 
-        <details className="admin-community-boss-details first-live-test-details" open={!communityBossFirstLiveTest.passed}>
+        <details
+          className="admin-community-boss-details first-live-test-details"
+          open={!communityBossFirstLiveTest.passed}
+        >
           <summary>
             <div>
               <span>First Live Test</span>
-              <small>Automatic chain check: proof write → auto recalc → public totals.</small>
+              <small>
+                Automatic chain check: proof write → auto recalc → public
+                totals.
+              </small>
             </div>
             <b>{communityBossFirstLiveTest.badge}</b>
           </summary>
@@ -39051,7 +39215,9 @@ function AdminTreasuryPanel({
           <summary>
             <div>
               <span>Launch console</span>
-              <small>Only admin sees blocking items and final public copy.</small>
+              <small>
+                Only admin sees blocking items and final public copy.
+              </small>
             </div>
             <b>{communityBossLaunchConsole.badge}</b>
           </summary>
@@ -39078,8 +39244,8 @@ function AdminTreasuryPanel({
             </div>
           ) : (
             <p className="community-boss-launch-console-clear">
-              Launch path is clear. Public copy is factual and contains no payout
-              promise, wallet value, or PvP.
+              Launch path is clear. Public copy is factual and contains no
+              payout promise, wallet value, or PvP.
             </p>
           )}
         </details>
@@ -39767,7 +39933,14 @@ function SettingsScreen({
         cloudStatus,
         cloudError,
       }),
-    [settings.reminders, settings.dailyReminder, telegram, webAuth, cloudStatus, cloudError],
+    [
+      settings.reminders,
+      settings.dailyReminder,
+      telegram,
+      webAuth,
+      cloudStatus,
+      cloudError,
+    ],
   );
   const shareSlotLimit = getProfileShareSlotLimit(
     settingsWalletHp,
