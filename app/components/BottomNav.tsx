@@ -46,6 +46,7 @@ export function BottomNav({
           title={item.label}
         >
           <img src={item.icon} alt="" />
+          <span>{item.label}</span>
         </button>
       ))}
     </nav>
