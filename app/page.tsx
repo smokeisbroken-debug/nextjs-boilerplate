@@ -7596,6 +7596,15 @@ function formatShortDateRange(start: Date, endExclusive: Date) {
 }
 
 const DAILY_ROUTINE_ACTIONS_KEY = "broke-daily-routine-actions-v1";
+const dailyRoutineActionKeys: DailyRoutineActionKey[] = [
+  "openedApp",
+  "reviewedWallet",
+  "reviewedDay",
+  "lockedNextMove",
+  "checkedChart",
+  "checkedSave",
+  "sharedProgress",
+];
 
 function getDefaultDailyRoutineActions(date: string): DailyRoutineActions {
   return {
@@ -7608,6 +7617,20 @@ function getDefaultDailyRoutineActions(date: string): DailyRoutineActions {
     checkedSave: false,
     sharedProgress: false,
   };
+}
+
+function mergeDailyRoutineActionsForSync(
+  current: DailyRoutineActions,
+  incoming: DailyRoutineActions,
+): DailyRoutineActions {
+  const date = incoming.date || current.date || dayKey(new Date());
+  const merged = getDefaultDailyRoutineActions(date);
+
+  dailyRoutineActionKeys.forEach((key) => {
+    merged[key] = Boolean(current[key] || incoming[key]);
+  });
+
+  return merged;
 }
 
 function readDailyRoutineActions(
@@ -7805,6 +7828,18 @@ function readDailyRoutineReward(date = dayKey(new Date())) {
       claimed: false,
     };
   }
+}
+
+function mergeDailyRoutineRewardForSync(
+  current: DailyRoutineRewardState,
+  incoming: DailyRoutineRewardState,
+): DailyRoutineRewardState {
+  const date = incoming.date || current.date || dayKey(new Date());
+
+  return {
+    date,
+    claimed: Boolean(current.claimed || incoming.claimed),
+  };
 }
 
 function writeDailyRoutineReward(
@@ -9361,6 +9396,72 @@ function mergeExpensesForSync(
   return Array.from(merged.values()).sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
+}
+
+function normalizeClientStreak(input?: Partial<Streak> | null): Streak {
+  const currentStreak = Math.max(0, Math.floor(Number(input?.currentStreak) || 0));
+  const bestStreak = Math.max(
+    currentStreak,
+    Math.floor(Number(input?.bestStreak) || 0),
+  );
+  const lastActiveDate = /^\d{4}-\d{2}-\d{2}$/.test(
+    String(input?.lastActiveDate || ""),
+  )
+    ? String(input?.lastActiveDate)
+    : null;
+
+  return {
+    currentStreak,
+    bestStreak,
+    lastActiveDate,
+    updatedAt: input?.updatedAt || null,
+  };
+}
+
+function isRecentStreakDate(date: string | null | undefined) {
+  const today = dayKey(new Date());
+  const yesterday = getPreviousDayKey(today);
+
+  return date === today || date === yesterday;
+}
+
+function protectStreakFromAccidentalDowngrade(
+  current: Streak,
+  incoming: Streak,
+  options: { allowReset?: boolean } = {},
+): Streak {
+  const safeCurrent = normalizeClientStreak(current);
+  const safeIncoming = normalizeClientStreak(incoming);
+
+  if (options.allowReset) return safeIncoming;
+
+  const bestStreak = Math.max(safeCurrent.bestStreak, safeIncoming.bestStreak);
+  const incomingDowngradedCurrent =
+    safeIncoming.currentStreak < safeCurrent.currentStreak;
+  const currentIsFresh = isRecentStreakDate(safeCurrent.lastActiveDate);
+  const incomingIsFresh = isRecentStreakDate(safeIncoming.lastActiveDate);
+
+  if (incomingDowngradedCurrent && currentIsFresh) {
+    return {
+      ...safeCurrent,
+      bestStreak,
+      updatedAt:
+        [safeCurrent.updatedAt, safeIncoming.updatedAt]
+          .filter((date): date is string => Boolean(date))
+          .sort()
+          .pop() || safeCurrent.updatedAt || safeIncoming.updatedAt || null,
+    };
+  }
+
+  return {
+    ...safeIncoming,
+    bestStreak,
+    lastActiveDate:
+      safeIncoming.lastActiveDate ||
+      (incomingIsFresh ? safeCurrent.lastActiveDate : null) ||
+      safeCurrent.lastActiveDate ||
+      null,
+  };
 }
 
 function mergeStreaksForDisplay(
@@ -14233,6 +14334,17 @@ export default function Home() {
     }
   }
 
+  function applyCloudStreak(
+    nextStreak?: Streak | null,
+    options: { allowReset?: boolean } = {},
+  ) {
+    if (!nextStreak) return;
+
+    setStreak((current) =>
+      protectStreakFromAccidentalDowngrade(current, nextStreak, options),
+    );
+  }
+
   function queueCloudAppStateSync() {
     if (!loaded || cloudStatus !== "cloud" || !cloudAuthReady) return;
 
@@ -14503,7 +14615,7 @@ export default function Home() {
           const cloudExpenses = data.expenses.map(normalizeExpense);
           setExpenses((prev) => mergeExpensesForSync(prev, cloudExpenses));
         }
-        if (data.streak) setStreak(data.streak);
+        if (data.streak) applyCloudStreak(data.streak);
         if (data.challengeTemplates)
           setChallengeTemplates(data.challengeTemplates);
         if ("activeChallenge" in data)
@@ -14886,7 +14998,7 @@ export default function Home() {
                 : item,
             ),
           );
-          if (data.streak) setStreak(data.streak);
+          if (data.streak) applyCloudStreak(data.streak);
           if ("activeChallenge" in data)
             setActiveChallenge(data.activeChallenge ?? null);
           if ("challengeProgress" in data)
@@ -14969,7 +15081,7 @@ export default function Home() {
           setExpenses((prev) =>
             prev.map((item) => (item.id === expense.id ? data.expense! : item)),
           );
-          if (data.streak) setStreak(data.streak);
+          if (data.streak) applyCloudStreak(data.streak);
           if ("activeChallenge" in data)
             setActiveChallenge(data.activeChallenge ?? null);
           if ("challengeProgress" in data)
@@ -15150,7 +15262,7 @@ export default function Home() {
             ),
           );
         }
-        if (data.streak) setStreak(data.streak);
+        if (data.streak) applyCloudStreak(data.streak);
         if ("activeChallenge" in data)
           setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data)
@@ -15194,7 +15306,7 @@ export default function Home() {
     if (cloudAuthReady) {
       try {
         const data = await callBrokeApi(cloudInitData, "deleteExpense", { id });
-        if (data.streak) setStreak(data.streak);
+        if (data.streak) applyCloudStreak(data.streak);
         if ("activeChallenge" in data)
           setActiveChallenge(data.activeChallenge ?? null);
         if ("challengeProgress" in data)
@@ -15227,7 +15339,7 @@ export default function Home() {
     if (cloudAuthReady) {
       try {
         const data = await callBrokeApi(cloudInitData, "reset");
-        setStreak(data.streak ?? emptyStreak);
+        applyCloudStreak(data.streak ?? emptyStreak, { allowReset: true });
         setActiveChallenge(data.activeChallenge ?? null);
         setChallengeProgress(data.challengeProgress ?? null);
         if ("challengeHistory" in data)
@@ -30475,14 +30587,28 @@ function writeLocalCloudAppState(input: Partial<CloudAppState>) {
   writeGrowthPlannerState(appState.growthPlanner);
   writeDebtRadarItems(appState.debtRadarItems);
   writeHomeHabitLeaks(appState.homeHabitLeaks);
-  if (appState.dailyRoutineActions)
-    writeDailyRoutineActions(appState.dailyRoutineActions, false);
-  if (appState.dailyRoutineReward)
-    writeDailyRoutineReward(
-      appState.dailyRoutineReward.date,
-      appState.dailyRoutineReward.claimed,
+  if (appState.dailyRoutineActions) {
+    const currentActions = readDailyRoutineActions(
+      appState.dailyRoutineActions.date,
+    );
+    writeDailyRoutineActions(
+      mergeDailyRoutineActionsForSync(
+        currentActions,
+        appState.dailyRoutineActions,
+      ),
       false,
     );
+  }
+  if (appState.dailyRoutineReward) {
+    const currentReward = readDailyRoutineReward(
+      appState.dailyRoutineReward.date,
+    );
+    const mergedReward = mergeDailyRoutineRewardForSync(
+      currentReward,
+      appState.dailyRoutineReward,
+    );
+    writeDailyRoutineReward(mergedReward.date, mergedReward.claimed, false);
+  }
   if (appState.activeStreakProof) {
     writeActiveStreakProofState(
       mergeActiveStreakProofStates(
