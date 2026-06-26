@@ -3794,8 +3794,8 @@ const languageOptions: {
 
 const ruText: Record<string, string> = {
   $BROKE: "$BROKE",
-  "$BROKE Chart": "$BROKE Chart",
-  "$BROKE Chart?": "$BROKE Chart?",
+  "$BROKE Analysis": "$BROKE Analysis",
+  "$BROKE Analysis?": "$BROKE Analysis?",
   "$BROKE Community": "$BROKE Community",
   "$BROKE Life Tracker": "$BROKE Life Tracker",
   "$BROKE Life Tracker guide": "Гайд $BROKE Life Tracker",
@@ -4105,8 +4105,8 @@ const ruText: Record<string, string> = {
   "Add context": "Добавить контекст",
   "Add a note to one expense so the habit is visible.":
     "Добавь заметку к одному расходу, чтобы привычка стала видимой.",
-  "Check $BROKE Chart": "Проверить $BROKE Chart",
-  "Open the Chart tab and look at today’s damage.":
+  "Check $BROKE Analysis": "Проверить $BROKE Analysis",
+  "Open Analysis and look at today’s wallet pressure.":
     "Открой график и посмотри сегодняшний урон.",
   "Check Rewards plan": "Проверить Rewards plan",
   "Open Rewards and review one leak-cut scenario.":
@@ -4169,8 +4169,8 @@ const ruText: Record<string, string> = {
   Damage: "Урон",
   "You watch crypto charts every day.": "Ты каждый день смотришь crypto-чарты.",
   "But do you watch your own": "Но смотришь ли ты свой",
-  "But do you watch your own $BROKE Chart?":
-    "Но смотришь ли ты свой $BROKE Chart?",
+  "But do you watch your own $BROKE Analysis?":
+    "Но смотришь ли ты свой $BROKE Analysis?",
   "Cut one leak.": "Урежь одну утечку.",
   "Survive better.": "Выживай увереннее.",
   "Potential leak cut": "Потенциальное сокращение утечек",
@@ -4382,7 +4382,7 @@ const ruText: Record<string, string> = {
   "3. Mark leaks honestly": "3. Отмечай утечки честно",
   "4. Use Daily Routine": "4. Используй ежедневную рутину",
   "5. Read Wallet Survival": "5. Смотри выживание кошелька",
-  "6. Check the $BROKE Chart": "6. Проверяй $BROKE Chart",
+  "6. Check the $BROKE Analysis": "6. Проверяй $BROKE Analysis",
   "7. Share safely": "7. Делись безопасно",
   "$BROKE is not a normal expense tracker. It helps you find wallet leaks, build discipline, and share safe progress.":
     "$BROKE — не обычный трекер расходов. Он помогает видеть утечки денег, строить дисциплину и делиться безопасным прогрессом.",
@@ -4392,7 +4392,7 @@ const ruText: Record<string, string> = {
     "Открой Добавить, введи сумму, выбери категорию и отметь: Нужно, Возможно или Не нужно.",
   "Needed does not count as a leak. Maybe counts as half. Not needed counts as a full wallet leak.":
     "Нужно не считается утечкой. Возможно считается наполовину. Не нужно считается полной утечкой.",
-  "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check chart, check Rewards, and share public proof.":
+  "Complete 7 real daily actions: open app, track expense, mark a leak, add context, check Analysis, check Rewards, and share public proof.":
     "Выполни 7 реальных действий в день: открыть app, записать расход, отметить утечку, добавить контекст, проверить график, проверить Rewards и поделиться безопасным прогрессом.",
   "Survival Score, Biggest Leak, Hours Lost, Status and Doomspending Alert show what is draining your wallet this week.":
     "Оценка выживания, главная утечка, потерянные часы, статус и тревога импульсивных трат показывают, что сливает кошелёк на этой неделе.",
@@ -4702,18 +4702,18 @@ const ruText: Record<string, string> = {
   Result: "Результат",
   Survived: "Выжил",
 
-  "Chart Pulse": "Пульс графика",
+  "Analysis Pulse": "Пульс анализа",
   tracked: "записано",
   "No damage yet": "Пока без урона",
   records: "записей",
   "leak pressure": "давление утечек",
-  "Add expenses to make the chart alive.": "Добавь расходы, чтобы график ожил.",
+  "Add expenses to make Analysis useful.": "Добавь расходы, чтобы Analysis стал полезным.",
   Leaks: "Утечки",
   pressure: "давление",
   "Top category": "Главная категория",
   "Avg/day": "Среднее/день",
   "daily pace": "дневной темп",
-  "No chart data yet": "Пока нет данных для графика",
+  "No analysis data yet": "Пока нет данных для анализа",
   "Add one expense and this screen turns into your Wallet Pressure Chart.":
     "Добавь один расход, и экран станет Wallet Pressure Chart.",
   "Wallet Survival Report": "Отчёт выживания кошелька",
@@ -4908,7 +4908,7 @@ const ruText: Record<string, string> = {
   "3. Use Next Best Action": "3. Используй Next Best Action",
   "Next Best Action tells the user what to do now.":
     "Next Best Action показывает, что сделать сейчас.",
-  "It can suggest adding the first record, controlling the biggest leak, checking the chart, or sharing safe progress.":
+  "It can suggest adding the first record, controlling the biggest leak, checking Analysis, or sharing safe progress.":
     "Он может предложить добавить первую запись, взять под контроль главную утечку, проверить график или поделиться безопасным прогрессом.",
   "This keeps the app from feeling like a notebook and turns it into a daily discipline tool.":
     "Так приложение перестаёт быть блокнотом и становится инструментом ежедневной дисциплины.",
@@ -4922,7 +4922,7 @@ const ruText: Record<string, string> = {
   "5. Complete the daily routine": "5. Выполняй ежедневную рутину",
   "The routine is not a fake one-click task.":
     "Рутина — это не фейковое задание в один клик.",
-  "It is completed when the user really opens the app, tracks expenses, marks leaks, checks charts, checks Rewards, and shares progress.":
+  "It is completed when the user really opens the app, tracks expenses, marks leaks, checks Analysis, checks Rewards, and shares progress.":
     "Она выполняется, когда пользователь реально открывает app, записывает расходы, отмечает утечки, смотрит график, проверяет Rewards и делится прогрессом.",
   "This makes $BROKE feel like discipline, not just finance tracking.":
     "Это делает $BROKE дисциплиной, а не просто учётом финансов.",
@@ -4955,8 +4955,8 @@ const ruText: Record<string, string> = {
     "Maybe означает спорную трату и считается как половина давления.",
   "Not needed means it was a full money leak.":
     "Not needed означает полноценную money leak.",
-  "Honest marking makes Wallet HP, Rewards, Chart, and Growth Lab much more accurate.":
-    "Честная отметка делает Wallet HP, Rewards, Chart и Growth Lab намного точнее.",
+  "Honest marking makes Wallet HP, Rewards, Analysis, and Growth Lab much more accurate.":
+    "Честная отметка делает Wallet HP, Rewards, Analysis и Growth Lab намного точнее.",
   "4. Add notes when context matters":
     "4. Добавляй заметки, когда важен контекст",
   "Notes explain why the expense happened.":
@@ -4972,11 +4972,11 @@ const ruText: Record<string, string> = {
     "Это быстро, но сумму всё равно нужно проверять.",
   "If the quick amount is wrong, edit it before saving the record.":
     "Если быстрая сумма неправильная, измени её перед сохранением.",
-  "Chart Guide": "Гайд Chart",
-  "$BROKE Chart: Wallet Pressure": "$BROKE Chart: давление кошелька",
-  "Chart turns spending into daily pressure candles. It helps users see controlled days, leak danger days, and the habits that hurt Wallet HP.":
-    "Chart превращает расходы в дневные свечи давления. Он помогает видеть контролируемые дни, опасные дни утечек и привычки, которые бьют по Wallet HP.",
-  "Chart rule": "Правило Chart",
+  "Analysis Guide": "Гайд Analysis",
+  "$BROKE Analysis: Wallet Pressure": "$BROKE Analysis: давление кошелька",
+  "Analysis turns spending into daily pressure candles. It helps users see controlled days, leak danger days, and the habits that hurt Wallet HP.":
+    "Analysis превращает расходы в дневные свечи давления. Он помогает видеть контролируемые дни, опасные дни утечек и привычки, которые бьют по Wallet HP.",
+  "Analysis rule": "Правило Analysis",
   "Do not only watch crypto charts. Watch your own wallet chart and find the day where the leak started.":
     "Смотри не только crypto-чарты. Смотри свой график кошелька и находи день, где началась утечка.",
   "1. Choose the right range": "1. Выбери правильный период",
@@ -5002,13 +5002,13 @@ const ruText: Record<string, string> = {
   "This is the category to control first.":
     "Эту категорию нужно контролировать первой.",
   "4. Use Wallet Insights": "4. Используй Wallet Insights",
-  "Wallet Insights explain what the chart means in plain language.":
+  "Wallet Insights explain what the analysis means in plain language.":
     "Wallet Insights объясняют график простым языком.",
   "They turn numbers into actions.": "Они превращают цифры в действия.",
   "Use them when a user does not know what to fix next.":
     "Используй их, когда непонятно, что исправлять дальше.",
-  "5. Share only safe chart context": "5. Делись только безопасным контекстом",
-  "Chart data can be emotional and personal.":
+  "5. Share only safe analysis context": "5. Делись только безопасным контекстом",
+  "Analysis data can be emotional and personal.":
     "Данные графика могут быть личными и эмоциональными.",
   "Public sharing should avoid private income and real balance.":
     "В публичном share не стоит показывать личный доход и реальный баланс.",
@@ -5217,20 +5217,20 @@ const ruText: Record<string, string> = {
   "no leak detected yet": "утечка пока не найдена",
   "Start here": "Начни здесь",
   "Your wallet has no movement yet.": "У кошелька пока нет движения.",
-  "Track one real expense to unlock Wallet HP, Chart movement, Rewards scenarios, Growth Lab and share cards.":
-    "Запиши один реальный расход, чтобы открыть Wallet HP, движение графика, Rewards-сценарии, Growth Lab и share-карточки.",
+  "Track one real expense to unlock Wallet HP, Analysis movement, Rewards scenarios, Growth Lab and share cards.":
+    "Запиши один реальный расход, чтобы открыть Wallet HP, Analysis, Rewards-сценарии, Growth Lab и share-карточки.",
   "Add first expense": "Добавь первый расход",
   "Use a real spend, not a fake test.":
     "Используй реальную трату, не фейковый тест.",
   "Mark the leak": "Отметь утечку",
   "Needed, Maybe or Not needed.": "Needed, Maybe или Not needed.",
   "Unlock the system": "Открой систему",
-  "Chart, Rewards, Growth and reports become real.":
-    "Chart, Rewards, Growth и отчёты станут реальными.",
+  "Analysis, Rewards, Growth and reports become real.":
+    "Analysis, Rewards, Growth и отчёты станут реальными.",
   "No leaks tracked yet.": "Утечки пока не записаны.",
-  "Add your first expense to make Wallet HP, Chart and Growth Lab real.":
-    "Добавь первый расход, чтобы Wallet HP, Chart и Growth Lab стали реальными.",
-  "$BROKE Chart is waiting": "$BROKE Chart ждёт",
+  "Add your first expense to make Wallet HP, Analysis and Growth Lab real.":
+    "Добавь первый расход, чтобы Wallet HP, Analysis и Growth Lab стали реальными.",
+  "$BROKE Analysis is waiting": "$BROKE Analysis ждёт",
   "No wallet movement yet.": "Пока нет движения кошелька.",
   "Track one expense to create today’s pressure candle.":
     "Запиши один расход, чтобы создать сегодняшнюю свечу давления.",
@@ -5248,27 +5248,27 @@ const ruText: Record<string, string> = {
   "First 3-Day User Journey": "Первый 3-дневный путь",
   complete: "выполнено",
   "Turn first use into a habit.": "Преврати первое использование в привычку.",
-  "Follow the first 3 days: track a real leak, read the chart, then share a safe public result card.":
+  "Follow the first 3 days: track a real leak, read Analysis, then share a safe public result card.":
     "Пройди первые 3 дня: запиши реальную утечку, посмотри график, затем поделись безопасной публичной карточкой.",
   "Track Day 1 leak": "Записать утечку Day 1",
-  "Check Chart": "Проверить Chart",
+  "Check Analysis": "Проверить Analysis",
   "Open share card": "Открыть share-карточку",
   "Keep streak alive": "Сохрани серию",
   "Day 1 — Track first leak": "Day 1 — запиши первую утечку",
   "First real movement detected.": "Первое реальное движение найдено.",
   "Add one real Needed / Maybe / Not needed expense.":
     "Добавь один реальный расход Needed / Maybe / Not needed.",
-  "Day 2 — Check Chart": "Day 2 — проверь Chart",
-  "Chart checked. You saw the wallet movement.":
-    "Chart проверен. Ты увидел движение кошелька.",
-  "Open Chart and find the biggest movement.":
-    "Открой Chart и найди главное движение.",
+  "Day 2 — Check Analysis": "Day 2 — проверь Analysis",
+  "Analysis checked. You saw the wallet movement.":
+    "Analysis проверен. Ты увидел движение кошелька.",
+  "Open Analysis and find the biggest movement.":
+    "Открой Analysis и найди главное движение.",
   "Unlock this after your first expense.": "Откроется после первого расхода.",
   "Day 3 — Share result": "Day 3 — поделись результатом",
   "Public progress shared.": "Публичный прогресс опубликован.",
   "Open the public card and share without private numbers.":
     "Открой публичную карточку и поделись без личных чисел.",
-  "Unlock this after checking Chart.": "Откроется после проверки Chart.",
+  "Unlock this after checking Analysis.": "Откроется после проверки Analysis.",
   "none yet": "пока нет",
   "Return Hook": "Крючок возврата",
   "not locked": "не закреплено",
@@ -5277,7 +5277,7 @@ const ruText: Record<string, string> = {
     "Вернись завтра и запиши одну реальную утечку",
   "The first return should create real wallet movement, not a fake click.":
     "Первое возвращение должно создать реальное движение кошелька, а не фейковый клик.",
-  "Return tomorrow and check the chart": "Вернись завтра и проверь график",
+  "Return tomorrow and check Analysis": "Вернись завтра и проверь график",
   "See if the same leak repeats and where wallet pressure starts.":
     "Посмотри, повторяется ли та же утечка и где начинается давление на кошелёк.",
   "Return tomorrow and share a safe result":
@@ -5297,11 +5297,11 @@ const ruText: Record<string, string> = {
   "Tomorrow Hook": "Крючок на завтра",
   path: "путь",
   "Track your first real leak": "Запиши первую реальную утечку",
-  "One real expense unlocks Wallet HP, Chart, Rewards, Growth Lab and public share cards.":
-    "Один реальный расход открывает Wallet HP, Chart, Rewards, Growth Lab и публичные share-карточки.",
+  "One real expense unlocks Wallet HP, Analysis, Rewards, Growth Lab and public share cards.":
+    "Один реальный расход открывает Wallet HP, Analysis, Rewards, Growth Lab и публичные share-карточки.",
   "Check your wallet movement": "Проверь движение кошелька",
-  "Open Chart once and find the category that started the biggest pressure.":
-    "Открой Chart один раз и найди категорию, которая дала главное давление.",
+  "Open Analysis once and find the category that started the biggest pressure.":
+    "Открой Analysis один раз и найди категорию, которая дала главное давление.",
   "Share safe public progress": "Поделись безопасным публичным прогрессом",
   "Open the public card. It hides income and real balance, but shows discipline.":
     "Открой публичную карточку. Она скрывает доход и реальный баланс, но показывает дисциплину.",
@@ -5313,7 +5313,7 @@ const ruText: Record<string, string> = {
   Track: "Запись",
   "First real leak": "Первая реальная утечка",
   Read: "Анализ",
-  "Chart movement": "Движение Chart",
+  "Analysis movement": "Движение Analysis",
   "Public result": "Публичный результат",
   Return: "Возврат",
   "Tomorrow hook": "Крючок на завтра",
@@ -5450,8 +5450,8 @@ const ruText: Record<string, string> = {
   "Next step: track honestly and check whether the pattern changes.":
     "Следующий шаг: записывай честно и проверь, изменится ли паттерн.",
   "Ignored for now.": "Пока проигнорировано.",
-  "No problem. The pattern stays visible in Chart when you want to return to it.":
-    "Не проблема. Паттерн останется видимым в Chart, когда захочешь вернуться.",
+  "No problem. The pattern stays visible in Analysis when you want to return to it.":
+    "Не проблема. Паттерн останется видимым в Analysis, когда захочешь вернуться.",
   "Accept fix": "Принять фикс",
   "Make easier": "Сделать легче",
   "Make harder": "Сделать сложнее",
@@ -5981,11 +5981,11 @@ function applyRussianDynamicRules(value: string) {
     .replace(/\bcrypto-chartы\b/g, "крипто-графики")
     .replace(
       /But do you watch your own \$BROKE (Chart|График)\?/g,
-      "Но следишь ли ты за своим $BROKE Chart?",
+      "Но следишь ли ты за своим $BROKE Analysis?",
     )
     .replace(
-      /Но смотришь ли ты свой \$BROKE Chart\?/g,
-      "Но следишь ли ты за своим $BROKE Chart?",
+      /Но смотришь ли ты свой \$BROKE Analysis\?/g,
+      "Но следишь ли ты за своим $BROKE Analysis?",
     )
     .replace(
       /You spent (\$[\d,.]+|C\$[\d,.]+) on custom (today|сегодня)\./g,
@@ -15970,14 +15970,14 @@ function HelpGuideModal({
       icon: "/nav-home.png",
       footerTitle: "Home rule",
       footerBody:
-        "Use Home for the daily decision: read the status, follow one suggested action, then leave the deeper analysis for Chart, Rewards, or Growth.",
+        "Use Home for the daily decision: read the status, follow one suggested action, then leave the deeper analysis for Analysis, Rewards, or Growth.",
       sections: [
         {
           title: "Bottom navigation: what every button opens",
           body: [
             "Home opens the main dashboard, Wallet HP, today status, reports, routine, and the next action.",
             "Add opens Track Leak. Press it when money leaves your wallet and you want the app to learn from it.",
-            "Chart opens Wallet Pressure Chart and Leak Pattern Lab. Press it when you want to understand why the leak happened.",
+            "Analysis opens Wallet Pressure Chart and Leak Pattern Lab. Press it when you want to understand why the leak happened.",
             "Growth opens the planning lab. Press it when you want to see what leaked money could cover instead.",
             "Project opens BROKE Project Leak Research, an experimental project risk-signal checklist for DYOR discipline.",
             "Wallet opens Wallet Leak Score, a manual wallet-behavior self-check for FOMO, panic, and bad-entry leaks.",
@@ -16012,10 +16012,10 @@ function HelpGuideModal({
           title: "Today / Week / Month tabs",
           body: [
             "Today shows what happened during the current day.",
-            "Recent day chips let you compare today with earlier days without opening the full chart.",
+            "Recent day chips let you compare today with earlier days without opening full Analysis.",
             "Quiet means the day has little or no leak pressure.",
             "A money amount on a day means tracked pressure exists there.",
-            "Tap Chart if you need a full candle story and exact pattern explanation.",
+            "Tap Analysis if you need a full candle story and exact pattern explanation.",
           ],
           icon: A.calendar,
         },
@@ -16034,7 +16034,7 @@ function HelpGuideModal({
           body: [
             "This block tells you the next useful button to press.",
             "If there are no records, it usually sends you to Add so the app has real data.",
-            "If a pattern exists, it may send you to Chart or Rewards.",
+            "If a pattern exists, it may send you to Analysis or Rewards.",
             "If public proof is ready, it may suggest a safe share card.",
             "Follow one action. Do not try to fix the whole app in one session.",
           ],
@@ -16054,7 +16054,7 @@ function HelpGuideModal({
           title: "Daily Routine and streak logic",
           body: [
             "Routine tasks are meant to be real actions, not fake one-click farming.",
-            "Open the app, check wallet state, review today, lock one next move, check Chart, check Rewards, and finish the final Share on X step.",
+            "Open the app, check wallet state, review today, lock one next move, check Analysis, check Rewards, and finish the final Share on X step.",
             "Active Streak is protected only after the full 7/7 Daily Routine is complete.",
             "Future reward readiness uses this Daily Routine streak, not separate Rewards button taps.",
           ],
@@ -16149,7 +16149,7 @@ function HelpGuideModal({
             "Needed means the expense was required. It reduces money but should not be treated as a leak.",
             "Maybe means the expense was questionable. It adds partial leak pressure.",
             "Not needed means the expense was avoidable. It adds full leak pressure.",
-            "Be honest here. This button controls Wallet HP, Chart pressure, Rewards scenarios, and Growth calculations.",
+            "Be honest here. This button controls Wallet HP, Analysis pressure, Rewards scenarios, and Growth calculations.",
           ],
           icon: A.leaks,
         },
@@ -16179,7 +16179,7 @@ function HelpGuideModal({
           title: "Save / Track button",
           body: [
             "Press the main save button after amount, category, decision type, and optional triggers are correct.",
-            "After saving, Wallet HP updates and the record becomes part of Chart, Rewards, Growth, reports, and streak activity.",
+            "After saving, Wallet HP updates and the record becomes part of Analysis, Rewards, Growth, reports, and streak activity.",
             "If cloud sync is available, the record is also saved to the account.",
             "If cloud sync fails, the app can still keep local data and show a warning.",
           ],
@@ -16271,10 +16271,10 @@ function HelpGuideModal({
         {
           title: "Active Streak Timeline",
           body: [
-            "This block shows the last 7 proof days inside Chart.",
+            "This block shows the last 7 proof days inside Analysis.",
             "It explains which days were protected by completed Daily Routine proof.",
             "If the streak is 0, use this timeline to see whether today has proof, yesterday was missed, or recovery is available.",
-            "Chart is for history and trust. Use Rewards when you need to protect today.",
+            "Analysis is for history and trust. Use Rewards when you need to protect today.",
           ],
           icon: A.bestStreak,
         },
@@ -16299,7 +16299,7 @@ function HelpGuideModal({
           icon: A.bestStreak,
         },
         {
-          title: "Chart sharing",
+          title: "Analysis sharing",
           body: [
             "Use share buttons only for safe summaries.",
             "Do not expose exact income, payday, real balance, or debt details in public.",
@@ -16436,7 +16436,7 @@ function HelpGuideModal({
           title: "Daily Routine proof",
           body: [
             "Open Daily Routine from Home or from the Rewards proof button.",
-            "Complete all seven real actions: open app, check wallet state, review today/no-spend day, lock one next move, check Chart, check Rewards, and Share on X.",
+            "Complete all seven real actions: open app, check wallet state, review today/no-spend day, lock one next move, check Analysis, check Rewards, and Share on X.",
             "When 7/7 is complete, the app logs Daily Routine proof and protects today’s Active Streak.",
             "Track Leak, Clean Day, One Fix, and Daily Challenge can still be useful features, but they do not activate Active Streak by themselves, and the routine never requires a fake daily expense.",
           ],
@@ -21147,7 +21147,7 @@ function WeeklyBehaviorReportHomeCard({
         "Safe text copied without income, real balance or debt details.",
       );
     } catch {
-      notifyApp("Copy unavailable", "Open Chart and copy the report manually.");
+      notifyApp("Copy unavailable", "Open Analysis and copy the report manually.");
     }
   }
 
@@ -21507,7 +21507,7 @@ function SmartHomeFocusCard({
       title: !hasExpense
         ? "Return tomorrow and track one real leak"
         : !chartChecked
-          ? "Return tomorrow and check the chart"
+          ? "Return tomorrow and check Analysis"
           : !shareDone
             ? "Return tomorrow and share a safe result"
             : "Return tomorrow and keep the streak alive",
@@ -21572,7 +21572,7 @@ function SmartHomeFocusCard({
             eyebrow: "Today’s Focus",
             title: "Track your first real leak",
             detail:
-              "One real expense unlocks Wallet HP, Chart, Rewards, Growth Lab and public share cards.",
+              "One real expense unlocks Wallet HP, Analysis, Rewards, Growth Lab and public share cards.",
             button: "Track first leak",
             action: onOpenAdd,
           }
@@ -21581,8 +21581,8 @@ function SmartHomeFocusCard({
               eyebrow: "Today’s Focus",
               title: "Check your wallet movement",
               detail:
-                "Open Chart once and find the category that started the biggest pressure.",
-              button: "Check Chart",
+                "Open Analysis once and find the category that started the biggest pressure.",
+              button: "Check Analysis",
               action: openChartStep,
             }
           : !shareDone
@@ -21652,7 +21652,7 @@ function SmartHomeFocusCard({
           <b>{chartChecked ? "✓" : "2"}</b>
           <div>
             <strong>Read</strong>
-            <span>Chart movement</span>
+            <span>Analysis movement</span>
           </div>
         </article>
 
@@ -21778,7 +21778,7 @@ function FirstThreeDayJourneyCard({
       }
     : !day2Done
       ? {
-          label: "Check Chart",
+          label: "Check Analysis",
           onClick: openChartStep,
         }
       : !day3Done
@@ -21803,7 +21803,7 @@ function FirstThreeDayJourneyCard({
         <div>
           <strong>Turn first use into a habit.</strong>
           <p>
-            Follow the first 3 days: track a real leak, read the chart, then
+            Follow the first 3 days: track a real leak, read Analysis, then
             share a safe public result card.
           </p>
         </div>
@@ -21831,12 +21831,12 @@ function FirstThreeDayJourneyCard({
         >
           <b>{day2Done ? "✓" : "2"}</b>
           <div>
-            <strong>Day 2 — Check Chart</strong>
+            <strong>Day 2 — Check Analysis</strong>
             <span>
               {day2Done
-                ? "Chart checked. You saw the wallet movement."
+                ? "Analysis checked. You saw the wallet movement."
                 : day2Unlocked
-                  ? "Open Chart and find the biggest movement."
+                  ? "Open Analysis and find the biggest movement."
                   : "Unlock this after your first expense."}
             </span>
           </div>
@@ -21853,7 +21853,7 @@ function FirstThreeDayJourneyCard({
                 ? "Public progress shared."
                 : day3Unlocked
                   ? "Open the public card and share without private numbers."
-                  : "Unlock this after checking Chart."}
+                  : "Unlock this after checking Analysis."}
             </span>
           </div>
         </article>
@@ -21934,10 +21934,10 @@ function DailyReturnHookCard({
       : !routineActions.checkedChart
         ? {
             action: "check_chart",
-            title: "Return tomorrow and check the chart",
+            title: "Return tomorrow and check Analysis",
             detail:
               "See if the same leak repeats and where wallet pressure starts.",
-            button: "Check Chart",
+            button: "Check Analysis",
           }
         : !routineActions.sharedProgress
           ? {
@@ -22097,7 +22097,7 @@ function FirstRunPathCard({ onOpenAdd }: { onOpenAdd: () => void }) {
           <span>Start here</span>
           <strong>Your wallet has no movement yet.</strong>
           <p>
-            Track one real expense to unlock Wallet HP, Chart movement, Rewards
+            Track one real expense to unlock Wallet HP, Analysis movement, Rewards
             scenarios, Growth Lab and share cards.
           </p>
         </div>
@@ -22122,7 +22122,7 @@ function FirstRunPathCard({ onOpenAdd }: { onOpenAdd: () => void }) {
           <b>3</b>
           <div>
             <strong>Unlock the system</strong>
-            <span>Chart, Rewards, Growth and reports become real.</span>
+            <span>Analysis, Rewards, Growth and reports become real.</span>
           </div>
         </article>
       </div>
@@ -23171,14 +23171,14 @@ function DailyRoutinePanel({
     {
       id: "lockedNextMove",
       title: "Next move",
-      body: "Chart or Growth opened.",
+      body: "Analysis or Growth opened.",
       icon: A.challengeTrophy,
       done: actions.lockedNextMove,
     },
     {
       id: "checkedChart",
-      title: "Read Chart",
-      body: "Chart opened.",
+      title: "Read Analysis",
+      body: "Analysis opened.",
       icon: A.navChart,
       done: actions.checkedChart,
     },
@@ -25042,7 +25042,7 @@ function RecentExpenses({
           />
           <strong>No leaks tracked yet.</strong>
           <span>
-            Add your first expense to make Wallet HP, Chart and Growth Lab real.
+            Add your first expense to make Wallet HP, Analysis and Growth Lab real.
           </span>
           <button type="button" onClick={onOpenAdd}>
             Track first leak
@@ -26085,8 +26085,8 @@ function OneFixRecommendationPanel({
         <div className="one-fix-state-note ignored">
           <strong>Ignored for now.</strong>
           <span>
-            No problem. The pattern stays visible in Chart when you want to
-            return to it.
+            No problem. The pattern stays visible in Analysis when you want
+            to return to it.
           </span>
         </div>
       )}
@@ -27261,7 +27261,7 @@ function ChartScreen({
         <section className="chart-empty-state v58-empty-card v58-chart-empty">
           <img src={A.chartFrog} alt="" />
           <div>
-            <span>$BROKE Chart is waiting</span>
+            <span>$BROKE Analysis is waiting</span>
             <strong>No wallet pressure yet.</strong>
             <p>
               Track one expense to create today’s candle. Needed spending stays
