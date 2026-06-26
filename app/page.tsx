@@ -18515,7 +18515,7 @@ function DashboardScreen({
           <div>
             <span>More tools</span>
             <small>
-              Growth, analysis preview, routines, recent expenses, and sync.
+              Growth, routines, recent expenses, sync, and links to deeper reports.
             </small>
           </div>
           <b>Optional</b>
@@ -18667,31 +18667,24 @@ function DashboardScreen({
         <details className="clean-details">
           <summary>
             <div>
-              <span>Analysis preview</span>
-              <small>Preview wallet movement and today’s damage.</small>
+              <span>Analysis & reports</span>
+              <small>Charts, patterns, weekly review, and monthly history live in Analysis.</small>
             </div>
-            <b>7D Preview</b>
+            <b>Open tab</b>
           </summary>
-          <section className="chart-preview">
-            <div className="section-title">
-              <span>Analysis preview</span>
-              <small>7D Preview</small>
+          <section className="first-user-clarity-card compact-analysis-link">
+            <div>
+              <span>Consolidated reports</span>
+              <strong>Use Analysis after tracking a leak.</strong>
+              <p>
+                Home stays focused on wallet status and tracking. Analysis keeps
+                the pressure chart, one fix, pattern lab, weekly review, and
+                monthly history in one place.
+              </p>
             </div>
-
-            <MiniChart chartDays={chartDays} />
-
-            <div className="damage-card">
-              <div>
-                <small>Today&apos;s Damage</small>
-                <strong>
-                  {summary.todaySpent > 0
-                    ? `-${money(summary.todaySpent, settings.currency)}`
-                    : money(0, settings.currency)}
-                </strong>
-                <span>tracked today</span>
-              </div>
-              <img src={A.chartFrog} alt="Chart frog" />
-            </div>
+            <button type="button" onClick={onOpenChart}>
+              Open Analysis
+            </button>
           </section>
         </details>
 
@@ -27035,7 +27028,7 @@ function ChartScreen({
   return (
     <div className="screen">
       <Header
-        title="$BROKE Chart"
+        title="$BROKE Analysis"
         showBack
         rightIcon={A.export}
         onBack={onBack}
@@ -27044,7 +27037,8 @@ function ChartScreen({
 
       <section className="chart-banner">
         <p>
-          Wallet Pressure Chart tracks daily leak pressure.
+          Analysis keeps reports in one place: pressure chart, patterns,
+          weekly review, and monthly history.
           <br />
           Green means controlled. Red means <span>Wallet HP danger.</span>
         </p>
