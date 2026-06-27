@@ -18757,13 +18757,13 @@ function DashboardScreen({
         <div className="home-compact-hero-copy">
           <span className="home-compact-kicker">Home status</span>
           <h1>
-            Your wallet is leaking.
-            <span>Numbers first. Pattern next.</span>
+            Track leaks. Build habits.
+            <span>Improve Wallet Health.</span>
           </h1>
           <div className="home-clarity-pill compact">
             <span>Track leak</span>
             <b>→</b>
-            <span>Read pattern</span>
+            <span>Wallet report</span>
             <b>→</b>
             <span>Next move</span>
           </div>
@@ -18933,33 +18933,6 @@ function DashboardScreen({
         </div>
       </details>
 
-      <details className="home-compact-details home-focus-details home-collapsed-section">
-        <summary className="home-compact-summary home-focus-summary">
-          <div>
-            <span>Today’s Focus</span>
-            <strong>
-              {summary.todaySpent > 0
-                ? `${money(summary.todaySpent, settings.currency)} tracked today`
-                : "No leak tracked today"}
-            </strong>
-            <small>
-              Next action, pressure signal, and the button to press next.
-            </small>
-          </div>
-          <b>Open</b>
-        </summary>
-        <div className="home-compact-body">
-          <SmartHomeFocusCard
-            settings={settings}
-            summary={summary}
-            allExpenses={allExpenses}
-            identityStats={identityStats}
-            onOpenAdd={onOpenAdd}
-            onOpenChart={onOpenChart}
-          />
-        </div>
-      </details>
-
       {allExpenses.length === 0 && (
         <section className="first-user-clarity-card">
           <div>
@@ -18985,6 +18958,39 @@ function DashboardScreen({
           <b>{identityStats.weeklySurvivalScore}/100</b>
         </summary>
         <V2IdentityPanel settings={settings} identityStats={identityStats} />
+
+        {isProMode && (
+          <details className="home-compact-details home-weekly-report-details home-collapsed-section">
+            <summary className="home-compact-summary home-weekly-report-summary">
+              <div>
+                <span>Weekly Behavior Report</span>
+                <strong>
+                  {weeklyPatternSummary.strongestPattern ||
+                    weeklyPatternSummary.headline}
+                </strong>
+                <small>
+                  Weekly pattern, pressure, comparison, share card, and next
+                  move.
+                </small>
+              </div>
+              <b>{weeklyPatternSummary.leakPressure}%</b>
+            </summary>
+            <div className="home-compact-body">
+              <WeeklyBehaviorReportHomeCard
+                settings={settings}
+                weeklyPatternSummary={weeklyPatternSummary}
+                patternHistory={patternHistory}
+                walletHp={summary.walletHp}
+                identityStats={identityStats}
+                leaderboard={leaderboard}
+                shareInitData={telegram.isTelegram ? telegram.initData : ""}
+                onOpenChart={onOpenChart}
+                onOpenAdd={onOpenAdd}
+              />
+            </div>
+          </details>
+        )}
+
 
         {isProMode && (
           <div className="home-report-toolbox">
@@ -19045,48 +19051,93 @@ function DashboardScreen({
         )}
       </details>
 
+
+      {isProMode && (
+        <details className="clean-details home-challenges-badges-details">
+          <summary>
+            <div>
+              <span>Challenges & Badges</span>
+              <small>Biggest leak mission and progress badges together.</small>
+            </div>
+            <b>
+              {identityStats.biggestLeakAmount > 0 ? "Ready" : "Needs leak"}
+            </b>
+          </summary>
+          <div className="home-challenges-badges-stack">
+            <section className="home-combined-panel">
+              <div className="home-combined-panel-head">
+                <span>Biggest Leak Challenge</span>
+                <b>
+                  {identityStats.biggestLeakAmount > 0
+                    ? "Ready"
+                    : "Needs leak"}
+                </b>
+              </div>
+              <BiggestLeakChallengePanel
+                settings={settings}
+                identityStats={identityStats}
+                mission={leakMission}
+                expenses={allExpenses}
+                shareInitData={telegram.isTelegram ? telegram.initData : ""}
+                onStartMission={onStartLeakMission}
+                onResetMission={onResetLeakMission}
+                onOpenAdd={onOpenAdd}
+              />
+            </section>
+
+            <section className="home-combined-panel">
+              <div className="home-combined-panel-head">
+                <span>Badges</span>
+                <b>
+                  {badges.filter((badge) => badge.earned).length}/{badges.length}
+                </b>
+              </div>
+              <BadgeMiniStrip badges={badges} />
+            </section>
+          </div>
+        </details>
+      )}
+
+      <details className="clean-details" id="daily-routine-panel">
+        <summary>
+          <div>
+            <span>Daily Routine</span>
+            <small>No-spend days count. Final task: Share on X.</small>
+          </div>
+          <b>Streak proof</b>
+        </summary>
+        <DailyRoutinePanel
+          settings={settings}
+          summary={summary}
+          expenses={routineExpenses}
+          onRoutineComplete={onRoutineComplete}
+        />
+      </details>
+
+      <details className="clean-details">
+        <summary>
+          <span>Recent Expenses</span>
+          <b>{expenses.length} total</b>
+        </summary>
+        <RecentExpenses
+          settings={settings}
+          expenses={expenses}
+          onDeleteExpense={onDeleteExpense}
+          onUpdateExpense={onUpdateExpense}
+          onOpenAdd={onOpenAdd}
+        />
+      </details>
+
       <details className="clean-details home-secondary-hub">
         <summary>
           <div>
-            <span>More tools</span>
+            <span>Account tools</span>
             <small>
-              Growth, routines, recent expenses, and sync tools.
+              Sync, restart, and setup helpers.
             </small>
           </div>
-          <b>Optional</b>
+          <b>Tools</b>
         </summary>
-
-        {isProMode && (
-          <details className="home-compact-details home-weekly-report-details home-collapsed-section">
-            <summary className="home-compact-summary home-weekly-report-summary">
-              <div>
-                <span>Weekly Behavior Report</span>
-                <strong>
-                  {weeklyPatternSummary.strongestPattern ||
-                    weeklyPatternSummary.headline}
-                </strong>
-                <small>
-                  Weekly pattern, pressure, comparison, share card, and next
-                  move.
-                </small>
-              </div>
-              <b>{weeklyPatternSummary.leakPressure}%</b>
-            </summary>
-            <div className="home-compact-body">
-              <WeeklyBehaviorReportHomeCard
-                settings={settings}
-                weeklyPatternSummary={weeklyPatternSummary}
-                patternHistory={patternHistory}
-                walletHp={summary.walletHp}
-                identityStats={identityStats}
-                leaderboard={leaderboard}
-                shareInitData={telegram.isTelegram ? telegram.initData : ""}
-                onOpenChart={onOpenChart}
-                onOpenAdd={onOpenAdd}
-              />
-            </div>
-          </details>
-        )}
 
         {isProMode && comebackState && (
           <details className="home-compact-details home-comeback-details home-collapsed-section">
@@ -19114,52 +19165,6 @@ function DashboardScreen({
           </details>
         )}
 
-        {isProMode && (
-          <details className="clean-details home-challenges-badges-details">
-            <summary>
-              <div>
-                <span>Challenges & Badges</span>
-                <small>Biggest leak mission and progress badges together.</small>
-              </div>
-              <b>
-                {identityStats.biggestLeakAmount > 0 ? "Ready" : "Needs leak"}
-              </b>
-            </summary>
-            <div className="home-challenges-badges-stack">
-              <section className="home-combined-panel">
-                <div className="home-combined-panel-head">
-                  <span>Biggest Leak Challenge</span>
-                  <b>
-                    {identityStats.biggestLeakAmount > 0
-                      ? "Ready"
-                      : "Needs leak"}
-                  </b>
-                </div>
-                <BiggestLeakChallengePanel
-                  settings={settings}
-                  identityStats={identityStats}
-                  mission={leakMission}
-                  expenses={allExpenses}
-                  shareInitData={telegram.isTelegram ? telegram.initData : ""}
-                  onStartMission={onStartLeakMission}
-                  onResetMission={onResetLeakMission}
-                  onOpenAdd={onOpenAdd}
-                />
-              </section>
-
-              <section className="home-combined-panel">
-                <div className="home-combined-panel-head">
-                  <span>Badges</span>
-                  <b>
-                    {badges.filter((badge) => badge.earned).length}/{badges.length}
-                  </b>
-                </div>
-                <BadgeMiniStrip badges={badges} />
-              </section>
-            </div>
-          </details>
-        )}
-
         {expenses.length === 0 && (
           <details className="clean-details">
             <summary>
@@ -19176,36 +19181,6 @@ function DashboardScreen({
             />
           </details>
         )}
-
-        <details className="clean-details" id="daily-routine-panel">
-          <summary>
-            <div>
-              <span>Daily Routine</span>
-              <small>No-spend days count. Final task: Share on X.</small>
-            </div>
-            <b>Streak proof</b>
-          </summary>
-          <DailyRoutinePanel
-            settings={settings}
-            summary={summary}
-            expenses={routineExpenses}
-            onRoutineComplete={onRoutineComplete}
-          />
-        </details>
-
-        <details className="clean-details">
-          <summary>
-            <span>Recent Expenses</span>
-            <b>{expenses.length} total</b>
-          </summary>
-          <RecentExpenses
-            settings={settings}
-            expenses={expenses}
-            onDeleteExpense={onDeleteExpense}
-            onUpdateExpense={onUpdateExpense}
-            onOpenAdd={onOpenAdd}
-          />
-        </details>
 
         <details className="clean-details">
           <summary>
