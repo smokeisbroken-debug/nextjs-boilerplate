@@ -3165,6 +3165,7 @@ declare global {
 const STORAGE_KEY = "broke-life-tracker-v1";
 const LEAK_MISSION_KEY = "broke-local-leak-mission-v1";
 const ONBOARDING_KEY = "broke-life-tracker-onboarding-completed-v1";
+const WALKTHROUGH_KEY = "broke-life-tracker-walkthrough-seen-v1";
 const APP_MODE_KEY = "broke-app-mode-v1";
 const LOCAL_APP_STATE_CHANGE_EVENT = "broke-local-app-state-change";
 const PROJECT_X_URL = "https://x.com/SmokeIsBroke";
@@ -3203,6 +3204,102 @@ const emptyTelegramState: TelegramState = {
   startParam: "",
   initData: "",
 };
+
+type AppWalkthroughStep = {
+  id: string;
+  tab: Tab;
+  kicker: string;
+  title: string;
+  body: string;
+  focus: string;
+  action: string;
+  proOnly?: boolean;
+};
+
+const APP_WALKTHROUGH_STEPS: AppWalkthroughStep[] = [
+  {
+    id: "home-track",
+    tab: "home",
+    kicker: "Start here",
+    title: "Track leaks first.",
+    body:
+      "The Home screen now starts with the main action: add a real leak before reading reports or opening optional tools.",
+    focus: "Home → Track a leak now",
+    action: "Add one expense, choose Leak / Maybe / Need, then save.",
+  },
+  {
+    id: "mode-switch",
+    tab: "home",
+    kicker: "Mode switch",
+    title: "Use Standard for simple tracking, Pro for full tools.",
+    body:
+      "The top switch controls how much the app shows. Standard keeps the journey simple. Pro unlocks Growth, Rewards, reports and deeper tools.",
+    focus: "Top right → Standard / Pro",
+    action: "New users can stay in Standard until they understand tracking.",
+  },
+  {
+    id: "track-tab",
+    tab: "add",
+    kicker: "Full track screen",
+    title: "Use Track when the Home quick form is not enough.",
+    body:
+      "The Track tab is the full leak form. It keeps categories, triggers, notes, and recent leak context in one place.",
+    focus: "Bottom menu → Track",
+    action: "Use it for detailed records, not for browsing the app.",
+  },
+  {
+    id: "analysis",
+    tab: "chart",
+    kicker: "Read the pattern",
+    title: "Analysis is where reports and patterns live.",
+    body:
+      "Charts, pressure signals, weekly review, monthly history and pattern lab are grouped here so Home stays action-first.",
+    focus: "Bottom menu → Analysis",
+    action: "Open this after tracking leaks, not before.",
+  },
+  {
+    id: "growth",
+    tab: "growth",
+    kicker: "Build habits",
+    title: "Growth turns tracking into behavior change.",
+    body:
+      "Challenges, routines, badges and progress belong here. This supports the core tracking loop instead of replacing it.",
+    focus: "Bottom menu → Growth",
+    action: "Use after the user has tracked enough real leaks.",
+    proOnly: true,
+  },
+  {
+    id: "rewards",
+    tab: "whatif",
+    kicker: "Earn rewards",
+    title: "Rewards are after action, not before it.",
+    body:
+      "Rewards, leaderboard, streak proof and challenge proof sit behind the tracking habit. They should motivate users without hiding the main action.",
+    focus: "Bottom menu → Rewards",
+    action: "Track first, then claim progress.",
+    proOnly: true,
+  },
+  {
+    id: "check",
+    tab: "check",
+    kicker: "Optional checker",
+    title: "Check is a secondary tool.",
+    body:
+      "Universal, Project, Wallet and Compare checks are useful, but they are not why users open BROKE Life Tracker every day.",
+    focus: "Bottom menu → Check",
+    action: "Use it when checking a project or wallet, not for daily leak tracking.",
+  },
+  {
+    id: "profile",
+    tab: "settings",
+    kicker: "Personal setup",
+    title: "Profile keeps settings and sync out of the way.",
+    body:
+      "Currency, reminders, cloud sync, data repair, privacy and personal settings live here so Home can stay focused.",
+    focus: "Bottom menu → Profile",
+    action: "Adjust setup here after the first leak is tracked.",
+  },
+];
 
 const emptyStreak: Streak = {
   currentStreak: 0,
@@ -14260,6 +14357,8 @@ export default function Home() {
   const [activeStreakProof, setActiveStreakProof] =
     useState<ActiveStreakProofState>(() => readActiveStreakProofState());
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [walkthroughOpen, setWalkthroughOpen] = useState(false);
+  const [walkthroughStepIndex, setWalkthroughStepIndex] = useState(0);
   const [appMode, setAppMode] = useState<AppMode>("standard");
 
   const openAppTrackedRef = useRef(false);
@@ -14578,6 +14677,28 @@ export default function Home() {
       setLoaded(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!loaded || !onboardingCompleted) return;
+
+    let shouldOpen = false;
+
+    try {
+      shouldOpen = localStorage.getItem(WALKTHROUGH_KEY) !== "true";
+    } catch {
+      shouldOpen = false;
+    }
+
+    if (!shouldOpen) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setWalkthroughStepIndex(0);
+      setActiveTab("home");
+      setWalkthroughOpen(true);
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loaded, onboardingCompleted]);
 
   useEffect(() => {
     if (!loaded || telegram.isTelegram) return;
@@ -15643,6 +15764,51 @@ export default function Home() {
     streak: activeStreak,
   };
 
+  const walkthroughSteps = useMemo(() => {
+    return APP_WALKTHROUGH_STEPS.filter(
+      (step) => !step.proOnly || appMode === "pro",
+    );
+  }, [appMode]);
+
+  const currentWalkthroughStep =
+    walkthroughSteps[
+      Math.min(walkthroughStepIndex, Math.max(walkthroughSteps.length - 1, 0))
+    ] || null;
+
+  function closeWalkthrough(done = false) {
+    try {
+      localStorage.setItem(WALKTHROUGH_KEY, "true");
+    } catch {
+      // Local-only guard: walkthrough should never block app usage.
+    }
+
+    setWalkthroughOpen(false);
+
+    if (done) {
+      showToast(
+        "Walkthrough complete",
+        "Start with Track leak, then read Analysis.",
+        "info",
+      );
+    }
+  }
+
+  function goToWalkthroughStep(nextIndex: number) {
+    if (!walkthroughSteps.length) return;
+
+    const boundedIndex = Math.max(
+      0,
+      Math.min(nextIndex, walkthroughSteps.length - 1),
+    );
+    const nextStep = walkthroughSteps[boundedIndex];
+
+    setWalkthroughStepIndex(boundedIndex);
+
+    if (nextStep.tab !== activeTab) {
+      setActiveTab(nextStep.tab);
+    }
+  }
+
   return (
     <main className="app-shell app-shell-with-community">
       <section className="phone">
@@ -15904,6 +16070,24 @@ export default function Home() {
           />
         )}
 
+        {walkthroughOpen && currentWalkthroughStep && (
+          <AppWalkthroughOverlay
+            step={currentWalkthroughStep}
+            stepIndex={walkthroughStepIndex}
+            totalSteps={walkthroughSteps.length}
+            onBack={() => goToWalkthroughStep(walkthroughStepIndex - 1)}
+            onNext={() => {
+              if (walkthroughStepIndex >= walkthroughSteps.length - 1) {
+                closeWalkthrough(true);
+                return;
+              }
+
+              goToWalkthroughStep(walkthroughStepIndex + 1);
+            }}
+            onSkip={() => closeWalkthrough(false)}
+          />
+        )}
+
         {helpOpen && (
           <HelpGuideModal
             activeTab={activeTab}
@@ -15931,6 +16115,77 @@ export default function Home() {
 
       {loaded && onboardingCompleted && <CommunityLiveSidebar />}
     </main>
+  );
+}
+
+function AppWalkthroughOverlay({
+  step,
+  stepIndex,
+  totalSteps,
+  onBack,
+  onNext,
+  onSkip,
+}: {
+  step: AppWalkthroughStep;
+  stepIndex: number;
+  totalSteps: number;
+  onBack: () => void;
+  onNext: () => void;
+  onSkip: () => void;
+}) {
+  const isLast = stepIndex >= totalSteps - 1;
+
+  return (
+    <div className="app-walkthrough-overlay" role="dialog" aria-modal="true">
+      <div className="app-walkthrough-highlight" aria-hidden="true">
+        <span>{step.focus}</span>
+      </div>
+
+      <section className="app-walkthrough-card">
+        <div className="app-walkthrough-head">
+          <span>{step.kicker}</span>
+          <button type="button" onClick={onSkip} aria-label="Skip walkthrough">
+            Skip
+          </button>
+        </div>
+
+        <div className="app-walkthrough-progress" aria-hidden="true">
+          {Array.from({ length: totalSteps }).map((_, index) => (
+            <span
+              key={index}
+              className={index <= stepIndex ? "active" : ""}
+            />
+          ))}
+        </div>
+
+        <div className="app-walkthrough-focus">
+          <small>Focus</small>
+          <strong>{step.focus}</strong>
+        </div>
+
+        <h2>{step.title}</h2>
+        <p>{step.body}</p>
+
+        <div className="app-walkthrough-action">
+          <small>What to do</small>
+          <span>{step.action}</span>
+        </div>
+
+        <div className="app-walkthrough-actions">
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={onBack}
+            disabled={stepIndex === 0}
+          >
+            Back
+          </button>
+          <button type="button" className="primary-btn" onClick={onNext}>
+            {isLast ? "Got it" : "Next"}
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
 

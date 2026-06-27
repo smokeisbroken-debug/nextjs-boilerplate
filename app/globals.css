@@ -41552,3 +41552,160 @@ html.embedded-app-view .hero h1 {
 .home-challenges-badges-details .badge-mini-strip {
   margin: 0;
 }
+
+/* ===== V59.63.16 FIRST-RUN WALKTHROUGH ===== */
+.app-walkthrough-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  align-items: end;
+  padding: 18px 14px calc(86px + env(safe-area-inset-bottom));
+  background:
+    radial-gradient(circle at 50% 18%, rgba(183, 255, 25, 0.18), transparent 34%),
+    rgba(0, 0, 0, 0.66);
+  backdrop-filter: blur(7px);
+}
+
+.app-walkthrough-highlight {
+  position: absolute;
+  top: 118px;
+  left: 22px;
+  right: 22px;
+  min-height: 118px;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(183, 255, 25, 0.72);
+  border-radius: 26px;
+  box-shadow:
+    0 0 0 999px rgba(0, 0, 0, 0.1),
+    0 0 32px rgba(183, 255, 25, 0.24),
+    inset 0 0 26px rgba(183, 255, 25, 0.08);
+  pointer-events: none;
+}
+
+.app-walkthrough-highlight span {
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(183, 255, 25, 0.95);
+  color: #071104;
+  font-size: 0.74rem;
+  font-weight: 950;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.app-walkthrough-card {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+  width: min(100%, 420px);
+  margin: 0 auto;
+  padding: 16px;
+  border: 1px solid rgba(183, 255, 25, 0.28);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(24, 54, 18, 0.98), rgba(8, 18, 8, 0.98));
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.48);
+}
+
+.app-walkthrough-head,
+.app-walkthrough-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.app-walkthrough-head span {
+  color: var(--green);
+  font-size: 0.76rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.app-walkthrough-head button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.app-walkthrough-progress {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12px, 1fr));
+  gap: 5px;
+}
+
+.app-walkthrough-progress span {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.app-walkthrough-progress span.active {
+  background: linear-gradient(90deg, var(--green), #eaff5f);
+}
+
+.app-walkthrough-focus,
+.app-walkthrough-action {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid rgba(183, 255, 25, 0.14);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.app-walkthrough-focus small,
+.app-walkthrough-action small {
+  color: var(--green);
+  font-size: 0.66rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.app-walkthrough-focus strong,
+.app-walkthrough-action span {
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.app-walkthrough-card h2 {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: clamp(1.34rem, 6vw, 2rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+}
+
+.app-walkthrough-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.42;
+}
+
+.app-walkthrough-actions .secondary-btn:disabled {
+  opacity: 0.38;
+}
+
+@media (max-width: 420px) {
+  .app-walkthrough-overlay {
+    padding-inline: 10px;
+  }
+
+  .app-walkthrough-card {
+    border-radius: 20px;
+    padding: 14px;
+  }
+}
