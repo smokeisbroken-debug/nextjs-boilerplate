@@ -42110,3 +42110,95 @@ html.embedded-app-view .hero h1 {
     justify-self: start;
   }
 }
+
+/* ===== V59.63.21 EMAIL BACKEND STATUS UI ===== */
+.email-backend-check {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.email-backend-check.ready {
+  border-color: rgba(168, 255, 48, 0.24);
+  background:
+    radial-gradient(circle at top right, rgba(168, 255, 48, 0.08), transparent 46%),
+    rgba(0, 0, 0, 0.2);
+}
+
+.email-backend-check.warning,
+.email-backend-check.checking {
+  border-color: rgba(255, 213, 74, 0.22);
+  background:
+    radial-gradient(circle at top right, rgba(255, 213, 74, 0.08), transparent 46%),
+    rgba(0, 0, 0, 0.2);
+}
+
+.email-backend-check.error {
+  border-color: rgba(255, 101, 101, 0.28);
+  background:
+    radial-gradient(circle at top right, rgba(255, 101, 101, 0.08), transparent 46%),
+    rgba(0, 0, 0, 0.2);
+}
+
+.email-backend-check > div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.email-backend-check span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.email-backend-check strong {
+  color: var(--text);
+  font-size: 0.95rem;
+  line-height: 1.1;
+}
+
+.email-backend-check small,
+.email-backend-check em {
+  color: rgba(244, 247, 240, 0.64);
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 750;
+  line-height: 1.32;
+}
+
+.email-backend-check button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  border: 1px solid rgba(168, 255, 48, 0.2);
+  border-radius: 999px;
+  padding: 0 12px;
+  background: rgba(168, 255, 48, 0.08);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 950;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.email-backend-check button:disabled {
+  cursor: progress;
+  opacity: 0.68;
+}
+
+@media (max-width: 430px) {
+  .email-backend-check {
+    display: grid;
+  }
+
+  .email-backend-check button {
+    width: 100%;
+  }
+}

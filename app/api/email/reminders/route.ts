@@ -323,8 +323,32 @@ function getDueTypes(input: {
   return due;
 }
 
+function getPublicProviderStatus(provider: ReturnType<typeof detectEmailProvider>) {
+  const providerLabel = provider.provider === "none" ? "none" : provider.provider;
+
+  return {
+    provider: providerLabel,
+    configured: provider.configured,
+    canSend: provider.canSend,
+    mode: provider.mode,
+    missingCount: provider.missing.length,
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
+    if (request.nextUrl.searchParams.get("status") === "1") {
+      const provider = detectEmailProvider();
+
+      return NextResponse.json({
+        ok: true,
+        endpoint: "email-reminders",
+        delivery: getPublicProviderStatus(provider),
+        note:
+          "Email backend is reachable. Public status only reports provider readiness; sending remains disabled until a provider implementation is connected.",
+      });
+    }
+
     if (!getEmailSecret()) {
       return NextResponse.json(
         {

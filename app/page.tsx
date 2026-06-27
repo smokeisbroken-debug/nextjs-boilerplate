@@ -2870,6 +2870,15 @@ type EmailReminderStatus = {
   tone: "off" | "warning" | "ready";
 };
 
+type EmailBackendCheckState = {
+  tone: "idle" | "checking" | "ready" | "warning" | "error";
+  label: string;
+  detail: string;
+  providerLabel: string;
+  sendingLabel: string;
+  checkedAt: string;
+};
+
 type ProfileShareMetric = {
   label: string;
   value: string;
@@ -3611,6 +3620,113 @@ function buildEmailReminderStatus(
     detail:
       "Email preferences are saved. Connect Resend, SendGrid or SMTP before real emails can be sent.",
     tone: "ready",
+  };
+}
+
+const defaultEmailBackendCheckState: EmailBackendCheckState = {
+  tone: "idle",
+  label: "Not checked",
+  detail: "Check the backend before enabling real email delivery.",
+  providerLabel: "Not checked",
+  sendingLabel: "Unknown",
+  checkedAt: "",
+};
+
+function formatEmailProviderLabel(value: unknown) {
+  const provider = String(value || "none").trim().toLowerCase();
+
+  if (provider === "resend") return "Resend";
+  if (provider === "sendgrid") return "SendGrid";
+  if (provider === "smtp") return "SMTP";
+
+  return "None";
+}
+
+function buildEmailBackendCheckState(input: unknown): EmailBackendCheckState {
+  const payload = input as {
+    ok?: boolean;
+    error?: string;
+    delivery?: {
+      provider?: string;
+      configured?: boolean;
+      canSend?: boolean;
+      mode?: string;
+      missingCount?: number;
+    };
+  };
+  const delivery = payload.delivery || {};
+  const providerLabel = formatEmailProviderLabel(delivery.provider);
+  const missingCount = Number(delivery.missingCount || 0);
+
+  if (!payload.ok) {
+    return {
+      tone: "error",
+      label: "Backend error",
+      detail: payload.error || "Email backend did not return a healthy status.",
+      providerLabel: "Unknown",
+      sendingLabel: "Blocked",
+      checkedAt: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+  }
+
+  if (!delivery.provider || delivery.provider === "none") {
+    return {
+      tone: "warning",
+      label: "Needs provider",
+      detail:
+        "Backend is reachable, but no email provider is configured yet.",
+      providerLabel: "None",
+      sendingLabel: "Disabled",
+      checkedAt: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+  }
+
+  if (!delivery.configured || missingCount > 0) {
+    return {
+      tone: "warning",
+      label: "Provider incomplete",
+      detail:
+        "Backend found an email provider, but required environment settings are still missing.",
+      providerLabel,
+      sendingLabel: "Blocked",
+      checkedAt: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+  }
+
+  if (!delivery.canSend) {
+    return {
+      tone: "ready",
+      label: "Provider detected",
+      detail:
+        "Backend can see the provider config. Real sending is still locked until the send implementation is enabled.",
+      providerLabel,
+      sendingLabel: "Skeleton only",
+      checkedAt: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+  }
+
+  return {
+    tone: "ready",
+    label: "Ready",
+    detail: "Email backend and provider are ready for delivery.",
+    providerLabel,
+    sendingLabel: "Ready",
+    checkedAt: new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
   };
 }
 
@@ -40270,6 +40386,10 @@ function SettingsScreen({
     }));
   }
 
+  const [emailBackendCheck, setEmailBackendCheck] = useState<EmailBackendCheckState>(
+    defaultEmailBackendCheckState,
+  );
+
   function updateEmailReminderSettings(next: Partial<EmailReminderSettings>) {
     setSettings((prev) =>
       normalizeSettings({
@@ -40281,6 +40401,55 @@ function SettingsScreen({
         },
       }),
     );
+  }
+
+  async function checkEmailBackendStatus() {
+    setEmailBackendCheck((prev) => ({
+      ...prev,
+      tone: "checking",
+      label: "Checking...",
+      detail: "Contacting email backend status endpoint.",
+      sendingLabel: "Checking",
+    }));
+
+    try {
+      const response = await fetch("/api/email/reminders?status=1", {
+        cache: "no-store",
+      });
+      const data = await response.json();
+      const nextState = buildEmailBackendCheckState({
+        ...data,
+        ok: response.ok && data?.ok,
+        error: data?.error,
+      });
+
+      setEmailBackendCheck(nextState);
+
+      if (nextState.tone === "error") {
+        triggerHaptic("error");
+        notifyApp("Email backend check failed", nextState.detail, "info");
+      } else {
+        triggerHaptic(nextState.tone === "warning" ? "medium" : "success");
+        notifyApp("Email backend", nextState.label, "info");
+      }
+    } catch (error) {
+      setEmailBackendCheck({
+        tone: "error",
+        label: "Backend error",
+        detail:
+          error instanceof Error
+            ? error.message
+            : "Could not reach email backend status endpoint.",
+        providerLabel: "Unknown",
+        sendingLabel: "Blocked",
+        checkedAt: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      });
+      triggerHaptic("error");
+      notifyApp("Email backend check failed", "Could not reach status endpoint.", "info");
+    }
   }
 
   const settingsWalletPressureBase = Math.max(totalIncome - fixedCosts, 1);
@@ -43543,16 +43712,36 @@ function SettingsScreen({
                   </div>
                   <div>
                     <span>Provider</span>
-                    <strong>Not connected</strong>
+                    <strong>{emailBackendCheck.providerLabel}</strong>
                   </div>
                   <div>
                     <span>Sending</span>
-                    <strong>Disabled</strong>
+                    <strong>{emailBackendCheck.sendingLabel}</strong>
                   </div>
                 </div>
 
+                <div className={`email-backend-check ${emailBackendCheck.tone}`}>
+                  <div>
+                    <span>Backend check</span>
+                    <strong>{emailBackendCheck.label}</strong>
+                    <small>{emailBackendCheck.detail}</small>
+                    {emailBackendCheck.checkedAt ? (
+                      <em>Last check: {emailBackendCheck.checkedAt}</em>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={checkEmailBackendStatus}
+                    disabled={emailBackendCheck.tone === "checking"}
+                  >
+                    {emailBackendCheck.tone === "checking"
+                      ? "Checking..."
+                      : "Check backend"}
+                  </button>
+                </div>
+
                 <p className="email-reminder-note">
-                  This only saves user preferences. Real email delivery starts after a backend provider is connected.
+                  Preferences are saved now. Real email delivery starts only after provider sending is connected on the backend.
                 </p>
               </section>
             </details>
