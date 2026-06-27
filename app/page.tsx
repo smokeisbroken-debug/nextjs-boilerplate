@@ -8208,10 +8208,21 @@ function writeDailyRoutineReward(
 
 const ACTIVE_STREAK_PROOF_KEY = "broke-active-streak-proof-v1";
 const ACTIVE_STREAK_ELIGIBILITY_DAYS = 7;
-const FUTURE_HOLDER_REWARD_MIN_BALANCE = 100_000;
+const FUTURE_HOLDER_REWARD_MIN_BALANCE = 250_000;
+const BROKE_WALLET_AUTO_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
+const BROKE_WALLET_AUTO_REFRESH_STALE_MS = 15 * 60 * 1000;
 const ACTIVE_STREAK_RECOVERY_ACTIONS = 1;
 const ACTIVE_STREAK_RECOVERY_COOLDOWN_DAYS = 7;
 const activeStreakProofActions: ActiveStreakProofAction[] = ["daily_routine"];
+
+function isWalletBalanceAutoRefreshDue(lastCheckedAt?: string) {
+  if (!lastCheckedAt) return true;
+
+  const checkedAt = new Date(lastCheckedAt).getTime();
+  if (!Number.isFinite(checkedAt)) return true;
+
+  return Date.now() - checkedAt >= BROKE_WALLET_AUTO_REFRESH_STALE_MS;
+}
 
 function getPreviousDayKey(dateKey: string, daysBack = 1) {
   const date = new Date(`${dateKey}T00:00:00`);
@@ -8644,7 +8655,7 @@ function getActiveStreakRewardReadinessLabel(
   if (verified && meetsMinHold && status.eligible)
     return "Reward-ready foundation";
   if (!verified) return "Verify wallet next";
-  if (!meetsMinHold) return "Hold 100K+ $BROKE next";
+  if (!meetsMinHold) return "Hold 250K+ $BROKE next";
   if (status.recoveryMode || status.recoveryAvailable) return "Recovery active";
   if (status.activeToday) return "Daily Routine protected today";
 
@@ -16910,7 +16921,7 @@ function HelpGuideModal({
           title: "Rewards overview card",
           body: [
             "This is the short top card in Rewards.",
-            "It shows the planned June 1 direction: Daily Routine activity matters, 100K $BROKE minimum hold, 7+ day streak, wallet verification, and balance-share split.",
+            "It shows the planned June 1 direction: Daily Routine activity matters, 250K $BROKE minimum hold, 7+ day streak, wallet verification, and balance-share split.",
             "It is a preparation card, not a live payout screen.",
             "Use Open Daily Routine when today’s proof is still needed.",
           ],
@@ -21034,7 +21045,7 @@ function FutureRewardsExplainerCard() {
     },
     {
       label: "Minimum hold",
-      value: "100K $BROKE",
+      value: "250K $BROKE",
       detail: "Planned minimum for future eligibility.",
     },
     {
@@ -21081,7 +21092,7 @@ function RewardSnapshotLedgerCard({
   const snapshotReady = walletVerified && minHoldReady && status.eligible;
   const missing = [
     !walletVerified ? "wallet proof" : "",
-    walletVerified && !minHoldReady ? "100K+ hold" : "",
+    walletVerified && !minHoldReady ? "250K+ hold" : "",
     !status.eligible ? "7+ active streak" : "",
   ].filter(Boolean);
   const balanceSharePreview = snapshotReady
@@ -21207,7 +21218,7 @@ function RewardsLaunchOverviewCard({
         </article>
         <article>
           <span>Min hold</span>
-          <strong>100K $BROKE</strong>
+          <strong>250K $BROKE</strong>
           <small>{holdLabel}</small>
         </article>
         <article>
@@ -21227,7 +21238,7 @@ function RewardsLaunchOverviewCard({
           {verified ? "Wallet verified" : "Verify wallet"}
         </span>
         <span className={meetsMinHold ? "done" : "pending"}>
-          {meetsMinHold ? "100K+ hold" : "100K+ needed"}
+          {meetsMinHold ? "250K+ hold" : "250K+ needed"}
         </span>
         <span className={status.eligible ? "done" : "pending"}>
           {status.eligible ? "7+ streak live" : "Build 7-day streak"}
@@ -37195,7 +37206,7 @@ function WhatIfScreen({
       done: walletVerified,
     },
     {
-      label: "100K+ $BROKE hold",
+      label: "250K+ $BROKE hold",
       detail: holderMeetsFutureRewardMinimum
         ? `${formatTokenAmount(settings.wallet.brokeBalance)} BROKE`
         : `Planned minimum: ${formatTokenAmount(FUTURE_HOLDER_REWARD_MIN_BALANCE)}`,
@@ -38055,7 +38066,7 @@ function WhatIfScreen({
         <summary>
           <div>
             <span>Future Holder Rewards</span>
-            <small>100K+ hold, wallet proof, 7+ Daily Routine days.</small>
+            <small>250K+ hold, wallet proof, 7+ Daily Routine days.</small>
           </div>
           <b>{rewardFoundationReady ? "Ready" : "Prep"}</b>
         </summary>
@@ -38064,7 +38075,7 @@ function WhatIfScreen({
             <span>Reward foundation</span>
             <strong>{rewardFoundationReady ? "Ready" : "Building"}</strong>
             <small>
-              Verified wallet + 100K+ $BROKE + live 7+ Daily Routine streak.
+              Verified wallet + 250K+ $BROKE + live 7+ Daily Routine streak.
             </small>
           </article>
           <article>
@@ -38450,7 +38461,7 @@ function AdminTreasuryPanel({
   const [serverAutoSending, setServerAutoSending] = useState(false);
   const [serverAutoConfirm, setServerAutoConfirm] = useState("");
   const [adminEmbeddedView, setAdminEmbeddedView] = useState(false);
-  const [eligibilityMinHold, setEligibilityMinHold] = useState("100000");
+  const [eligibilityMinHold, setEligibilityMinHold] = useState("250000");
   const [eligibilityMinStreak, setEligibilityMinStreak] = useState("7");
   const [distributionSmokeStatus, setDistributionSmokeStatus] =
     useState<AdminDistributionSmokeStatus>("idle");
@@ -38651,7 +38662,7 @@ function AdminTreasuryPanel({
 
     try {
       const params = new URLSearchParams({
-        minHold: eligibilityMinHold.trim() || "100000",
+        minHold: eligibilityMinHold.trim() || "250000",
         minStreak: eligibilityMinStreak.trim() || "7",
       });
       const response = await fetch(`/api/admin/holders?${params.toString()}`, {
@@ -39892,7 +39903,7 @@ function AdminTreasuryPanel({
               setHolderIntel(null);
               setDistributionMessage("");
             }}
-            placeholder="100000"
+            placeholder="250000"
           />
         </label>
         <label>
@@ -40193,6 +40204,7 @@ function SettingsScreen({
   >([]);
   const [selectedWalletProviderId, setSelectedWalletProviderId] = useState("");
   const [walletStatusRefreshing, setWalletStatusRefreshing] = useState(false);
+  const walletAutoRefreshInFlightRef = useRef(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [avatarMessage, setAvatarMessage] = useState("");
   const adminAccess = useMemo(
@@ -40223,6 +40235,45 @@ function SettingsScreen({
     telegram.isTelegram,
     telegram.initData,
     webAuth.user?.id,
+  ]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const walletAddress = settings.wallet.walletAddress.trim();
+    if (!isLikelySolanaWalletAddress(walletAddress)) return;
+
+    let cancelled = false;
+    const refreshIfDue = () => {
+      if (cancelled) return;
+      if (walletChecking || walletVerifying || walletAutoRefreshInFlightRef.current) return;
+      if (!isWalletBalanceAutoRefreshDue(settings.wallet.lastCheckedAt)) return;
+
+      void checkBrokeWalletBalance("auto", { silent: true });
+    };
+    const refreshOnVisible = () => {
+      if (document.visibilityState === "visible") refreshIfDue();
+    };
+
+    refreshIfDue();
+    const interval = window.setInterval(
+      refreshIfDue,
+      BROKE_WALLET_AUTO_REFRESH_INTERVAL_MS,
+    );
+    window.addEventListener("focus", refreshIfDue);
+    document.addEventListener("visibilitychange", refreshOnVisible);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refreshIfDue);
+      document.removeEventListener("visibilitychange", refreshOnVisible);
+    };
+  }, [
+    settings.wallet.walletAddress,
+    settings.wallet.lastCheckedAt,
+    walletChecking,
+    walletVerifying,
   ]);
 
   useEffect(() => {
@@ -40936,24 +40987,35 @@ function SettingsScreen({
   }
 
   async function checkBrokeWalletBalance(
-    source: "manual" | "rescan" = "manual",
+    source: "manual" | "rescan" | "auto" = "manual",
+    options?: { silent?: boolean },
   ) {
+    const silent = Boolean(options?.silent);
     const walletAddress = (
-      walletAddressDraft.trim() || settings.wallet.walletAddress
+      source === "auto"
+        ? settings.wallet.walletAddress
+        : walletAddressDraft.trim() || settings.wallet.walletAddress
     ).trim();
 
     if (!isLikelySolanaWalletAddress(walletAddress)) {
-      setWalletMessage("Paste a valid Solana wallet address first.");
-      notifyApp(
-        "Invalid wallet",
-        "Paste a valid Solana address. No seed phrase is ever needed.",
-      );
+      if (!silent) {
+        setWalletMessage("Paste a valid Solana wallet address first.");
+        notifyApp(
+          "Invalid wallet",
+          "Paste a valid Solana address. No seed phrase is ever needed.",
+        );
+      }
       return;
     }
 
-    setWalletChecking(true);
-    setWalletProviderHelpOpen(false);
-    setWalletMessage("");
+    if (silent) {
+      if (walletAutoRefreshInFlightRef.current) return;
+      walletAutoRefreshInFlightRef.current = true;
+    } else {
+      setWalletChecking(true);
+      setWalletProviderHelpOpen(false);
+      setWalletMessage("");
+    }
 
     try {
       const response = await fetch(`/api/wallet/balance?t=${Date.now()}`, {
@@ -41017,33 +41079,43 @@ function SettingsScreen({
               : "watch",
         verifiedAt: matchedLinkedWallet ? settings.wallet.verifiedAt : "",
       });
-      setWalletAddressDraft(data.walletAddress || walletAddress);
+      if (!silent) {
+        setWalletAddressDraft(data.walletAddress || walletAddress);
+      }
       if (matchedLinkedWallet && settings.wallet.isVerified) {
         void refreshWalletVerificationStatus(true, {
           preserveLiveBalance: true,
           liveBalanceSnapshot,
         });
       }
-      setWalletMessage(
-        `$BROKE balance refreshed: ${formatTokenAmount(liveBalanceSnapshot.balance)} · ${
-          data.persisted ? "cloud saved" : "live RPC loaded"
-        } · ${new Date(liveBalanceSnapshot.checkedAt).toLocaleTimeString()}`,
-      );
-      notifyApp(
-        source === "rescan" ? "Rescan refreshed balance" : "Wallet refreshed",
-        `Live RPC balance: ${formatTokenAmount(liveBalanceSnapshot.balance)}.`,
-        "info",
-      );
-      triggerHaptic("success");
+      if (!silent) {
+        setWalletMessage(
+          `$BROKE balance refreshed: ${formatTokenAmount(liveBalanceSnapshot.balance)} · ${
+            data.persisted ? "cloud saved" : "live RPC loaded"
+          } · ${new Date(liveBalanceSnapshot.checkedAt).toLocaleTimeString()}`,
+        );
+        notifyApp(
+          source === "rescan" ? "Rescan refreshed balance" : "Wallet refreshed",
+          `Live RPC balance: ${formatTokenAmount(liveBalanceSnapshot.balance)}.`,
+          "info",
+        );
+        triggerHaptic("success");
+      }
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Could not check $BROKE balance.";
-      setWalletMessage(message);
-      notifyApp("Wallet check failed", message, "info");
+      if (!silent) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Could not check $BROKE balance.";
+        setWalletMessage(message);
+        notifyApp("Wallet check failed", message, "info");
+      }
     } finally {
-      setWalletChecking(false);
+      if (silent) {
+        walletAutoRefreshInFlightRef.current = false;
+      } else {
+        setWalletChecking(false);
+      }
     }
   }
 

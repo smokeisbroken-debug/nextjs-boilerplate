@@ -46,7 +46,7 @@ type RewardEpochRow = {
   minimum_active_streak_days?: number | string | null;
 };
 
-const FUTURE_HOLDER_REWARD_MIN_BALANCE = 100_000;
+const FUTURE_HOLDER_REWARD_MIN_BALANCE = 250_000;
 const ACTIVE_STREAK_ELIGIBILITY_DAYS = 7;
 const ACTIVE_STREAK_ACTIONS: ActiveStreakProofAction[] = ["daily_routine"];
 

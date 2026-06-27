@@ -49,7 +49,7 @@ type WebAuthSession = {
 
 const WEB_AUTH_COOKIE = "broke_tg_session";
 const DEFAULT_BROKE_TOKEN_MINT = "9UjwQHUVbJtgdYhBSSpzBF4z9mBwFkBoT2RJroGwwray";
-const DEFAULT_REWARD_MIN_HOLD = 100_000;
+const DEFAULT_REWARD_MIN_HOLD = 250_000;
 const DEFAULT_REWARD_MIN_STREAK = 7;
 const ACTIVE_STREAK_ACTIONS: ActiveStreakProofAction[] = ["daily_routine"];
 

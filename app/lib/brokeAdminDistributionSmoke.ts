@@ -43,7 +43,7 @@ export function getAdminDistributionRouteSmokeReport(): AdminDistributionSmokeRe
     treasuryWallet: DEFAULT_TREASURY_WALLET_ADDRESS,
     connectedWallet: DEFAULT_TREASURY_WALLET_ADDRESS,
     rules: {
-      minHold: 100000,
+      minHold: 250000,
       minStreak: 7,
     },
     payouts: [
