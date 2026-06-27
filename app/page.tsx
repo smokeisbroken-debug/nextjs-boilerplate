@@ -18750,6 +18750,14 @@ function DashboardScreen({
         onRight={onBellClick}
       />
 
+      <HomeTrackLeakCard
+        settings={settings}
+        summary={summary}
+        onQuickLeak={onQuickLeak}
+        onOpenFullTrack={onOpenAdd}
+        onOpenAnalysis={onOpenChart}
+      />
+
       <section
         className="hero home-compact-hero"
         aria-label="Home wallet status"
@@ -18786,14 +18794,6 @@ function DashboardScreen({
           onSwitchToPro={onToggleAppMode}
         />
       )}
-
-      <HomeTrackLeakCard
-        settings={settings}
-        summary={summary}
-        onQuickLeak={onQuickLeak}
-        onOpenFullTrack={onOpenAdd}
-        onOpenAnalysis={onOpenChart}
-      />
 
       <details
         open
