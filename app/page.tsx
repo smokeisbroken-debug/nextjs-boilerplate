@@ -8224,6 +8224,27 @@ function isWalletBalanceAutoRefreshDue(lastCheckedAt?: string) {
   return Date.now() - checkedAt >= BROKE_WALLET_AUTO_REFRESH_STALE_MS;
 }
 
+function formatWalletBalanceCheckedLabel(lastCheckedAt?: string) {
+  if (!lastCheckedAt) return "Not checked yet";
+
+  const checkedAt = new Date(lastCheckedAt);
+  const checkedMs = checkedAt.getTime();
+  if (!Number.isFinite(checkedMs)) return "Check needed";
+
+  const minutesAgo = Math.max(0, Math.round((Date.now() - checkedMs) / 60000));
+
+  if (minutesAgo < 1) return "Just checked";
+  if (minutesAgo < 60) return `${minutesAgo}m ago`;
+
+  const hoursAgo = Math.round(minutesAgo / 60);
+  if (hoursAgo < 24) return `${hoursAgo}h ago`;
+
+  return checkedAt.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function getPreviousDayKey(dateKey: string, daysBack = 1) {
   const date = new Date(`${dateKey}T00:00:00`);
   date.setDate(date.getDate() - daysBack);
@@ -21034,37 +21055,37 @@ function RewardsNotificationPrepCard({
 function FutureRewardsExplainerCard() {
   const terms = [
     {
-      label: "Live streak",
-      value: "7+ active days",
-      detail: "Current state, not a one-time unlock.",
-    },
-    {
-      label: "Wallet proof",
+      label: "Wallet",
       value: "Verified owner",
-      detail: "Message signature only. No token movement.",
+      detail: "Only a verified wallet can qualify for holder rewards.",
     },
     {
       label: "Minimum hold",
       value: "250K $BROKE",
-      detail: "Planned minimum for future eligibility.",
+      detail: "Keep at least this balance for holder eligibility.",
     },
     {
-      label: "Balance-share",
-      value: "Your % of eligible pool",
-      detail: "Your eligible BROKE / total eligible BROKE.",
+      label: "Streak",
+      value: "7+ active days",
+      detail: "Daily Routine must stay live, not just completed once.",
     },
     {
-      label: "Reward epoch",
-      value: "Not live yet",
-      detail: "No payouts, claims, or Creator Fee distribution now.",
+      label: "Balance share",
+      value: "Based on eligible balance",
+      detail: "Your verified eligible BROKE compared with the eligible pool.",
+    },
+    {
+      label: "Reward timing",
+      value: "Opens later",
+      detail: "The app prepares eligibility before rewards go live.",
     },
   ];
 
   return (
     <section className="future-rewards-explainer-card rewards-clarity-card">
       <div className="section-title compact-title">
-        <span>Quick reward terms</span>
-        <small>Full details are in the ? guide.</small>
+        <span>Reward rules in plain English</span>
+        <small>Wallet, hold, streak, then rewards.</small>
       </div>
       <div className="future-rewards-steps reward-term-grid">
         {terms.map((item) => (
@@ -21106,15 +21127,15 @@ function RewardSnapshotLedgerCard({
       className={`reward-snapshot-ledger-card ${snapshotReady ? "ready" : "building"}`}
     >
       <div className="section-title compact-title">
-        <span>Reward Snapshot Ledger</span>
-        <small>Project snapshot foundation. No payout or claim active.</small>
+        <span>Reward snapshot status</span>
+        <small>Shows whether this account is ready to be counted later.</small>
       </div>
       <div className="reward-snapshot-ledger-grid">
         <article>
           <span>Snapshot status</span>
           <strong>{snapshotReady ? "Ready to be counted" : "Preparing"}</strong>
           <small>
-            Final eligibility is locked only when an epoch snapshot is run.
+            Final eligibility is counted only when a real reward snapshot opens.
           </small>
         </article>
         <article>
@@ -21124,7 +21145,7 @@ function RewardSnapshotLedgerCard({
               ? formatTokenAmount(verifiedBalance)
               : "Verify first"}
           </strong>
-          <small>Only verified wallet balance can enter the ledger.</small>
+          <small>Only verified wallet balance can qualify.</small>
         </article>
         <article>
           <span>Active streak</span>
@@ -21138,18 +21159,18 @@ function RewardSnapshotLedgerCard({
           </small>
         </article>
         <article>
-          <span>Balance-share</span>
+          <span>Balance share</span>
           <strong>{balanceSharePreview}</strong>
           <small>
-            Your verified eligible BROKE / total verified eligible BROKE.
+            Your verified eligible BROKE compared with all eligible BROKE.
           </small>
         </article>
       </div>
       <div className="reward-snapshot-ledger-note">
-        <b>Ledger only</b>
+        <b>Preparation only</b>
         <span>
-          v59.27 prepares epochs and snapshot rows. Token transfers, claims,
-          staking, payouts, and Creator Fee distribution stay off.
+          Rewards are not claimable yet. This screen only shows readiness: wallet,
+          250K+ hold, and 7+ Daily Routine streak.
         </span>
       </div>
     </section>
@@ -21168,68 +21189,80 @@ function RewardsLaunchOverviewCard({
   onOpenProfile: () => void;
 }) {
   const verified = Boolean(settings.wallet.isVerified);
+  const verifiedHolderBalance = verified ? settings.wallet.brokeBalance : 0;
   const meetsMinHold =
-    settings.wallet.brokeBalance >= FUTURE_HOLDER_REWARD_MIN_BALANCE;
+    verifiedHolderBalance >= FUTURE_HOLDER_REWARD_MIN_BALANCE;
   const rewardReady = verified && meetsMinHold && status.eligible;
   const todayLabel = status.activeToday
     ? "Protected today"
     : status.recoveryAvailable
       ? "Recovery available"
       : "Needs Daily Routine";
-  const verifiedHolderBalance = verified ? settings.wallet.brokeBalance : 0;
+  const balanceGap = Math.max(
+    0,
+    FUTURE_HOLDER_REWARD_MIN_BALANCE - verifiedHolderBalance,
+  );
   const holdLabel = !verified
-    ? "Verify first"
+    ? "Verify wallet first"
     : meetsMinHold
       ? `${formatTokenAmount(verifiedHolderBalance)} BROKE`
-      : `${formatTokenAmount(Math.max(0, FUTURE_HOLDER_REWARD_MIN_BALANCE - verifiedHolderBalance))} left`;
+      : `${formatTokenAmount(balanceGap)} BROKE left`;
+  const walletModeLabel = !settings.wallet.walletAddress
+    ? "No wallet"
+    : verified
+      ? "Verified"
+      : "Watch-only";
+  const balanceCheckedLabel = formatWalletBalanceCheckedLabel(
+    settings.wallet.lastCheckedAt,
+  );
+  const balanceFresh = !isWalletBalanceAutoRefreshDue(
+    settings.wallet.lastCheckedAt,
+  );
 
   return (
     <section
       className={`rewards-launch-overview-card ${rewardReady ? "ready" : status.recoveryAvailable ? "recovery" : "building"}`}
     >
       <div className="rewards-launch-eyebrow">
-        <span>Starting June 1</span>
-        <b>Prep</b>
+        <span>Rewards readiness</span>
+        <b>{rewardReady ? "Ready" : "Building"}</b>
       </div>
 
       <div className="rewards-launch-main">
         <div>
-          <span>Holder Rewards</span>
-          <strong>Daily Routine matters.</strong>
+          <span>Holder status</span>
+          <strong>Hold. Track. Stay eligible.</strong>
           <p>
-            June 1 prep. Hold $BROKE, verify wallet, keep 7+ Daily Routine days.
+            Rewards are prepared around three simple signals: verified wallet,
+            250K+ $BROKE, and a live 7-day Daily Routine streak.
           </p>
         </div>
         <aside>
-          <strong>{status.currentStreak}d</strong>
-          <small>
-            {status.eligible
-              ? "7+ active"
-              : `${status.progressDays}/${ACTIVE_STREAK_ELIGIBILITY_DAYS}`}
-          </small>
+          <strong>{rewardReady ? "✓" : status.currentStreak + "d"}</strong>
+          <small>{rewardReady ? "Ready" : "Streak"}</small>
         </aside>
       </div>
 
-      <div className="rewards-launch-rules">
+      <div className="rewards-launch-rules holder-readiness-rules">
         <article>
-          <span>Pool</span>
-          <strong>Up to 50%</strong>
-          <small>Creator Fee allocation, once opened.</small>
+          <span>Wallet</span>
+          <strong>{walletModeLabel}</strong>
+          <small>{verified ? "Ownership confirmed" : "Verify to qualify"}</small>
         </article>
         <article>
-          <span>Min hold</span>
+          <span>Minimum hold</span>
           <strong>250K $BROKE</strong>
           <small>{holdLabel}</small>
         </article>
         <article>
           <span>Streak</span>
           <strong>7+ routines</strong>
-          <small>Daily Routine only.</small>
+          <small>{status.eligible ? "Streak ready" : "Build Daily Routine"}</small>
         </article>
         <article>
-          <span>Split</span>
-          <strong>Balance-share</strong>
-          <small>Your eligible BROKE / total eligible BROKE.</small>
+          <span>Balance check</span>
+          <strong>{balanceFresh ? "Fresh" : "Refresh"}</strong>
+          <small>{balanceCheckedLabel}</small>
         </article>
       </div>
 
@@ -21238,7 +21271,7 @@ function RewardsLaunchOverviewCard({
           {verified ? "Wallet verified" : "Verify wallet"}
         </span>
         <span className={meetsMinHold ? "done" : "pending"}>
-          {meetsMinHold ? "250K+ hold" : "250K+ needed"}
+          {meetsMinHold ? "250K+ hold" : "Below 250K"}
         </span>
         <span className={status.eligible ? "done" : "pending"}>
           {status.eligible ? "7+ streak live" : "Build 7-day streak"}
@@ -21261,7 +21294,7 @@ function RewardsLaunchOverviewCard({
           Open Daily Routine
         </button>
         <button type="button" onClick={onOpenProfile}>
-          Wallet proof
+          Wallet settings
         </button>
       </div>
     </section>
@@ -21490,7 +21523,7 @@ function ActiveHolderEligibilityStrip({
         <span>Future Holder Rewards</span>
         <strong>{label}</strong>
         <small>
-          Verified wallet + $BROKE balance + live 7+ day Daily Routine streak.
+          Verified wallet + 250K+ $BROKE balance + live 7+ day Daily Routine streak.
           If the streak breaks, eligibility pauses.
         </small>
       </div>
@@ -37193,23 +37226,25 @@ function WhatIfScreen({
   const rewardFoundationReady =
     walletVerified && holderMeetsFutureRewardMinimum && activeStreakReady;
   const holderRewardWeight = !walletVerified
-    ? "Verify wallet before balance-share."
-    : holderHasVerifiedBalance
-      ? "Share = your verified BROKE / total eligible BROKE"
-      : "No eligible balance yet";
+    ? "Verify wallet to qualify."
+    : holderMeetsFutureRewardMinimum
+      ? `${formatTokenAmount(verifiedHolderBalance)} BROKE ready`
+      : holderHasVerifiedBalance
+        ? `${formatTokenAmount(Math.max(0, FUTURE_HOLDER_REWARD_MIN_BALANCE - verifiedHolderBalance))} BROKE left`
+        : "No $BROKE balance found";
   const rewardChecklist = [
     {
       label: "Verified wallet",
       detail: walletVerified
-        ? "Ownership proof active"
-        : "Verify ownership in Profile",
+        ? "Wallet ownership confirmed"
+        : "Verify wallet in Profile",
       done: walletVerified,
     },
     {
-      label: "250K+ $BROKE hold",
+      label: "250K+ holder balance",
       detail: holderMeetsFutureRewardMinimum
         ? `${formatTokenAmount(settings.wallet.brokeBalance)} BROKE`
-        : `Planned minimum: ${formatTokenAmount(FUTURE_HOLDER_REWARD_MIN_BALANCE)}`,
+        : `Minimum: ${formatTokenAmount(FUTURE_HOLDER_REWARD_MIN_BALANCE)} BROKE`,
       done: holderMeetsFutureRewardMinimum,
     },
     {
@@ -37220,8 +37255,8 @@ function WhatIfScreen({
       done: activeStreakReady,
     },
     {
-      label: "Reward epoch",
-      detail: "Locked until Creator Fee pool opens",
+      label: "Reward status",
+      detail: "Rewards are not claimable yet",
       done: false,
     },
   ];
@@ -37897,32 +37932,32 @@ function WhatIfScreen({
       <section className="rewards-layout-map" aria-label="Rewards layout map">
         <div>
           <span>Rewards map</span>
-          <strong>Proof first, game layer second, tools after.</strong>
+          <strong>Holder status, streak, progress, and tools.</strong>
           <small>
-            Open only what you need. Social/game blocks stay public-safe and do
-            not expose wallet value.
+            Rewards now focus on clear app progress: verified wallet, 250K+ hold,
+            Daily Routine streak, and useful wallet tools.
           </small>
         </div>
         <div className="rewards-layout-map-grid">
           <article>
             <b>1</b>
-            <span>Proof</span>
-            <small>Cards for X, bot, and text.</small>
+            <span>Holder</span>
+            <small>Wallet and 250K+ balance.</small>
           </article>
           <article>
             <b>2</b>
-            <span>Boss</span>
-            <small>Mascot, Weekly Boss, Safe Points.</small>
+            <span>Streak</span>
+            <small>Daily Routine proof.</small>
           </article>
           <article>
             <b>3</b>
-            <span>Routine</span>
-            <small>Daily proof and streak recovery.</small>
+            <span>Progress</span>
+            <small>Badges and public proof.</small>
           </article>
           <article>
             <b>4</b>
             <span>Tools</span>
-            <small>Survival, challenges, leak cuts.</small>
+            <small>Reports, survival, leak cuts.</small>
           </article>
         </div>
       </section>
@@ -37950,8 +37985,8 @@ function WhatIfScreen({
       <details className="clean-details rewards-social-details mascot-rewards-details">
         <summary>
           <div>
-            <span>Mascot Progression</span>
-            <small>Visual growth, badge proof, and real-action boosts.</small>
+            <span>Progress Profile</span>
+            <small>Habit progress, badge proof, and real-action boosts.</small>
           </div>
           <b>Stage {mascotProgressionState.stage}/5</b>
         </summary>
@@ -37967,9 +38002,9 @@ function WhatIfScreen({
       <details className="clean-details rewards-social-details weekly-boss-rewards-details">
         <summary>
           <div>
-            <span>Weekly Boss</span>
+            <span>Weekly Progress</span>
             <small>
-              Step battle from real weekly actions. Visual only, no fake taps.
+              Weekly activity from real tracking and challenge actions.
             </small>
           </div>
           <b>{weeklyBossState.progressPercent}%</b>
@@ -37986,10 +38021,9 @@ function WhatIfScreen({
       <details className="clean-details rewards-social-details community-boss-rewards-details">
         <summary>
           <div>
-            <span>Community Boss Prep</span>
+            <span>Community Progress</span>
             <small>
-              Live aggregate read path. Auto aggregate after proof. No payout
-              math.
+              Community proof progress and safe public activity points.
             </small>
           </div>
           <b>{communityBossPrepState.prepLabel}</b>
@@ -38065,21 +38099,21 @@ function WhatIfScreen({
       <details className="clean-details rewards-core-details">
         <summary>
           <div>
-            <span>Future Holder Rewards</span>
-            <small>250K+ hold, wallet proof, 7+ Daily Routine days.</small>
+            <span>Holder Rewards Status</span>
+            <small>250K+ hold, verified wallet, 7+ Daily Routine days.</small>
           </div>
           <b>{rewardFoundationReady ? "Ready" : "Prep"}</b>
         </summary>
         <section className="rewards-hub-grid rewards-readiness-grid">
           <article className={rewardFoundationReady ? "ready" : "building"}>
-            <span>Reward foundation</span>
+            <span>Eligibility</span>
             <strong>{rewardFoundationReady ? "Ready" : "Building"}</strong>
             <small>
               Verified wallet + 250K+ $BROKE + live 7+ Daily Routine streak.
             </small>
           </article>
           <article>
-            <span>Reward share</span>
+            <span>Holder balance</span>
             <strong>
               {holderHasVerifiedBalance
                 ? "Balance based"
@@ -38126,15 +38160,14 @@ function WhatIfScreen({
 
         <section className="future-reward-pool-card">
           <div>
-            <span>Creator Fee Reward Pool</span>
-            <strong>Coming later after volume trigger</strong>
+            <span>Reward pool</span>
+            <strong>Not claimable yet</strong>
             <p>
-              Planned: after the volume trigger, up to 50% of Creator Fee may go
-              to eligible verified holders. Split is based on each holder’s
-              eligible $BROKE balance share at snapshot time.
+              When rewards open, eligible verified holders can be counted by
+              their $BROKE balance share at snapshot time.
             </p>
           </div>
-          <b>Locked</b>
+          <b>Later</b>
         </section>
 
         <section className="reward-eligibility-checklist">
