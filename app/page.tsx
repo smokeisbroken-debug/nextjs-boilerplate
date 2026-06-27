@@ -15775,6 +15775,14 @@ export default function Home() {
       Math.min(walkthroughStepIndex, Math.max(walkthroughSteps.length - 1, 0))
     ] || null;
 
+  useEffect(() => {
+    if (!walkthroughOpen || !walkthroughSteps.length) return;
+
+    if (walkthroughStepIndex > walkthroughSteps.length - 1) {
+      setWalkthroughStepIndex(walkthroughSteps.length - 1);
+    }
+  }, [walkthroughOpen, walkthroughStepIndex, walkthroughSteps.length]);
+
   function closeWalkthrough(done = false) {
     try {
       localStorage.setItem(WALKTHROUGH_KEY, "true");
@@ -16134,9 +16142,16 @@ function AppWalkthroughOverlay({
   onSkip: () => void;
 }) {
   const isLast = stepIndex >= totalSteps - 1;
+  const stepLabel = `Step ${stepIndex + 1} of ${totalSteps}`;
 
   return (
-    <div className="app-walkthrough-overlay" role="dialog" aria-modal="true">
+    <div
+      className="app-walkthrough-overlay"
+      data-step-id={step.id}
+      role="dialog"
+      aria-modal="true"
+      aria-label="First run walkthrough"
+    >
       <div className="app-walkthrough-highlight" aria-hidden="true">
         <span>{step.focus}</span>
       </div>
@@ -16144,12 +16159,13 @@ function AppWalkthroughOverlay({
       <section className="app-walkthrough-card">
         <div className="app-walkthrough-head">
           <span>{step.kicker}</span>
+          <em>{stepLabel}</em>
           <button type="button" onClick={onSkip} aria-label="Skip walkthrough">
             Skip
           </button>
         </div>
 
-        <div className="app-walkthrough-progress" aria-hidden="true">
+        <div className="app-walkthrough-progress" aria-label={stepLabel}>
           {Array.from({ length: totalSteps }).map((_, index) => (
             <span
               key={index}
