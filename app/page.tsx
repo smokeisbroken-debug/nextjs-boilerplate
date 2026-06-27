@@ -3615,10 +3615,10 @@ function buildEmailReminderStatus(
   }
 
   return {
-    label: "Needs provider",
-    badge: "Provider",
+    label: "Email setup needed",
+    badge: "Setup",
     detail:
-      "Email preferences are saved. Connect Resend, SendGrid or SMTP before real emails can be sent.",
+      "Email preferences are saved. Choose an email service before real emails can be sent.",
     tone: "ready",
   };
 }
@@ -3626,7 +3626,7 @@ function buildEmailReminderStatus(
 const defaultEmailBackendCheckState: EmailBackendCheckState = {
   tone: "idle",
   label: "Not checked",
-  detail: "Check the backend before enabling real email delivery.",
+  detail: "Check email delivery before enabling real reminders.",
   providerLabel: "Not checked",
   sendingLabel: "Unknown",
   checkedAt: "",
@@ -3661,8 +3661,8 @@ function buildEmailBackendCheckState(input: unknown): EmailBackendCheckState {
   if (!payload.ok) {
     return {
       tone: "error",
-      label: "Backend error",
-      detail: payload.error || "Email backend did not return a healthy status.",
+      label: "Email check failed",
+      detail: payload.error || "Email delivery check did not return a healthy status.",
       providerLabel: "Unknown",
       sendingLabel: "Blocked",
       checkedAt: new Date().toLocaleTimeString([], {
@@ -3675,11 +3675,11 @@ function buildEmailBackendCheckState(input: unknown): EmailBackendCheckState {
   if (!delivery.provider || delivery.provider === "none") {
     return {
       tone: "warning",
-      label: "Needs provider",
+      label: "Email service needed",
       detail:
-        "Backend is reachable, but no email provider is configured yet.",
-      providerLabel: "None",
-      sendingLabel: "Disabled",
+        "Email delivery is reachable, but no email service is connected yet.",
+      providerLabel: "Not connected",
+      sendingLabel: "Off",
       checkedAt: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -3690,9 +3690,9 @@ function buildEmailBackendCheckState(input: unknown): EmailBackendCheckState {
   if (!delivery.configured || missingCount > 0) {
     return {
       tone: "warning",
-      label: "Provider incomplete",
+      label: "Email setup incomplete",
       detail:
-        "Backend found an email provider, but required environment settings are still missing.",
+        "Email delivery found a service, but setup is not complete yet.",
       providerLabel,
       sendingLabel: "Blocked",
       checkedAt: new Date().toLocaleTimeString([], {
@@ -3705,11 +3705,11 @@ function buildEmailBackendCheckState(input: unknown): EmailBackendCheckState {
   if (!delivery.canSend) {
     return {
       tone: "ready",
-      label: "Provider detected",
+      label: "Email service connected",
       detail:
-        "Backend can see the provider config. Real sending is still locked until the send implementation is enabled.",
+        "Email delivery can see the service setup. Real sending is still paused until it is enabled.",
       providerLabel,
-      sendingLabel: "Skeleton only",
+      sendingLabel: "Paused",
       checkedAt: new Date().toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -3720,7 +3720,7 @@ function buildEmailBackendCheckState(input: unknown): EmailBackendCheckState {
   return {
     tone: "ready",
     label: "Ready",
-    detail: "Email backend and provider are ready for delivery.",
+    detail: "Email delivery is ready.",
     providerLabel,
     sendingLabel: "Ready",
     checkedAt: new Date().toLocaleTimeString([], {
@@ -4625,12 +4625,12 @@ const ruText: Record<string, string> = {
   "Web Demo": "Web Demo",
   "Web Synced": "Web синхронизирован",
   "Web cloud": "Web cloud",
-  "Web demo mode. Login with Telegram to enable cloud sync.":
-    "Web demo mode. Войди через Telegram, чтобы включить cloud sync.",
+  "Web mode. Login with Telegram to keep progress connected.":
+    "Web mode. Войди через Telegram, чтобы связать прогресс.",
   "Website is synced with your Telegram account.":
     "Сайт синхронизирован с твоим Telegram-аккаунтом.",
-  "Website progress now uses the same Supabase profile as your Telegram Mini App.":
-    "Прогресс сайта теперь использует тот же Supabase-профиль, что и Telegram Mini App.",
+  "Website progress now uses the same account as your Telegram Mini App.":
+    "Прогресс сайта теперь использует тот же аккаунт, что и Telegram Mini App.",
   "Use one account on website and Telegram":
     "Один аккаунт для сайта и Telegram",
   "Login with Telegram to sync expenses, streaks, badges, challenges and leaderboard across website and Telegram.":
@@ -4645,7 +4645,7 @@ const ruText: Record<string, string> = {
   "Start param": "Start param",
   Version: "Версия",
   Platform: "Платформа",
-  "Sync & connection details": "Синхронизация и детали подключения",
+  "Account connection": "Подключение аккаунта",
   "Syncing...": "Синхронизация...",
   "Checking...": "Проверка...",
   "Sync error": "Ошибка синхронизации",
@@ -5421,8 +5421,8 @@ const ruText: Record<string, string> = {
   "Settings Guide": "Гайд Settings",
   "Settings: Make the App Fit Real Life":
     "Settings: настрой app под реальную жизнь",
-  "Settings controls the life profile behind the calculations. Country, currency, life mode, rent mode, income style, and sync settings make the app realistic for different users.":
-    "Settings управляет life profile за расчётами. Страна, валюта, режим жизни, аренда, стиль дохода и sync делают app реалистичным для разных пользователей.",
+  "Settings controls the life profile behind the calculations. Country, currency, life mode, rent mode, income style, and account connection make the app realistic for different users.":
+    "Settings управляет жизненным профилем за расчётами. Страна, валюта, режим жизни, аренда, стиль дохода и подключение аккаунта делают app реалистичным для разных пользователей.",
   "Settings rule": "Правило Settings",
   "Set the profile once, then update it only when real life changes. Wrong settings create wrong Wallet HP and wrong leak pressure.":
     "Настрой профиль один раз, потом меняй только при реальных изменениях. Неверные настройки дают неверный Wallet HP и неправильное давление утечек.",
@@ -5447,13 +5447,13 @@ const ruText: Record<string, string> = {
     "Эти расходы уменьшают доступные деньги до расчёта утечек.",
   "If fixed costs are wrong, Wallet HP will feel wrong.":
     "Если fixed costs неверные, Wallet HP будет казаться неправильным.",
-  "4. Sync and account state": "4. Sync и состояние аккаунта",
-  "Telegram sync keeps progress connected to the user profile.":
-    "Telegram sync связывает прогресс с профилем пользователя.",
-  "Web sync allows website and Telegram usage to match.":
-    "Web sync позволяет сайту и Telegram использовать один прогресс.",
-  "If sync shows an error, the app can still work locally until cloud sync recovers.":
-    "Если sync показывает ошибку, app может работать локально до восстановления cloud sync.",
+  "4. Account connection": "4. Подключение аккаунта",
+  "Telegram connection keeps progress linked to the user profile.":
+    "Подключение Telegram связывает прогресс с профилем пользователя.",
+  "Website and Telegram can use the same progress when account connection is active.":
+    "Сайт и Telegram могут использовать один прогресс, когда аккаунт подключён.",
+  "If account connection shows an error, the app can still work locally until connection recovers.":
+    "Если подключение аккаунта показывает ошибку, app может работать локально до восстановления подключения.",
   "5. Data control": "5. Контроль данных",
   "Settings includes reset and data management areas.":
     "Settings содержит reset и управление данными.",
@@ -6054,10 +6054,10 @@ const ruText: Record<string, string> = {
     "Growth показывает, что эта перенаправленная утечка могла бы покрыть через Target Coverage или Personal Goal.",
   "Together they create the full loop: find the leak, cut the leak, redirect the leak.":
     "Вместе они создают полный цикл: найти утечку, сократить утечку, перенаправить утечку.",
-  "Settings: Currency, Privacy, and Sync":
-    "Settings: валюта, приватность и sync",
-  "Settings controls the app’s real-life assumptions: language, profile, income, fixed costs, currency mode, privacy, categories, sync, and data control.":
-    "Settings управляет реальными предположениями приложения: язык, профиль, доход, фиксированные расходы, режим валюты, приватность, категории, sync и контроль данных.",
+  "Settings: Currency, Privacy, and Account":
+    "Settings: валюта, приватность и аккаунт",
+  "Settings controls the app’s real-life assumptions: language, profile, income, fixed costs, currency mode, privacy, categories, account connection, and data control.":
+    "Settings управляет реальными предположениями приложения: язык, профиль, доход, фиксированные расходы, режим валюты, приватность, категории, подключение аккаунта и контроль данных.",
   "Keep profile numbers realistic, use Convert values only when you want real exchange-rate display, and keep Public Proof Mode on for public sharing.":
     "Держи числа профиля реалистичными, используй Convert values только когда нужен реальный пересчёт по курсу, и оставляй Public Proof Mode включённым для публичного шаринга.",
   "1. Life Profile and income": "1. Life Profile и доход",
@@ -6088,9 +6088,9 @@ const ruText: Record<string, string> = {
     "Share-карточки могут показывать выбранную валюту и примерный USD reference.",
   "Debt & Bills Radar stays private-first and should not be turned into a detailed debt share card.":
     "Debt & Bills Radar остаётся private-first и не должен превращаться в подробную карточку долгов.",
-  "5. Sync and data control": "5. Sync и контроль данных",
-  "Telegram and web sync keep expenses, settings, Growth state, and Debt Radar state connected when cloud sync is available.":
-    "Telegram и web sync связывают расходы, настройки, Growth state и Debt Radar state, когда cloud sync доступен.",
+  "5. Account and data control": "5. Аккаунт и контроль данных",
+  "Telegram and web account connection keep expenses, settings, Growth state, and Debt Radar state connected when available.":
+    "Подключение Telegram и web связывает расходы, настройки, Growth state и Debt Radar state, когда оно доступно.",
   "Reset and delete actions should be used carefully because they can remove progress.":
     "Reset и delete нужно использовать осторожно, потому что они могут удалить прогресс.",
   // v58.6 translation polish: settings currency, chart pressure, Growth, and Debt Radar.
@@ -10864,10 +10864,10 @@ function buildCommunityBossPrepState({
       ? "Ready layer"
       : projectedCommunityProgress >= 45
         ? "Warming up"
-        : "Prep only";
+        : "Preparing";
   const nextPrepAction = activeProofStatus.activeToday
     ? weeklyBoss.nextActionHint
-    : "Complete today’s Daily Routine before any community boss sync is considered.";
+    : "Complete today’s Daily Routine before community progress is considered.";
   const lanes: CommunityBossPrepLane[] = [
     {
       id: "personal_boss",
@@ -10908,7 +10908,7 @@ function buildCommunityBossPrepState({
     weekRangeLabel: weeklyBoss.weekRangeLabel,
     bossName: "Community Leak Boss",
     prepLabel,
-    syncLabel: "Backend sync later",
+    syncLabel: "Public progress later",
     localDamage: weeklyBoss.userDamage,
     safeSocialPoints,
     projectedCommunityProgress,
@@ -11000,8 +11000,8 @@ function buildSocialLeaderboardState({
     },
     {
       id: "community_prep",
-      title: "Community prep",
-      detail: `${communityBoss.safeSocialPoints} local prep points. Backend sync is not live yet.`,
+      title: "Community progress",
+      detail: `${communityBoss.safeSocialPoints} progress points saved. Public team progress is not live yet.`,
       value: `+${communityPrepPoints}`,
       points: communityPrepPoints,
       ready: communityBoss.safeSocialPoints > 0,
@@ -37414,18 +37414,18 @@ function WhatIfScreen({
         parsed.persisted && parsed.autoRecalculated
           ? "Proof saved + aggregate updated"
           : parsed.persisted
-            ? "Proof persisted"
+            ? "Proof saved"
             : parsed.ok
               ? "Proof checked"
               : "Proof rejected",
         parsed.persisted && parsed.autoRecalculated
-          ? "Community Boss proof was stored and public totals were recalculated automatically."
+          ? "Community proof was saved and public totals were updated."
           : parsed.persisted
-            ? "Community Boss proof was stored behind the manual write gate."
+            ? "Community proof was saved."
             : parsed.ok
-              ? "Community Boss proof was sanitized. No database write was made unless the gate is open."
+              ? "Community proof was checked safely."
               : parsed.error ||
-                "Community Boss proof was rejected by the endpoint.",
+                "Community proof could not be accepted.",
         "info",
       );
     } catch (error) {
@@ -37437,12 +37437,12 @@ function WhatIfScreen({
         error:
           error instanceof Error
             ? error.message.slice(0, 180)
-            : "Community Boss proof dry-run failed.",
+            : "Community proof check failed.",
         updatedAt: new Date().toISOString(),
       });
       notifyApp(
-        "Dry-run failed",
-        "Community Boss proof submit preview could not be checked.",
+        "Proof check failed",
+        "Community proof could not be checked.",
         "info",
       );
     }
@@ -40383,7 +40383,7 @@ function SettingsScreen({
       ...prev,
       tone: "checking",
       label: "Checking...",
-      detail: "Contacting email backend status endpoint.",
+      detail: "Checking email delivery status.",
       sendingLabel: "Checking",
     }));
 
@@ -40402,19 +40402,19 @@ function SettingsScreen({
 
       if (nextState.tone === "error") {
         triggerHaptic("error");
-        notifyApp("Email backend check failed", nextState.detail, "info");
+        notifyApp("Email delivery check failed", nextState.detail, "info");
       } else {
         triggerHaptic(nextState.tone === "warning" ? "medium" : "success");
-        notifyApp("Email backend", nextState.label, "info");
+        notifyApp("Email delivery", nextState.label, "info");
       }
     } catch (error) {
       setEmailBackendCheck({
         tone: "error",
-        label: "Backend error",
+        label: "Email check failed",
         detail:
           error instanceof Error
             ? error.message
-            : "Could not reach email backend status endpoint.",
+            : "Could not reach email delivery status.",
         providerLabel: "Unknown",
         sendingLabel: "Blocked",
         checkedAt: new Date().toLocaleTimeString([], {
@@ -40423,7 +40423,7 @@ function SettingsScreen({
         }),
       });
       triggerHaptic("error");
-      notifyApp("Email backend check failed", "Could not reach status endpoint.", "info");
+      notifyApp("Email delivery check failed", "Could not reach status check.", "info");
     }
   }
 
@@ -43598,7 +43598,7 @@ function SettingsScreen({
               <summary>
                 <div>
                   <span>Email reminders</span>
-                  <small>Weekly reports and streak warnings, ready for provider setup.</small>
+                  <small>Weekly reports and streak warnings, ready when email delivery is connected.</small>
                 </div>
                 <b>{emailReminderStatus.label}</b>
               </summary>
@@ -43686,18 +43686,18 @@ function SettingsScreen({
                     <strong>{emailReminderChannelCount}/3</strong>
                   </div>
                   <div>
-                    <span>Provider</span>
+                    <span>Email service</span>
                     <strong>{emailBackendCheck.providerLabel}</strong>
                   </div>
                   <div>
-                    <span>Sending</span>
+                    <span>Delivery</span>
                     <strong>{emailBackendCheck.sendingLabel}</strong>
                   </div>
                 </div>
 
                 <div className={`email-backend-check ${emailBackendCheck.tone}`}>
                   <div>
-                    <span>Backend check</span>
+                    <span>Email setup check</span>
                     <strong>{emailBackendCheck.label}</strong>
                     <small>{emailBackendCheck.detail}</small>
                     {emailBackendCheck.checkedAt ? (
@@ -43711,18 +43711,18 @@ function SettingsScreen({
                   >
                     {emailBackendCheck.tone === "checking"
                       ? "Checking..."
-                      : "Check backend"}
+                      : "Check email setup"}
                   </button>
                 </div>
 
                 <p className="email-reminder-note">
-                  Preferences are saved now. Real email delivery starts only after provider sending is connected on the backend.
+                  Preferences are saved now. Real email delivery starts only after an email service is connected.
                 </p>
               </section>
             </details>
 
             <details className="tech-details">
-              <summary>Sync & connection details</summary>
+              <summary>Account connection</summary>
               <TelegramMiniStatus
                 telegram={telegram}
                 webAuth={webAuth}
