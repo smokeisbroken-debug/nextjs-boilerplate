@@ -565,6 +565,7 @@ type Settings = {
   language: Language;
   dailyReminder: boolean;
   reminders: TelegramReminderSettings;
+  emailReminders: EmailReminderSettings;
   onboardingCompleted?: boolean;
   profile: {
     region: RegionPreset;
@@ -2853,6 +2854,22 @@ type TelegramReminderSettings = {
   timezone: string;
 };
 
+type EmailReminderSettings = {
+  enabled: boolean;
+  emailAddress: string;
+  dailyReminder: boolean;
+  weeklyReport: boolean;
+  streakWarning: boolean;
+  updatedAt: string;
+};
+
+type EmailReminderStatus = {
+  label: string;
+  badge: string;
+  detail: string;
+  tone: "off" | "warning" | "ready";
+};
+
 type ProfileShareMetric = {
   label: string;
   value: string;
@@ -3510,12 +3527,100 @@ function normalizeTelegramReminderSettings(
   return { enabled, time, timezone };
 }
 
+const defaultEmailReminderSettings: EmailReminderSettings = {
+  enabled: false,
+  emailAddress: "",
+  dailyReminder: true,
+  weeklyReport: true,
+  streakWarning: true,
+  updatedAt: "",
+};
+
+function normalizeEmailAddress(value: unknown) {
+  return String(value || "").trim().slice(0, 160);
+}
+
+function isValidEmailAddress(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
+}
+
+function normalizeEmailReminderSettings(
+  input?: Partial<EmailReminderSettings> | null,
+): EmailReminderSettings {
+  return {
+    enabled:
+      typeof input?.enabled === "boolean"
+        ? input.enabled
+        : defaultEmailReminderSettings.enabled,
+    emailAddress: normalizeEmailAddress(input?.emailAddress),
+    dailyReminder:
+      typeof input?.dailyReminder === "boolean"
+        ? input.dailyReminder
+        : defaultEmailReminderSettings.dailyReminder,
+    weeklyReport:
+      typeof input?.weeklyReport === "boolean"
+        ? input.weeklyReport
+        : defaultEmailReminderSettings.weeklyReport,
+    streakWarning:
+      typeof input?.streakWarning === "boolean"
+        ? input.streakWarning
+        : defaultEmailReminderSettings.streakWarning,
+    updatedAt:
+      typeof input?.updatedAt === "string" ? input.updatedAt : "",
+  };
+}
+
+function buildEmailReminderStatus(
+  emailReminders: EmailReminderSettings,
+): EmailReminderStatus {
+  const email = normalizeEmailAddress(emailReminders.emailAddress);
+
+  if (!emailReminders.enabled) {
+    return {
+      label: "Not connected",
+      badge: "Off",
+      detail:
+        "Email reminders are disabled. Telegram reminders can still protect daily check-ins.",
+      tone: "off",
+    };
+  }
+
+  if (!email) {
+    return {
+      label: "Needs email",
+      badge: "Missing",
+      detail:
+        "Add an email address before weekly reports or streak warnings can be prepared.",
+      tone: "warning",
+    };
+  }
+
+  if (!isValidEmailAddress(email)) {
+    return {
+      label: "Check email",
+      badge: "Invalid",
+      detail:
+        "The address is saved locally, but it does not look valid yet.",
+      tone: "warning",
+    };
+  }
+
+  return {
+    label: "Needs provider",
+    badge: "Provider",
+    detail:
+      "Email preferences are saved. Connect Resend, SendGrid or SMTP before real emails can be sent.",
+    tone: "ready",
+  };
+}
+
 const defaultSettings: Settings = {
   currency: defaultCurrency,
   currencyMode: "display",
   language: "en",
   dailyReminder: false,
   reminders: defaultTelegramReminderSettings,
+  emailReminders: defaultEmailReminderSettings,
   onboardingCompleted: false,
   profile: {
     region: "Global",
@@ -6730,6 +6835,7 @@ function normalizeSettings(input?: Partial<Settings> | null): Settings {
       input?.reminders,
       input?.dailyReminder,
     ),
+    emailReminders: normalizeEmailReminderSettings(input?.emailReminders),
     profile: {
       ...defaultSettings.profile,
       ...(input?.profile || {}),
@@ -40164,6 +40270,19 @@ function SettingsScreen({
     }));
   }
 
+  function updateEmailReminderSettings(next: Partial<EmailReminderSettings>) {
+    setSettings((prev) =>
+      normalizeSettings({
+        ...prev,
+        emailReminders: {
+          ...normalizeEmailReminderSettings(prev.emailReminders),
+          ...next,
+          updatedAt: new Date().toISOString(),
+        },
+      }),
+    );
+  }
+
   const settingsWalletPressureBase = Math.max(totalIncome - fixedCosts, 1);
   const settingsTotalLeaks = sumLeakExpenses(currentMonthExpenses);
   const settingsWalletHp = clamp(
@@ -40282,6 +40401,15 @@ function SettingsScreen({
       cloudError,
     ],
   );
+  const emailReminderSettings = normalizeEmailReminderSettings(
+    settings.emailReminders,
+  );
+  const emailReminderStatus = buildEmailReminderStatus(emailReminderSettings);
+  const emailReminderChannelCount = [
+    emailReminderSettings.dailyReminder,
+    emailReminderSettings.weeklyReport,
+    emailReminderSettings.streakWarning,
+  ].filter(Boolean).length;
   const shareSlotLimit = getProfileShareSlotLimit(
     settingsWalletHp,
     settings.wallet,
@@ -43321,6 +43449,114 @@ function SettingsScreen({
               ) : null}
             </section>
             <ReminderConnectionCard status={reminderConnectionStatus} />
+
+            <details className="clean-details settings-clean-details email-reminder-prep" open>
+              <summary>
+                <div>
+                  <span>Email reminders</span>
+                  <small>Weekly reports and streak warnings, ready for provider setup.</small>
+                </div>
+                <b>{emailReminderStatus.label}</b>
+              </summary>
+
+              <section className={`email-reminder-card ${emailReminderStatus.tone}`}>
+                <div className="email-reminder-head">
+                  <div>
+                    <span>Email status</span>
+                    <strong>{emailReminderStatus.label}</strong>
+                    <small>{emailReminderStatus.detail}</small>
+                  </div>
+                  <b>{emailReminderStatus.badge}</b>
+                </div>
+
+                <label className="email-reminder-input">
+                  <span>Email address</span>
+                  <input
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="name@example.com"
+                    value={emailReminderSettings.emailAddress}
+                    onChange={(event) =>
+                      updateEmailReminderSettings({
+                        emailAddress: event.target.value,
+                      })
+                    }
+                  />
+                </label>
+
+                <div className="email-reminder-toggle-list" aria-label="Email reminder preferences">
+                  <button
+                    type="button"
+                    className={emailReminderSettings.enabled ? "active" : ""}
+                    onClick={() =>
+                      updateEmailReminderSettings({
+                        enabled: !emailReminderSettings.enabled,
+                      })
+                    }
+                  >
+                    <span>Email reminders</span>
+                    <strong>{emailReminderSettings.enabled ? "On" : "Off"}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    className={emailReminderSettings.dailyReminder ? "active" : ""}
+                    onClick={() =>
+                      updateEmailReminderSettings({
+                        dailyReminder: !emailReminderSettings.dailyReminder,
+                      })
+                    }
+                  >
+                    <span>Daily check-in</span>
+                    <strong>{emailReminderSettings.dailyReminder ? "On" : "Off"}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    className={emailReminderSettings.weeklyReport ? "active" : ""}
+                    onClick={() =>
+                      updateEmailReminderSettings({
+                        weeklyReport: !emailReminderSettings.weeklyReport,
+                      })
+                    }
+                  >
+                    <span>Weekly report</span>
+                    <strong>{emailReminderSettings.weeklyReport ? "On" : "Off"}</strong>
+                  </button>
+                  <button
+                    type="button"
+                    className={emailReminderSettings.streakWarning ? "active" : ""}
+                    onClick={() =>
+                      updateEmailReminderSettings({
+                        streakWarning: !emailReminderSettings.streakWarning,
+                      })
+                    }
+                  >
+                    <span>Streak warning</span>
+                    <strong>{emailReminderSettings.streakWarning ? "On" : "Off"}</strong>
+                  </button>
+                </div>
+
+                <div className="email-reminder-meta-grid">
+                  <div>
+                    <span>Saved channels</span>
+                    <strong>{emailReminderChannelCount}/3</strong>
+                  </div>
+                  <div>
+                    <span>Provider</span>
+                    <strong>Not connected</strong>
+                  </div>
+                  <div>
+                    <span>Sending</span>
+                    <strong>Disabled</strong>
+                  </div>
+                </div>
+
+                <p className="email-reminder-note">
+                  This only saves user preferences. Real email delivery starts after a backend provider is connected.
+                </p>
+              </section>
+            </details>
+
             <details className="tech-details">
               <summary>Sync & connection details</summary>
               <TelegramMiniStatus

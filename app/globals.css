@@ -41925,3 +41925,188 @@ html.embedded-app-view .hero h1 {
     font-size: 0.78rem;
   }
 }
+
+/* ===== V59.63.19 EMAIL PREFERENCES PREP ===== */
+.email-reminder-prep summary b {
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.email-reminder-card {
+  display: grid;
+  gap: 11px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(168, 255, 48, 0.08), transparent 44%),
+    rgba(0, 0, 0, 0.18);
+}
+
+.email-reminder-card.ready {
+  border-color: rgba(255, 213, 74, 0.22);
+}
+
+.email-reminder-card.warning {
+  border-color: rgba(255, 213, 74, 0.24);
+  background:
+    radial-gradient(circle at top right, rgba(255, 213, 74, 0.08), transparent 44%),
+    rgba(0, 0, 0, 0.18);
+}
+
+.email-reminder-card.off {
+  opacity: 0.9;
+}
+
+.email-reminder-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.email-reminder-head div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.email-reminder-head span,
+.email-reminder-input span,
+.email-reminder-meta-grid span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.email-reminder-head strong {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.12;
+}
+
+.email-reminder-head small,
+.email-reminder-note {
+  color: rgba(244, 247, 240, 0.66);
+  font-size: 0.79rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.email-reminder-head b {
+  flex: 0 0 auto;
+  border: 1px solid rgba(168, 255, 48, 0.16);
+  border-radius: 999px;
+  padding: 6px 9px;
+  color: var(--accent);
+  background: rgba(168, 255, 48, 0.07);
+  font-size: 0.68rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.email-reminder-input {
+  display: grid;
+  gap: 6px;
+}
+
+.email-reminder-input input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 0 12px;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text);
+  font-size: 0.94rem;
+  font-weight: 800;
+  outline: none;
+}
+
+.email-reminder-input input:focus {
+  border-color: rgba(168, 255, 48, 0.34);
+  box-shadow: 0 0 0 3px rgba(168, 255, 48, 0.08);
+}
+
+.email-reminder-toggle-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.email-reminder-toggle-list button {
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 15px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text);
+  text-align: left;
+  display: grid;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.email-reminder-toggle-list button.active {
+  border-color: rgba(168, 255, 48, 0.24);
+  background: rgba(168, 255, 48, 0.08);
+}
+
+.email-reminder-toggle-list span {
+  color: rgba(244, 247, 240, 0.68);
+  font-size: 0.73rem;
+  font-weight: 850;
+}
+
+.email-reminder-toggle-list strong {
+  color: var(--accent);
+  font-size: 0.88rem;
+  line-height: 1;
+}
+
+.email-reminder-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.email-reminder-meta-grid div {
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.email-reminder-meta-grid strong {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.76rem;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.email-reminder-note {
+  margin: 0;
+}
+
+@media (max-width: 430px) {
+  .email-reminder-toggle-list,
+  .email-reminder-meta-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .email-reminder-head {
+    display: grid;
+  }
+
+  .email-reminder-head b {
+    justify-self: start;
+  }
+}
