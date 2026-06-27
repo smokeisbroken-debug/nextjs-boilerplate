@@ -32602,6 +32602,44 @@ function UniversalLeakCheckScreen({
           ? "Auto-detect"
           : "Waiting";
 
+  const checkToolTabs = [
+    {
+      id: "auto",
+      label: "Universal",
+      title: "Paste & auto-check",
+      helper: "Main check path",
+      active: true,
+      action: () => {
+        setOpenHubTool("auto");
+        document.getElementById("universal-leak-input")?.focus();
+      },
+    },
+    {
+      id: "project",
+      label: "Project",
+      title: "Manual token notes",
+      helper: "Saved research",
+      active: false,
+      action: onOpenTokenResearch,
+    },
+    {
+      id: "wallet",
+      label: "Wallet",
+      title: "Wallet behavior",
+      helper: "Manual review",
+      active: false,
+      action: onOpenWalletReview,
+    },
+    {
+      id: "compare",
+      label: "Compare",
+      title: "Project vs project",
+      helper: "Side-by-side",
+      active: false,
+      action: onOpenCompare,
+    },
+  ];
+
   useEffect(() => {
     if (!openHubTool) return;
     const card = hubToolRefs.current[openHubTool];
@@ -32879,20 +32917,35 @@ function UniversalLeakCheckScreen({
         <span>Universal Leak Check</span>
         <h2>Paste token, wallet, or URL. Get a result.</h2>
         <p>
-          One entry point for automatic leak context. Token checks use
-          liquidity, pair, supply, concentration, and volume signals. Wallet
-          checks now explain public-context leaks like gas runway, exposure
-          spread, dust clutter, and source blind spots.
+          Check is a support tool, not the main app flow. Use Universal for one
+          fast automatic read, or open a focused manual review when you already
+          know what you want to inspect.
         </p>
+      </div>
+
+      <div className="check-tool-tabs-card" aria-label="Check tools">
+        {checkToolTabs.map((tool) => (
+          <button
+            type="button"
+            key={tool.id}
+            className={`check-tool-tab ${tool.active ? "active" : ""}`}
+            aria-current={tool.active ? "page" : undefined}
+            onClick={tool.action}
+          >
+            <span>{tool.label}</span>
+            <strong>{tool.title}</strong>
+            <small>{tool.helper}</small>
+          </button>
+        ))}
       </div>
 
       <div className="universal-check-hub-card">
         <div className="section-title-row">
           <div>
             <span>Leak Hub</span>
-            <h3>All leak tools now live under Check</h3>
+            <h3>Choose one check path</h3>
           </div>
-          <em>Bottom nav stays cleaner</em>
+          <em>Universal first</em>
         </div>
         <div className="universal-check-tool-grid">
           <div
