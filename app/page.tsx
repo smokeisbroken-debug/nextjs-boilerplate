@@ -41797,6 +41797,18 @@ function SettingsScreen({
     }
   }
 
+
+  function openProfileSection(sectionId: string) {
+    const section = document.getElementById(sectionId);
+
+    if (section instanceof HTMLDetailsElement) {
+      section.open = true;
+    }
+
+    section?.scrollIntoView({ behavior: "smooth", block: "start" });
+    triggerHaptic("light");
+  }
+
   return (
     <div className="screen">
       <Header
@@ -42035,10 +42047,10 @@ function SettingsScreen({
             <b>Stage {profileMascotProgression.stage}/5</b>
           </div>
           <div className="profile-mascot-snapshot-copy">
-            <span>Mascot status</span>
+            <span>Progress status</span>
             <strong>{profileMascotProgression.stageTitle}</strong>
             <small>
-              Level {profileMascotProgression.level} · Power{" "}
+              Level {profileMascotProgression.level} · Habit power{" "}
               {profileMascotProgression.power}/100 · {profileMascotNextLabel}
             </small>
             <div
@@ -42055,7 +42067,7 @@ function SettingsScreen({
             </b>
             <span>badges</span>
             <button type="button" onClick={onOpenRewards}>
-              Open Mascot
+              Open Rewards
             </button>
           </div>
         </section>
@@ -42086,6 +42098,7 @@ function SettingsScreen({
         </div>
 
         <details
+          id="profile-wallet-section"
           className={`wallet-balance-foundation-card profile-compact-details holder-tier-${settings.wallet.holderTier.id}`}
         >
           <summary className="profile-compact-summary wallet-compact-summary">
@@ -42542,7 +42555,10 @@ function SettingsScreen({
           </AdminPanelModal>
         )}
 
-        <details className="profile-share-studio-card profile-compact-details">
+        <details
+          id="profile-share-section"
+          className="profile-share-studio-card profile-compact-details"
+        >
           <summary className="profile-compact-summary share-studio-compact-summary">
             <div>
               <span>Share Studio</span>
@@ -42670,12 +42686,39 @@ function SettingsScreen({
         <div className="profile-settings-hub-heading compact-settings-heading">
           <div>
             <span>Profile settings</span>
-            <strong>Wallet setup, privacy, sync and data.</strong>
+            <strong>Wallet setup, reminders, currency and data.</strong>
           </div>
-          <b>Everything kept</b>
+          <b>Settings hub</b>
         </div>
 
-        <details className="profile-settings-section quick-setup">
+        <div className="profile-settings-shortcuts" aria-label="Quick profile settings">
+          <button type="button" onClick={() => openProfileSection("profile-wallet-section")}>
+            <span>Wallet</span>
+            <strong>Holder check</strong>
+          </button>
+          <button type="button" onClick={() => openProfileSection("profile-money-section")}>
+            <span>Money</span>
+            <strong>Income & costs</strong>
+          </button>
+          <button type="button" onClick={() => openProfileSection("profile-reminders-section")}>
+            <span>Reminders</span>
+            <strong>Daily check-in</strong>
+          </button>
+          <button type="button" onClick={() => openProfileSection("profile-currency-section")}>
+            <span>Currency</span>
+            <strong>Display mode</strong>
+          </button>
+          <button type="button" onClick={() => openProfileSection("profile-privacy-section")}>
+            <span>Privacy</span>
+            <strong>Public proof</strong>
+          </button>
+          <button type="button" onClick={() => openProfileSection("profile-data-section")}>
+            <span>Data</span>
+            <strong>Records</strong>
+          </button>
+        </div>
+
+        <details id="profile-quick-setup-section" className="profile-settings-section quick-setup">
           <summary className="profile-section-summary">
             <div>
               <span>Quick Setup</span>
@@ -42700,7 +42743,7 @@ function SettingsScreen({
           </div>
         </details>
 
-        <details className="profile-settings-section money-setup">
+        <details id="profile-money-section" className="profile-settings-section money-setup">
           <summary className="profile-section-summary">
             <div>
               <span>Money Setup</span>
@@ -42894,7 +42937,7 @@ function SettingsScreen({
           </div>
         </details>
 
-        <details className="profile-settings-section currency-tools">
+        <details id="profile-currency-section" className="profile-settings-section currency-tools">
           <summary className="profile-section-summary">
             <div>
               <span>Currency & Repair</span>
@@ -43046,7 +43089,7 @@ function SettingsScreen({
           </div>
         </details>
 
-        <details className="profile-settings-section privacy-tools">
+        <details id="profile-privacy-section" className="profile-settings-section privacy-tools">
           <summary className="profile-section-summary">
             <div>
               <span>Privacy & Public Proof</span>
@@ -43124,7 +43167,7 @@ function SettingsScreen({
           </div>
         </details>
 
-        <details className="profile-settings-section identity-tools">
+        <details id="profile-personalization-section" className="profile-settings-section identity-tools">
           <summary className="profile-section-summary">
             <div>
               <span>Personalization</span>
@@ -43192,7 +43235,7 @@ function SettingsScreen({
           </div>
         </details>
 
-        <details className="profile-settings-section reminder-sync-tools">
+        <details id="profile-reminders-section" className="profile-settings-section reminder-sync-tools">
           <summary className="profile-section-summary">
             <div>
               <span>Notifications & Sync</span>
@@ -43290,7 +43333,7 @@ function SettingsScreen({
           </div>
         </details>
 
-        <details className="profile-settings-section progress-vault-tools">
+        <details id="profile-progress-section" className="profile-settings-section progress-vault-tools">
           <summary className="profile-section-summary">
             <div>
               <span>Progress Vault</span>
@@ -43323,7 +43366,7 @@ function SettingsScreen({
           </div>
         </details>
 
-        <details className="profile-settings-section data-security-tools">
+        <details id="profile-data-section" className="profile-settings-section data-security-tools">
           <summary className="profile-section-summary">
             <div>
               <span>Data & Records</span>

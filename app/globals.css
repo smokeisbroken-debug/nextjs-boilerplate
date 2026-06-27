@@ -41867,3 +41867,61 @@ html.embedded-app-view .hero h1 {
     gap: 9px;
   }
 }
+
+/* ===== V59.63.18 PROFILE SETTINGS SHORTCUTS ===== */
+.profile-settings-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+  margin: -4px 0 2px;
+}
+
+.profile-settings-shortcuts button {
+  min-width: 0;
+  border: 1px solid rgba(168, 255, 48, 0.14);
+  border-radius: 18px;
+  padding: 11px 10px;
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text);
+  text-align: left;
+  display: grid;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.profile-settings-shortcuts button:active {
+  transform: translateY(1px);
+}
+
+.profile-settings-shortcuts span {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.profile-settings-shortcuts strong {
+  color: rgba(244, 247, 240, 0.82);
+  font-size: 0.82rem;
+  line-height: 1.12;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 430px) {
+  .profile-settings-shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .profile-settings-shortcuts button {
+    padding: 10px 9px;
+    border-radius: 16px;
+  }
+
+  .profile-settings-shortcuts strong {
+    font-size: 0.78rem;
+  }
+}
